@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import PackedSequence
 from typing import overload
 
 from torch_xla.experimental.scan import scan
@@ -42,9 +43,14 @@ class GRU(nn.GRU):
           computing the final results. Default: 1
       bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
           Default: ``True``
+      batch_first: If ``True``, then the input and output tensors are provided
+            as `(batch, seq, feature)` instead of `(seq, batch, feature)`.
+            Note that this does not apply to hidden or cell states. See the
+            Inputs/Outputs sections below for details.  Default: ``False``
       dropout: If non-zero, introduces a `Dropout` layer on the outputs of each
           GRU layer except the last layer, with dropout probability equal to
           :attr:`dropout`. Default: 0
+      bidirectional: If ``True``, becomes a bidirectional RNN. Default: ``False``
 
   This implementation has the following differences from the GRU module in PyTorch upstream:
 
@@ -54,17 +60,19 @@ class GRU(nn.GRU):
   """
 
   @overload
-  def __init__(self,
-               input_size: int,
-               hidden_size: int,
-               num_layers: int = 1,
-               bias: bool = True,
-               dropout: float = 0.0):
+  def __init__(
+      self,
+      input_size: int,
+      hidden_size: int,
+      num_layers: int = 1,
+      bias: bool = True,
+      batch_first: bool = False,
+      dropout: float = 0.0,
+      bidirectional: bool = False,
+  ):
     pass
 
   def __init__(self, *args, **kwargs):
-    assert not kwargs.get('batch_first', False), \
-      "GRU only supports batch_first=False (seq_len, batch, input_size)."
     assert not kwargs.get('bidirectional', False), \
       "GRU only supports unidirectional GRU."
     assert kwargs.get('proj_size', 0) == 0, \
@@ -78,16 +86,66 @@ class GRU(nn.GRU):
         input: Tensor of shape (seq_len, batch, input_size)
         hx: Optional initial hidden state of shape (num_layers, batch, hidden_size).
             If not provided, defaults to zeros.
-    Returns:
-        output: Tensor of shape (seq_len, batch, hidden_size) from the last GRU layer.
-        hidden: Tensor of shape (num_layers, batch, hidden_size) containing the final hidden state per layer.
+
+    Outputs: output, h_n
+        * **output**: tensor of shape :math:`(L, D * H_{out})` for unbatched input,
+          :math:`(L, N, D * H_{out})` when ``batch_first=False`` or
+          :math:`(N, L, D * H_{out})` when ``batch_first=True`` containing the output features
+          `(h_t)` from the last layer of the GRU, for each `t`.
+        * **h_n**: tensor of shape :math:`(D * \text{num\_layers}, H_{out})` or
+          :math:`(D * \text{num\_layers}, N, H_{out})` containing the final hidden state
+          for the input sequence.
+
+      where:
+
+        .. math::
+            \begin{aligned}
+                N ={} & \text{batch size} \\
+                L ={} & \text{sequence length} \\
+                D ={} & 2 \text{ if bidirectional=True otherwise } 1 \\
+                H_{in} ={} & \text{input\_size} \\
+                H_{out} ={} & \text{hidden\_size}
+            \end{aligned}
     """
-    seq_len, batch_size, _ = input.size()
-    if hx is None:
-      hx = input.new_zeros(self.num_layers, batch_size, self.hidden_size)
+    assert not isinstance(input, PackedSequence), \
+      "PackedSequence is not supported. Use a regular tensor instead."
+
+    if input.dim() not in (2, 3):
+      raise ValueError(
+          f"GRU: Expected input to be 2D or 3D, got {input.dim()}D instead")
+    is_batched = input.dim() == 3
+    batch_dim = 0 if self.batch_first else 1
+
+    # Unsqueeze the input to (seq_len, batch_size, input_size) or (batch_size, seq_len, input_size) if unbatched.
+    if not is_batched:
+      input = input.unsqueeze(batch_dim)
+      if hx is not None:
+        if hx.dim() != 2:
+          raise RuntimeError(
+              f"For unbatched 2-D input, hx should also be 2-D but got {hx.dim()}-D tensor"
+          )
+        hx = hx.unsqueeze(1)
     else:
-      assert hx.size(0) == self.num_layers, \
-        "Mismatch in number of layers for hidden state."
+      if hx is not None and hx.dim() != 3:
+        raise RuntimeError(
+            f"For batched 3-D input, hx should also be 3-D but got {hx.dim()}-D tensor"
+        )
+
+    batch_size = input.size(0) if self.batch_first else input.size(1)
+    if hx is None:
+      hx = input.new_zeros(
+          self.num_layers,
+          batch_size,
+          self.hidden_size,
+          dtype=input.dtype,
+          device=input.device,
+      )
+
+    self.check_forward_args(input, hx, None)
+
+    # Reshape the input to (seq_len, batch_size, input_size) if batch is at the first dimension.
+    if self.batch_first:
+      input = input.transpose(0, 1)
 
     # The output of one layer is the input to the next.
     output = input
@@ -146,8 +204,19 @@ class GRU(nn.GRU):
         layer_output = F.dropout(
             layer_output, p=self.dropout, training=self.training)
       output = layer_output
-    assert output.size(0) == seq_len
 
     # Stack the final hidden states for each layer.
     hidden = torch.stack(hidden_states, dim=0)
+
+    # Reshape the output according to the input format. The original shape of the output is (seq_len, batch_size, hidden_size).
+    # If the input was unbatched, we need to squeeze it back to (seq_len, hidden_size).
+    if not is_batched:
+      output = output.squeeze(1)
+      if hidden is not None:
+        hidden = hidden.squeeze(1)
+
+    # If the input has batch at the first dimension, we need to transpose the output back to (batch_size, seq_len, hidden_size).
+    if self.batch_first:
+      output = output.transpose(0, 1)
+
     return output, hidden
