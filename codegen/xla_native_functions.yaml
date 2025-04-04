@@ -51,6 +51,7 @@ full_codegen:
   - hardswish_backward
   - inverse
   - isnan
+  - isneginf
   - leaky_relu
   - le.Scalar
   - le.Tensor
