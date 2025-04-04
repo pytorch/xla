@@ -38,7 +38,7 @@ def _dynamo_backend(model: torch.fx.GraphModule, sample_args: Any):
 
   def run_jax(*args, initial_rng_key):
     args_t = torchax.interop.torch_view(args)
-    env.prng_key = jax.random.key(initial_rng_key)
+    env.manual_seed(initial_rng_key)
     with env:
       res = model(*args_t)
     return torchax.interop.jax_view(res)

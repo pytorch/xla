@@ -982,7 +982,7 @@ def call_jax(jax_func,
       >>>   import jax.numpy as jnp
       >>>   return a + jnp.sin(b)
       >>>
-      >>> # Pass PyTorh/XLA tensors to JAX function this way.
+      >>> # Pass PyTorch/XLA tensors to JAX function this way.
       >>> a = torch.ones((3, 3), device='xla')
       >>> b = xb.call_jax(f, (a, a))
       >>>
