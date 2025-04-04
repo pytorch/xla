@@ -87,10 +87,6 @@ using either VS Code or a local container:
   pip install torch_xla[tpu] \
     -f https://storage.googleapis.com/libtpu-wheels/index.html \
     -f https://storage.googleapis.com/libtpu-releases/index.html
-  # Optional: if you're using custom kernels, install pallas dependencies
-  pip install torch_xla[pallas] \
-    -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
-    -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
   ```
 
 * If you are running on a TPU VM, ensure `torch` and `torch_xla` were built and 

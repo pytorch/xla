@@ -53,6 +53,7 @@ import contextlib
 import distutils.ccompiler
 import distutils.command.clean
 import os
+import re
 import requests
 import shutil
 import subprocess
@@ -226,7 +227,7 @@ class BuildBazelExtension(build_ext.build_ext):
   def run(self):
     for ext in self.extensions:
       self.bazel_build(ext)
-    command.build_ext.build_ext.run(self)
+    command.build_ext.build_ext.run(self)  # type: ignore
 
   def bazel_build(self, ext):
     if not os.path.exists(self.build_temp):
@@ -260,17 +261,107 @@ class BuildBazelExtension(build_ext.build_ext):
     shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
 
 
-class Develop(develop.develop):
-
-  def run(self):
-    self.run_command("build_ext")
-    super().run()
-
-
 # Read in README.md for our long_description
 cwd = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
   long_description = f.read()
+
+# Finds torch_xla and its subpackages
+packages_to_include = find_packages(include=['torch_xla*'])
+# Explicitly add torchax
+packages_to_include.extend(find_packages(where='torchax', include=['torchax*']))
+
+# Map the top-level 'torchax' package name to its source location
+torchax_dir = os.path.join(cwd, 'torchax')
+package_dir_mapping = {'torch_xla': os.path.join(cwd, 'torch_xla')}
+package_dir_mapping['torchax'] = os.path.join(torchax_dir, 'torchax')
+
+
+class Develop(develop.develop):
+
+  def run(self):
+    # Build the C++ extension
+    self.run_command("build_ext")
+
+    # Run the standard develop process first
+    # This installs dependencies, scripts, and importantly, creates an `.egg-link` file
+    super().run()
+
+    # Replace the `.egg-link` with a `.pth` file.
+    self.link_packages()
+
+  def link_packages(self):
+    """
+    There are two mechanisms to install an "editable" package in Python: `.egg-link`
+    and `.pth` files. setuptools uses `.egg-link` by default. However, `.egg-link`
+    only supports linking a single directory containg one editable package.
+    This function removes the `.egg-link` file and generates a `.pth` file that can
+    be used to link multiple packages, in particular, `torch_xla` and `torchax`.
+
+    Note that this function is only relevant in the editable package development path
+    (`python setup.py develop`). Nightly and release wheel builds work out of the box
+    without egg-link/pth.
+    """
+    # Ensure paths like self.install_dir are set
+    self.ensure_finalized()
+
+    # Get the site-packages directory
+    target_dir = self.install_dir
+
+    # Remove the standard .egg-link file
+    # It's usually named based on the distribution name
+    dist_name = self.distribution.get_name()
+    egg_link_file = os.path.join(target_dir, dist_name + '.egg-link')
+    if os.path.exists(egg_link_file):
+      print(f"Removing default egg-link file: {egg_link_file}")
+      try:
+        os.remove(egg_link_file)
+      except OSError as e:
+        print(f"Warning: Could not remove {egg_link_file}: {e}")
+
+    # Create our custom .pth file with specific paths
+    cwd = os.path.dirname(__file__)
+    # Path containing 'torch_xla' package source: ROOT
+    path_for_torch_xla = os.path.abspath(cwd)
+    # Path containing 'torchax' package source: ROOT/torchax
+    path_for_torchax = os.path.abspath(os.path.join(cwd, 'torchax'))
+
+    paths_to_add = {path_for_torch_xla, path_for_torchax}
+
+    # Construct a suitable .pth filename (PEP 660 style is good practice)
+    version = self.distribution.get_version()
+    # Sanitize name and version for filename (replace runs of non-alphanumeric chars with '-')
+    sanitized_name = re.sub(r"[^a-zA-Z0-9.]+", "_", dist_name)
+    sanitized_version = re.sub(r"[^a-zA-Z0-9.]+", "_", version)
+    pth_filename = os.path.join(
+        target_dir, f"__editable_{sanitized_name}_{sanitized_version}.pth")
+
+    # Ensure site-packages exists
+    os.makedirs(target_dir, exist_ok=True)
+
+    # Write the paths to the .pth file, one per line
+    with open(pth_filename, "w", encoding='utf-8') as f:
+      for path in sorted(paths_to_add):
+        f.write(path + "\n")
+
+
+def _get_jax_install_requirements():
+  if not USE_NIGHTLY:
+    # Stable versions of JAX can be directly installed from PyPI.
+    return [
+        f'jaxlib=={_jaxlib_version}',
+        f'jax=={_jax_version}',
+    ]
+
+  # Install nightly JAX libraries from the JAX package registries.
+  jax = f'jax @ https://storage.googleapis.com/jax-releases/nightly/jax/jax-{_jax_version}-py3-none-any.whl'
+  jaxlib = []
+  for python_minor_version in [9, 10, 11]:
+    jaxlib.append(
+        f'jaxlib @ https://storage.googleapis.com/jax-releases/nightly/nocuda/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
+    )
+  return [jax] + jaxlib
+
 
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
@@ -297,7 +388,8 @@ setup(
         "Programming Language :: Python :: 3",
     ],
     python_requires=">=3.8.0",
-    packages=find_packages(include=['torch_xla*']),
+    packages=packages_to_include,
+    package_dir=package_dir_mapping,
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
         BazelExtension('//:_XLAC_cuda_functions.so'),
@@ -310,6 +402,8 @@ setup(
         # importlib.metadata backport required for PJRT plugin discovery prior
         # to Python 3.10
         'importlib_metadata>=4.6;python_version<"3.10"',
+        # Some torch operations are lowered to HLO via JAX.
+        *_get_jax_install_requirements(),
     ],
     package_data={
         'torch_xla': ['lib/*.so*',],
@@ -331,6 +425,8 @@ setup(
             f'libtpu=={_libtpu_version}',
             'tpu-info',
         ],
+        # As of https://github.com/pytorch/xla/pull/8895, jax is always a dependency of torch_xla.
+        # However, this no-op extras_require entrypoint is left here for backwards compatibility.
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
         'pallas': [f'jaxlib=={_jaxlib_version}', f'jax=={_jax_version}'],
     },
