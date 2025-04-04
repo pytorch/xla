@@ -104,8 +104,12 @@ for effective memory management with KV cache.
 ## Dependencies
 
 The Pallas integration depends on JAX to function. However, not every
-JAX version is compatible with your installed PyTorch/XLA. PyTorch/XLA therefore
-pins specific versions of JAX in its setup script.
+JAX version is compatible with your installed PyTorch/XLA. To install
+the proper JAX:
+
+``` bash
+pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+```
 
 ## Write your own Pallas kernels
 
