@@ -21,7 +21,6 @@ import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 from torch_xla.distributed.spmd.xla_sharding import ShardingSpec
 import os
-from torch_xla.experimental.deprecation import deprecated
 import torch_xla._internal.utils as _utils
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
@@ -39,15 +38,6 @@ _DEVICE_CONTEXTS_LOCK = threading.Lock()
 XLA_LIB = Library("xla", "DEF")
 
 from . import xla_model as this_module
-
-xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size,
-                            'xrt_world_size() will be removed in release 2.7.')
-get_ordinal = deprecated(
-    this_module, torch_xla.runtime.global_ordinal,
-    'xla_model.get_ordinal() will be removed in release 2.7.')
-parse_xla_device = deprecated(
-    this_module, _utils.parse_xla_device,
-    'xla_model.parse_xla_device() will be removed in release 2.7.')
 
 
 class DeviceContext(object):
