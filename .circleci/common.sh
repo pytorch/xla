@@ -106,10 +106,10 @@ function install_pre_deps_pytorch_xla() {
 }
 
 
+# TODO(https://github.com/pytorch/xla/issues/8934): Remove PyTorch usage of this function, then
+# remove this function from the script.
 function install_post_deps_pytorch_xla() {
-  # Install dependencies after we built torch_xla. This is due to installing
-  # those packages can potentially trigger `pip install torch_xla` if torch_xla
-  # is not detected in the system.
+  true
 }
 
 function build_torch_xla() {
