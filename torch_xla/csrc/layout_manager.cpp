@@ -130,7 +130,7 @@ xla::Shape MakeShapeWithSortedLayout(absl::Span<const int64_t> dimensions,
 xla::Shape* SetDynamicDimensions(xla::Shape* shape,
                                  absl::Span<const bool> dynamic_dimensions) {
   if (!dynamic_dimensions.empty()) {
-    XLA_CHECK_EQ(dynamic_dimensions.size(), shape->rank());
+    XLA_CHECK_EQ(dynamic_dimensions.size(), shape->dimensions_size());
     for (size_t i = 0; i < dynamic_dimensions.size(); ++i) {
       shape->set_dynamic_dimension(i, dynamic_dimensions[i]);
     }

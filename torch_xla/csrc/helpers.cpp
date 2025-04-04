@@ -110,7 +110,7 @@ xla::XlaOp XlaHelpers::CreateReturnValue(
 
 int64_t XlaHelpers::GetDynamicDimension(const xla::Shape& shape) {
   int64_t dynamic_dimension = -1;
-  for (int64_t i = 0; i < shape.rank(); ++i) {
+  for (int64_t i = 0; i < shape.dimensions_size(); ++i) {
     if (shape.is_dynamic_dimension(i)) {
       XLA_CHECK(dynamic_dimension < 0)
           << "Only one dynamic dimension is supported: " << i << " and "
@@ -273,11 +273,12 @@ xla::PrimitiveType XlaHelpers::TypeOfXlaOp(xla::XlaOp op) {
 xla::XlaOp XlaHelpers::ReshapeToRank(xla::XlaOp input, int64_t expected_rank,
                                      int64_t offset) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
-  XLA_CHECK_LE(offset + shape.rank(), expected_rank);
-  if (shape.rank() == expected_rank) {
+  XLA_CHECK_LE(offset + shape.dimensions_size(), expected_rank);
+  if (shape.dimensions_size() == expected_rank) {
     return input;
   }
-  std::vector<int64_t> dimensions(expected_rank - offset - shape.rank(), 1);
+  std::vector<int64_t> dimensions(
+      expected_rank - offset - shape.dimensions_size(), 1);
   dimensions.insert(dimensions.end(), shape.dimensions().begin(),
                     shape.dimensions().end());
   dimensions.insert(dimensions.end(), offset, 1);
@@ -294,7 +295,7 @@ XlaHelpers::GetDynamicReshapeInfo(const xla::Shape& input_shape,
   DynamicReshapeInfo info;
   info.output_shape =
       xla::ShapeUtil::MakeShape(input_shape.element_type(), output_sizes);
-  if (info.output_shape.rank() > 0) {
+  if (info.output_shape.dimensions_size() > 0) {
     int64_t size_prod_until_dyndim = 1;
     for (int64_t i = 0; i <= input_dyndim_idx; ++i) {
       size_prod_until_dyndim *= input_shape.dimensions(i);
@@ -390,7 +391,7 @@ xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
     return xla::Reshape(input, output_sizes);
   }
   const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
-  XLA_CHECK(output_sizes.size() == aux_input_shape.rank())
+  XLA_CHECK(output_sizes.size() == aux_input_shape.dimensions_size())
       << "XlaHelpers::DynamicUnboundedReshape constrainled failed! output size"
          " and aux_input should have same rank.";
 
@@ -430,7 +431,7 @@ bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
 xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
   runtime::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
   *input_shape_tmp = ShapeHelper::ShapeOfXlaOp(input);
-  if (input_shape_tmp->rank() == 1) {
+  if (input_shape_tmp->dimensions_size() == 1) {
     return input;
   }
   int64_t input_elements = xla::ShapeUtil::ElementsIn(*input_shape_tmp);
@@ -444,7 +445,7 @@ xla::XlaOp XlaHelpers::FlattenDimRange(xla::XlaOp input, int64_t start,
 
   std::vector<int64_t> sizes;
   int64_t flat_size = -1;
-  for (int64_t dim = 0; dim < input_shape_tmp->rank(); ++dim) {
+  for (int64_t dim = 0; dim < input_shape_tmp->dimensions_size(); ++dim) {
     if (dim < start || dim >= start + range) {
       if (flat_size >= 0) {
         sizes.push_back(flat_size);
@@ -667,14 +668,16 @@ std::vector<int64_t> XlaHelpers::getBroadcastDimensions(xla::XlaOp op1,
                                                         xla::XlaOp op2) {
   const xla::Shape& shape1 = ShapeHelper::ShapeOfXlaOp(op1);
   const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
-  if (shape1.rank() == 0 || shape2.rank() == 0 ||
-      shape1.rank() == shape2.rank())
+  if (shape1.dimensions_size() == 0 || shape2.dimensions_size() == 0 ||
+      shape1.dimensions_size() == shape2.dimensions_size())
     return {};
 
-  std::vector<int64_t> broadcast_dimensions(
-      shape1.rank() <= shape2.rank() ? shape1.rank() : shape2.rank());
+  std::vector<int64_t> broadcast_dimensions(shape1.dimensions_size() <=
+                                                    shape2.dimensions_size()
+                                                ? shape1.dimensions_size()
+                                                : shape2.dimensions_size());
   std::iota(broadcast_dimensions.begin(), broadcast_dimensions.end(),
-            std::abs(shape1.rank() - shape2.rank()));
+            std::abs(shape1.dimensions_size() - shape2.dimensions_size()));
   return broadcast_dimensions;
 }
 
@@ -892,7 +895,7 @@ xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
     output_dynamic.push_back(aux_input_shape.is_dynamic_dimension(dim));
   }
 
-  for (int dim = 0; dim < input_shape.rank(); dim++) {
+  for (int dim = 0; dim < input_shape.dimensions_size(); dim++) {
     output_dimensions.push_back(input_shape.dimensions(dim));
     output_dynamic.push_back(input_shape.is_dynamic_dimension(dim));
   }
@@ -912,7 +915,7 @@ xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
     }
   }
 
-  for (int dim = 0; dim < input_shape.rank(); dim++) {
+  for (int dim = 0; dim < input_shape.dimensions_size(); dim++) {
     if (input_shape.dimensions(dim) != xla::Shape::kUnboundedSize) {
       get_dim_ops.push_back(
           xla::Reshape(XlaHelpers::ScalarValue<int32_t>(

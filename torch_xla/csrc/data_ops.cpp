@@ -163,7 +163,7 @@ xla::XlaOp SetDimensionSizes(xla::XlaOp input,
 
 xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, int64_t dim) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  XLA_CHECK_LT(dim, input_shape.rank());
+  XLA_CHECK_LT(dim, input_shape.dimensions_size());
   if (input_shape.dimensions(dim) != 1) {
     return input;
   }
@@ -342,7 +342,7 @@ xla::XlaOp BuildUpdateSlice(xla::XlaOp input, xla::XlaOp source,
                               input_shape.element_type());
   }
   xla::XlaOp reshaped_source =
-      XlaHelpers::ReshapeToRank(update_source, input_shape.rank());
+      XlaHelpers::ReshapeToRank(update_source, input_shape.dimensions_size());
   std::vector<xla::XlaOp> start_indices;
   for (auto index : base_indices) {
     start_indices.push_back(
@@ -423,7 +423,7 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, int64_t dim,
   xla::XlaOp pred_zero = xla::Zero(target.builder(), pred_type);
   xla::XlaOp zero = xla::Zero(target.builder(), target_shape.element_type());
   xla::PaddingConfig padding_config;
-  for (int64_t i = 0; i < target_shape.rank(); ++i) {
+  for (int64_t i = 0; i < target_shape.dimensions_size(); ++i) {
     auto* dims = padding_config.add_dimensions();
     if (i == dim) {
       dims->set_edge_padding_low(start);
@@ -448,11 +448,11 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, int64_t dim,
 xla::XlaOp BuildReflectionPad2d(xla::XlaOp input,
                                 absl::Span<const int64_t> padding) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  XLA_CHECK_GE(2 * input_shape.rank(), padding.size());
+  XLA_CHECK_GE(2 * input_shape.dimensions_size(), padding.size());
   XLA_CHECK_EQ(padding.size() % 2, 0) << "Uneven padding: " << padding.size();
   xla::XlaOp result = input;
   for (size_t i = 0; i < padding.size(); i += 2) {
-    int64_t dim = input_shape.rank() - 1 - i / 2;
+    int64_t dim = input_shape.dimensions_size() - 1 - i / 2;
     int64_t dim_size = input_shape.dimensions(dim);
     int64_t lhs_padding = padding[i];
     int64_t rhs_padding = padding[i + 1];
@@ -473,12 +473,12 @@ xla::XlaOp BuildReflectionPadBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                       absl::Span<const int64_t> padding) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   const xla::Shape& grad_output_shape = ShapeHelper::ShapeOfXlaOp(grad_output);
-  XLA_CHECK_GE(2 * grad_output_shape.rank(), padding.size());
+  XLA_CHECK_GE(2 * grad_output_shape.dimensions_size(), padding.size());
   XLA_CHECK_EQ(padding.size() % 2, 0) << "Uneven padding: " << padding.size();
 
   xla::XlaOp grad = grad_output;
   for (size_t i = 0; i < padding.size(); i += 2) {
-    int64_t dim = grad_output_shape.rank() - 1 - i / 2;
+    int64_t dim = grad_output_shape.dimensions_size() - 1 - i / 2;
     int64_t dim_size = grad_output_shape.dimensions(dim);
     int64_t lhs_padding = padding[i];
     int64_t rhs_padding = padding[i + 1];
@@ -511,11 +511,11 @@ xla::XlaOp BuildReflectionPadBackward(xla::XlaOp grad_output, xla::XlaOp input,
 xla::XlaOp BuildReplicationPad(xla::XlaOp input,
                                absl::Span<const int64_t> padding) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  XLA_CHECK_GE(2 * input_shape.rank(), padding.size());
+  XLA_CHECK_GE(2 * input_shape.dimensions_size(), padding.size());
   XLA_CHECK_EQ(padding.size() % 2, 0) << "Uneven padding: " << padding.size();
   xla::XlaOp result = input;
   for (size_t i = 0; i < padding.size(); i += 2) {
-    int64_t dim = input_shape.rank() - 1 - i / 2;
+    int64_t dim = input_shape.dimensions_size() - 1 - i / 2;
     if ((padding[i] != 0 || padding[i + 1] != 0) &&
         input_shape.dimensions(dim) > 0) {
       std::vector<xla::XlaOp> parts;
@@ -542,12 +542,12 @@ xla::XlaOp BuildReplicationPadBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                        absl::Span<const int64_t> padding) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   const xla::Shape& grad_output_shape = ShapeHelper::ShapeOfXlaOp(grad_output);
-  XLA_CHECK_GE(2 * grad_output_shape.rank(), padding.size());
+  XLA_CHECK_GE(2 * grad_output_shape.dimensions_size(), padding.size());
   XLA_CHECK_EQ(padding.size() % 2, 0) << "Uneven padding: " << padding.size();
 
   xla::XlaOp grad = grad_output;
   for (size_t i = 0; i < padding.size(); i += 2) {
-    int64_t dim = grad_output_shape.rank() - 1 - i / 2;
+    int64_t dim = grad_output_shape.dimensions_size() - 1 - i / 2;
     int64_t dim_size = grad_output_shape.dimensions(dim);
     int64_t lhs_padding = padding[i];
     int64_t rhs_padding = padding[i + 1];
@@ -588,7 +588,7 @@ xla::XlaOp PadInDim(xla::XlaOp input, int64_t dim, int64_t pad_lo,
     pad_value = &zero;
   }
   xla::PaddingConfig padding_config;
-  for (int64_t i = 0; i < input_shape.rank(); ++i) {
+  for (int64_t i = 0; i < input_shape.dimensions_size(); ++i) {
     auto* dims = padding_config.add_dimensions();
     dims->set_interior_padding(0);
     if (i == dim) {

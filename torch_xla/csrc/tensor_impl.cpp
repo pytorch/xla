@@ -203,7 +203,7 @@ void XLATensorImpl::SetupSizeProperties() {
 
 void XLATensorImpl::SetupSymSizeProperties() {
   auto shape = tensor_->shape();
-  auto rank = shape.get().rank();
+  auto rank = shape.get().dimensions_size();
   std::vector<c10::SymInt> sym_sizes;
   sym_sizes.reserve(rank);
 

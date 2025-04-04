@@ -30,7 +30,7 @@ XLATensorPtr Cross(const XLATensorPtr& input, const XLATensorPtr& other,
   int64_t canonical_dim;
   if (dim) {
     canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
-        *dim, input->shape().get().rank());
+        *dim, input->shape().get().dimensions_size());
   } else {
     auto input_shape_ref = input->shape();
     auto dim_3_it = std::find((*input_shape_ref).dimensions().begin(),
@@ -42,7 +42,7 @@ XLATensorPtr Cross(const XLATensorPtr& input, const XLATensorPtr& other,
   XLA_CHECK_EQ(input->size(canonical_dim), 3)
       << "Invalid cross argument: dimension " << canonical_dim
       << " does not have size 3";
-  XLA_CHECK_LT(canonical_dim, input->shape().get().rank())
+  XLA_CHECK_LT(canonical_dim, input->shape().get().dimensions_size())
       << "Invalid cross argument: dimension " << canonical_dim
       << " out of range";
   // Extract the slices for each axis.
@@ -95,8 +95,8 @@ XLATensorPtr SmoothL1Loss(const XLATensorPtr& input, const XLATensorPtr& target,
   XLATensorPtr l1_loss = tensor_methods::sub(abs_diff, half_beta, one);
   XLATensorPtr elementwise_loss = tensor_methods::where(
       tensor_methods::lt(abs_diff, beta_scalar), squared_loss, l1_loss);
-  auto all_dimensions =
-      torch::lazy::Iota<int64_t>((*broadcasted_input->shape()).rank());
+  auto all_dimensions = torch::lazy::Iota<int64_t>(
+      (*broadcasted_input->shape()).dimensions_size());
   switch (reduction) {
     case ReductionMode::kNone:
       return elementwise_loss;
@@ -184,7 +184,8 @@ XLATensorPtr SoftplusBackward(const XLATensorPtr& grad_output,
 
 XLATensorPtr Select(const XLATensorPtr& input, int64_t dim, int64_t index) {
   auto shape = input->shape();
-  dim = torch::lazy::GetCanonicalDimensionIndex(dim, shape.get().rank());
+  dim = torch::lazy::GetCanonicalDimensionIndex(dim,
+                                                shape.get().dimensions_size());
   XLATensorPtr result = tensor_methods::narrow(input, dim, index, 1);
   auto new_dims = torch::lazy::DropDimensions(
       torch_xla::runtime::util::ToVector<int64_t>(shape.get().dimensions()),
@@ -201,8 +202,8 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
   auto indices_shape_ref = indices->shape();
   // The weight must be of rank 2, which means the rank of grad_output is one
   // more than the indices.
-  XLA_CHECK_EQ(grad_output->shape().get().rank(),
-               indices_shape_ref.get().rank() + 1);
+  XLA_CHECK_EQ(grad_output->shape().get().dimensions_size(),
+               indices_shape_ref.get().dimensions_size() + 1);
   int64_t numel = xla::ShapeUtil::ElementsIn(indices_shape_ref.get());
   XLATensorPtr grad =
       tensor_methods::view(grad_output, {numel, grad_output->size(-1)});
@@ -244,17 +245,17 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
 
 XLATensorPtr Embedding(const XLATensorPtr& weight,
                        const XLATensorPtr& indices) {
-  XLA_CHECK_EQ(weight->shape().get().rank(), 2);
+  XLA_CHECK_EQ(weight->shape().get().dimensions_size(), 2);
   XLA_CHECK(indices->dtype() == at::ScalarType::Long ||
             indices->dtype() == at::ScalarType::Int);
 
-  if (indices->shape().get().rank() == 1) {
+  if (indices->shape().get().dimensions_size() == 1) {
     return tensor_methods::index_select(weight, 0, indices);
   }
 
   std::vector<int64_t> final_size;
   int64_t num_elements = 1;
-  for (int i = 0; i < indices->shape().get().rank(); i++) {
+  for (int i = 0; i < indices->shape().get().dimensions_size(); i++) {
     int64_t dim = indices->shape().get().dimensions(i);
     final_size.push_back(dim);
     num_elements *= dim;

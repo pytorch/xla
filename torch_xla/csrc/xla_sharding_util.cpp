@@ -210,12 +210,12 @@ ShardingUtil::ShardingType ShardingUtil::GetShardingType(
 
 bool ShardingUtil::EqualShardingSpecs(const XLATensor::ShardingSpec& a,
                                       const XLATensor::ShardingSpec& b) {
-  return xla::protobuf_util::ProtobufEquals(a.sharding, b.sharding);
+  return xla::protobuf_util::HaveSameSerialization(a.sharding, b.sharding);
 }
 
 bool ShardingUtil::EqualOpShardings(const xla::OpSharding& a,
                                     const xla::OpSharding& b) {
-  return xla::protobuf_util::ProtobufEquals(a, b);
+  return xla::protobuf_util::HaveSameSerialization(a, b);
 }
 
 xla::OpSharding ShardingUtil::CreateOpSharding(
@@ -700,8 +700,8 @@ void ShardingUtil::ReshardParameters(
     XLA_CHECK(input_shardings[i].type() != xla::OpSharding::UNKNOWN)
         << "Resharding by UNKNOWN sharding type is not allowed.";
     // Skip re-sharding if not necessary.
-    if (!xla::protobuf_util::ProtobufEquals(data[i]->GetSharding(),
-                                            input_shardings[i])) {
+    if (!xla::protobuf_util::HaveSameSerialization(data[i]->GetSharding(),
+                                                   input_shardings[i])) {
       reshard_indices.push_back(i);
       data_to_reshard.push_back(data[i]);
       shardings_to_reshard.push_back(input_shardings[i]);

@@ -707,7 +707,7 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
 }
 
 std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape) {
-  std::vector<int64_t> strides(shape.rank());
+  std::vector<int64_t> strides(shape.dimensions_size());
   int64_t stride = 1;
   for (auto dim : shape.layout().minor_to_major()) {
     strides[dim] = stride;

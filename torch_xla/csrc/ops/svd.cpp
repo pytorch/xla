@@ -25,17 +25,17 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool some, bool compute_uv) {
     u = xla::Zeros(input.builder(), ShapeHelper::ShapeOfXlaOp(u));
     v = xla::Zeros(input.builder(), ShapeHelper::ShapeOfXlaOp(v));
   } else if (some) {
-    int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
-    int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
-    std::vector<int64_t> base_indices(input_shape.rank(), 0);
+    int64_t m_dim = input_shape.dimensions(input_shape.dimensions_size() - 2);
+    int64_t n_dim = input_shape.dimensions(input_shape.dimensions_size() - 1);
+    std::vector<int64_t> base_indices(input_shape.dimensions_size(), 0);
 
     auto u_sizes = torch::lazy::ToVector<int64_t>(input_shape.dimensions());
-    u_sizes[input_shape.rank() - 1] = std::min(m_dim, n_dim);
+    u_sizes[input_shape.dimensions_size() - 1] = std::min(m_dim, n_dim);
     u = BuildSlice(u, base_indices, u_sizes);
 
     auto v_sizes = torch::lazy::ToVector<int64_t>(input_shape.dimensions());
-    v_sizes[input_shape.rank() - 2] = n_dim;
-    v_sizes[input_shape.rank() - 1] = std::min(m_dim, n_dim);
+    v_sizes[input_shape.dimensions_size() - 2] = n_dim;
+    v_sizes[input_shape.dimensions_size() - 1] = std::min(m_dim, n_dim);
     v = BuildSlice(v, base_indices, v_sizes);
   }
   return {u, svd_result.d, v};
@@ -44,24 +44,26 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool some, bool compute_uv) {
 xla::Shape NodeOutputShape(const torch::lazy::Value& input, bool some,
                            bool compute_uv) {
   const xla::Shape& input_shape = GetXlaShape(input);
-  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  XLA_CHECK_GE(input_shape.dimensions_size(), 2) << input_shape;
   // The input tensor is ...,M,N
-  int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
-  int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
+  int64_t m_dim = input_shape.dimensions(input_shape.dimensions_size() - 2);
+  int64_t n_dim = input_shape.dimensions(input_shape.dimensions_size() - 1);
   xla::Shape ushape(input_shape);
   if (!compute_uv || !some) {
-    ushape.set_dimensions(input_shape.rank() - 1, m_dim);
+    ushape.set_dimensions(input_shape.dimensions_size() - 1, m_dim);
   } else {
-    ushape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
+    ushape.set_dimensions(input_shape.dimensions_size() - 1,
+                          std::min(m_dim, n_dim));
   }
   // D is min(M, N).
   xla::Shape dshape = xla::ShapeUtil::MakeShape(input_shape.element_type(),
                                                 {std::min(m_dim, n_dim)});
   // V is NxN
   xla::Shape vshape(input_shape);
-  vshape.set_dimensions(input_shape.rank() - 2, n_dim);
+  vshape.set_dimensions(input_shape.dimensions_size() - 2, n_dim);
   if (some) {
-    vshape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
+    vshape.set_dimensions(input_shape.dimensions_size() - 1,
+                          std::min(m_dim, n_dim));
   }
   return xla::ShapeUtil::MakeTupleShape({ushape, dshape, vshape});
 }

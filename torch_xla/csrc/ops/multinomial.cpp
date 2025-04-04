@@ -10,7 +10,7 @@ namespace {
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            int64_t num_samples) {
   auto input_shape = GetXlaShape(input);
-  int64_t rank = input_shape.rank();
+  int64_t rank = input_shape.dimensions_size();
   XLA_CHECK(rank == 1 || rank == 2) << "Rank of input must be either 1 or 2";
   if (rank == 2) {
     return xla::ShapeUtil::MakeShape(xla::PrimitiveType::S64,

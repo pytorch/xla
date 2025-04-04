@@ -18,21 +18,23 @@ std::vector<xla::XlaOp> LowerQR(xla::XlaOp input, bool some) {
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input, bool some) {
   const xla::Shape& input_shape = GetXlaShape(input);
-  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  XLA_CHECK_GE(input_shape.dimensions_size(), 2) << input_shape;
   // The input tensor is ..., M, N
-  int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
-  int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
+  int64_t m_dim = input_shape.dimensions(input_shape.dimensions_size() - 2);
+  int64_t n_dim = input_shape.dimensions(input_shape.dimensions_size() - 1);
   xla::Shape qshape(input_shape);
   xla::Shape rshape(input_shape);
   if (!some) {
     // Q is M x M
-    qshape.set_dimensions(input_shape.rank() - 1, m_dim);
+    qshape.set_dimensions(input_shape.dimensions_size() - 1, m_dim);
     // R is M x N, so left unchanged
   } else {
     // Q is M x min(M, N)
-    qshape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
+    qshape.set_dimensions(input_shape.dimensions_size() - 1,
+                          std::min(m_dim, n_dim));
     // R is min(M, N) x N
-    rshape.set_dimensions(input_shape.rank() - 2, std::min(m_dim, n_dim));
+    rshape.set_dimensions(input_shape.dimensions_size() - 2,
+                          std::min(m_dim, n_dim));
   }
   return xla::ShapeUtil::MakeTupleShape({qshape, rshape});
 }

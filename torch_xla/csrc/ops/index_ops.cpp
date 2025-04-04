@@ -144,7 +144,7 @@ std::vector<XLATensorPtr> WrapIndicesOnce(
     int start_dim) {
   std::vector<XLATensorPtr> canonical_indices;
   auto base_shape_ref = base->shape();
-  XLA_CHECK_LE(indices.size(), base_shape_ref.get().rank());
+  XLA_CHECK_LE(indices.size(), base_shape_ref.get().dimensions_size());
   for (size_t dim_idx = 0; dim_idx < indices.size(); ++dim_idx) {
     const XLATensorPtr& dim_index = indices[dim_idx];
     int64_t dim_size = base_shape_ref.get().dimensions(dim_idx + start_dim);
@@ -271,8 +271,8 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
 
 torch::lazy::Value EnsureRank1(const torch::lazy::Value& index) {
   const XlaNode* casted = dynamic_cast<const XlaNode*>(index.node.get());
-  XLA_CHECK_LE(casted->xla_shape().rank(), 1);
-  return casted->xla_shape().rank() == 0
+  XLA_CHECK_LE(casted->xla_shape().dimensions_size(), 1);
+  return casted->xla_shape().dimensions_size() == 0
              ? torch_xla::MakeNode<Expand>(index, std::vector<int64_t>{1})
              : index;
 }
@@ -331,7 +331,8 @@ XLATensorPtr IndexByTensors(const XLATensorPtr& base,
     return GetZeroElementTensor(base, indices, start_dim);
   }
   auto canonical_indices = WrapIndicesOnce(base, indices, start_dim);
-  int64_t indices_rank = canonical_indices.front()->shape().get().rank();
+  int64_t indices_rank =
+      canonical_indices.front()->shape().get().dimensions_size();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single gather.
   XLATensorPtr indices_nd =
@@ -350,7 +351,8 @@ torch::lazy::Value IndexPutByTensors(
     return base->GetIrValue();
   }
   auto canonical_indices = WrapIndicesOnce(base, indices, start_dim);
-  int64_t indices_rank = canonical_indices.front()->shape().get().rank();
+  int64_t indices_rank =
+      canonical_indices.front()->shape().get().dimensions_size();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single scatter.
   XLATensorPtr indices_nd =
@@ -368,7 +370,7 @@ torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
   XLA_CHECK_EQ(index->dtype(), at::ScalarType::Long)
       << "Fill index is expected to be of scalar type Long, but it is "
       << index->dtype();
-  XLA_CHECK_LE(index->shape().get().rank(), 1)
+  XLA_CHECK_LE(index->shape().get().dimensions_size(), 1)
       << "Fill index is supposed to be a vector";
   return IndexFillOp(
       base->GetIrValue(), dim, index->GetIrValue(),
@@ -382,9 +384,9 @@ torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
   XLA_CHECK_EQ(index->dtype(), at::ScalarType::Long)
       << "Fill index is expected to be of scalar type Long, but it is "
       << index->dtype();
-  XLA_CHECK_LE(index->shape().get().rank(), 1)
+  XLA_CHECK_LE(index->shape().get().dimensions_size(), 1)
       << "Fill index is supposed to be a vector";
-  XLA_CHECK_EQ(value->shape().get().rank(), 0)
+  XLA_CHECK_EQ(value->shape().get().dimensions_size(), 0)
       << "Fill only supports a 0-dimensional value tensor";
   return IndexFillOp(base->GetIrValue(), dim, index->GetIrValue(),
                      value->GetIrValue());
@@ -398,7 +400,7 @@ torch::lazy::Value IndexAdd(const XLATensorPtr& base, int64_t dim,
       << "Add index is expected to be of scalar type Long or scalar type Int, "
          "but it is "
       << index->dtype();
-  XLA_CHECK_LE(index->shape().get().rank(), 1)
+  XLA_CHECK_LE(index->shape().get().dimensions_size(), 1)
       << "Add index is supposed to be a vector";
   return IndexAddOp(base->GetIrValue(), dim, index->GetIrValue(),
                     source->GetIrValue());
@@ -410,7 +412,7 @@ torch::lazy::Value IndexCopy(const XLATensorPtr& base, int64_t dim,
   XLA_CHECK_EQ(index->dtype(), at::ScalarType::Long)
       << "Copy index is expected to be of scalar type Long, but it is "
       << index->dtype();
-  XLA_CHECK_LE(index->shape().get().rank(), 1)
+  XLA_CHECK_LE(index->shape().get().dimensions_size(), 1)
       << "Copy index is supposed to be a vector";
   return IndexCopyOp(base->GetIrValue(), dim, index->GetIrValue(),
                      source->GetIrValue());

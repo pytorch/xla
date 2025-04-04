@@ -71,7 +71,7 @@ static xla::XlaOp BuildBroadcastForReducedLogits(xla::XlaOp reduced_logits,
 SoftMaxPartials LogSoftmaxPartials(xla::XlaOp logits, int64_t dim) {
   const xla::Shape& logits_shape = ShapeHelper::ShapeOfXlaOp(logits);
   std::vector<int64_t> broadcast_dimensions =
-      BroadcastDimensions(logits_shape.rank(), dim);
+      BroadcastDimensions(logits_shape.dimensions_size(), dim);
   xla::XlaComputation max_func =
       XlaHelpers::CreateMaxComputation(logits_shape.element_type());
   xla::Literal min_value =
@@ -98,7 +98,7 @@ SoftMaxPartials LogSoftmaxPartials(xla::XlaOp logits, int64_t dim) {
 xla::XlaOp SoftmaxSumOfGrad(xla::XlaOp grad_output, int64_t dim) {
   const xla::Shape& grad_output_shape = ShapeHelper::ShapeOfXlaOp(grad_output);
   auto broadcast_dimensions =
-      BroadcastDimensions(grad_output_shape.rank(), dim);
+      BroadcastDimensions(grad_output_shape.dimensions_size(), dim);
   const auto init_value = XlaHelpers::ScalarValue<float>(
       0, grad_output_shape.element_type(), grad_output.builder());
   return xla::Reduce(
@@ -121,7 +121,7 @@ xla::XlaOp BuildLogSoftmaxGrad(xla::XlaOp grad_output, xla::XlaOp output,
   xla::XlaOp sum = SoftmaxSumOfGrad(grad_output, dim);
   const xla::Shape& grad_output_shape = ShapeHelper::ShapeOfXlaOp(grad_output);
   auto broadcast_dimensions =
-      BroadcastDimensions(grad_output_shape.rank(), dim);
+      BroadcastDimensions(grad_output_shape.dimensions_size(), dim);
   return xla::Sub(grad_output,
                   xla::Mul(xla::Exp(output), sum, broadcast_dimensions));
 }
@@ -143,7 +143,7 @@ xla::XlaOp BuildSoftmaxGrad(xla::XlaOp grad_output, xla::XlaOp output,
   xla::XlaOp sum = SoftmaxSumOfGrad(xla::Mul(grad_output, output), dim);
   const xla::Shape& grad_output_shape = ShapeHelper::ShapeOfXlaOp(grad_output);
   auto broadcast_dimensions =
-      BroadcastDimensions(grad_output_shape.rank(), dim);
+      BroadcastDimensions(grad_output_shape.dimensions_size(), dim);
   return xla::Mul(output, xla::Sub(grad_output, sum, broadcast_dimensions));
 }
 

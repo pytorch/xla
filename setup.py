@@ -66,7 +66,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
 
-_date = '20250320'
+_date = '20250331'
 _libtpu_version = '0.0.12'
 _jax_version = '0.5.4'
 _jaxlib_version = '0.5.4'

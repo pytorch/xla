@@ -12,7 +12,7 @@ namespace {
 
 xla::XlaOp SliceOneToken(xla::XlaOp input) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  int64_t input_rank = input_shape.rank();
+  int64_t input_rank = input_shape.dimensions_size();
   if (input_rank > 0) {
     xla::GatherDimensionNumbers dim_numbers;
     for (int64_t i = 0; i < input_rank; ++i) {

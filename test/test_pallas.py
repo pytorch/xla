@@ -563,8 +563,6 @@ class PallasTest(parameterized.TestCase):
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
 
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
-                   "This test only works on TPUv4+.")
   def test_paged_attention_wrapper(self):
     from torch_xla.experimental.custom_kernel import paged_attention
     from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
@@ -1090,8 +1088,6 @@ class PallasTest(parameterized.TestCase):
           torch.allclose(
               output.cpu(), nonkernel_output.cpu(), atol=1e-2, rtol=1e-2))
 
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() != 4,
-                   "This test only works on TPUv4 and TPUv5p.")
   def test_paged_attention_wrapper_with_megacore_modes(self):
     # TODO: enable checking TPU accelerator types.
     from torch_xla.experimental.custom_kernel import paged_attention
@@ -1160,8 +1156,6 @@ class PallasTest(parameterized.TestCase):
               atol=1e-5,
               rtol=1e-5))
 
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
-                   "This test only works on TPUv4+.")
   def test_paged_attention_wrapper_with_dynamo(self):
     from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
 
@@ -1238,8 +1232,6 @@ class PallasTest(parameterized.TestCase):
               atol=1e-5,
               rtol=1e-5))
 
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
-                   "This test only works on TPUv4+.")
   def test_paged_attention_wrapper_with_attn_logits_soft_cap(self):
     # TODO: enable checking TPU accelerator types.
     from torch_xla.experimental.custom_kernel import paged_attention

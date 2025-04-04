@@ -1480,7 +1480,8 @@ at::Tensor XLANativeFunctions::diagonal_scatter(const at::Tensor& base,
                                                 int64_t dim2) {
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
-  int64_t base_rank = bridge::GetXlaTensor(base)->shape().get().rank();
+  int64_t base_rank =
+      bridge::GetXlaTensor(base)->shape().get().dimensions_size();
   int64_t canonical_dim1 =
       torch::lazy::GetCanonicalDimensionIndex(dim1, base_rank);
   int64_t canonical_dim2 =
@@ -2312,7 +2313,7 @@ at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::mean(
       self_tensor,
-      torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      torch::lazy::Iota<int64_t>(self_tensor->shape().get().dimensions_size()),
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
@@ -2324,7 +2325,8 @@ at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(tensor_methods::mean(
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+          : torch::lazy::Iota<int64_t>(
+                self_tensor->shape().get().dimensions_size()),
       keepdim, dtype));
 }
 
@@ -2850,7 +2852,7 @@ at::Tensor XLANativeFunctions::prod(const at::Tensor& self,
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::prod(
       self_tensor,
-      torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      torch::lazy::Iota<int64_t>(self_tensor->shape().get().dimensions_size()),
       /*keep_reduced_dimensions=*/false,
       PromoteIntegralType(self.scalar_type(), dtype)));
 }
@@ -3309,8 +3311,8 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
   auto mutated_view_tensor_shape = mutated_view_tensor->shape();
   auto common_device = torch_xla::bridge::GetXlaDevice(base);
 
-  dim = torch::lazy::GetCanonicalDimensionIndex(dim,
-                                                base_tensor_shape.get().rank());
+  dim = torch::lazy::GetCanonicalDimensionIndex(
+      dim, base_tensor_shape.get().dimensions_size());
   xla::Shape narrow_shape = base_tensor_shape;
   narrow_shape.set_dimensions(dim, 1);
   torch::lazy::NodePtr mutated_view_tensor_reshaped_node =
@@ -3318,7 +3320,7 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
           mutated_view_tensor->GetIrValue(),
           torch::lazy::ToVector<int64_t>(narrow_shape.dimensions()));
 
-  std::vector<int64_t> indices(base_tensor_shape.get().rank(), 0);
+  std::vector<int64_t> indices(base_tensor_shape.get().dimensions_size(), 0);
   indices[dim] = torch::lazy::GetCanonicalPosition(
       runtime::util::ToVector<int64_t>(base_tensor_shape.get().dimensions()),
       dim, index);
@@ -3374,7 +3376,8 @@ at::Tensor XLANativeFunctions::slice_scatter(
   int64_t end_val = end.has_value() ? end.value() : INT64_MAX;
 
   auto input_shape = base_->shape();
-  dim = torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  dim = torch::lazy::GetCanonicalDimensionIndex(
+      dim, input_shape.get().dimensions_size());
   start_val = torch::lazy::GetCanonicalPosition(
       runtime::util::ToVector<int64_t>(input_shape.get().dimensions()), dim,
       start_val);
@@ -3503,7 +3506,7 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::std(
       self_tensor,
-      torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      torch::lazy::Iota<int64_t>(self_tensor->shape().get().dimensions_size()),
       /*keep_reduced_dimensions=*/false, /*correction=*/unbiased ? 1.0 : 0.0));
 }
 
@@ -3515,7 +3518,8 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(tensor_methods::std(
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+          : torch::lazy::Iota<int64_t>(
+                self_tensor->shape().get().dimensions_size()),
       keepdim, /*correction=*/unbiased ? 1.0 : 0.0));
 }
 
@@ -3528,7 +3532,8 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(tensor_methods::std(
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+          : torch::lazy::Iota<int64_t>(
+                self_tensor->shape().get().dimensions_size()),
       keepdim, correction ? correction->toDouble() : 1.0));
 }
 
@@ -3540,7 +3545,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::std_mean(
   auto results = tensor_methods::std_mean(
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+          : torch::lazy::Iota<int64_t>(
+                self_tensor->shape().get().dimensions_size()),
       correction ? correction->toDouble() : 1.0, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
@@ -3584,7 +3590,7 @@ at::Tensor XLANativeFunctions::sum(const at::Tensor& self,
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::sum(
       self_tensor,
-      torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      torch::lazy::Iota<int64_t>(self_tensor->shape().get().dimensions_size()),
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
@@ -3596,7 +3602,8 @@ at::Tensor XLANativeFunctions::sum(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(tensor_methods::sum(
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+          : torch::lazy::Iota<int64_t>(
+                self_tensor->shape().get().dimensions_size()),
       keepdim, dtype));
 }
 
@@ -3823,7 +3830,7 @@ at::Tensor XLANativeFunctions::var(const at::Tensor& self,
       self_tensor,
       dim ? XlaHelpers::I64List(*dim)
           : torch::lazy::Iota<int64_t>(
-                bridge::GetXlaTensor(self)->shape().get().rank()),
+                bridge::GetXlaTensor(self)->shape().get().dimensions_size()),
       correction ? correction->toDouble() : 1.0, keepdim));
 }
 
@@ -3835,7 +3842,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
   auto results = tensor_methods::var_mean(
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+          : torch::lazy::Iota<int64_t>(
+                self_tensor->shape().get().dimensions_size()),
       correction ? correction->toDouble() : 1.0, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
@@ -3982,7 +3990,7 @@ at::Tensor XLANativeFunctions::_pdist_forward(const at::Tensor& self,
                                               double p) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLA_CHECK(p >= 0) << "p value for the p-norm distance must be >= 0";
-  XLA_CHECK(bridge::GetXlaTensor(self)->shape().get().rank() == 2)
+  XLA_CHECK(bridge::GetXlaTensor(self)->shape().get().dimensions_size() == 2)
       << "pdist only support 2d dimension";
   return bridge::AtenFromXlaTensor(
       tensor_methods::pdist_forward(bridge::GetXlaTensor(self), p));
@@ -4073,7 +4081,7 @@ at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
   std::vector<int64_t> dims;
   if (dim) {
     dims = torch::lazy::GetCanonicalDimensionIndices(
-        {dim.value()}, xla_tensor->shape().get().rank());
+        {dim.value()}, xla_tensor->shape().get().dimensions_size());
   }
   return bridge::AtenFromXlaTensor(
       tensor_methods::count_nonzero(xla_tensor, dims));
@@ -4086,7 +4094,7 @@ at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
 
   std::vector<int64_t> canonical_dims =
       torch::lazy::GetCanonicalDimensionIndices(
-          dim, xla_tensor->shape().get().rank());
+          dim, xla_tensor->shape().get().dimensions_size());
   std::unordered_set<int64_t> dims_set;
   for (int dim : canonical_dims) {
     XLA_CHECK(dims_set.find(dim) == dims_set.end())
@@ -4248,7 +4256,8 @@ at::Tensor XLANativeFunctions::linalg_vector_norm(
   return bridge::AtenFromXlaTensor(tensor_methods::linalg_vector_norm(
       self_tensor, ord,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+          : torch::lazy::Iota<int64_t>(
+                self_tensor->shape().get().dimensions_size()),
       keepdim, dtype));
 }
 

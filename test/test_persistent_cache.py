@@ -93,7 +93,9 @@ def _spmd_sharded_test(tmpdir, metrics):
   _assert_correctness_and_metrics(t, xt, metrics)
 
 
-@absltest.skipUnless(xr.device_type() in {'TPU', 'CUDA', 'NEURON'},
+# Skip CUDA, the on disk cache cannot be deserialized after XLA pin update in
+# #8908
+@absltest.skipUnless(xr.device_type() in {'TPU', 'NEURON'},
                      'Device type does not support persistent caching')
 class PersistentCacheTest(parameterized.TestCase):
   """

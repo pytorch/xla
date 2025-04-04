@@ -125,7 +125,7 @@ class XlaHelpers {
   }
 
   static std::vector<int64_t> GetAllDimensions(const xla::Shape& shape) {
-    return torch::lazy::Iota<int64_t>(shape.rank());
+    return torch::lazy::Iota<int64_t>(shape.dimensions_size());
   }
 
   static xla::XlaOp BroadcastDimensions(xla::XlaOp input,

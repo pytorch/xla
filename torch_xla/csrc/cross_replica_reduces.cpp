@@ -309,7 +309,7 @@ AllGatherResultCoalesced BuildAllGatherCoalesced(
           xla::AllGather(xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
                          dim, shard_count, cc_groups);
     }
-    if (ShapeHelper::ShapeOfXlaOp(all_gather_result).rank() == 0) {
+    if (ShapeHelper::ShapeOfXlaOp(all_gather_result).dimensions_size() == 0) {
       for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
         size_t op_idx = type_ctx.second.indices[i];
         result[op_idx] = xla::GetTupleElement(all_gather_result, i);
@@ -537,7 +537,7 @@ ReduceScatterResultCoalesced BuildReduceScatterCoalesced(
     for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
       size_t op_idx = type_ctx.second.indices[i];
       xla::XlaOp gte;
-      if (ShapeHelper::ShapeOfXlaOp(reduce_result).rank() == 0) {
+      if (ShapeHelper::ShapeOfXlaOp(reduce_result).dimensions_size() == 0) {
         gte = xla::GetTupleElement(reduce_result, i);
       } else {
         gte = reduce_result;

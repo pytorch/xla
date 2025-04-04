@@ -21,7 +21,7 @@ struct WeightScale {
 // This allows the ignored index to be ignored by the one-hot conversion.
 xla::XlaOp OneHotIota(xla::XlaBuilder* builder, int64_t depth, int axis,
                       const xla::Shape& indices_shape, int ignore_index) {
-  int indices_dims = indices_shape.rank();
+  int indices_dims = indices_shape.dimensions_size();
   std::vector<int64_t> linspace_dims(indices_dims + 1, 1);
   linspace_dims[axis] = depth;
   xla::Shape linspace_xla_shape =
@@ -62,7 +62,7 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, int64_t depth, int axis,
 
   // Now compare the labels in index form to the iota tensor to get the one hot
   // format.
-  std::vector<int64_t> broadcast_dims(indices_shape.rank());
+  std::vector<int64_t> broadcast_dims(indices_shape.dimensions_size());
   std::iota(broadcast_dims.begin(), broadcast_dims.begin() + axis, 0);
   std::iota(broadcast_dims.begin() + axis, broadcast_dims.end(), axis + 1);
   xla::XlaOp one_hot_bool = xla::Eq(indices, iota, broadcast_dims);
@@ -88,7 +88,7 @@ WeightScale GetMaskedWeight(xla::XlaOp weight, const xla::Shape& logits_shape,
   }
   xla::XlaOp zeros =
       XlaHelpers::ScalarBroadcast<float>(0.0, logits_shape, labels.builder());
-  std::vector<int64_t> broadcast_dims(labels_shape.rank());
+  std::vector<int64_t> broadcast_dims(labels_shape.dimensions_size());
   std::iota(broadcast_dims.begin(), broadcast_dims.begin() + axis, 0);
   std::iota(broadcast_dims.begin() + axis, broadcast_dims.end(), axis + 1);
   xla::XlaOp xvalid_bitmap = xla::BroadcastInDim(
@@ -171,9 +171,9 @@ xla::XlaOp BuildNllLossBackward(xla::XlaOp grad_output, xla::XlaOp logits,
 
   const xla::Shape& grad_output_shape = ShapeHelper::ShapeOfXlaOp(grad_output);
   xla::XlaOp grad = grad_output;
-  if (grad_output_shape.rank() == 1) {
+  if (grad_output_shape.dimensions_size() == 1) {
     grad = xla::BroadcastInDim(grad, logits_shape.dimensions(), {0});
-  } else if (grad_output_shape.rank() == 3) {
+  } else if (grad_output_shape.dimensions_size() == 3) {
     // nll_loss_2d case
     grad = xla::BroadcastInDim(grad, logits_shape.dimensions(), {0, 2, 3});
   }

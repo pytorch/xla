@@ -161,7 +161,7 @@ auto XLATensor::data() const -> const std::shared_ptr<Data>& {
 
 int64_t XLATensor::size(int64_t dim) const {
   auto xla_shape = shape();
-  int rank = xla_shape.get().rank();
+  int rank = xla_shape.get().dimensions_size();
   int dim_index = torch::lazy::GetCanonicalDimensionIndex(dim, rank);
   return xla_shape.get().dimensions(dim_index);
 }

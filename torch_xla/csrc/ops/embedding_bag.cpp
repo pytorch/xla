@@ -27,17 +27,18 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
   int64_t weight_dim = weight_shape.dimensions(1);
   xla::Shape indices_shape = ShapeHelper::ShapeOfXlaOp(indices);
   int64_t num_embeddings = indices_shape.dimensions(0);
-  XLA_CHECK(indices_shape.rank() == 1 || indices_shape.rank() == 2)
+  XLA_CHECK(indices_shape.dimensions_size() == 1 ||
+            indices_shape.dimensions_size() == 2)
       << "input has to be a 1D or 2D Tensor, but got Tensor of dimension "
-      << indices_shape.rank();
-  if (indices_shape.rank() == 1) {
-    XLA_CHECK(offset_shape.rank() == 1)
+      << indices_shape.dimensions_size();
+  if (indices_shape.dimensions_size() == 1) {
+    XLA_CHECK(offset_shape.dimensions_size() == 1)
         << "offsets has to be a 1D Tensor, but got Tensor of dimension "
-        << offset_shape.rank();
+        << offset_shape.dimensions_size();
   }
-  XLA_CHECK(weight_shape.rank() == 2)
+  XLA_CHECK(weight_shape.dimensions_size() == 2)
       << "weight has to be a 2D Tensor, but got Tensor of dimension "
-      << weight_shape.rank();
+      << weight_shape.dimensions_size();
 
   xla::XlaOp output2 = xla::ZerosLike(indices);
   xla::XlaOp output3 = xla::ZerosLike(offsets);

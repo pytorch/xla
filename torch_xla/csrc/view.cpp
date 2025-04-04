@@ -128,7 +128,7 @@ torch::lazy::Value ApplyUpdate(torch::lazy::Value ir_value,
 ViewInfo::ViewInfo(Type view_type, xla::Shape shape, xla::Shape source_shape)
     : view_type(view_type),
       shape(std::move(shape)),
-      indices(source_shape.rank(), 0),
+      indices(source_shape.dimensions_size(), 0),
       source_shape(std::move(source_shape)) {}
 
 ViewInfo::ViewInfo(Type view_type, xla::Shape source_shape,

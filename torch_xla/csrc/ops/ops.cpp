@@ -253,8 +253,8 @@ torch::lazy::NodePtr LogSoftmaxBackwardOp(const torch::lazy::Value& grad_output,
                                           int64_t dim) {
   return torch_xla::MakeNode<LogSoftmaxBackward>(
       grad_output, output,
-      torch::lazy::GetCanonicalDimensionIndex(dim,
-                                              GetXlaShape(grad_output).rank()));
+      torch::lazy::GetCanonicalDimensionIndex(
+          dim, GetXlaShape(grad_output).dimensions_size()));
 }
 
 torch::lazy::NodePtr SoftmaxBackwardOp(const torch::lazy::Value& grad_output,
@@ -262,8 +262,8 @@ torch::lazy::NodePtr SoftmaxBackwardOp(const torch::lazy::Value& grad_output,
                                        int64_t dim) {
   return torch_xla::MakeNode<SoftmaxBackward>(
       grad_output, output,
-      torch::lazy::GetCanonicalDimensionIndex(dim,
-                                              GetXlaShape(grad_output).rank()));
+      torch::lazy::GetCanonicalDimensionIndex(
+          dim, GetXlaShape(grad_output).dimensions_size()));
 }
 
 torch::lazy::NodePtr Clamp(const torch::lazy::Value& input,
@@ -532,7 +532,8 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
   torch::lazy::ScopePusher ir_scope(at::aten::norm.toQualString());
   auto dimensions = torch::lazy::ToVector<int64_t>(dims);
   if (dimensions.empty()) {
-    dimensions = torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
+    dimensions =
+        torch::lazy::Iota<int64_t>(GetXlaShape(input).dimensions_size());
   }
   if (!p.has_value() || p->toDouble() == 2.0) {
     torch::lazy::NodePtr square = input * input;
@@ -630,9 +631,9 @@ torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
   double ord_value = ord.to<double>();
   auto input_shape = GetXlaShape(input);
   // Handle vector norm of scalars separately.
-  if (input_shape.rank() == 0 && ord_value == 0.0) {
+  if (input_shape.dimensions_size() == 0 && ord_value == 0.0) {
     return ComparisonOp(at::aten::ne, input, ScalarOp(0, input_shape));
-  } else if (input_shape.rank() == 0) {
+  } else if (input_shape.dimensions_size() == 0) {
     return torch_xla::MakeNode<Abs>(input);
   } else if (ord_value == 0.0) {
     torch::lazy::NodePtr ne =
@@ -770,7 +771,7 @@ torch::lazy::NodePtr MaxUnary(const torch::lazy::Value& input) {
         XlaHelpers::ScalarValue(min_max.min, element_type, loctx->builder());
     xla::XlaOp result = xla::Reduce(
         xla_input, init_value, XlaHelpers::CreateMaxComputation(element_type),
-        torch::lazy::Iota<int64_t>(input_shape.rank()));
+        torch::lazy::Iota<int64_t>(input_shape.dimensions_size()));
     return node.ReturnOp(xla::Reshape(result, {}), loctx);
   };
   XLA_CHECK_GT(xla::ShapeUtil::ElementsIn(GetXlaShape(input)), 0);
@@ -791,7 +792,7 @@ torch::lazy::NodePtr MinUnary(const torch::lazy::Value& input) {
         XlaHelpers::ScalarValue(min_max.max, element_type, loctx->builder());
     xla::XlaOp result = xla::Reduce(
         xla_input, init_value, XlaHelpers::CreateMinComputation(element_type),
-        torch::lazy::Iota<int64_t>(input_shape.rank()));
+        torch::lazy::Iota<int64_t>(input_shape.dimensions_size()));
     return node.ReturnOp(xla::Reshape(result, {}), loctx);
   };
   XLA_CHECK_GT(xla::ShapeUtil::ElementsIn(GetXlaShape(input)), 0);
@@ -974,10 +975,10 @@ torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input) {
     const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(xla_input);
     xla::XlaOp zero = xla::Zero(xla_input.builder(), xla::PrimitiveType::S32);
     xla::XlaOp one = xla::One(xla_input.builder(), xla::PrimitiveType::S32);
-    xla::XlaOp zero_dim =
-        xla::TorchIndexSelect(xla_input, zero, input_shape.rank() - 1);
-    xla::XlaOp first_dim =
-        xla::TorchIndexSelect(xla_input, one, input_shape.rank() - 1);
+    xla::XlaOp zero_dim = xla::TorchIndexSelect(
+        xla_input, zero, input_shape.dimensions_size() - 1);
+    xla::XlaOp first_dim = xla::TorchIndexSelect(
+        xla_input, one, input_shape.dimensions_size() - 1);
     return node.ReturnOp(xla::Complex(zero_dim, first_dim), loctx);
   };
 
@@ -995,7 +996,7 @@ torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input) {
     default:
       XLA_ERROR() << "input shape type not supported: " << input_shape;
   }
-  res_shape.DeleteDimension(res_shape.rank() - 1);
+  res_shape.DeleteDimension(res_shape.dimensions_size() - 1);
 
   return GenericOp(torch::lazy::OpKind(at::aten::view_as_complex_copy), {input},
                    res_shape, std::move(lower_fn));
@@ -1008,7 +1009,8 @@ torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input) {
     const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(xla_input);
     xla::XlaOp real = xla::Real(xla_input);
     xla::XlaOp imag = xla::Imag(xla_input);
-    return node.ReturnOp(BuildStack({real, imag}, input_shape.rank()), loctx);
+    return node.ReturnOp(
+        BuildStack({real, imag}, input_shape.dimensions_size()), loctx);
   };
 
   xla::Shape input_shape = GetXlaShape(input);

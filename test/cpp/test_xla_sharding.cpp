@@ -414,11 +414,11 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
   EXPECT_EQ(sharding_specs.size(), 1);
   if (n_devices > 1) {
     // Tiled sharding requires multiple devices.
-    EXPECT_TRUE(
-        xla::protobuf_util::ProtobufEquals(tiled, sharding_specs[0]->sharding));
+    EXPECT_TRUE(xla::protobuf_util::HaveSameSerialization(
+        tiled, sharding_specs[0]->sharding));
   } else {
     // Sincle device execution defaults to replication sharding.
-    EXPECT_TRUE(xla::protobuf_util::ProtobufEquals(
+    EXPECT_TRUE(xla::protobuf_util::HaveSameSerialization(
         xla::HloSharding::Replicate().ToProto(), sharding_specs[0]->sharding));
   }
 
