@@ -146,6 +146,15 @@ function install_gcc10() {
   sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
 }
 
+
+function install_gcc11() {
+  sudo apt-get -y install gcc-11 g++-11
+  export CC=/usr/bin/gcc-11
+  export CXX=/usr/bin/g++-11
+  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
+  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+}
+
 function install_req_packages() {
   sudo apt-get -y install python3-pip git curl libopenblas-dev vim apt-transport-https ca-certificates wget procps
   maybe_install_cuda
@@ -332,7 +341,7 @@ function main() {
   if [[ $(uname -m) == "x86_64" ]]; then
     install_llvm_clang
   elif [[ $(uname -m) == "aarch64" ]]; then
-    install_gcc10
+    install_gcc11
   fi
   install_and_setup_conda
   build_and_install_torch
