@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from typing import overload
 
 from torch_xla.experimental.scan import scan
 
 
-class GRU(nn.Module):
+class GRU(nn.GRU):
   r"""
   PyTorch/XLA GRU implemented using scan.
 
@@ -52,47 +53,24 @@ class GRU(nn.Module):
 
   """
 
+  @overload
   def __init__(self,
-               input_size,
-               hidden_size,
-               num_layers=1,
-               bias=True,
-               dropout=0.0):
-    super().__init__()
+               input_size: int,
+               hidden_size: int,
+               num_layers: int = 1,
+               bias: bool = True,
+               dropout: float = 0.0):
+    pass
 
-    self.input_size = input_size
-    self.hidden_size = hidden_size
-    self.num_layers = num_layers
-    self.bias = bias
-    self.dropout = dropout
+  def __init__(self, *args, **kwargs):
+    assert not kwargs.get('batch_first', False), \
+      "GRU only supports batch_first=False (seq_len, batch, input_size)."
+    assert not kwargs.get('bidirectional', False), \
+      "GRU only supports unidirectional GRU."
+    assert kwargs.get('proj_size', 0) == 0, \
+      "GRU only supports no projection."
 
-    # Create parameters for each layer.
-    # For layer 0, the input dimension is `input_size`, otherwise it's `hidden_size`.
-    self.weight_ih = nn.ParameterList()
-    self.weight_hh = nn.ParameterList()
-    if bias:
-      self.bias_ih = nn.ParameterList()
-      self.bias_hh = nn.ParameterList()
-
-    for layer in range(num_layers):
-      layer_input_size = input_size if layer == 0 else hidden_size
-      # weight_ih: combines weights for reset, update, and new gates.
-      w_ih = nn.Parameter(torch.Tensor(3 * hidden_size, layer_input_size))
-      w_hh = nn.Parameter(torch.Tensor(3 * hidden_size, hidden_size))
-      self.weight_ih.append(w_ih)
-      self.weight_hh.append(w_hh)
-      if bias:
-        b_ih = nn.Parameter(torch.Tensor(3 * hidden_size))
-        b_hh = nn.Parameter(torch.Tensor(3 * hidden_size))
-        self.bias_ih.append(b_ih)
-        self.bias_hh.append(b_hh)
-    self.reset_parameters()
-
-  def reset_parameters(self):
-    # Initialize parameters uniformly as in the upstream PyTorch GRU.
-    stdv = 1.0 / (self.hidden_size**0.5)
-    for weight in self.parameters():
-      weight.data.uniform_(-stdv, stdv)
+    super().__init__(*args, **kwargs)
 
   def forward(self, input, hx=None):
     """
@@ -119,12 +97,12 @@ class GRU(nn.Module):
     for layer in range(self.num_layers):
       init = {
           'h': hx[layer],
-          'w_ih': self.weight_ih[layer],
-          'w_hh': self.weight_hh[layer]
+          'w_ih': getattr(self, f'weight_ih_l{layer}'),
+          'w_hh': getattr(self, f'weight_hh_l{layer}')
       }
       if self.bias:
-        init['b_ih'] = self.bias_ih[layer]
-        init['b_hh'] = self.bias_hh[layer]
+        init['b_ih'] = getattr(self, f'bias_ih_l{layer}', None)
+        init['b_hh'] = getattr(self, f'bias_hh_l{layer}', None)
 
       # Define the step function for scanning over time.
       # x_t: (batch, current_input_size)
@@ -155,15 +133,8 @@ class GRU(nn.Module):
         # Update hidden state
         h_new = (1 - z) * n + z * h
 
-        carry_new = {
-            'h': h_new,
-            'w_ih': w_ih,
-            'w_hh': w_hh,
-        }
-        if b_ih is not None:
-          carry_new['b_ih'] = b_ih
-        if b_hh is not None:
-          carry_new['b_hh'] = b_hh
+        carry_new = {**carry, 'h': h_new}
+
         return carry_new, h_new
 
       # Use scan to iterate over the time dimension.

@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-
 import torch_xla
 from torch_xla.experimental.gru import GRU
 
@@ -27,16 +26,9 @@ class TestGRU(parameterized.TestCase):
         input_size, hidden_size, num_layers=num_layers, bias=bias, dropout=0.0)
 
     # Copy parameters from the upstream GRU to our scan-based GRU.
-    for layer in range(num_layers):
-      scan_gru.weight_ih[layer].data.copy_(
-          getattr(gru, f'weight_ih_l{layer}').data)
-      scan_gru.weight_hh[layer].data.copy_(
-          getattr(gru, f'weight_hh_l{layer}').data)
-      if gru.bias:
-        scan_gru.bias_ih[layer].data.copy_(
-            getattr(gru, f'bias_ih_l{layer}').data)
-        scan_gru.bias_hh[layer].data.copy_(
-            getattr(gru, f'bias_hh_l{layer}').data)
+    # This ensures that the scan-based GRU has the same parameters as the
+    # upstream GRU and both models are parameterized the same way.
+    scan_gru.load_state_dict(gru.state_dict(), strict=True)
 
     return gru, scan_gru
 
@@ -78,7 +70,7 @@ class TestGRU(parameterized.TestCase):
     for layer in range(num_layers):
       for name in params_to_check:
         param1 = getattr(gru, f'{name}_l{layer}')
-        param2 = getattr(scan_gru, name)[layer]
+        param2 = getattr(scan_gru, f'{name}_l{layer}')
         torch.testing.assert_close(
             param1.grad,
             param2.grad,
@@ -87,6 +79,46 @@ class TestGRU(parameterized.TestCase):
             check_device=False,
             atol=atol,
             rtol=rtol)
+
+  def test_scan_gru_and_upstream_gru_parameter_independency(self):
+    """
+    Ensures that the parameters of the scan-based GRU and upstream GRU are independent even the parameters of the scan-based GRU are initialized using the upstream GRU.
+    """
+    input_size, hidden_size, num_layers = 16, 32, 2
+    gru, scan_gru = self.build_models(input_size, hidden_size, num_layers, True)
+    gru = gru.cpu()
+    scan_gru = scan_gru.to('xla')
+    torch_xla.sync()
+
+    with torch.no_grad():
+      gru_weight_ih_l0 = gru.state_dict()['weight_ih_l0']
+      scan_gru_weight_ih_l0 = scan_gru.state_dict()['weight_ih_l0']
+
+      # Compare the parameters of the GRU and scan-based GRU before changing.
+      torch.testing.assert_close(
+          gru_weight_ih_l0,
+          scan_gru_weight_ih_l0,
+          msg=lambda msg: f"weight_ih_l0 mismatch. {msg}",
+          check_device=False)
+
+      # Change the parameters of the GRU with random numbers.
+      gru_weight_ih_l0.uniform_(-1, 1)
+
+      # Assert not close after the change.
+      try:
+        torch.testing.assert_close(
+            gru_weight_ih_l0,
+            scan_gru_weight_ih_l0,
+            msg=lambda msg: f"weight_ih_l0 mismatch. {msg}",
+            check_device=False)
+        raise AssertionError(
+            "weight_ih_l0 should not be close after changing the GRU parameters."
+        )
+      except AssertionError as e:
+        if str(e).startswith("weight_ih_l0 mismatch."):
+          pass
+        else:
+          raise e
 
   @parameterized.parameters(True, False)
   def test_scan_gru_vs_pytorch_xla_for_loop(self, bias):
