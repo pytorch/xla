@@ -7,7 +7,7 @@ manual_versioned_builds = [
   {
     git_tag         = "v2.6.1"
     package_version = "2.6.1"
-    pytorch_git_rev = "v2.6.1"
+    pytorch_git_rev = "v2.6.0"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
@@ -16,7 +16,7 @@ manual_versioned_builds = [
   {
     git_tag         = "v2.6.1"
     package_version = "2.6.1"
-    pytorch_git_rev = "v2.6.1"
+    pytorch_git_rev = "v2.6.0"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
@@ -25,7 +25,7 @@ manual_versioned_builds = [
   {
     git_tag         = "v2.6.1"
     package_version = "2.6.1"
-    pytorch_git_rev = "v2.6.1"
+    pytorch_git_rev = "v2.6.0"
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
@@ -35,7 +35,7 @@ manual_versioned_builds = [
   {
     git_tag         = "v2.6.1"
     package_version = "2.6.1"
-    pytorch_git_rev = "v2.6.1"
+    pytorch_git_rev = "v2.6.0"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
@@ -44,7 +44,7 @@ manual_versioned_builds = [
   {
     git_tag         = "v2.6.1"
     package_version = "2.6.1"
-    pytorch_git_rev = "v2.6.1"
+    pytorch_git_rev = "v2.6.0"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
@@ -53,7 +53,7 @@ manual_versioned_builds = [
   {
     git_tag         = "v2.6.1"
     package_version = "2.6.1"
-    pytorch_git_rev = "v2.6.1"
+    pytorch_git_rev = "v2.6.0"
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
@@ -63,11 +63,12 @@ manual_versioned_builds = [
   {
     git_tag         = "v2.6.1"
     package_version = "2.6.1+libtpu"
-    pytorch_git_rev = "v2.6.1"
+    pytorch_git_rev = "v2.6.0"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "1"
   },
+
   {
     git_tag         = "v2.6.0"
     package_version = "2.6.0"
