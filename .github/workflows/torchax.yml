@@ -1,3 +1,4 @@
+name: torchax
 on:
   pull_request:
     branches:
@@ -14,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  torchxla2-cpu:
+  torchax-cpu:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
