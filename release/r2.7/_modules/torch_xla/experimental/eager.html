@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+gite82231f )
+                  master (2.7.0+gitda7fdca )
                 </div>
               
             
@@ -462,14 +462,6 @@
     <span class="k">yield</span> <span class="n">saved_eager_mode</span>
   <span class="k">finally</span><span class="p">:</span>
     <span class="n">eager_mode</span><span class="p">(</span><span class="n">saved_eager_mode</span><span class="p">)</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
-  <span class="c1"># can&#39;s use deprecated wrapper at import time due to circular dependency</span>
-  <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-      <span class="s1">&#39;torch_xla.experimental.compile is deprecated. Use torch_xla.compile instead.&#39;</span>
-  <span class="p">)</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
 </pre></div>
 
              </article>
