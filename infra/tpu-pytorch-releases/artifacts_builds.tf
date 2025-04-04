@@ -2,9 +2,9 @@
 # Define common configuration parameters for 2.7 release and nightly
 locals {
   tpu_python_versions = ["3.9", "3.10", "3.11"]
-  release_git_tag         = "v2.7.0-rc3"
-  release_package_version = "2.7.0-rc3"
-  release_pytorch_git_rev = "v2.7.0-rc3"
+  release_git_tag         = "v2.7.0-rc4"
+  release_package_version = "2.7.0-rc4"
+  release_pytorch_git_rev = "v2.7.0-rc6"
   nightly_package_version = "2.8.0"
   cuda_versions = {
     "nightly": ["11.8", "12.1", "12.6", "12.8"],
