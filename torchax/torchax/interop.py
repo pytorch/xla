@@ -1,3 +1,4 @@
+import collections
 import copy
 import functools
 import torch
@@ -51,13 +52,29 @@ def set_all_buffers(m, params, buffers):
 
 class JittableModule(torch.nn.Module):
 
-    def __init__(self, m: torch.nn.Module, extra_jit_args={}):
+    def __init__(self, m: torch.nn.Module, extra_jit_args={}, dedup_paramters=True):
         super().__init__()
         self.params, self.buffers = extract_all_buffers(m)
         self._model = m
         self._jitted = {}
 
         self._extra_jit_args = extra_jit_args
+
+        self._extra_dumped_weights = {}
+
+        if dedup_paramters:
+            temp = collections.defaultdict(list)
+            for k, v in self.params.items():
+                temp[id(v)].append(k)
+
+            for v in temp.values():
+                if len(v) > 1:
+                    # duplicated weights with different name
+                    self._extra_dumped_weights[v[0]] = v[1:]
+                    for extra_keys in v[1:]:
+                        del self.params[extra_keys]
+
+
 
 
     def __call__(self, *args, **kwargs):
@@ -69,6 +86,10 @@ class JittableModule(torch.nn.Module):
         kwargs = kwargs or {}
         params_copy = copy.copy(params)
         params_copy.update(buffers)
+        # reinflate the state dict so there are not any missing keys
+        for k, v in self._extra_dumped_weights.items():
+            for new_key in v:
+                params_copy[new_key] = params_copy[k]
         with torch_stateless._reparametrize_module(self._model, params_copy):
             res = getattr(self._model, method_name)(*args, **kwargs)
         return res
@@ -285,9 +306,11 @@ def wrap_jax_jit(torch_function, jax_jit_func=jax.jit, kwargs_for_jax=None):
     return torch_view(jitted)
 
 
-def jax_jit(torch_function, kwargs_for_jax_jit=None):
+def jax_jit(torch_function, kwargs_for_jax_jit=None, fix_for_buffer_donation=False):
     return wrap_jax_jit(torch_function, jax_jit_func=jax.jit,
                         kwargs_for_jax=kwargs_for_jax_jit)
+
+
 
 
 def jax_shard_map(torch_function, kwargs_for_jax_shard_map=None):
