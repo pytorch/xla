@@ -952,6 +952,7 @@ def ragged_paged_attention(
     soft_cap: float | None = None,
     mask_value=None,
     use_kernel=True,
+    max_model_len=2048, # Used as a hint for the kernel block sizes selection
     # kernel tuning parameters
     num_kv_pages_per_block=None,
     num_queries_per_block=None,
@@ -980,9 +981,11 @@ def ragged_paged_attention(
 
   if num_kv_pages_per_block is None:
     assert num_queries_per_block is None
-    token_num = q.shape[0]
-    num_kv_pages_per_block, num_queries_per_block = _get_default_ragged_paged_attention_block_size(
-        token_num)
+    from torch_xla.experimental.tuned_block_sizes import get_ragged_attention_tuned_block_size
+    token_num, q_head_num, _ = q.shape
+    kv_head_num = kv_pages[2] // 2
+    num_kv_pages_per_block, num_queries_per_block = get_ragged_attention_tuned_block_size(
+      q_head_num, kv_head_num, token_num, max_model_len)
 
   if vmem_limit_bytes is None:
     vmem_limit_bytes = 64 * 1024 * 1024
