@@ -84,8 +84,6 @@ import torchax.device_module
 torch._register_device_module('jax', torchax.device_module)
 
 
-
-
 def enable_accuracy_mode():
   jax.config.update('jax_enable_x64', True)
   jax.config.update('jax_default_matmul_precision', 'highest')

@@ -354,11 +354,8 @@ class Environment(contextlib.ContextDecorator):
       from torchax.ops import jaten, jtorch, jc10d, jtorchvision_nms
       self._ops.update(ops_registry.all_aten_ops)
       self._ops.update(ops_registry.all_torch_functions)
-
-      decomps = torch._decomp.core_aten_decompositions()
-      from torchax.decompositions import EXTRA_DECOMP
-      decomps.update(EXTRA_DECOMP)
-      for k, v in decomps.items():
+      from torchax.decompositions import DECOMPOSITIONS
+      for k, v in DECOMPOSITIONS.items():
         if k not in self._ops:
           self._ops[k] = ops_registry.Operator(
             k,

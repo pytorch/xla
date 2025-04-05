@@ -379,9 +379,11 @@ def _aten_t(x):
 @op(torch.ops.aten.transpose)
 @op(torch.ops.aten.transpose_copy)
 def _aten_transpose(x, dim0, dim1):
-  shape = list(range(len(x.shape)))
-  shape[dim0], shape[dim1] = shape[dim1], shape[dim0]
-  return jnp.transpose(x, shape)
+  if x.ndim == 0:
+    return x
+  dim0 = dim0 if dim0 >= 0 else dim0 + x.ndim
+  dim1 = dim1 if dim1 >= 0 else dim1 + x.ndim
+  return jnp.swapaxes(x, dim0, dim1)
 
 
 @op(torch.ops.aten.triu)
@@ -449,12 +451,6 @@ def repeat_interleave(self, repeats, dim=0):
     total_repeat_length = self.shape[dim] * repeats
     repeats = np.array([repeats] * self.shape[dim])
   return jnp.repeat(self, repeats, dim, total_repeat_length=total_repeat_length)
-
-
-# aten.upsample_bilinear2d
-@op(torch.ops.aten.upsample_bilinear2d)
-def _aten_upsample_bilinear2d(x, output_size, align_corners=False, scale_h=None, scale_w=None):
-  return _aten_upsample_bilinear2d_aa(x, output_size=output_size, align_corners=align_corners, scale_factors=None, scales_h=scale_h, scales_w=scale_w)
 
 
 @op(torch.ops.aten.view_as_real)
@@ -987,39 +983,22 @@ def _aten_gelu(self, *, approximate="none"):
 
 @op(torch.ops.aten.squeeze)
 @op(torch.ops.aten.squeeze_copy)
-def _aten_squeeze_dim(self, dim):
-  """Squeezes a Jax tensor by removing a single dimension of size 1.
+def _aten_squeeze_dim(self, dim=None):
+  if self.ndim == 0:
+    return self 
+  if dim is not None:
+    if isinstance(dim, int): 
+      if self.shape[dim] != 1:
+        return self
+      if dim < 0:
+        dim += self.ndim
+    else:
+      # NOTE: torch leaves the dims that is not 1 unchanged,
+      # but jax raises error.
+      dim = [i if i >= 0 else (i + self.ndim)
+             for i in dim if self.shape[i] == 1]
 
-  Args:
-    self: The input tensor.
-    dim: The dimension to squeeze.
-
-  Returns:
-    The squeezed tensor with the specified dimension removed if it is 1,
-    otherwise the original tensor is returned.
-  """
-
-  # Validate input arguments
-  if not isinstance(self, jnp.ndarray):
-    raise TypeError(f"Expected a Jax tensor, got {type(self)}.")
-  if isinstance(dim, int):
-    dim = [dim]
-
-  # Check if the specified dimension has size 1
-  if (len(self.shape) == 0) or all([self.shape[d] != 1 for d in dim]):
-    return self
-
-  # Use slicing to remove the dimension if it is 1
-  new_shape = list(self.shape)
-
-  def fix_dim(p):
-    if p < 0:
-      return p + len(self.shape)
-    return p
-
-  dim = [fix_dim(d) for d in dim]
-  new_shape = [p for i, p in enumerate(self.shape) if i not in dim or p != 1]
-  return self.reshape(new_shape)
+  return jnp.squeeze(self, dim)
 
 @op(torch.ops.aten.bucketize)
 def _aten_bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
