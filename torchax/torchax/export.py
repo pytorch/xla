@@ -83,7 +83,7 @@ def exported_program_to_jax(exported_program, export_raw: bool = False):
   if torch.__version__ >= '2.2':
     # torch version 2.1 didn't expose this yet
     exported_program = exported_program.run_decompositions()
-    exported_program = exported_program.run_decompositions(decompositions.EXTRA_DECOMP)
+    exported_program = exported_program.run_decompositions(decompositions.DECOMPOSITIONS)
   if DEBUG:
     print(exported_program.graph_module.code)
 
