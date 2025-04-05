@@ -915,29 +915,6 @@ def _ragged_paged_attention_nonkernel(
   return torch.cat(outputs, dim=0)
 
 
-def _get_default_ragged_paged_attention_block_size(token_num):
-  tpu_version = torch_xla.tpu.version()
-  if tpu_version < 4:
-    raise NotImplementedError("TPU version must be 4 or higher.")
-  if tpu_version == 4:
-    # This default block size is not tuned, only make sure there's no
-    # OOM in vmem
-    num_kv_pages_per_block = 16
-    num_queries_per_block = 128
-    return num_kv_pages_per_block, num_queries_per_block
-
-  # This heristic is based on the initial kernel micro benchmarking:
-  # When the token_num is small, there's no long request of prefill.
-  # While when it's larger, the block size is adjusted for it.
-  if token_num <= 128:
-    num_kv_pages_per_block = 128
-    num_queries_per_block = 32
-  else:
-    num_kv_pages_per_block = 128
-    num_queries_per_block = 96
-  return num_kv_pages_per_block, num_queries_per_block
-
-
 @requires_jax
 def ragged_paged_attention(
     q,  # [max_num_batched_tokens, num_q_heads, head_dim]
@@ -952,7 +929,7 @@ def ragged_paged_attention(
     soft_cap: float | None = None,
     mask_value=None,
     use_kernel=True,
-    max_model_len=2048, # Used as a hint for the kernel block sizes selection
+    max_model_len=2048,  # Used as a hint for the kernel block sizes selection
     # kernel tuning parameters
     num_kv_pages_per_block=None,
     num_queries_per_block=None,
@@ -985,7 +962,7 @@ def ragged_paged_attention(
     token_num, q_head_num, _ = q.shape
     kv_head_num = kv_pages[2] // 2
     num_kv_pages_per_block, num_queries_per_block = get_ragged_attention_tuned_block_size(
-      q_head_num, kv_head_num, token_num, max_model_len)
+        q_head_num, kv_head_num, token_num, max_model_len)
 
   if vmem_limit_bytes is None:
     vmem_limit_bytes = 64 * 1024 * 1024
