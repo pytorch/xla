@@ -39,11 +39,11 @@ class TestContext(unittest.TestCase):
 
   def test_same_manual_seed(self):
     with xla_env:
-      torch.manual_seed(1234)
+      xla_env.manual_seed(1234)
       x = torch.randn((3, 3))
       self.assertIsInstance(x, tensor.Tensor)
 
-      torch.manual_seed(1234)
+      xla_env.manual_seed(1234)
       y = torch.randn((3, 3))
       self.assertIsInstance(y, tensor.Tensor)
 
@@ -51,11 +51,11 @@ class TestContext(unittest.TestCase):
 
   def test_different_manual_seed(self):
     with xla_env:
-      torch.manual_seed(1234)
+      xla_env.manual_seed(1234)
       x = torch.randn((3, 3))
       self.assertIsInstance(x, tensor.Tensor)
 
-      torch.manual_seed(12345)
+      xla_env.manual_seed(12345)
       y = torch.randn((3, 3))
       self.assertIsInstance(y, tensor.Tensor)
 
