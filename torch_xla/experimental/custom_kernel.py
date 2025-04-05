@@ -9,6 +9,7 @@ import torch_xla
 from torch_xla.distributed.spmd import Mesh
 import torch_xla.distributed.spmd as xs
 from torch_xla._internal.jax_workarounds import requires_jax
+from torch_xla.experimental.tuned_block_sizes import get_ragged_attention_tuned_block_size
 
 # Re-expose this API used that is referenced by docs
 from torch_xla._internal.jax_workarounds import jax_import_guard  # noqa: F401, pylint: disable=unused-import
@@ -958,7 +959,6 @@ def ragged_paged_attention(
 
   if num_kv_pages_per_block is None:
     assert num_queries_per_block is None
-    from torch_xla.experimental.tuned_block_sizes import get_ragged_attention_tuned_block_size
     token_num, q_head_num, _ = q.shape
     kv_head_num = kv_pages[2] // 2
     num_kv_pages_per_block, num_queries_per_block = get_ragged_attention_tuned_block_size(

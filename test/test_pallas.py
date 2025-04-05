@@ -751,12 +751,15 @@ class PallasTest(parameterized.TestCase):
     num_seqs_jax = jnp.array([num_seqs], dtype=jnp.int32)
 
     from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as jax_ragged_paged_attention
-    from torch_xla.experimental.custom_kernel import _get_default_ragged_paged_attention_block_size
+    from torch_xla.experimental.tuned_block_sizes import get_ragged_attention_tuned_block_size
     if num_kv_pages_per_block is None:
       assert num_queries_per_block is None
       token_num = q.shape[0]
-      num_kv_pages_per_block, num_queries_per_block = _get_default_ragged_paged_attention_block_size(
-          token_num)
+      token_num, q_head_num, _ = q.shape
+      kv_head_num = kv_pages[2] // 2
+      max_model_len = 2048
+      num_kv_pages_per_block, num_queries_per_block = get_ragged_attention_tuned_block_size(
+          q_head_num, kv_head_num, token_num, max_model_len)
     jax_kernel_output = torch.from_numpy(
         np.array(
             jax_ragged_paged_attention(
