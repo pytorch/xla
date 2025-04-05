@@ -234,42 +234,42 @@ class SplashAttentionTest(unittest.TestCase):
       torch.testing.assert_close(
           org_grad.cpu(), sa_grad.cpu(), rtol=1e-4, atol=1e-2)
 
-  # @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
-  #                  "This test only works on TPUv3+.")
-  # @with_jax_high_precision
-  # def test_splash_attention_aot_traceable(self):
-  #   from functorch.compile import aot_function, make_boxed_func
+  @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  @with_jax_high_precision
+  def test_splash_attention_aot_traceable(self):
+    from functorch.compile import aot_function, make_boxed_func
 
-  #   def compiler(gm, _):
-  #     return make_boxed_func(gm)
+    def compiler(gm, _):
+      return make_boxed_func(gm)
 
-  #   compiled_splash_attention = aot_function(
-  #       splash_attention, fw_compiler=compiler)
+    compiled_splash_attention = aot_function(
+        splash_attention, fw_compiler=compiler)
 
-  #   q_sa = self.q_sa.clone().detach().requires_grad_(True)
-  #   k_sa = self.k_sa.clone().detach().requires_grad_(True)
-  #   v_sa = self.v_sa.clone().detach().requires_grad_(True)
-  #   segment_ids_sa = self.segment_ids_sa.clone().detach()
-  #   o_sa = compiled_splash_attention(
-  #       q_sa,
-  #       k_sa,
-  #       v_sa,
-  #       self.config.to_json(),
-  #       decoder_segment_ids=segment_ids_sa)
-  #   torch_xla.sync()
-  #   for i in [q_sa, k_sa, v_sa]:
-  #     i.retain_grad()
-  #   loss_sa = torch.sum(o_sa)
-  #   loss_sa.backward()
-  #   torch_xla.sync()
-  #   q_grad_sa, k_grad_sa, v_grad_sa = q_sa.grad, k_sa.grad, v_sa.grad
+    q_sa = self.q_sa.clone().detach().requires_grad_(True)
+    k_sa = self.k_sa.clone().detach().requires_grad_(True)
+    v_sa = self.v_sa.clone().detach().requires_grad_(True)
+    segment_ids_sa = self.segment_ids_sa.clone().detach()
+    o_sa = compiled_splash_attention(
+        q_sa,
+        k_sa,
+        v_sa,
+        self.config.to_json(),
+        decoder_segment_ids=segment_ids_sa)
+    torch_xla.sync()
+    for i in [q_sa, k_sa, v_sa]:
+      i.retain_grad()
+    loss_sa = torch.sum(o_sa)
+    loss_sa.backward()
+    torch_xla.sync()
+    q_grad_sa, k_grad_sa, v_grad_sa = q_sa.grad, k_sa.grad, v_sa.grad
 
-  #   torch.testing.assert_close(self.o.cpu(), o_sa.cpu(), rtol=1e-3, atol=1e-5)
-  #   for org_grad, sa_grad in zip([self.q_grad, self.k_grad, self.v_grad],
-  #                                [q_grad_sa, k_grad_sa, v_grad_sa],
-  #                                strict=False):
-  #     torch.testing.assert_close(
-  #         org_grad.cpu(), sa_grad.cpu(), rtol=1e-4, atol=1e-2)
+    torch.testing.assert_close(self.o.cpu(), o_sa.cpu(), rtol=1e-3, atol=1e-5)
+    for org_grad, sa_grad in zip([self.q_grad, self.k_grad, self.v_grad],
+                                 [q_grad_sa, k_grad_sa, v_grad_sa],
+                                 strict=False):
+      torch.testing.assert_close(
+          org_grad.cpu(), sa_grad.cpu(), rtol=1e-4, atol=1e-2)
 
 
 if __name__ == "__main__":
