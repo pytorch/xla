@@ -131,13 +131,11 @@ class SplashAttentionTest(unittest.TestCase):
     q_sa = q.clone().detach().requires_grad_(True)
     k_sa = k.clone().detach().requires_grad_(True)
     v_sa = v.clone().detach().requires_grad_(True)
-    q_sa.retain_grad()
-    k_sa.retain_grad()
-    v_sa.retain_grad()
-
     # Repeat the kv tensors to match the q tensor heads. This is required for flash
     k = self.maybe_expend_kv(k)
+    k.retain_grad()
     v = self.maybe_expend_kv(v)
+    v.retain_grad()
     torch_xla.sync()
     return q, k, v, q_sa, k_sa, v_sa
 
@@ -165,20 +163,17 @@ class SplashAttentionTest(unittest.TestCase):
 
     o = self._attention(q, k, v, attn_mask=attention_mask)
     torch_xla.sync()
-    for i in [q, k, v]:
-      i.retain_grad()
     loss = torch.sum(o)
     loss.backward()
-    torch_xla.sync()
     q_grad, k_grad, v_grad = q.grad, k.grad, v.grad
+    torch_xla.sync()
 
     o_sa = splash_attention(q_sa, k_sa, v_sa, self.config.to_json())
     torch_xla.sync()
-    [i.retain_grad() for i in [q_sa, k_sa, v_sa]]
     loss_sa = torch.sum(o_sa)
     loss_sa.backward()
-    torch_xla.sync()
     q_grad_sa, k_grad_sa, v_grad_sa = q_sa.grad, k_sa.grad, v_sa.grad
+    torch_xla.sync()
 
     with torch.no_grad():
       k_grad = self.maybe_reduce_kv_grad(k_grad)
@@ -228,13 +223,10 @@ class SplashAttentionTest(unittest.TestCase):
         v_sa,
         self.config.to_json(),
         decoder_segment_ids=segment_ids_sa.to("xla"))
-    torch_xla.sync()
-    for i in [q_sa, k_sa, v_sa]:
-      i.retain_grad()
     loss_sa = torch.sum(o_sa)
     loss_sa.backward()
-    torch_xla.sync()
     q_grad_sa, k_grad_sa, v_grad_sa = q_sa.grad, k_sa.grad, v_sa.grad
+    torch_xla.sync()
     torch.testing.assert_close(self.o.cpu(), o_sa.cpu(), rtol=1e-3, atol=1e-5)
     for org_grad, sa_grad in zip([self.q_grad, self.k_grad, self.v_grad],
                                  [q_grad_sa, k_grad_sa, v_grad_sa],
