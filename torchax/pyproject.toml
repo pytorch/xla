@@ -49,8 +49,8 @@ odml = ["jax[cpu]>=0.4.30", "jax[cpu]"]
 [tool.hatch.build.targets.wheel]
 packages = ["torchax"]
 
-[tool.pytest.ini_options]
-addopts="-n auto"
+#[tool.pytest.ini_options]
+#addopts="-n auto"
 
 [tool.ruff]
 line-length = 80
