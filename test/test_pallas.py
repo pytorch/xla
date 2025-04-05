@@ -678,6 +678,7 @@ class PallasTest(parameterized.TestCase):
           sliding_window=sliding_window,
           soft_cap=soft_cap,
           use_kernel=True,
+          max_model_len=2048,
           num_kv_pages_per_block=num_kv_pages_per_block,
           num_queries_per_block=num_queries_per_block,
       ):
@@ -692,7 +693,7 @@ class PallasTest(parameterized.TestCase):
             sliding_window=sliding_window,
             soft_cap=soft_cap,
             use_kernel=use_kernel,
-            max_model_len=2048,
+            max_model_len=max_model_len,
             num_kv_pages_per_block=num_kv_pages_per_block,
             num_queries_per_block=num_queries_per_block,
         )
