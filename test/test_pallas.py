@@ -692,6 +692,7 @@ class PallasTest(parameterized.TestCase):
             sliding_window=sliding_window,
             soft_cap=soft_cap,
             use_kernel=use_kernel,
+            max_model_len=2048,
             num_kv_pages_per_block=num_kv_pages_per_block,
             num_queries_per_block=num_queries_per_block,
         )
@@ -712,6 +713,7 @@ class PallasTest(parameterized.TestCase):
         sliding_window=sliding_window,
         soft_cap=soft_cap,
         use_kernel=True,
+        max_model_len=2048,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
     )[:cu_q_lens[num_seqs]]
@@ -774,6 +776,7 @@ class PallasTest(parameterized.TestCase):
                 sm_scale=sm_scale,
                 sliding_window=sliding_window,
                 soft_cap=soft_cap,
+                max_model_len=max_model_len,
             )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(dtype)
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 

@@ -1681,7 +1681,7 @@ def non_xla_ragged_paged_attention(q, kv, attention_type):
 XLA_LIB.define(
     "ragged_paged_attention(Tensor q, Tensor kv_pages, Tensor kv_lens, Tensor page_indices, "
     "Tensor cu_q_lens, Tensor num_seqs, float sm_scale=1, int? sliding_window=None, "
-    "float? soft_cap=None, float? mask_value=None, bool use_kernel=True, "
+    "float? soft_cap=None, float? mask_value=None, bool use_kernel=True, int max_model_len=2048,"
     "int? num_kv_pages_per_block=None, int? num_queries_per_block=None, int? vmem_limit_bytes=None) -> Tensor",
 )
 
@@ -1699,6 +1699,7 @@ def ragged_paged_attention_xla(
     soft_cap: float | None = None,
     mask_value=None,
     use_kernel=True,
+    max_model_len=2048,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
     num_queries_per_block=None,
@@ -1734,6 +1735,7 @@ def ragged_paged_attention_non_xla(
     soft_cap: float | None = None,
     mask_value=None,
     use_kernel=True,
+    max_model_len=2048,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
     num_queries_per_block=None,
