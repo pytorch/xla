@@ -776,7 +776,6 @@ class PallasTest(parameterized.TestCase):
                 sm_scale=sm_scale,
                 sliding_window=sliding_window,
                 soft_cap=soft_cap,
-                max_model_len=max_model_len,
             )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(dtype)
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 
