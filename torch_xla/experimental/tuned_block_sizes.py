@@ -1,3 +1,6 @@
+import torch_xla
+
+
 def _next_power_of_2_bit_manipulation(x):
   """
     Finds the smallest power of 2 >= x using bit manipulation.
@@ -60,6 +63,16 @@ _ragged_attention_table = {
 
 def get_ragged_attention_tuned_block_size(q_head_num, kv_head_num, token_num,
                                           max_model_len):
+  tpu_version = torch_xla.tpu.version()
+  if tpu_version < 4:
+    raise NotImplementedError("TPU version must be 4 or higher.")
+  if tpu_version == 4:
+    # This default block size is not tuned, only make sure there's no
+    # OOM in vmem
+    num_kv_pages_per_block = 16
+    num_queries_per_block = 128
+    return num_kv_pages_per_block, num_queries_per_block
+
   key = _simplify_key_ragged_paged_attention(q_head_num, kv_head_num, token_num,
                                              max_model_len)
   block_sizes = _ragged_attention_table.get(key, (128, 32))
