@@ -1717,6 +1717,7 @@ def ragged_paged_attention_xla(
       soft_cap=soft_cap,
       mask_value=mask_value,
       use_kernel=use_kernel,
+      max_model_len=max_model_len,
       num_kv_pages_per_block=num_kv_pages_per_block,
       num_queries_per_block=num_queries_per_block,
       vmem_limit_bytes=vmem_limit_bytes)
