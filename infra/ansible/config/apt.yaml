@@ -35,7 +35,7 @@ apt:
       - git
       - gnupg
       - libgomp1
-      - libopenblas-base
+      - libopenblas-dev
       - patch
       - vim
 
