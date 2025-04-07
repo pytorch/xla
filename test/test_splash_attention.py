@@ -82,7 +82,7 @@ class SplashAttentionTest(unittest.TestCase):
       self.k_grad = self.maybe_reduce_kv_grad(k_grad)
       self.v_grad = self.maybe_reduce_kv_grad(v_grad)
 
-  def maybe_expend_kv(self, hidden_state):
+  def maybe_repeat_kv(self, hidden_state):
     if hidden_state.size(1) == self.NUM_Q_HEADS:
       return hidden_state
     num_kv_group = self.NUM_Q_HEADS // self.NUM_KV_HEADS
@@ -90,7 +90,7 @@ class SplashAttentionTest(unittest.TestCase):
 
   def maybe_reduce_kv_grad(self, hidden_state_grad):
     # For GQA, the kv grad shape is [BATCH_SIZE, NUM_Q_HEADS, SEQ_LEN,
-    # HEAD_DIM]. We need to convert it back to [BATCH_SIZE, NUM_Q_HEADS,
+    # HEAD_DIM]. We need to convert it back to [BATCH_SIZE, NUM_KV_HEADS,
     # SEQ_LEN, HEAD_DIM]. The returned grad should be sum over the kv heads over
     # each group to preserve the magnitude of gradients.
     if hidden_state_grad.size(1) == self.NUM_KV_HEADS:
@@ -132,16 +132,16 @@ class SplashAttentionTest(unittest.TestCase):
     k_sa = k.clone().detach().requires_grad_(True)
     v_sa = v.clone().detach().requires_grad_(True)
     # Repeat the kv tensors to match the q tensor heads. This is required for flash
-    k = self.maybe_expend_kv(k)
+    k = self.maybe_repeat_kv(k)
     k.retain_grad()
-    v = self.maybe_expend_kv(v)
+    v = self.maybe_repeat_kv(v)
     v.retain_grad()
     torch_xla.sync()
     return q, k, v, q_sa, k_sa, v_sa
 
   def _attention(self, q, k, v, *, attn_mask=None, ab=None):
-    k = self.maybe_expend_kv(k)
-    v = self.maybe_expend_kv(v)
+    k = self.maybe_repeat_kv(k)
+    v = self.maybe_repeat_kv(v)
     attn_weight = q @ k.transpose(-2, -1)
     if attn_mask is not None:
       # Masked out the unrelevant parts.

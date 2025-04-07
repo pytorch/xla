@@ -14,7 +14,7 @@ from torch_xla.experimental.custom_kernel import requires_jax
 
 
 @dataclasses.dataclass
-class SplashAttentionConfig:
+class SplashAttentionConfig(eq=True, frozen=True, hash=True):
   ### Splash attention block sizes
   # These can be tuned for specific hardware generations, and can be set up to
   # the model's sequence length.
@@ -31,8 +31,6 @@ class SplashAttentionConfig:
   sa_k_layout: str = "HEAD_DIM_MINOR"
   sa_v_layout: str = "HEAD_DIM_MINOR"
   mesh: str | None = None
-  # Check more rules from MaxText config:
-  # https://github.com/AI-Hypercomputer/maxtext/blob/462087ed90a60485a145e909e047bacc28397f82/MaxText/configs/base.yml#L261.
   qkv_partition_spec: tuple[tuple[str] | str | None] = (
       ("data", "fsdp"),
       None,
@@ -43,8 +41,8 @@ class SplashAttentionConfig:
       ("data", "fsdp"),
       None,
   )
-  AttentionType_LOCAL_SLIDING: bool = False
-  SLIDE_WINDOW_SIZE: int | None = None
+  attentiontype_local_sliding: bool = False
+  slide_window_size: int | None = None
 
   def to_json(self) -> str:
     """Serialize to JSON string"""
@@ -115,7 +113,7 @@ def splash_attention_jax_wrapper(
   )
 
   mesh = config.maybe_convert_and_get_jax_mesh()
-  # input q,k,v shape: [batch, #head, seq_len, kv]
+  # input q,k,v shape: [batch, #head, seq_len, head_dim]
   if decoder_segment_ids is not None and not decoder_segment_ids.shape:
     decoder_segment_ids = None
   if decoder_segment_ids is not None:
@@ -152,21 +150,22 @@ def splash_attention_jax_wrapper(
       check_rep=False,
   )
   def wrap_flash_attention(query, key, value, decoder_segment_ids):
+    seq_len = query.shape[2]
     if decoder_segment_ids is not None:
       assert (
-          query.shape[2] == decoder_segment_ids.q.shape[1]
+          seq_len == decoder_segment_ids.q.shape[1]
       ), "Sharding along sequence dimension not allowed in tpu kernel attention"
     block_sizes = splash_attention_kernel.BlockSizes(
-        block_q=min(global_block_q, query.shape[2]),
+        block_q=min(global_block_q, seq_len),
         block_kv=min(global_block_kv, key.shape[2]),
         block_kv_compute=min(global_block_kv_compute, key.shape[2]),
-        block_q_dkv=min(global_block_q_dkv, query.shape[2]),
+        block_q_dkv=min(global_block_q_dkv, seq_len),
         block_kv_dkv=min(global_block_kv_dkv, key.shape[2]),
-        block_kv_dkv_compute=min(global_block_kv_dkv_compute, query.shape[2]),
+        block_kv_dkv_compute=min(global_block_kv_dkv_compute, seq_len),
         block_q_dq=None if global_use_fused_bwd_kernel else min(
-            global_block_q_dq, query.shape[2]),
+            global_block_q_dq, seq_len),
         block_kv_dq=None if global_use_fused_bwd_kernel else min(
-            global_block_kv_dq, query.shape[2]),
+            global_block_kv_dq, seq_len),
         use_fused_bwd_kernel=global_use_fused_bwd_kernel,
         q_layout=splash_attention_kernel.QKVLayout[global_q_layout],
         k_layout=splash_attention_kernel.QKVLayout[global_k_layout],
@@ -174,16 +173,16 @@ def splash_attention_jax_wrapper(
     )
 
     mask = splash_attention_mask.CausalMask(
-        shape=(query.shape[2], query.shape[2]))
+        shape=(seq_len, seq_len))
 
     # Apply local masking if local sliding attention is enabled.
-    if config.AttentionType_LOCAL_SLIDING:
-      if config.SLIDE_WINDOW_SIZE is None:
+    if config.attentiontype_local_sliding:
+      if config.slide_window_size is None:
         raise ValueError(
             "Sliding_window_size must be set if Local Sliding attention type")
       mask &= splash_attention_mask.LocalMask(
-          shape=(query.shape[2], query.shape[2]),
-          window_size=(config.SLIDE_WINDOW_SIZE, config.SLIDE_WINDOW_SIZE),
+          shape=(seq_len, seq_len),
+          window_size=(config.slide_window_size, config.slide_window_size),
           offset=0,
       )
 
@@ -323,7 +322,7 @@ def sa_custom_forward_fake(
     decoder_segment_ids: torch.Tensor | None,
     attn_logits_soft_cap: float | None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-  # q.shape: batch_size, seq_length, num_heads, kv (head_dim?)
+  # q.shape: batch_size, seq_length, num_heads, head_dim
   return (torch.empty_like(q), None, None)
 
 
@@ -393,5 +392,17 @@ def splash_attention(
     decoder_segment_ids: torch.Tensor | None = None,
     attn_logits_soft_cap: float | None = None,
 ) -> torch.Tensor:
+  """Splash attention function.
+  
+  Args:
+    decoder_segment_ids: Segment ids are a pair of 1D jax.Arrays, one for Q (of
+    size q_seq_len) and one for KV (of size kv_seq_len).  A segment id mask is
+    computed such that only tokens that have the same segment id can attend to
+    each other. This creates a block-sparse pattern along the main diagonal.
+    attn_logits_soft_cap: The soft clipping value for logits pre softmax.
+
+  Returns:
+    The attention output tensor.
+  """
   return SplashAttention.apply(q, k, v, config, decoder_segment_ids,
                                attn_logits_soft_cap)
