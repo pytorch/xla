@@ -678,7 +678,6 @@ class PallasTest(parameterized.TestCase):
           sliding_window=sliding_window,
           soft_cap=soft_cap,
           use_kernel=True,
-          max_model_len=2048,
           num_kv_pages_per_block=num_kv_pages_per_block,
           num_queries_per_block=num_queries_per_block,
       ):
@@ -693,7 +692,6 @@ class PallasTest(parameterized.TestCase):
             sliding_window=sliding_window,
             soft_cap=soft_cap,
             use_kernel=use_kernel,
-            max_model_len=max_model_len,
             num_kv_pages_per_block=num_kv_pages_per_block,
             num_queries_per_block=num_queries_per_block,
         )
@@ -714,7 +712,6 @@ class PallasTest(parameterized.TestCase):
         sliding_window=sliding_window,
         soft_cap=soft_cap,
         use_kernel=True,
-        max_model_len=2048,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
     )[:cu_q_lens[num_seqs]]
@@ -755,14 +752,15 @@ class PallasTest(parameterized.TestCase):
 
     from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as jax_ragged_paged_attention
     from torch_xla.experimental.tuned_block_sizes import get_ragged_attention_tuned_block_size
-    max_model_len = 2048
     if num_kv_pages_per_block is None:
       assert num_queries_per_block is None
-      token_num = q.shape[0]
       token_num, q_head_num, _ = q.shape
-      kv_head_num = kv_pages[2] // 2
+      _, page_size, num_combined_kv_heads, _ = kv_pages.shape
+      _, pages_per_seq = page_indices.shape
+      num_kv_heads = num_combined_kv_heads // 2
+      max_model_len = pages_per_seq * page_size
       num_kv_pages_per_block, num_queries_per_block = get_ragged_attention_tuned_block_size(
-          q_head_num, kv_head_num, token_num, max_model_len)
+          q_head_num, num_kv_heads, token_num, max_model_len)
     jax_kernel_output = torch.from_numpy(
         np.array(
             jax_ragged_paged_attention(
