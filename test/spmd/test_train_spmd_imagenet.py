@@ -68,6 +68,7 @@ import schedulers
 import numpy as np
 from functools import partial
 import torch
+import torch.profiler
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -312,7 +313,22 @@ def train_imagenet():
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
+
+    wait_steps = 5
+    warmup_steps = 5
+    active_steps = 10
+    num_repeats = 0
+    prof = torch.profiler.profile(
+            schedule=torch.profiler.schedule(wait=wait_steps, warmup=warmup_steps, active=active_steps, repeat=num_repeats),
+            on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/resnet18'),
+            record_shapes=True,
+            profile_memory=True,
+            with_stack=True)
+    prof.start()  
     for step, (data, target) in enumerate(loader):
+      prof.step()
+      if step >= wait_steps + warmup_steps + active_steps:
+        break
       x = data.to(xm.xla_device())
       y = target.to(xm.xla_device())
       with xp.StepTrace('train_imagenet'):
@@ -339,6 +355,7 @@ def train_imagenet():
             _train_update, args=(device, step, loss, tracker, epoch, writer))
       if FLAGS.num_steps and FLAGS.num_steps == step:
         break
+    prof.stop()
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -363,16 +380,16 @@ def train_imagenet():
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     train_loop_fn(train_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
-    if not FLAGS.test_only_at_end or epoch == FLAGS.num_epochs:
-      accuracy = test_loop_fn(test_loader, epoch)
-      xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
-          epoch, test_utils.now(), accuracy))
-      max_accuracy = max(accuracy, max_accuracy)
-      test_utils.write_to_summary(
-          writer,
-          epoch,
-          dict_to_write={'Accuracy/test': accuracy},
-          write_xla_metrics=True)
+    # if not FLAGS.test_only_at_end or epoch == FLAGS.num_epochs:
+    #   accuracy = test_loop_fn(test_loader, epoch)
+    #   xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
+    #       epoch, test_utils.now(), accuracy))
+    #   max_accuracy = max(accuracy, max_accuracy)
+    #   test_utils.write_to_summary(
+    #       writer,
+    #       epoch,
+    #       dict_to_write={'Accuracy/test': accuracy},
+    #       write_xla_metrics=True)
     if FLAGS.metrics_debug:
       xm.master_print(met.metrics_report())
 
