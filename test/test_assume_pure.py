@@ -3,8 +3,8 @@ from absl.testing import absltest
 import torch
 import torch.nn as nn
 import torch_xla
-from torch_xla.experimental.assume_pure import assume_pure
 import torch_xla.core.xla_builder as xb
+from torch_xla.experimental.assume_pure import assume_pure
 from torch_xla._internal.jax_workarounds import jax_import_guard
 
 
@@ -29,7 +29,6 @@ def assert_gradients_close(test_case, tensor1, tensor2):
 class TestJaxInterop(absltest.TestCase):
 
   def setUp(self):
-    # Ensure we're using the XLA device for tests
     self.device = torch_xla.device()
 
   def test_assume_pure_basic(self):
@@ -90,135 +89,116 @@ class TestJaxInterop(absltest.TestCase):
   def test_assume_pure_matmul_grads(self):
     """Tests matmul with all inputs requiring gradients."""
 
-    # Define original and decorated functions
-    def original_matmul(a, b):
-      return a @ b
-
-    @assume_pure
-    def decorated_matmul(a, b):
-      # Note: The function wrapped by assume_pure should ideally use torch ops
-      # that have XLA lowering support for efficiency, which matmul does.
+    def matmul_fn(a, b):
       return a @ b
 
     # Prepare inputs (cloned for independent grad computation)
     a_orig = torch.randn(4, 5, device=self.device, requires_grad=True)
     b_orig = torch.randn(5, 3, device=self.device, requires_grad=True)
-    a_dec = a_orig.clone().detach().requires_grad_(True)
-    b_dec = b_orig.clone().detach().requires_grad_(True)
+    a_pure = a_orig.clone().detach().requires_grad_(True)
+    b_pure = b_orig.clone().detach().requires_grad_(True)
 
-    # --- Forward Pass ---
-    output_orig = original_matmul(a_orig, b_orig)
-    output_dec = decorated_matmul(a_dec, b_dec)
+    # Forward pass
+    output_orig = matmul_fn(a_orig, b_orig)
+    output_pure = assume_pure(matmul_fn)(a_pure, b_pure)
 
     # Check forward pass equivalence
     torch.testing.assert_close(
         output_orig,
-        output_dec,
+        output_pure,
         msg="Forward outputs do not match",
         check_device=False)
 
-    # --- Backward Pass ---
+    # Backward pass
     loss_orig = output_orig.sum()
-    loss_dec = output_dec.sum()
+    loss_pure = output_pure.sum()
 
     loss_orig.backward()
-    loss_dec.backward()
+    loss_pure.backward()
     torch_xla.sync()  # Use mark_step or sync to ensure computations complete
 
     # Check gradients
-    assert_gradients_close(self, a_orig, a_dec)
-    assert_gradients_close(self, b_orig, b_dec)
+    assert_gradients_close(self, a_orig, a_pure)
+    assert_gradients_close(self, b_orig, b_pure)
 
   def test_assume_pure_einsum_grads(self):
     """Tests einsum with all inputs requiring gradients."""
 
-    def original_einsum(x, y):
-      return torch.einsum('bij,bjk->bik', x, y)
-
-    @assume_pure
-    def decorated_einsum(x, y):
+    def einsum_fn(x, y):
       return torch.einsum('bij,bjk->bik', x, y)
 
     # Prepare inputs
     x_orig = torch.randn(2, 3, 4, device=self.device, requires_grad=True)
     y_orig = torch.randn(2, 4, 5, device=self.device, requires_grad=True)
-    x_dec = x_orig.clone().detach().requires_grad_(True)
-    y_dec = y_orig.clone().detach().requires_grad_(True)
+    x_pure = x_orig.clone().detach().requires_grad_(True)
+    y_pure = y_orig.clone().detach().requires_grad_(True)
 
-    # --- Forward Pass ---
-    output_orig = original_einsum(x_orig, y_orig)
-    output_dec = decorated_einsum(x_dec, y_dec)
+    # Forward pass
+    output_orig = einsum_fn(x_orig, y_orig)
+    output_pure = assume_pure(einsum_fn)(x_pure, y_pure)
     torch.testing.assert_close(
         output_orig,
-        output_dec,
+        output_pure,
         msg=lambda msg: f"Forward outputs do not match: {msg}",
         check_device=False)
 
-    # --- Backward Pass ---
+    # Backward pass
     output_orig.sum().backward()
-    output_dec.sum().backward()
+    output_pure.sum().backward()
     torch_xla.sync()
 
     # Check gradients
-    assert_gradients_close(self, x_orig, x_dec)
-    assert_gradients_close(self, y_orig, y_dec)
+    assert_gradients_close(self, x_orig, x_pure)
+    assert_gradients_close(self, y_orig, y_pure)
 
   def test_assume_pure_partial_grads_args(self):
     """Tests a function where only some positional inputs require gradients."""
 
-    def original_func(a, b, c):  # a, c require grad; b does not
-      return a * torch.tanh(b) + c**2
-
-    @assume_pure
-    def decorated_func(a, b, c):
+    def fn(a, b, c):  # a, c require grad; b does not
       return a * torch.tanh(b) + c**2
 
     # Prepare inputs
     torch_xla.manual_seed(42)
-    a_orig = torch.randn(
-        3, 3, device=self.device, requires_grad=True, dtype=torch.bfloat16)
-    b_orig = torch.randn(
-        3, 3, device=self.device, requires_grad=False,
-        dtype=torch.bfloat16)  # No grad for b
-    c_orig = torch.randn(
-        3, 3, device=self.device, requires_grad=True, dtype=torch.bfloat16)
+    a_orig = torch.randn(3, 3, device=self.device, requires_grad=True)
+    # No grad for b
+    b_orig = torch.randn(3, 3, device=self.device, requires_grad=False)
+    c_orig = torch.randn(3, 3, device=self.device, requires_grad=True)
 
-    a_dec = a_orig.clone().detach().requires_grad_(True)
-    b_dec = b_orig.clone().detach().requires_grad_(False)  # Match requires_grad
-    c_dec = c_orig.clone().detach().requires_grad_(True)
+    a_pure = a_orig.clone().detach().requires_grad_(True)
+    # Matching requires_grad
+    b_pure = b_orig.clone().detach().requires_grad_(False)
+    c_pure = c_orig.clone().detach().requires_grad_(True)
 
-    # --- Forward Pass ---
-    output_orig = original_func(a_orig, b_orig, c_orig)
-    output_dec = decorated_func(a_dec, b_dec, c_dec)
+    # Forward pass
+    output_orig = fn(a_orig, b_orig, c_orig)
+    output_pure = assume_pure(fn)(a_pure, b_pure, c_pure)
     torch.testing.assert_close(
         output_orig,
-        output_dec,
+        output_pure,
         msg="Forward outputs do not match",
         check_device=False)
 
-    # --- Backward Pass ---
+    # Backward pass
     output_orig.sum().backward()
-    output_dec.sum().backward()
+    output_pure.sum().backward()
     torch_xla.sync()
 
     # Check gradients
-    assert_gradients_close(self, a_orig, a_dec)
-    assert_gradients_close(self, b_orig, b_dec)  # Should both be None
-    assert_gradients_close(self, c_orig, c_dec)
+    assert_gradients_close(self, a_orig, a_pure)
+    assert_gradients_close(self, b_orig, b_pure)
+    assert_gradients_close(self, c_orig, c_pure)
 
+    self.assertIsNotNone(a_orig.grad, "a_orig should have grad")
     self.assertIsNone(b_orig.grad, "b_orig should not have grad")
-    self.assertIsNone(b_dec.grad, "b_dec should not have grad")
+    self.assertIsNone(b_pure.grad, "b_pure should not have grad")
+    self.assertIsNotNone(c_orig.grad, "a_orig should have grad")
 
   def test_assume_pure_partial_grads_kwargs(self):
     """Tests a function where inputs requiring gradients are passed via kwargs."""
 
-    def original_func(x, *, factor,
-                      bias):  # x, bias require grad; factor does not
+    def fn(x, *, factor, bias):
+      # x, bias require grad; factor does not
       # factor is a non-tensor kwarg, bias is a tensor kwarg
-      return x * factor + bias
-
-    @assume_pure
-    def decorated_func(x, *, factor, bias):
       return x * factor + bias
 
     # Prepare inputs
@@ -226,26 +206,26 @@ class TestJaxInterop(absltest.TestCase):
     bias_orig = torch.randn(3, 3, device=self.device, requires_grad=True)
     factor_val = 2.5  # Non-tensor kwarg
 
-    x_dec = x_orig.clone().detach().requires_grad_(True)
-    bias_dec = bias_orig.clone().detach().requires_grad_(True)
+    x_pure = x_orig.clone().detach().requires_grad_(True)
+    bias_pure = bias_orig.clone().detach().requires_grad_(True)
 
-    # --- Forward Pass ---
-    output_orig = original_func(x_orig, factor=factor_val, bias=bias_orig)
-    output_dec = decorated_func(x_dec, factor=factor_val, bias=bias_dec)
+    # Forward pass
+    output_orig = fn(x_orig, factor=factor_val, bias=bias_orig)
+    output_pure = assume_pure(fn)(x_pure, factor=factor_val, bias=bias_pure)
     torch.testing.assert_close(
         output_orig,
-        output_dec,
+        output_pure,
         msg="Forward outputs do not match",
         check_device=False)
 
-    # --- Backward Pass ---
+    # Backward pass
     output_orig.sum().backward()
-    output_dec.sum().backward()
+    output_pure.sum().backward()
     torch_xla.sync()
 
     # Check gradients
-    assert_gradients_close(self, x_orig, x_dec)
-    assert_gradients_close(self, bias_orig, bias_dec)
+    assert_gradients_close(self, x_orig, x_pure)
+    assert_gradients_close(self, bias_orig, bias_pure)
     # Factor is not a tensor, so it won't have a .grad attribute
 
   def test_assume_pure_no_grads_needed(self):
@@ -254,35 +234,27 @@ class TestJaxInterop(absltest.TestCase):
     def original_func(a, b):
       return torch.cos(a) + torch.sin(b)
 
-    @assume_pure
-    def decorated_func(a, b):
-      return torch.cos(a) + torch.sin(b)
-
     # Prepare inputs
     a_orig = torch.randn(3, 3, device=self.device, requires_grad=False)
     b_orig = torch.randn(3, 3, device=self.device, requires_grad=False)
-    a_dec = a_orig.clone().detach().requires_grad_(False)
-    b_dec = b_orig.clone().detach().requires_grad_(False)
+    a_pure = a_orig.clone().detach().requires_grad_(False)
+    b_pure = b_orig.clone().detach().requires_grad_(False)
 
-    # --- Forward Pass ---
+    # Forward pass
     output_orig = original_func(a_orig, b_orig)
-    output_dec = decorated_func(a_dec, b_dec)
+    output_pure = assume_pure(original_func)(a_pure, b_pure)
     torch.testing.assert_close(
         output_orig,
-        output_dec,
+        output_pure,
         msg="Forward outputs do not match",
         check_device=False)
 
-    # --- Backward Pass (Optional Check) ---
-    # Cannot call backward if output doesn't require grad
     self.assertFalse(output_orig.requires_grad)
-    self.assertFalse(output_dec.requires_grad)
-
-    # Explicitly check grads are None
+    self.assertFalse(output_pure.requires_grad)
     self.assertIsNone(a_orig.grad)
     self.assertIsNone(b_orig.grad)
-    self.assertIsNone(a_dec.grad)
-    self.assertIsNone(b_dec.grad)
+    self.assertIsNone(a_pure.grad)
+    self.assertIsNone(b_pure.grad)
 
 
 if __name__ == "__main__":
