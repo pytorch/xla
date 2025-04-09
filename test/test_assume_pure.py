@@ -87,8 +87,7 @@ class TestJaxInterop(absltest.TestCase):
     orig_params = dict(orig_model.named_parameters())
     pure_model = deepcopy(orig_model)
     pure_params = dict(pure_model.named_parameters())
-    orig_x = torch.ones((5, 3, 3, 3), device='xla',
-                        requires_grad=True).to('xla')
+    orig_x = torch.ones((5, 3, 3, 3), device='xla', requires_grad=True)
     pure_x = orig_x.clone().detach().requires_grad_(True)
     torch_xla.sync()
 
