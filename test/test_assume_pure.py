@@ -1,3 +1,4 @@
+from copy import deepcopy
 from absl.testing import absltest
 
 import torch
@@ -60,6 +61,57 @@ class TestJaxInterop(absltest.TestCase):
 
     torch.testing.assert_close(
         o, model(torch.ones(3, 3).to('xla')), check_device=False)
+
+  def test_assume_pure_complex_module(self):
+    # Define a module comprising of some linear, conv, and relu layers
+    class MyModule(nn.Module):
+
+      def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(3, 3)
+        self.conv = nn.Conv2d(3, 3, kernel_size=(3, 3), stride=(1, 1))
+        self.relu = nn.ReLU()
+        self.flatten = nn.Flatten()
+        self.fc = nn.Linear(3, 3)
+
+      def forward(self, x):
+        x = self.linear(x)
+        x = self.conv(x)
+        x = self.relu(x)
+        x = self.flatten(x)
+        x = self.fc(x)
+        return x
+
+    # Prepare inputs
+    orig_model = MyModule().to('xla')
+    orig_params = dict(orig_model.named_parameters())
+    pure_model = deepcopy(orig_model)
+    pure_params = dict(pure_model.named_parameters())
+    orig_x = torch.ones((5, 3, 3, 3), device='xla',
+                        requires_grad=True).to('xla')
+    pure_x = orig_x.clone().detach().requires_grad_(True)
+    torch_xla.sync()
+
+    # Call module in a pure way.
+    def pure_call(params, x):
+      return torch.func.functional_call(pure_model, params, x)
+
+    orig_output = orig_model(orig_x)
+    pure_output = assume_pure(pure_call)(pure_params, pure_x)
+    torch_xla.sync()
+
+    # Check that the outputs are close
+    torch.testing.assert_close(orig_output, pure_output, check_device=False)
+
+    # Check that the gradients are close
+    orig_output.sum().backward()
+    pure_output.sum().backward()
+    torch_xla.sync()
+    assert_gradients_close(self, orig_x, pure_x)
+    for name, _ in orig_model.named_parameters():
+      orig_param = orig_params[name]
+      pure_param = pure_params[name]
+      assert_gradients_close(self, orig_param, pure_param)
 
   def test_assume_pure_avoid_retracing_avoid_rejit(self):
     starting_lowerings = xb._jax_to_hlo_cache_num_misses()
