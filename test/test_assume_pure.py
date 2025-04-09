@@ -2,9 +2,8 @@ from absl.testing import absltest
 
 import torch
 import torch.nn as nn
-import torch_xla  # Required for XLA device and sync
+import torch_xla
 from torch_xla.experimental.assume_pure import assume_pure
-import torch_xla.core.xla_model as xm  # For xm.xla_device() and xm.mark_step() / sync()
 import torch_xla.core.xla_builder as xb
 from torch_xla._internal.jax_workarounds import jax_import_guard
 
@@ -20,11 +19,9 @@ def assert_gradients_close(test_case, tensor1, tensor2):
         f"Gradient mismatch: one is None, the other is not. Grad1: {grad1}, Grad2: {grad2}"
     )
   else:
-    # Use xm.save / xm.load if tensors might be on different devices after grad computation,
-    # though typically they should stay on XLA. assert_close handles this check_device=False.
     torch.testing.assert_close(
-        grad1,
-        grad2,
+        grad1.detach(),
+        grad2.detach(),
         msg=lambda s: f"Gradients do not match {s}",
         check_device=False)
 
@@ -33,7 +30,7 @@ class TestJaxInterop(absltest.TestCase):
 
   def setUp(self):
     # Ensure we're using the XLA device for tests
-    self.device = xm.xla_device()
+    self.device = torch_xla.device()
 
   def test_assume_pure_basic(self):
 
@@ -126,7 +123,7 @@ class TestJaxInterop(absltest.TestCase):
 
     loss_orig.backward()
     loss_dec.backward()
-    xm.mark_step()  # Use mark_step or sync to ensure computations complete
+    torch_xla.sync()  # Use mark_step or sync to ensure computations complete
 
     # Check gradients
     assert_gradients_close(self, a_orig, a_dec)
@@ -154,13 +151,13 @@ class TestJaxInterop(absltest.TestCase):
     torch.testing.assert_close(
         output_orig,
         output_dec,
-        msg="Forward outputs do not match",
+        msg=lambda msg: f"Forward outputs do not match: {msg}",
         check_device=False)
 
     # --- Backward Pass ---
     output_orig.sum().backward()
     output_dec.sum().backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     # Check gradients
     assert_gradients_close(self, x_orig, x_dec)
@@ -202,7 +199,7 @@ class TestJaxInterop(absltest.TestCase):
     # --- Backward Pass ---
     output_orig.sum().backward()
     output_dec.sum().backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     # Check gradients
     assert_gradients_close(self, a_orig, a_dec)
@@ -244,7 +241,7 @@ class TestJaxInterop(absltest.TestCase):
     # --- Backward Pass ---
     output_orig.sum().backward()
     output_dec.sum().backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     # Check gradients
     assert_gradients_close(self, x_orig, x_dec)
@@ -289,8 +286,9 @@ class TestJaxInterop(absltest.TestCase):
 
 
 if __name__ == "__main__":
-  torch.set_default_dtype(torch.float32)
+  torch.set_default_dtype(torch.bfloat16)
   torch.manual_seed(42)
+  torch_xla.manual_seed(42)
   torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   jax_import_guard()
   import torchax
