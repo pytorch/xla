@@ -27,7 +27,7 @@ def assert_gradients_close(test_case, tensor1, tensor2):
         check_device=False)
 
 
-class TestJaxInterop(absltest.TestCase):
+class TestAssumePure(absltest.TestCase):
 
   def setUp(self):
     self.device = torch_xla.device()
@@ -63,31 +63,36 @@ class TestJaxInterop(absltest.TestCase):
         o, model(torch.ones(3, 3).to('xla')), check_device=False)
 
   def test_assume_pure_complex_module(self):
-    # Define a module comprising of some linear, conv, and relu layers
+    """Test a module comprising of some linear, conv, and relu layers."""
+
     class MyModule(nn.Module):
 
       def __init__(self):
         super().__init__()
-        self.linear = nn.Linear(3, 3)
-        self.conv = nn.Conv2d(3, 3, kernel_size=(3, 3), stride=(1, 1))
+        self.linear = nn.Linear(9, 9)
+        self.conv = nn.Conv2d(3, 3, kernel_size=(3, 3), padding=(1, 1))
+        self.layer_norm = nn.LayerNorm(9)
         self.relu = nn.ReLU()
         self.flatten = nn.Flatten()
-        self.fc = nn.Linear(3, 3)
+        self.fc = nn.Linear(9 * 9 * 3, 3)
 
       def forward(self, x):
         x = self.linear(x)
         x = self.conv(x)
+        x = self.layer_norm(x)
         x = self.relu(x)
         x = self.flatten(x)
         x = self.fc(x)
         return x
 
     # Prepare inputs
-    orig_model = MyModule().to('xla')
-    orig_params = dict(orig_model.named_parameters())
+    orig_model = MyModule()
     pure_model = deepcopy(orig_model)
+    orig_model = orig_model.to('xla')
+    pure_model = pure_model.to('xla')
+    orig_params = dict(orig_model.named_parameters())
     pure_params = dict(pure_model.named_parameters())
-    orig_x = torch.ones((5, 3, 3, 3), device='xla', requires_grad=True)
+    orig_x = torch.randn((5, 3, 9, 9), device='xla', requires_grad=True)
     pure_x = orig_x.clone().detach().requires_grad_(True)
     torch_xla.sync()
 
@@ -113,6 +118,8 @@ class TestJaxInterop(absltest.TestCase):
       assert_gradients_close(self, orig_param, pure_param)
 
   def test_assume_pure_avoid_retracing_avoid_rejit(self):
+    """Tests that we avoid retracing and re-jitting when using assume_pure."""
+
     starting_lowerings = xb._jax_to_hlo_cache_num_misses()
     trace_counter = 0
 
@@ -309,7 +316,7 @@ class TestJaxInterop(absltest.TestCase):
 
 
 if __name__ == "__main__":
-  torch.set_default_dtype(torch.bfloat16)
+  torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
   torch_xla.manual_seed(42)
   torch_xla._XLAC._xla_set_mat_mul_precision('highest')
