@@ -26,7 +26,6 @@ pip:
       - tensorboard
       - tensorboardX
       - tqdm
-      - typing
       - typing_extensions
       - sympy
       - yapf==0.30.0
