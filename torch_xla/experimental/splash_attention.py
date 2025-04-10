@@ -96,7 +96,7 @@ def splash_attention_jax_wrapper(
     key,
     value,
     decoder_segment_ids,
-    config: str,
+    config: SplashAttentionConfig,
     attn_logits_soft_cap,
 ):
   """Splash attention kernel wrapper for JAX
@@ -111,8 +111,6 @@ def splash_attention_jax_wrapper(
       splash_attention_kernel,
       splash_attention_mask,
   )
-  config = SplashAttentionConfig.from_json(config)
-
   mesh = config.maybe_convert_and_get_jax_mesh()
   # input q,k,v shape: [batch, #head, seq_len, head_dim]
   if decoder_segment_ids is not None and not decoder_segment_ids.shape:
@@ -227,7 +225,7 @@ def tpu_splash_attention_jax_call_wrapper(
     query: torch.Tensor,
     key: torch.Tensor,
     value: torch.Tensor,
-    config: str,
+    config: SplashAttentionConfig,
     decoder_segment_ids: torch.Tensor | None,
     attn_logits_soft_cap: float | None = None,
     is_forward: bool = True,
@@ -264,6 +262,7 @@ def sa_custom_forward(
     decoder_segment_ids: torch.Tensor | None,
     attn_logits_soft_cap: float | None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+  config = SplashAttentionConfig.from_json(config)
   return tpu_splash_attention_jax_call_wrapper(
       q,
       k,
@@ -299,6 +298,7 @@ def sa_custom_backward(
     decoder_segment_ids: torch.Tensor | None,
     attn_logits_soft_cap: float | None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+  config = SplashAttentionConfig.from_json(config)
   o = tpu_splash_attention_jax_call_wrapper(
       q,
       k,
