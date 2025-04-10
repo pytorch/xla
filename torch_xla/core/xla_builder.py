@@ -1013,9 +1013,13 @@ def call_jax(jax_func,
   works. If you get tracing overhead, check if `jax_func` is being redefined all the time.
   A common mistake is defining `jax_func` as a local function, e.g. during a training step.
   """
-
+  import torchax.tensor
+  import torchax.interop
   kwargs = kwargs or {}
   flattened, _spec = tree_flatten((args, kwargs))
+  if any(isinstance(a, torchax.tensor.Tensor) for a in flattened):
+    return torchax.interop.call_jax(jax_func, *args, **kwargs)
+
   xla_computation = jax_func_to_xla_computation(jax_func, args, kwargs, name)
   return xla_computation(flattened)
 
