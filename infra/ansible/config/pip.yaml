@@ -26,10 +26,10 @@ pip:
       - tensorboard
       - tensorboardX
       - tqdm
-      - typing
       - typing_extensions
       - sympy
       - yapf==0.30.0
+      - wheel==0.45.1
 
     build_amd64:
       - mkl
