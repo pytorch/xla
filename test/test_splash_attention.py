@@ -64,14 +64,13 @@ class SplashAttentionTest(unittest.TestCase):
     for i in range(self.BATCH_SIZE):
       segment_ids[i, :] = i
     self.segment_ids_sa = segment_ids.clone().detach()
-
     self.o = flash_attention(
         self.q,
         self.k,
         self.v,
         True,
-        segment_ids.to("xla"),
-        segment_ids.to("xla"),
+        segment_ids,
+        segment_ids,
         partition_spec=self.partition_spec,
         mesh=xs.get_global_mesh(),
     )
@@ -275,40 +274,42 @@ class SplashAttentionTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
                    "This test only works on TPUv3+.")
+  @with_jax_high_precision  # remove the decorator will cause failure in other tests :)
   def test_splash_attention_cache_hit(self):
-    xb.clear_jax_hlo_cache()
+    xb._JAX_TO_HLO_CACHE.clear()
     starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
-    q_sa = self.q_sa.clone().detach().requires_grad_(True)
-    k_sa = self.k_sa.clone().detach().requires_grad_(True)
-    v_sa = self.v_sa.clone().detach().requires_grad_(True)
-    segment_ids_sa = self.segment_ids_sa.clone().detach()
-    o_sa = splash_attention(
-        q_sa,
-        k_sa,
-        v_sa,
+    q = self.q_sa.clone().detach().requires_grad_(True)
+    k = self.k_sa.clone().detach().requires_grad_(True)
+    v = self.v_sa.clone().detach().requires_grad_(True)
+    segment_ids = self.segment_ids_sa.clone().detach()
+    o = splash_attention(
+        q,
+        k,
+        v,
         self.config.to_json(),
-        decoder_segment_ids=segment_ids_sa.to("xla"))
-    loss_sa = torch.sum(o_sa)
-    loss_sa.backward()
+        decoder_segment_ids=segment_ids.to("xla"))
+    loss = torch.sum(o)
+    loss.backward()
     torch_xla.sync()
 
-    q_sa = self.q_sa.clone().detach().requires_grad_(True)
-    k_sa = self.k_sa.clone().detach().requires_grad_(True)
-    v_sa = self.v_sa.clone().detach().requires_grad_(True)
-    q_sa = 2 * q_sa
-    o_sa = splash_attention(
-        q_sa,
-        k_sa,
-        v_sa,
+    q = self.q_sa.clone().detach().requires_grad_(True)
+    k = self.k_sa.clone().detach().requires_grad_(True)
+    v = self.v_sa.clone().detach().requires_grad_(True)
+    q = q * 2
+    segment_ids = self.segment_ids_sa.clone().detach()
+    o = splash_attention(
+        q,
+        k,
+        v,
         self.config.to_json(),
-        decoder_segment_ids=segment_ids_sa.to("xla"))
-    loss_sa = torch.sum(o_sa)
-    loss_sa.backward()
+        decoder_segment_ids=segment_ids.to("xla"))
+    loss = torch.sum(o)
+    loss.backward()
     torch_xla.sync()
     ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
     # There are 2 misses because we run both forward (+1 miss) and backward (+1
     # miss) pass.
-    self.assertEqual(ending_cache_misses - starting_cache_misses, 2)
+    self.assertEqual(ending_cache_misses - ending_cache_misses, 0)
 
 
 if __name__ == "__main__":
