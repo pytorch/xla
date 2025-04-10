@@ -1,5 +1,7 @@
 from copy import deepcopy
 from absl.testing import absltest
+from absl import flags
+import time
 
 import torch
 import torch.nn as nn
@@ -313,6 +315,65 @@ class TestAssumePure(absltest.TestCase):
     self.assertIsNone(b_orig.grad)
     self.assertIsNone(a_pure.grad)
     self.assertIsNone(b_pure.grad)
+
+
+FLAGS = flags.FLAGS
+flags.DEFINE_integer(
+    name='benchmark_iterations',
+    default=3,
+    help='Number of iterations to run the tracing benchmark test.')
+
+
+class TracingBenchmark(absltest.TestCase):
+
+  def test_trace_transformer_with_spda_attention(self):
+    num_iterations = FLAGS.benchmark_iterations
+    print(f"\nRunning benchmark with {num_iterations} iterations")
+
+    import sys
+    import os
+    example_folder = os.path.dirname(os.path.dirname(__file__)) + "/examples"
+    sys.path.append(example_folder)
+    from decoder_only_model import DecoderOnlyConfig, DecoderOnlyModel  # type:ignore
+
+    config = DecoderOnlyConfig(
+        hidden_size=128,
+        num_hidden_layers=100,
+        intermediate_size=8 * 128,
+        vocab_size=256)
+    model = DecoderOnlyModel(config=config).to('xla')
+    batch_size = 2
+    sequence_length = 8
+
+    # Generate random input_ids within the range of the vocabulary size
+    input_ids = torch.randint(0, config.vocab_size,
+                              (batch_size, sequence_length)).to('xla')
+
+    pure_model = deepcopy(model)
+    torch_xla.sync()
+
+    # Test tracing the model normally.
+    model(input_ids)  # Warm up
+    start_time = time.time()
+    for _ in range(num_iterations):
+      model(input_ids)
+    end_time = time.time()
+    model_time = (end_time - start_time) / num_iterations
+    print(f"Model time: {model_time * 1000:.4f} ms")
+
+    # Test tracing the model with assume_pure.
+    @assume_pure
+    def pure_call(params, x):
+      return torch.func.functional_call(pure_model, params, x)
+
+    params = dict(pure_model.named_parameters())
+    pure_call(params, input_ids)  # Warm up
+    start_time = time.time()
+    for _ in range(num_iterations):
+      pure_call(params, input_ids)
+    end_time = time.time()
+    pure_model_time = (end_time - start_time) / num_iterations
+    print(f"Pure model time: {pure_model_time * 1000:.4f} ms")
 
 
 if __name__ == "__main__":
