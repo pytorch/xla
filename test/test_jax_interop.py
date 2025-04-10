@@ -23,7 +23,7 @@ class TestJaxInterop(absltest.TestCase):
     torch.testing.assert_close(
         b, torch.sin(torch.ones(3, 3)) + 1, check_device=False)
 
-  def test_call_jax_pytree(self):
+  def test_call_jax_input_pytree(self):
     """Test that call_jax works with PyTree inputs."""
 
     dev = xm.xla_device()
@@ -44,6 +44,40 @@ class TestJaxInterop(absltest.TestCase):
             [
                 [4, 4],
                 [4, 4],
+            ],
+            dtype=torch.float32,
+        ),
+        check_device=False)
+
+  def test_call_jax_output_pytree(self):
+    """Test that call_jax works with PyTree outputs."""
+
+    dev = xm.xla_device()
+    a = torch.ones((2, 2), device=dev)
+
+    def f(a):
+      b = a + 1
+      c = a + 2
+      return {'b': b, 'c': c}
+
+    out = xb.call_jax(f, (a,))
+    torch_xla.sync()
+    torch.testing.assert_close(
+        out['b'],
+        torch.tensor(
+            [
+                [2, 2],
+                [2, 2],
+            ],
+            dtype=torch.float32,
+        ),
+        check_device=False)
+    torch.testing.assert_close(
+        out['c'],
+        torch.tensor(
+            [
+                [3, 3],
+                [3, 3],
             ],
             dtype=torch.float32,
         ),
