@@ -14,11 +14,11 @@ def assume_pure(fn):
   Returns a new function that will only be traced once for each unique
   input tensor shapes or non-tensor input argument values. This is useful
   for removing Lazy Tensor tracing overhead.
+  
+  The decorated function must be pure (i.e. no side-effects, behavior
+  only depends on inputs).
 
   Limitations:
-
-  - The decorated function must be pure (i.e. no side-effects, behavior
-    only depends on inputs).
   - The decorated function can only use upstream PyTorch operators e.g.
     `torch.einsum`, `torch.nn.functional.layer_norm`. Custom PyTorch/XLA
     operations such as `mark_sharding` are not supported. This limitation
