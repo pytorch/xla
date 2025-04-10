@@ -972,6 +972,7 @@ def _jax_to_xla_computation_cache_num_misses() -> int:
 _JAX_TO_XLA_COMPUTATION_CACHE = WeakKeyDictionary()
 
 
+@requires_jax
 def call_jax(jax_func,
              args: tuple[Any, ...],
              kwargs: Optional[dict[str, Any]] = None,
@@ -1016,9 +1017,9 @@ def call_jax(jax_func,
   works. If you get tracing overhead, check if `jax_func` is being redefined all the time.
   A common mistake is defining `jax_func` as a local function, e.g. during a training step.
   """
-
+  import jax
   kwargs = kwargs or {}
-  flattened, _spec = tree_flatten((args, kwargs))
+  flattened, _spec = jax.tree.flatten((args, kwargs))
   xla_computation = jax_func_to_xla_computation(jax_func, args, kwargs, name)
   return xla_computation(flattened)
 

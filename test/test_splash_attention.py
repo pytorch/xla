@@ -11,10 +11,12 @@ from torch_xla._internal import tpu
 from torch_xla.distributed.spmd import Mesh
 from torch_xla.experimental.custom_kernel import flash_attention
 
-from torch_xla.experimental.custom_kernel_from_jax import (
+from torch_xla.experimental.splash_attention import (
     SplashAttentionConfig,
     splash_attention,
 )
+
+import torch_xla.core.xla_builder as xb
 
 if xr.device_type() == "TPU":
   from torch_xla.experimental.custom_kernel import jax_import_guard
@@ -270,6 +272,42 @@ class SplashAttentionTest(unittest.TestCase):
                                  strict=False):
       torch.testing.assert_close(
           org_grad.cpu(), sa_grad.cpu(), rtol=1e-4, atol=1e-2)
+
+  @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_splash_attention_cache_hit(self):
+    starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    q_sa = self.q_sa.clone().detach().requires_grad_(True)
+    k_sa = self.k_sa.clone().detach().requires_grad_(True)
+    v_sa = self.v_sa.clone().detach().requires_grad_(True)
+    segment_ids_sa = self.segment_ids_sa.clone().detach()
+    o_sa = splash_attention(
+        q_sa,
+        k_sa,
+        v_sa,
+        self.config.to_json(),
+        decoder_segment_ids=segment_ids_sa.to("xla"))
+    loss_sa = torch.sum(o_sa)
+    loss_sa.backward()
+    torch_xla.sync()
+
+    q_sa = self.q_sa.clone().detach().requires_grad_(True)
+    k_sa = self.k_sa.clone().detach().requires_grad_(True)
+    v_sa = self.v_sa.clone().detach().requires_grad_(True)
+    q_sa = 2 * q_sa
+    o_sa = splash_attention(
+        q_sa,
+        k_sa,
+        v_sa,
+        self.config.to_json(),
+        decoder_segment_ids=segment_ids_sa.to("xla"))
+    loss_sa = torch.sum(o_sa)
+    loss_sa.backward()
+    torch_xla.sync()
+    ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    # There are 2 misses because we run both forward (+1 miss) and backward (+1
+    # miss) pass.
+    self.assertEqual(ending_cache_misses - starting_cache_misses, 2)
 
 
 if __name__ == "__main__":

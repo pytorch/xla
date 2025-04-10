@@ -13,8 +13,8 @@ from torch_xla.distributed.spmd import Mesh
 from torch_xla.experimental.custom_kernel import requires_jax
 
 
-@dataclasses.dataclass
-class SplashAttentionConfig(eq=True, frozen=True, hash=True):
+@dataclasses.dataclass(eq=True, frozen=True)
+class SplashAttentionConfig:
   ### Splash attention block sizes
   # These can be tuned for specific hardware generations, and can be set up to
   # the model's sequence length.
@@ -96,7 +96,7 @@ def splash_attention_jax_wrapper(
     key,
     value,
     decoder_segment_ids,
-    config: SplashAttentionConfig,
+    config: str,
     attn_logits_soft_cap,
 ):
   """Splash attention kernel wrapper for JAX
@@ -111,6 +111,7 @@ def splash_attention_jax_wrapper(
       splash_attention_kernel,
       splash_attention_mask,
   )
+  config = SplashAttentionConfig.from_json(config)
 
   mesh = config.maybe_convert_and_get_jax_mesh()
   # input q,k,v shape: [batch, #head, seq_len, head_dim]
@@ -172,8 +173,7 @@ def splash_attention_jax_wrapper(
         v_layout=splash_attention_kernel.QKVLayout[global_v_layout],
     )
 
-    mask = splash_attention_mask.CausalMask(
-        shape=(seq_len, seq_len))
+    mask = splash_attention_mask.CausalMask(shape=(seq_len, seq_len))
 
     # Apply local masking if local sliding attention is enabled.
     if config.attentiontype_local_sliding:
@@ -208,48 +208,18 @@ def splash_attention_jax_wrapper(
   return x
 
 
-@functools.lru_cache(maxsize=16)
-def _get_jax_forward_function(config_json: str, attn_logits_soft_cap,
-                              has_segment_ids):
-  """Cached factory function to create JAX forward functions"""
-  config = SplashAttentionConfig.from_json(config_json)
-  if has_segment_ids:
-    return functools.partial(
-        splash_attention_jax_wrapper,
-        config=config,
-        attn_logits_soft_cap=attn_logits_soft_cap,
-    )
-  else:
-    return functools.partial(
-        splash_attention_jax_wrapper,
-        decoder_segment_ids=None,
-        config=config,
-        attn_logits_soft_cap=attn_logits_soft_cap,
-    )
-
-
-@functools.lru_cache(maxsize=16)
-def _get_jax_backward_function(config_json: str, attn_logits_soft_cap,
-                               has_segment_ids):
-  """Cached factory function to create JAX backward functions"""
-  jax_f = _get_jax_forward_function(config_json, attn_logits_soft_cap,
-                                    has_segment_ids)
+@requires_jax
+def _jax_grad_f(query, key, value, decoder_segment_ids, config,
+                attn_logits_soft_cap, grad_output):
   import jax
-
-  if has_segment_ids:
-
-    def jax_grad_f_wrapper(query, key, value, decoder_segment_ids, grad_output):
-      primals, f_vjp = jax.vjp(jax_f, query, key, value, decoder_segment_ids)
-      return f_vjp(grad_output)
-
-    return jax_grad_f_wrapper
-  else:
-
-    def jax_grad_f_wrapper(query, key, value, grad_output):
-      primals, f_vjp = jax.vjp(jax_f, query, key, value)
-      return f_vjp(grad_output)
-
-    return jax_grad_f_wrapper
+  differentiated_fun = functools.partial(
+      splash_attention_jax_wrapper,
+      decoder_segment_ids=decoder_segment_ids,
+      config=config,
+      attn_logits_soft_cap=attn_logits_soft_cap,
+  )
+  primals, f_vjp = jax.vjp(differentiated_fun, query, key, value)
+  return f_vjp(grad_output)
 
 
 @xp.trace_me("tpu_splash_attention_jax_call_wrapper")
@@ -267,24 +237,17 @@ def tpu_splash_attention_jax_call_wrapper(
   query = query.contiguous()
   key = key.contiguous()
   value = value.contiguous()
-
-  # TODO: xb.call_jax() doesn't accept the input tensor with shape size 0. We
-  # have to split the decoder_segment_ids to be None or torch.Tensor cases.
-  # Later we can unify those two cases once 0 size shape tensor is supported.
-  has_decoder_ids = decoder_segment_ids is not None and decoder_segment_ids.shape
-  input_args = ([query, key, value, decoder_segment_ids]
-                if has_decoder_ids else [query, key, value])
+  input_args = [
+      query, key, value, decoder_segment_ids, config, attn_logits_soft_cap
+  ]
   if is_forward:
-    jax_f = _get_jax_forward_function(config, attn_logits_soft_cap,
-                                      has_decoder_ids)
-    output = call_jax(jax_f, input_args, {}, "splash_attention_jax_wrapper_fw")
+    output = call_jax(splash_attention_jax_wrapper, input_args, {},
+                      "splash_attention_jax_wrapper_fw")
     return (output, None, None)
   else:
     # TODO: find out a way to skip grad computation for decoder_segment_ids
-    jax_grad_f = _get_jax_backward_function(config, attn_logits_soft_cap,
-                                            has_decoder_ids)
     q_grad, k_grad, v_grad, *_rest = call_jax(
-        jax_grad_f,
+        _jax_grad_f,
         input_args + [grad_output],
         {},
         "splash_attention_jax_wrapper_bw",
