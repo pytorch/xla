@@ -276,7 +276,7 @@ class SplashAttentionTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_splash_attention_cache_hit(self):
-    xb.clear_jax_hlo_cache() 
+    xb.clear_jax_hlo_cache()
     starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
     q_sa = self.q_sa.clone().detach().requires_grad_(True)
     k_sa = self.k_sa.clone().detach().requires_grad_(True)
