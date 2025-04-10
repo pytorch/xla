@@ -41,7 +41,7 @@ run_xla_hlo_debug python3 "$TEST_CDIR/scan/test_scan_debug.py"
 python3 "$TEST_CDIR/test_pallas.py" -v
 python3 "$TEST_CDIR/test_pallas_spmd.py"
 XLA_DISABLE_FUNCTIONALIZATION=1 python3 "$TEST_CDIR/test_pallas_spmd.py"
-python3 "$TEST_CDIR/test_splash_attention_jax.py"
+python3 "$TEST_CDIR/test_splash_attention.py"
 python3 "$TEST_CDIR/test_profiler_session.py"
 python3 "$TEST_CDIR/test_multi_queries_paged_attention_kernel.py"
 python3 "$TEST_CDIR/test_ragged_paged_attention_kernel.py"
