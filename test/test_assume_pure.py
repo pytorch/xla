@@ -316,6 +316,25 @@ class TestAssumePure(absltest.TestCase):
     self.assertIsNone(a_pure.grad)
     self.assertIsNone(b_pure.grad)
 
+  def test_composibility_with_call_jax(self):
+
+    def jax_func(a, b):
+      return jnp.dot(a, b)
+
+    def f(a, b):
+      return xb.call_jax(jax_func, (a, b))
+
+    a = torch.randn(3, 3, device=self.device)
+    b = torch.randn(3, 3, device=self.device)
+
+    output_pure = assume_pure(f)(a, b)
+    torch.testing.assert_close(
+        output_pure,
+        a @ b,
+        msg="Forward outputs do not match",
+        check_device=False)
+
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer(
@@ -383,5 +402,6 @@ if __name__ == "__main__":
   torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   jax_import_guard()
   import torchax
+  import jax.numpy as jnp
   torchax.enable_accuracy_mode()
   absltest.main()
