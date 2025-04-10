@@ -3,7 +3,7 @@
 cuda_deps:
   # List all libcudnn8 versions with `apt list -a libcudnn8`
   libcudnn:
-    "12.8": libcudnn9-cuda-12=9.1.1.17-1
+    "12.8": libcudnn9-cuda-12=9.8.0.87-1
     "12.6": libcudnn9-cuda-12=9.1.1.17-1
     "12.4": libcudnn9-cuda-12=9.1.1.17-1
     "12.3": libcudnn9-cuda-12=9.1.1.17-1
@@ -13,7 +13,7 @@ cuda_deps:
     "11.7": libcudnn8=8.5.0.96-1+cuda11.7
     "11.2": libcudnn8=8.1.1.33-1+cuda11.2
   libcudnn-dev:
-    "12.8": libcudnn9-dev-cuda-12=9.1.1.17-1
+    "12.8": libcudnn9-dev-cuda-12=9.8.0.87-1
     "12.6": libcudnn9-dev-cuda-12=9.1.1.17-1
     "12.4": libcudnn9-dev-cuda-12=9.1.1.17-1
     "12.3": libcudnn9-dev-cuda-12=9.1.1.17-1
