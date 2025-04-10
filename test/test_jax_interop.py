@@ -23,7 +23,7 @@ class TestJaxInterop(absltest.TestCase):
     torch.testing.assert_close(
         b, torch.sin(torch.ones(3, 3)) + 1, check_device=False)
 
-  def test_call_jax_pytree(self):
+  def test_call_jax_input_pytree(self):
     """Test that call_jax works with PyTree inputs."""
 
     dev = xm.xla_device()
@@ -44,6 +44,40 @@ class TestJaxInterop(absltest.TestCase):
             [
                 [4, 4],
                 [4, 4],
+            ],
+            dtype=torch.float32,
+        ),
+        check_device=False)
+
+  def test_call_jax_output_pytree(self):
+    """Test that call_jax works with PyTree outputs."""
+
+    dev = xm.xla_device()
+    a = torch.ones((2, 2), device=dev)
+
+    def f(a):
+      b = a + 1
+      c = a + 2
+      return {'b': b, 'c': c}
+
+    out = xb.call_jax(f, (a,))
+    torch_xla.sync()
+    torch.testing.assert_close(
+        out['b'],
+        torch.tensor(
+            [
+                [2, 2],
+                [2, 2],
+            ],
+            dtype=torch.float32,
+        ),
+        check_device=False)
+    torch.testing.assert_close(
+        out['c'],
+        torch.tensor(
+            [
+                [3, 3],
+                [3, 3],
             ],
             dtype=torch.float32,
         ),
@@ -133,7 +167,7 @@ class TestJaxInterop(absltest.TestCase):
   def test_call_jax_cache_hlo(self):
     """Test that the HLO of a jax function should be cached."""
 
-    starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    starting_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
 
     # Let's trace two different jax functions a couple of times.
     dev = xm.xla_device()
@@ -152,13 +186,13 @@ class TestJaxInterop(absltest.TestCase):
     xb.call_jax(g, (a, a))
     xb.call_jax(g, (a, a))
 
-    ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    ending_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
     self.assertEqual(ending_cache_misses - starting_cache_misses, 2)
 
   def test_call_jax_cache_by_shape(self):
     """Test that the same function may be traced again if the shape of its arguments changes."""
 
-    starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    starting_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
 
     # Let's trace the same jax function with different shapes.
     dev = xm.xla_device()
@@ -172,12 +206,12 @@ class TestJaxInterop(absltest.TestCase):
     xb.call_jax(f, (a, a))
     xb.call_jax(f, (b, b))
 
-    ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    ending_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
     self.assertEqual(ending_cache_misses - starting_cache_misses, 2)
 
   def test_call_jax_cache_by_tree_spec(self):
     """Test that the same function may be traced again if the tree spec of its arguments changes."""
-    starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    starting_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
 
     # Let's trace the same jax function with different tree specs.
     dev = xm.xla_device()
@@ -192,12 +226,12 @@ class TestJaxInterop(absltest.TestCase):
     xb.call_jax(f, ({'a': a, 'b': a},))
     xb.call_jax(f, ({'a': a, 'b': b},))
 
-    ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    ending_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
     self.assertEqual(ending_cache_misses - starting_cache_misses, 2)
 
   def test_call_jax_cache_by_static_args(self):
     """Test that the same function may be traced again if a non-tensor argument changes."""
-    starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    starting_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
 
     # Let's trace the same jax function with different static args.
     dev = xm.xla_device()
@@ -211,7 +245,7 @@ class TestJaxInterop(absltest.TestCase):
     xb.call_jax(f, (a, 2.0))
     xb.call_jax(f, (a, 3.0))
 
-    ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    ending_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
     self.assertEqual(ending_cache_misses - starting_cache_misses, 3)
 
 
