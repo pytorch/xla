@@ -969,6 +969,11 @@ def _jax_to_xla_computation_cache_num_misses() -> int:
   return size
 
 
+# Be cautious about using cache. JAX config changes
+# (https://github.com/jax-ml/jax/blob/3864c4f335d1d236d5367264f3885dfce8721d9d/jax/_src/config.py#L254)
+# will not be reflected in the call_jax function argument. However, the config
+# will be embedded in the HLO level (e.g., data precision), which potentially
+# causes computations with different JAX config to reuse the same HLO.
 _JAX_TO_XLA_COMPUTATION_CACHE = WeakKeyDictionary()
 
 
