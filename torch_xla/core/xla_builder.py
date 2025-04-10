@@ -919,10 +919,10 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
       traced_out_spec.append(out_spec)
       return out_flat
 
-    def get_hlo():
+    def get_xla_computation():
       import torch_xla.debug.profiler as xp
       # If we see this trace span in the profiler, we'll know that there's a cache miss.
-      with xp.Trace('jax_to_hlo'):
+      with xp.Trace('jax_to_xla_computation'):
         lowered = jax.jit(fn, keep_unused=True).lower(*sample_tensor_args)
         hlo_ir = lowered.compiler_ir('hlo')
         assert len(traced_out_spec) == 1, \
@@ -934,39 +934,42 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
         computation = computation_from_module_proto(name, hlo_module)
         return computation, spec
 
-    computation, out_spec = _jax_to_hlo_cache_get_or_insert(
-        jax_func, sample_inputs, spec, get_hlo)
+    computation, out_spec = _jax_to_xla_computation_cache_get_or_insert(
+        jax_func, sample_inputs, spec, get_xla_computation)
     return XlaComputation(name, computation, pick_tensor_args, out_spec)
 
 
-def _jax_to_hlo_cache_get_or_insert(jax_func, sample_inputs: tuple[Any, ...],
-                                    input_tree_spec, get_hlo):
-  global _JAX_TO_HLO_CACHE
+def _jax_to_xla_computation_cache_get_or_insert(jax_func,
+                                                sample_inputs: tuple[Any, ...],
+                                                input_tree_spec,
+                                                get_xla_computation):
+  global _JAX_TO_XLA_COMPUTATION_CACHE
   # Use two layers of dictionary lookup.
   # The first layer uses the `jax_func`, which is only weakly referenced.
   # The second layer uses the sample inputs and the tree spec, which is strongly referenced.
-  inner_dict = _JAX_TO_HLO_CACHE.get(jax_func, None)
+  inner_dict = _JAX_TO_XLA_COMPUTATION_CACHE.get(jax_func, None)
   if inner_dict is not None:
     hlo = inner_dict.get((sample_inputs, input_tree_spec), None)
     if hlo is not None:
       return hlo
 
-  # Compget_hlo jax function to HLO.
-  hlo = get_hlo()
+  # Compile jax function to XLA computation (wraps an HLO module).
+  hlo = get_xla_computation()
   if inner_dict is None:
-    _JAX_TO_HLO_CACHE[jax_func] = {}
-  _JAX_TO_HLO_CACHE[jax_func][(sample_inputs, input_tree_spec)] = hlo
+    _JAX_TO_XLA_COMPUTATION_CACHE[jax_func] = {}
+  _JAX_TO_XLA_COMPUTATION_CACHE[jax_func][(sample_inputs,
+                                           input_tree_spec)] = hlo
   return hlo
 
 
-def _jax_to_hlo_cache_num_misses() -> int:
+def _jax_to_xla_computation_cache_num_misses() -> int:
   size = 0
-  for inner_dict in _JAX_TO_HLO_CACHE.values():
+  for inner_dict in _JAX_TO_XLA_COMPUTATION_CACHE.values():
     size += len(inner_dict)
   return size
 
 
-_JAX_TO_HLO_CACHE = WeakKeyDictionary()
+_JAX_TO_XLA_COMPUTATION_CACHE = WeakKeyDictionary()
 
 
 def call_jax(jax_func,

@@ -167,7 +167,7 @@ class TestJaxInterop(absltest.TestCase):
   def test_call_jax_cache_hlo(self):
     """Test that the HLO of a jax function should be cached."""
 
-    starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    starting_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
 
     # Let's trace two different jax functions a couple of times.
     dev = xm.xla_device()
@@ -186,13 +186,13 @@ class TestJaxInterop(absltest.TestCase):
     xb.call_jax(g, (a, a))
     xb.call_jax(g, (a, a))
 
-    ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    ending_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
     self.assertEqual(ending_cache_misses - starting_cache_misses, 2)
 
   def test_call_jax_cache_by_shape(self):
     """Test that the same function may be traced again if the shape of its arguments changes."""
 
-    starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    starting_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
 
     # Let's trace the same jax function with different shapes.
     dev = xm.xla_device()
@@ -206,12 +206,12 @@ class TestJaxInterop(absltest.TestCase):
     xb.call_jax(f, (a, a))
     xb.call_jax(f, (b, b))
 
-    ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    ending_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
     self.assertEqual(ending_cache_misses - starting_cache_misses, 2)
 
   def test_call_jax_cache_by_tree_spec(self):
     """Test that the same function may be traced again if the tree spec of its arguments changes."""
-    starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    starting_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
 
     # Let's trace the same jax function with different tree specs.
     dev = xm.xla_device()
@@ -226,12 +226,12 @@ class TestJaxInterop(absltest.TestCase):
     xb.call_jax(f, ({'a': a, 'b': a},))
     xb.call_jax(f, ({'a': a, 'b': b},))
 
-    ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    ending_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
     self.assertEqual(ending_cache_misses - starting_cache_misses, 2)
 
   def test_call_jax_cache_by_static_args(self):
     """Test that the same function may be traced again if a non-tensor argument changes."""
-    starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    starting_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
 
     # Let's trace the same jax function with different static args.
     dev = xm.xla_device()
@@ -245,7 +245,7 @@ class TestJaxInterop(absltest.TestCase):
     xb.call_jax(f, (a, 2.0))
     xb.call_jax(f, (a, 3.0))
 
-    ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    ending_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
     self.assertEqual(ending_cache_misses - starting_cache_misses, 3)
 
 
