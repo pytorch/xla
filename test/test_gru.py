@@ -14,17 +14,27 @@ class TestGRU(parameterized.TestCase):
     torch.manual_seed(0)
     torch_xla.manual_seed(0)
 
-  def build_models(self, input_size, hidden_size, num_layers, bias):
+  def build_models(self,
+                   input_size,
+                   hidden_size,
+                   num_layers,
+                   bias,
+                   batch_first=False):
     gru = nn.GRU(
         input_size,
         hidden_size,
         num_layers=num_layers,
         bias=bias,
-        batch_first=False,
+        batch_first=batch_first,
         dropout=0.0,
         bidirectional=False)
     scan_gru = GRU(
-        input_size, hidden_size, num_layers=num_layers, bias=bias, dropout=0.0)
+        input_size,
+        hidden_size,
+        num_layers=num_layers,
+        bias=bias,
+        batch_first=batch_first,
+        dropout=0.0)
 
     # Copy parameters from the upstream GRU to our scan-based GRU.
     # This ensures that the scan-based GRU has the same parameters as the
@@ -221,6 +231,49 @@ class TestGRU(parameterized.TestCase):
     inp2 = inp1.to('xla').clone().detach().requires_grad_(True)
     hx1 = torch.randn(num_layers, batch_size, hidden_size).requires_grad_(True)
     hx2 = hx1.to('xla').clone().detach().requires_grad_(True)
+    torch_xla.sync()
+
+    # Forward passes.
+    out1, h1 = gru(inp1, hx1)
+    torch_xla.sync()
+
+    out2, h2 = scan_gru(inp2, hx2)
+    torch_xla.sync()
+
+    # Compare the numerical outputs.
+    torch.testing.assert_close(
+        out1, out2, check_device=False, atol=1e-3, rtol=1e-3)
+    torch.testing.assert_close(h1, h2, check_device=False, atol=1e-3, rtol=1e-3)
+
+    # Compute losses.
+    loss1 = out1.sum() + h1.sum()
+    loss2 = out2.sum() + h2.sum()
+
+    # Backward passes.
+    loss1.backward()
+    loss2.backward()
+    torch_xla.sync()
+
+    # Gradient thresholds are relaxed because numerical differences between TPU
+    # and CPU adds up to a non-trivial impact over 2048 steps.
+    self.check_gradients(
+        inp1, hx1, inp2, hx2, num_layers, gru, scan_gru, atol=0.05, rtol=0.05)
+
+  @parameterized.parameters(True, False)
+  def test_batch_first(self, bias):
+    seq_len, batch_size, input_size, hidden_size, num_layers = 16, 4, 16, 32, 2
+    gru, scan_gru = self.build_models(
+        input_size, hidden_size, num_layers, bias, batch_first=True)
+    gru, scan_gru = gru.to('xla'), scan_gru.to('xla')
+    torch_xla.sync()
+
+    # Prepare input and initial hidden states.
+    inp1 = torch.randn(batch_size, seq_len,
+                       input_size).to('xla').requires_grad_(True)
+    inp2 = inp1.clone().detach().requires_grad_(True)
+    hx1 = torch.randn(num_layers, batch_size,
+                      hidden_size).to('xla').requires_grad_(True)
+    hx2 = hx1.clone().detach().requires_grad_(True)
     torch_xla.sync()
 
     # Forward passes.
