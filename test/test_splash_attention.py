@@ -276,8 +276,8 @@ class SplashAttentionTest(unittest.TestCase):
                    "This test only works on TPUv3+.")
   @with_jax_high_precision  # remove the decorator will cause failure in other tests :)
   def test_splash_attention_cache_hit(self):
-    xb._JAX_TO_HLO_CACHE.clear()
-    starting_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    xb._JAX_TO_XLA_COMPUTATION_CACHE.clear()
+    starting_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
     q = self.q_sa.clone().detach().requires_grad_(True)
     k = self.k_sa.clone().detach().requires_grad_(True)
     v = self.v_sa.clone().detach().requires_grad_(True)
@@ -306,10 +306,10 @@ class SplashAttentionTest(unittest.TestCase):
     loss = torch.sum(o)
     loss.backward()
     torch_xla.sync()
-    ending_cache_misses = xb._jax_to_hlo_cache_num_misses()
+    ending_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
     # There are 2 misses because we run both forward (+1 miss) and backward (+1
     # miss) pass.
-    self.assertEqual(ending_cache_misses - ending_cache_misses, 0)
+    self.assertEqual(ending_cache_misses - starting_cache_misses, 2)
 
 
 if __name__ == "__main__":
