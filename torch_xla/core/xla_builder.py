@@ -872,15 +872,13 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
     import torchax.ops.mappings as mappings
 
     flattened_inputs, spec = jax.tree.flatten((args, kwargs))
+    xla_device = torch_xla.device()  # this is expensive so do it once
 
     def abstractify(a):  # make a pytree leaf abstract
-      import jax
-      import torch_xla
       if a is None:
         return None
       if isinstance(a, torch.Tensor):
-        assert a.device == torch_xla.device(
-        ), f"Inputs must be XLA tensors. Got {a.device}"
+        assert a.device == xla_device, f"Inputs must be XLA tensors. Got {a.device}"
         return jax.ShapeDtypeStruct(a.shape, mappings.t2j_dtype(a.dtype))
       return a
 
