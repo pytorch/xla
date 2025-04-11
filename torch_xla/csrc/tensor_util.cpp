@@ -825,6 +825,49 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       runtime::GetComputationClient()->TransferToDevice(source_tensors));
 }
 
+std::vector<torch::lazy::BackendDataPtr> CreateGlobalTensorsData(
+  const std::vector<at::Tensor>& tensors,
+  const std::vector<std::string>& devices,
+  const xla::Shape local_shape) {
+TORCH_LAZY_TIMED("TensorToData");
+XLA_CHECK_EQ(tensors.size(), devices.size());
+
+if (devices.size() == 0) {
+  return {};
+}
+
+// CreateGlobalShardedData should be implicitly replicated to all devices.
+if (IsVirtualDevice(devices[0])) {
+  XLA_CHECK(
+      std::all_of(devices.begin(), devices.end(),
+                  [&](const std::string& s) { return s == devices[0]; }))
+      << "can't mix virtual device and real device.";
+
+  std::vector<std::string> local_devices =
+      runtime::GetComputationClient()->GetLocalDevices();
+  std::vector<runtime::ComputationClient::DataPtr> handles;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    auto device = ParseDeviceString(devices[i]);
+    auto shape = CreateComputationShapeFromTensor(tensors[i], &device);
+    auto replicated_data =
+        std::vector<at::Tensor>(local_devices.size(), tensors[i]);
+    handles.push_back(ShardingUtil::CreateGlobalShardedData(
+        replicated_data, local_devices, nullptr, local_shape));
+  }
+  return WrapXlaData(handles);
+}
+
+std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
+for (size_t i = 0; i < tensors.size(); ++i) {
+  torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
+  xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
+  source_tensors.push_back(std::make_shared<runtime::AtenSource>(
+      tensors[i], std::move(shape), devices[i]));
+}
+return WrapXlaData(
+    runtime::GetComputationClient()->TransferToDevice(source_tensors));
+}
+
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& shardings,
