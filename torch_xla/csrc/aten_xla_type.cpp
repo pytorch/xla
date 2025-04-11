@@ -3741,13 +3741,13 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
   // our XLA lowering.
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
-  if (!CheckTpuDevice(hw_type)) {
-    return at::native::call_fallback_fn<
-        &xla_fallback,
-        ATEN_OP(upsample_bilinear2d_backward)>::call(grad_output, output_size,
-                                                     input_size, align_corners,
-                                                     scales_h, scales_w);
-  }
+  /*if (!CheckTpuDevice(hw_type)) {*/
+  /*  return at::native::call_fallback_fn<*/
+  /*      &xla_fallback,*/
+  /*      ATEN_OP(upsample_bilinear2d_backward)>::call(grad_output, output_size,*/
+  /*                                                   input_size, align_corners,*/
+  /*                                                   scales_h, scales_w);*/
+  /*}*/
   std::vector<int64_t> scaled_output_size =
       torch::lazy::ToVector<int64_t>(output_size);
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
