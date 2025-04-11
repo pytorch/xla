@@ -217,6 +217,8 @@ class SplashAttentionTest(unittest.TestCase):
     q_sa = self.q_sa.clone().detach().requires_grad_(True)
     k_sa = self.k_sa.clone().detach().requires_grad_(True)
     v_sa = self.v_sa.clone().detach().requires_grad_(True)
+    for i in [q_sa, k_sa, v_sa]:
+      i.retain_grad()
     segment_ids_sa = self.segment_ids_sa.clone().detach()
     o_sa = splash_attention(
         q_sa,
@@ -250,6 +252,8 @@ class SplashAttentionTest(unittest.TestCase):
     q_sa = self.q_sa.clone().detach().requires_grad_(True)
     k_sa = self.k_sa.clone().detach().requires_grad_(True)
     v_sa = self.v_sa.clone().detach().requires_grad_(True)
+    for i in [q_sa, k_sa, v_sa]:
+      i.retain_grad()
     segment_ids_sa = self.segment_ids_sa.clone().detach()
     o_sa = compiled_splash_attention(
         q_sa,
@@ -258,8 +262,6 @@ class SplashAttentionTest(unittest.TestCase):
         self.config.to_json(),
         decoder_segment_ids=segment_ids_sa)
     torch_xla.sync()
-    for i in [q_sa, k_sa, v_sa]:
-      i.retain_grad()
     loss_sa = torch.sum(o_sa)
     loss_sa.backward()
     torch_xla.sync()
