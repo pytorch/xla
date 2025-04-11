@@ -1,6 +1,8 @@
+import functools
 import torch
 import unittest
 from torchax import interop
+import torchax
 
 class M1(torch.nn.Module):
 
@@ -23,7 +25,11 @@ class M(torch.nn.Module):
         self.m1 = M1()
 
 
+
 class InteropTest(unittest.TestCase):
+
+    def setUp(self):
+        torchax.enable_globally()
 
 
     def test_mod_attr(self):
@@ -40,6 +46,49 @@ class InteropTest(unittest.TestCase):
                                    {'m1.x': torch.tensor([0.0])})
         self.assertEqual(m.a.weight.item(), 0)
         self.assertEqual(m.m1.x.item(), 0)
+
+    def test_module_with_shared_weights(self):
+
+        class M2(torch.nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.a = torch.nn.Linear(10, 10)
+                self.b = self.a
+            
+            def forward(self, x):
+                return self.a(self.b(x))
+
+        m = M2().to('jax')
+
+        m_jitted = interop.JittableModule(m, dedup_parameters=True)
+
+
+        # a's weights and bias and b's weights and bias
+        self.assertEqual(len(m.state_dict()), 4)
+        
+        # b's weights and bias are deduped
+        self.assertEqual(len(m_jitted.params), 2)
+
+        x = torch.randn(10, 10).to('jax')
+
+        expected = m(x)
+        
+        torch.testing.assert_allclose(m_jitted(x), expected)
+
+        # make sure buffer donation works
+        functional_forward = interop.jax_jit(
+            functools.partial(m_jitted.functional_call, 'forward'),
+            kwargs_for_jax_jit={
+                'donate_argnums': (0, )
+            }
+        )
+
+        torch.testing.assert_allclose(
+            functional_forward(m_jitted.params, m_jitted.buffers, x) , expected)
+
+
+        
 
 
 
