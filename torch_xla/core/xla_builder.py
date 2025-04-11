@@ -969,9 +969,15 @@ def _jax_to_xla_computation_cache_num_misses() -> int:
   return size
 
 
+# Be cautious about using cache. JAX config changes
+# (https://github.com/jax-ml/jax/blob/3864c4f335d1d236d5367264f3885dfce8721d9d/jax/_src/config.py#L254)
+# will not be reflected in the call_jax function argument. However, the config
+# will be embedded in the HLO level (e.g., data precision), which potentially
+# causes computations with different JAX config to reuse the same HLO.
 _JAX_TO_XLA_COMPUTATION_CACHE = WeakKeyDictionary()
 
 
+@requires_jax
 def call_jax(jax_func,
              args: tuple[Any, ...],
              kwargs: Optional[dict[str, Any]] = None,
@@ -1016,9 +1022,9 @@ def call_jax(jax_func,
   works. If you get tracing overhead, check if `jax_func` is being redefined all the time.
   A common mistake is defining `jax_func` as a local function, e.g. during a training step.
   """
-
+  import jax
   kwargs = kwargs or {}
-  flattened, _spec = tree_flatten((args, kwargs))
+  flattened, _spec = jax.tree.flatten((args, kwargs))
   xla_computation = jax_func_to_xla_computation(jax_func, args, kwargs, name)
   return xla_computation(flattened)
 
