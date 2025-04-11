@@ -129,7 +129,6 @@ def run_export_and_compare(testcase,
                            equal_nan=True,
                            ignore_indices=False):
   atol, rtol = (1e-3, 1e-5)
-  #breakpoint()
   if func.name in atol_dict:
     atol, rtol = atol_dict[func.name]
 
