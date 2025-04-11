@@ -584,6 +584,12 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
+  
+  tx = maybe_get_torchax()
+  if tx is not None and (t, tx.tensor.Tensor):
+    t.shard_(P(*partition_spec))
+    return t
+
   op_sharding = mesh.get_op_sharding(partition_spec)
   annotate_func = torch_xla._XLAC._xla_mark_sharding
   annotate_func(unwrap_sharded_tensor(t), op_sharding)

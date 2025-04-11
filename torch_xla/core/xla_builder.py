@@ -4,7 +4,7 @@ from weakref import WeakKeyDictionary
 import torch
 import torch_xla
 from torch.utils._pytree import tree_flatten
-from torch_xla._internal.jax_workarounds import jax_env_context, jax_import_guard, requires_jax
+from torch_xla._internal.jax_workarounds import jax_env_context, jax_import_guard, requires_jax, maybe_get_torchax
 
 
 class Type:
@@ -869,19 +869,17 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
   # then the MegaScale device discovery will hang.
   with jax_env_context():
     import jax
-    import torchax.ops.mappings as mappings
+    tx = maybe_get_torchax()
 
     flattened_inputs, spec = jax.tree.flatten((args, kwargs))
 
     def abstractify(a):  # make a pytree leaf abstract
-      import jax
-      import torch_xla
       if a is None:
         return None
       if isinstance(a, torch.Tensor):
         assert a.device == torch_xla.device(
         ), f"Inputs must be XLA tensors. Got {a.device}"
-        return jax.ShapeDtypeStruct(a.shape, mappings.t2j_dtype(a.dtype))
+        return jax.ShapeDtypeStruct(a.shape, tx.ops.mappings.t2j_dtype(a.dtype))
       return a
 
     sample_inputs = tuple(abstractify(a) for a in flattened_inputs)
@@ -1013,12 +1011,11 @@ def call_jax(jax_func,
   works. If you get tracing overhead, check if `jax_func` is being redefined all the time.
   A common mistake is defining `jax_func` as a local function, e.g. during a training step.
   """
-  import torchax.tensor
-  import torchax.interop
   kwargs = kwargs or {}
   flattened, _spec = tree_flatten((args, kwargs))
-  if any(isinstance(a, torchax.tensor.Tensor) for a in flattened):
-    return torchax.interop.call_jax(jax_func, *args, **kwargs)
+  tx = maybe_get_torchax()
+  if tx is not None and any(isinstance(a, tx.tensor.Tensor) for a in flattened):
+    return tx.interop.call_jax(jax_func, *args, **kwargs)
 
   xla_computation = jax_func_to_xla_computation(jax_func, args, kwargs, name)
   return xla_computation(flattened)

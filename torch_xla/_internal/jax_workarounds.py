@@ -42,3 +42,17 @@ def jax_env_context():
       os.environ['SKIP_MEGASCALE_PJRT_CLIENT'] = previous_skip_megascale_env
     else:
       os.environ.pop('SKIP_MEGASCALE_PJRT_CLIENT', None)
+
+      
+def maybe_get_torchax():
+  try:
+    jax_import_guard()
+    with jax_env_context():
+      import torchax
+      import torchax.tensor
+      import torchax.interop
+      import torchax.ops.mappings
+      return torchax
+  except ImportError:
+    return None
+
