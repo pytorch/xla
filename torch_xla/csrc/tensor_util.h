@@ -53,6 +53,13 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices);
 
+
+std::vector<torch::lazy::BackendDataPtr> CreateGlobalTensorsData(
+  const std::vector<at::Tensor>& tensors,
+  const std::vector<std::string>& devices,
+  const xla::Shape local_shape);
+
+
 // Shard and transfer tensors to devices using `PjRtComputationClient`.
 // The client's data transfer to device is asynchronous.
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(

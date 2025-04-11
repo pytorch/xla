@@ -2520,7 +2520,7 @@ void InitXlaModuleBindings(py::module m) {
         ShardingUtil::CreateShardedData(shards, devices, sharding_spec);
     xtensor->SetXlaData(xla_data);
   });
-  m.def("_load_global_local_shards", [](const at::Tensor& tensor,
+  m.def("_load_global_tensor_to_local_shards", [](const at::Tensor& tensor,
                                  std::vector<at::Tensor>& shards,
                                  std::vector<std::string>& devices,
                                  xla::Shape local_shape) {
@@ -2530,7 +2530,7 @@ void InitXlaModuleBindings(py::module m) {
     auto sharding = xtensor->sharding_spec()->sharding;
     auto sharding_spec = xtensor->sharding_spec();
     XLA_CHECK(sharding.type() != xla::OpSharding::REPLICATED)
-        << "Replicated tensor should not be loaded from _load_local_shards - "
+        << "Replicated tensor should not be loaded from _load_global_local_shards - "
            "use copy_";
     auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
 
