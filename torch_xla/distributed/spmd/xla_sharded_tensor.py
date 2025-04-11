@@ -128,7 +128,7 @@ class XLAShardedTensor(torch.Tensor):
   def load_global_local_shards_(self, shards: List[XLAShard], local_shape):
     data = [s.data for s in shards]
     devices = [s.shard_device for s in shards]
-    torch_xla._XLAC._load_global_local_shards(self.global_tensor, data, devices)
+    torch_xla._XLAC._load_global_tensor_to_local_shards(self.global_tensor, data, devices, local_shape)
 
   # Load the given list of local shards into the underlying tensor's data
   # on the local devices.
