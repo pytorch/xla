@@ -52,7 +52,7 @@ def set_all_buffers(m, params, buffers):
 
 class JittableModule(torch.nn.Module):
 
-    def __init__(self, m: torch.nn.Module, extra_jit_args={}, dedup_paramters=True):
+    def __init__(self, m: torch.nn.Module, extra_jit_args={}, dedup_parameters=True):
         super().__init__()
         self.params, self.buffers = extract_all_buffers(m)
         self._model = m
@@ -62,7 +62,7 @@ class JittableModule(torch.nn.Module):
 
         self._extra_dumped_weights = {}
 
-        if dedup_paramters:
+        if dedup_parameters:
             temp = collections.defaultdict(list)
             for k, v in self.params.items():
                 temp[id(v)].append(k)
@@ -73,9 +73,6 @@ class JittableModule(torch.nn.Module):
                     self._extra_dumped_weights[v[0]] = v[1:]
                     for extra_keys in v[1:]:
                         del self.params[extra_keys]
-
-
-
 
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
