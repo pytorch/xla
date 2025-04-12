@@ -145,9 +145,9 @@ class Mesh:
     """
     self.jax_mesh = jax_mesh
     if sharder is None:
-      assert len(self.mesh.axis_names) == 1
+      assert len(self.jax_mesh.axis_names) == 1
       sharder = SingleAxisSharder(
-        self.mesh.axis_names[0], len(self.mesh.device_ids)
+        self.jax_mesh.axis_names[0], len(self.mesh.device_ids)
       )
     self._sharder = sharder
 
