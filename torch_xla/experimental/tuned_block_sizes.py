@@ -33,6 +33,7 @@ def _simplify_key_ragged_paged_attention(q_head_num, kv_head_num, token_num,
 
 
 # TODO: add more tuned block sizes in the table
+# q_head_num, kv_head_num, token_num, max_model_len
 _ragged_attention_table = {
     (32, 8, 4096, 2048): (128, 64),
     (4, 1, 4096, 2048): (128, 128),
@@ -58,6 +59,12 @@ _ragged_attention_table = {
     (4, 1, 2048, 128): (32, 32),
     (32, 8, 1024, 128): (32, 32),
     (1, 1, 1024, 128): (32, 32),
+    (10, 2, 4096, 2048): (128, 32),  # Qwen/Qwen2.5-32B
+    (10, 2, 2048, 2048): (128, 32),  # Qwen/Qwen2.5-32B
+    (10, 2, 1024, 2048): (128, 32),  # Qwen/Qwen2.5-32B
+    (5, 1, 4098, 2048): (128, 64),  # Qwen/Qwen2.5-32B
+    (5, 1, 2048, 2048): (128, 32),  # Qwen/Qwen2.5-32B
+    (5, 1, 1024, 2048): (128, 32),  # Qwen/Qwen2.5-32B
 }
 
 
