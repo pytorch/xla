@@ -2,11 +2,13 @@ from copy import deepcopy
 from absl.testing import absltest
 from absl import flags
 import time
+import unittest
 
 import torch
 import torch.nn as nn
 import torch_xla
 import torch_xla.core.xla_builder as xb
+import torch_xla.runtime as xr
 from torch_xla.experimental.assume_pure import assume_pure
 from torch_xla._internal.jax_workarounds import jax_import_guard
 
@@ -47,6 +49,27 @@ class TestAssumePure(absltest.TestCase):
     # Assert
     expected = torch.sin(torch.ones(3, 3) @ torch.ones(3, 3))
     torch.testing.assert_close(actual, expected, check_device=False)
+    
+  @unittest.skipUnless(xr.global_runtime_device_count() >= 2,
+                       "Multiple devices required")
+  def test_assume_pure_other_xla_devices(self):
+    # Preconditions: ensure we have at least two XLA devices.
+    assert torch.device('xla:0') != torch.device('xla:1')
+
+    # Arrange
+    @assume_pure
+    def simple_torch_function(a, b):
+      return torch.sin(a @ b)
+
+    # Act: use an XLA device with ID 1.
+    a = torch.ones((3, 3), device='xla:1', requires_grad=True)
+    actual = simple_torch_function(a, a)
+    actual.sum().backward()
+    torch_xla.sync()
+
+    # Assert
+    expected = torch.sin(torch.ones(3, 3) @ torch.ones(3, 3))
+    torch.testing.assert_close(actual, expected, check_device=False)
 
   def test_assume_pure_module(self):
     # Arrange
@@ -66,6 +89,7 @@ class TestAssumePure(absltest.TestCase):
     expected = model(torch.ones(3, 3).to('xla'))
     torch.testing.assert_close(actual, expected, check_device=False)
 
+  @unittest.skipIf(xr.device_type() == 'TPU', "Bug: https://github.com/pytorch/xla/issues/8974")
   def test_assume_pure_complex_module(self):
     """Test a module comprising of some linear, conv, and relu layers."""
 
@@ -108,13 +132,13 @@ class TestAssumePure(absltest.TestCase):
 
     # Assert
     # Check that the outputs are close
-    torch.testing.assert_close(orig_output, pure_output, check_device=False)
+    torch.testing.assert_close(pure_output, orig_output, check_device=False)
 
     # Check that the gradients are close
     orig_output.sum().backward()
     pure_output.sum().backward()
     torch_xla.sync()
-    assert_gradients_close(self, orig_x, pure_x)
+    assert_gradients_close(self, pure_x, orig_x)
     for name, _ in orig_model.named_parameters():
       orig_param = orig_params[name]
       pure_param = pure_params[name]
@@ -179,15 +203,16 @@ class TestAssumePure(absltest.TestCase):
     # Assert
     # Check forward pass equivalence
     torch.testing.assert_close(
-        output_orig,
         output_pure,
+        output_orig,
         msg="Forward outputs do not match",
         check_device=False)
 
     # Check gradients
-    assert_gradients_close(self, a_orig, a_pure)
-    assert_gradients_close(self, b_orig, b_pure)
+    assert_gradients_close(self, a_pure, a_orig)
+    assert_gradients_close(self, b_pure, b_orig)
 
+  @unittest.skipIf(xr.device_type() == 'TPU', "Bug: https://github.com/pytorch/xla/issues/8975")
   def test_assume_pure_einsum_grads(self):
     """Tests einsum with all inputs requiring gradients."""
 
@@ -206,8 +231,8 @@ class TestAssumePure(absltest.TestCase):
     output_orig = einsum_fn(x_orig, y_orig)
     output_pure = assume_pure(einsum_fn)(x_pure, y_pure)
     torch.testing.assert_close(
-        output_orig,
         output_pure,
+        output_orig,
         msg=lambda msg: f"Forward outputs do not match: {msg}",
         check_device=False)
 
@@ -218,8 +243,8 @@ class TestAssumePure(absltest.TestCase):
 
     # Assert
     # Check gradients
-    assert_gradients_close(self, x_orig, x_pure)
-    assert_gradients_close(self, y_orig, y_pure)
+    assert_gradients_close(self, x_pure, x_orig)
+    assert_gradients_close(self, y_pure, y_orig)
 
   def test_assume_pure_partial_grads_args(self):
     """Tests a function where only some positional inputs require gradients.
@@ -248,8 +273,8 @@ class TestAssumePure(absltest.TestCase):
     output_orig = fn(a_orig, b_orig, c_orig)
     output_pure = assume_pure(fn)(a_pure, b_pure, c_pure)
     torch.testing.assert_close(
-        output_orig,
         output_pure,
+        output_orig,
         msg="Forward outputs do not match",
         check_device=False)
 
@@ -260,8 +285,8 @@ class TestAssumePure(absltest.TestCase):
 
     # Assert
     # Check gradients
-    assert_gradients_close(self, a_orig, a_pure)
-    assert_gradients_close(self, c_orig, c_pure)
+    assert_gradients_close(self, a_pure, a_orig)
+    assert_gradients_close(self, c_pure, c_orig)
 
     self.assertIsNotNone(a_orig.grad, "a_orig should have grad")
     self.assertIsNone(b_orig.grad, "b_orig should not have grad")
@@ -290,8 +315,8 @@ class TestAssumePure(absltest.TestCase):
     output_orig = fn(x_orig, factor=factor_val, bias=bias_orig)
     output_pure = assume_pure(fn)(x_pure, factor=factor_val, bias=bias_pure)
     torch.testing.assert_close(
-        output_orig,
         output_pure,
+        output_orig,
         msg="Forward outputs do not match",
         check_device=False)
 
@@ -302,8 +327,8 @@ class TestAssumePure(absltest.TestCase):
 
     # Assert
     # Check gradients
-    assert_gradients_close(self, x_orig, x_pure)
-    assert_gradients_close(self, bias_orig, bias_pure)
+    assert_gradients_close(self, x_pure, x_orig)
+    assert_gradients_close(self, bias_pure, bias_orig)
     # Factor is not a tensor, so it won't have a .grad attribute. Nothing to check here.
 
   def test_assume_pure_no_grads_needed(self):
@@ -328,8 +353,8 @@ class TestAssumePure(absltest.TestCase):
     # Assert
     # Check outputs
     torch.testing.assert_close(
-        output_orig,
         output_pure,
+        output_orig,
         msg="Forward outputs do not match",
         check_device=False)
 
