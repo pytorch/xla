@@ -829,32 +829,32 @@ std::vector<torch::lazy::BackendDataPtr> CreateGlobalTensorsData(
   const std::vector<at::Tensor>& tensors,
   const std::vector<std::string>& devices,
   const xla::Shape local_shape) {
-TORCH_LAZY_TIMED("TensorToData");
-XLA_CHECK_EQ(tensors.size(), devices.size());
+  TORCH_LAZY_TIMED("CreateGlobalTensorsData");
+  XLA_CHECK_EQ(tensors.size(), devices.size());
 
-if (devices.size() == 0) {
-  return {};
-}
-
-// CreateGlobalShardedData should be implicitly replicated to all devices.
-if (IsVirtualDevice(devices[0])) {
-  XLA_CHECK(
-      std::all_of(devices.begin(), devices.end(),
-                  [&](const std::string& s) { return s == devices[0]; }))
-      << "can't mix virtual device and real device.";
-
-  std::vector<std::string> local_devices =
-      runtime::GetComputationClient()->GetLocalDevices();
-  std::vector<runtime::ComputationClient::DataPtr> handles;
-  for (size_t i = 0; i < tensors.size(); ++i) {
-    auto device = ParseDeviceString(devices[i]);
-    auto shape = CreateComputationShapeFromTensor(tensors[i], &device);
-    auto replicated_data =
-        std::vector<at::Tensor>(local_devices.size(), tensors[i]);
-    handles.push_back(ShardingUtil::CreateGlobalShardedData(
-        replicated_data, local_devices, nullptr, local_shape));
+  if (devices.size() == 0) {
+    return {};
   }
-  return WrapXlaData(handles);
+
+  // CreateGlobalShardedData should be implicitly replicated to all devices.
+  if (IsVirtualDevice(devices[0])) {
+    XLA_CHECK(
+        std::all_of(devices.begin(), devices.end(),
+                    [&](const std::string& s) { return s == devices[0]; }))
+        << "can't mix virtual device and real device.";
+
+    std::vector<std::string> local_devices =
+        runtime::GetComputationClient()->GetLocalDevices();
+    std::vector<runtime::ComputationClient::DataPtr> handles;
+    for (size_t i = 0; i < tensors.size(); ++i) {
+      auto device = ParseDeviceString(devices[i]);
+      auto shape = CreateComputationShapeFromTensor(tensors[i], &device);
+      auto replicated_data =
+          std::vector<at::Tensor>(local_devices.size(), tensors[i]);
+      handles.push_back(ShardingUtil::CreateGlobalShardedData(
+          replicated_data, local_devices, nullptr, local_shape));
+    }
+    return WrapXlaData(handles);
 }
 
 std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
