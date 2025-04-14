@@ -130,8 +130,7 @@ class ShardingUtil {
                               xla::OpSharding sharding);
 
   static void XlaGlobalTensorFromLocalProcessData(const at::Tensor& input,
-                                                  xla::OpSharding sharding,
-                                                  const xla::Shape local_shape);
+                                                  xla::OpSharding sharding);
   //////////////////////////// Auto-Sharding ////////////////////////////
 
   // Construct a device mesh for auto-sharding pass. Returns a tuple of mesh

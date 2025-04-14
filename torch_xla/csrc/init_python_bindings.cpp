@@ -2234,8 +2234,8 @@ void InitXlaModuleBindings(py::module m) {
           ShardingUtil::XlaMarkSharding(input, sharding);
         });
   m.def("_load_global_tensor_to_local_shards",
-        [](const at::Tensor& input, xla::OpSharding sharding, xla::Shape local_shape) {
-          ShardingUtil::XlaGlobalTensorFromLocalProcessData(input, sharding, local_shape);
+        [](const at::Tensor& input, xla::OpSharding sharding) {
+          ShardingUtil::XlaGlobalTensorFromLocalProcessData(input, sharding);
         });
   m.def("_mark_manual_sharding",
         [](const at::Tensor& input, xla::OpSharding sharding) {

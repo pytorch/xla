@@ -853,20 +853,14 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
 }
 
 void ShardingUtil::XlaGlobalTensorFromLocalProcessData(const at::Tensor& input,
-                                                       xla::OpSharding sharding,
-                                                       const xla::Shape local_shape) {
+                                                       xla::OpSharding sharding) {
+  TORCH_LAZY_COUNTER("XlaGlobalTensorFromLocalProcessData", 1);
+  XLA_CHECK(UseVirtualDevice())
+      << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
+  XLA_CHECK(sharding.type() != xla::OpSharding::UNKNOWN)
+      << "Can't explicilty annotate with UNKNOWN sharding type.";
   XlaMarkSharding(input, sharding);
-  // TORCH_LAZY_COUNTER("XlaGlobalTensorFromLocalProcessData", 1);
-  // XLA_CHECK(UseVirtualDevice())
-  //     << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
-  // XLA_CHECK(sharding.type() != xla::OpSharding::UNKNOWN)
-  //     << "Can't explicilty annotate with UNKNOWN sharding type.";
-  // XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-  // XLATensor::ShardingSpecPtr new_sharding_spec =
-  //     std::make_shared<XLATensor::ShardingSpec>(
-  //         sharding, MakeShapeWithDeviceLayout(
-  //                       xtensor->shape(), static_cast<XlaDeviceType>(
-  //                                             xtensor->GetDevice().type())));
+
 
   // // For Non DeviceData IR values, we directly attach the sharding spec
   // // to the xtensor.
