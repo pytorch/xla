@@ -596,7 +596,7 @@ def create_global_tensor_from_local_process_data(t: Union[torch.Tensor, XLAShard
 
   op_sharding = mesh.get_op_sharding(partition_spec)
   annotate_func = torch_xla._XLAC._load_global_tensor_to_local_shards
-  annotate_func(unwrap_sharded_tensor(t), op_sharding)
+  annotate_func(unwrap_sharded_tensor(t), op_sharding, local_shape)
   return wrap_as_sharded_tensor(t)
 
 
