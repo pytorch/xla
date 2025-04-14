@@ -209,7 +209,6 @@ class SplashAttentionTest(unittest.TestCase):
         f"{{devices=[{n_devices},1,1,1]<=[{n_devices}]}}",
     )
 
-
   @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   @with_jax_high_precision
