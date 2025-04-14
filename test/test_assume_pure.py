@@ -11,12 +11,12 @@ from torch_xla.experimental.assume_pure import assume_pure
 from torch_xla._internal.jax_workarounds import jax_import_guard
 
 
-# Helper function to compare gradients, handling None cases
+# Helper function to compare gradients
 def assert_gradients_close(test_case, tensor1, tensor2):
   grad1 = tensor1.grad
   grad2 = tensor2.grad
   if grad1 is None and grad2 is None:
-    return  # Both are None, which is expected if requires_grad=False or disconnected
+    test_case.fail("Both gradients are None, which is unexpected")
   elif grad1 is None or grad2 is None:
     test_case.fail(
         f"Gradient mismatch: one is None, the other is not. Grad1: {grad1}, Grad2: {grad2}"
@@ -30,9 +30,6 @@ def assert_gradients_close(test_case, tensor1, tensor2):
 
 
 class TestAssumePure(absltest.TestCase):
-
-  def setUp(self):
-    self.device = torch_xla.device()
 
   def test_assume_pure_basic(self):
 
@@ -153,8 +150,8 @@ class TestAssumePure(absltest.TestCase):
       return a @ b
 
     # Prepare inputs (cloned for independent grad computation)
-    a_orig = torch.randn(4, 5, device=self.device, requires_grad=True)
-    b_orig = torch.randn(5, 3, device=self.device, requires_grad=True)
+    a_orig = torch.randn(4, 5, device='xla', requires_grad=True)
+    b_orig = torch.randn(5, 3, device='xla', requires_grad=True)
     a_pure = a_orig.clone().detach().requires_grad_(True)
     b_pure = b_orig.clone().detach().requires_grad_(True)
 
@@ -188,8 +185,8 @@ class TestAssumePure(absltest.TestCase):
       return torch.einsum('bij,bjk->bik', x, y)
 
     # Prepare inputs
-    x_orig = torch.randn(2, 3, 4, device=self.device, requires_grad=True)
-    y_orig = torch.randn(2, 4, 5, device=self.device, requires_grad=True)
+    x_orig = torch.randn(2, 3, 4, device='xla', requires_grad=True)
+    y_orig = torch.randn(2, 4, 5, device='xla', requires_grad=True)
     x_pure = x_orig.clone().detach().requires_grad_(True)
     y_pure = y_orig.clone().detach().requires_grad_(True)
 
@@ -219,10 +216,10 @@ class TestAssumePure(absltest.TestCase):
 
     # Prepare inputs
     torch_xla.manual_seed(42)
-    a_orig = torch.randn(3, 3, device=self.device, requires_grad=True)
+    a_orig = torch.randn(3, 3, device='xla', requires_grad=True)
     # No grad for b
-    b_orig = torch.randn(3, 3, device=self.device, requires_grad=False)
-    c_orig = torch.randn(3, 3, device=self.device, requires_grad=True)
+    b_orig = torch.randn(3, 3, device='xla', requires_grad=False)
+    c_orig = torch.randn(3, 3, device='xla', requires_grad=True)
 
     a_pure = a_orig.clone().detach().requires_grad_(True)
     # Matching requires_grad
@@ -245,7 +242,6 @@ class TestAssumePure(absltest.TestCase):
 
     # Check gradients
     assert_gradients_close(self, a_orig, a_pure)
-    assert_gradients_close(self, b_orig, b_pure)
     assert_gradients_close(self, c_orig, c_pure)
 
     self.assertIsNotNone(a_orig.grad, "a_orig should have grad")
@@ -262,8 +258,8 @@ class TestAssumePure(absltest.TestCase):
       return x * factor + bias
 
     # Prepare inputs
-    x_orig = torch.randn(3, 3, device=self.device, requires_grad=True)
-    bias_orig = torch.randn(3, 3, device=self.device, requires_grad=True)
+    x_orig = torch.randn(3, 3, device='xla', requires_grad=True)
+    bias_orig = torch.randn(3, 3, device='xla', requires_grad=True)
     factor_val = 2.5  # Non-tensor kwarg
 
     x_pure = x_orig.clone().detach().requires_grad_(True)
@@ -295,8 +291,8 @@ class TestAssumePure(absltest.TestCase):
       return torch.cos(a) + torch.sin(b)
 
     # Prepare inputs
-    a_orig = torch.randn(3, 3, device=self.device, requires_grad=False)
-    b_orig = torch.randn(3, 3, device=self.device, requires_grad=False)
+    a_orig = torch.randn(3, 3, device='xla', requires_grad=False)
+    b_orig = torch.randn(3, 3, device='xla', requires_grad=False)
     a_pure = a_orig.clone().detach().requires_grad_(False)
     b_pure = b_orig.clone().detach().requires_grad_(False)
 
