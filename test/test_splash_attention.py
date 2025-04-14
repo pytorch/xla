@@ -209,8 +209,9 @@ class SplashAttentionTest(unittest.TestCase):
         f"{{devices=[{n_devices},1,1,1]<=[{n_devices}]}}",
     )
 
-  # TODO(zpcore): Bring the test back after fix the CI failure. The Failure only
-  # shows up in the github CI while local run works fine.
+  # TODO(zpcore): Bring the test back after fix
+  # https://github.com/pytorch/xla/issues/8971. The Failure only shows up in the
+  # github CI while local run works fine.
   # @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
   #                  "This test only works on TPUv3+.")
   # @with_jax_high_precision
