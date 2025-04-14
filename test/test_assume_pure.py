@@ -11,10 +11,11 @@ from torch_xla.experimental.assume_pure import assume_pure
 from torch_xla._internal.jax_workarounds import jax_import_guard
 
 
-# Helper function to compare gradients
-def assert_gradients_close(test_case, tensor1, tensor2):
-  grad1 = tensor1.grad
-  grad2 = tensor2.grad
+def assert_gradients_close(test_case, actual, expected):
+  """Checks that the gradients of the `actual` tensor is close to the gradients of the `expected` tensor."""
+
+  grad1 = actual.grad
+  grad2 = expected.grad
   if grad1 is None and grad2 is None:
     test_case.fail("Both gradients are None, which is unexpected")
   elif grad1 is None or grad2 is None:
@@ -32,38 +33,43 @@ def assert_gradients_close(test_case, tensor1, tensor2):
 class TestAssumePure(absltest.TestCase):
 
   def test_assume_pure_basic(self):
-
+    # Arrange
     @assume_pure
     def simple_torch_function(a, b):
       return torch.sin(a @ b)
 
+    # Act
     a = torch.ones((3, 3), device='xla', requires_grad=True)
-    o = simple_torch_function(a, a)
-    o.sum().backward()
-
+    actual = simple_torch_function(a, a)
+    actual.sum().backward()
     torch_xla.sync()
-    torch.testing.assert_close(
-        o, torch.sin(torch.ones(3, 3) @ torch.ones(3, 3)), check_device=False)
+
+    # Assert
+    expected = torch.sin(torch.ones(3, 3) @ torch.ones(3, 3))
+    torch.testing.assert_close(actual, expected, check_device=False)
 
   def test_assume_pure_module(self):
+    # Arrange
     model = nn.Linear(3, 3).to('xla')
 
     @assume_pure
     def simple_torch_function(params, x):
       return torch.func.functional_call(model, params, x)
 
+    # Act
     a = torch.ones((3, 3), device='xla', requires_grad=True)
-    o = simple_torch_function(dict(model.named_parameters()), a)
-    o.sum().backward()
-
+    actual = simple_torch_function(dict(model.named_parameters()), a)
+    actual.sum().backward()
     torch_xla.sync()
 
-    torch.testing.assert_close(
-        o, model(torch.ones(3, 3).to('xla')), check_device=False)
+    # Assert
+    expected = model(torch.ones(3, 3).to('xla'))
+    torch.testing.assert_close(actual, expected, check_device=False)
 
   def test_assume_pure_complex_module(self):
     """Test a module comprising of some linear, conv, and relu layers."""
 
+    # Arrange: define module and prepare inputs.
     class MyModule(nn.Module):
 
       def __init__(self):
@@ -84,7 +90,6 @@ class TestAssumePure(absltest.TestCase):
         x = self.fc(x)
         return x
 
-    # Prepare inputs
     orig_model = MyModule()
     pure_model = deepcopy(orig_model)
     orig_model = orig_model.to('xla')
@@ -95,14 +100,13 @@ class TestAssumePure(absltest.TestCase):
     pure_x = orig_x.clone().detach().requires_grad_(True)
     torch_xla.sync()
 
-    # Call module in a pure way.
-    def pure_call(params, x):
-      return torch.func.functional_call(pure_model, params, x)
-
+    # Act: call module in a pure way.
     orig_output = orig_model(orig_x)
+    pure_call = lambda params, x: torch.func.functional_call(pure_model, params, x)
     pure_output = assume_pure(pure_call)(pure_params, pure_x)
     torch_xla.sync()
 
+    # Assert
     # Check that the outputs are close
     torch.testing.assert_close(orig_output, pure_output, check_device=False)
 
@@ -119,6 +123,8 @@ class TestAssumePure(absltest.TestCase):
   def test_assume_pure_avoid_retracing_avoid_rejit(self):
     """Tests that we avoid retracing and re-jitting when using assume_pure."""
 
+    # Arrange: first clear the cache to prevent contamination from other tests.
+    xb._JAX_TO_XLA_COMPUTATION_CACHE.clear()
     starting_lowerings = xb._jax_to_xla_computation_cache_num_misses()
     trace_counter = 0
 
@@ -128,13 +134,14 @@ class TestAssumePure(absltest.TestCase):
       trace_counter += 1
       return torch.sin(a @ b)
 
-    # Simulate a training loop.
+    # Act: simulate a training loop.
     for _ in range(5):
       a = torch.ones((3, 3), device='xla', requires_grad=True)
       o = simple_torch_function(a, a)
       o.sum().backward()
       torch_xla.sync()
 
+    # Assert
     ending_lowerings = xb._jax_to_xla_computation_cache_num_misses()
 
     # Check that we only trace once.
@@ -146,6 +153,7 @@ class TestAssumePure(absltest.TestCase):
   def test_assume_pure_matmul_grads(self):
     """Tests matmul with all inputs requiring gradients."""
 
+    # Arrange
     def matmul_fn(a, b):
       return a @ b
 
@@ -155,16 +163,10 @@ class TestAssumePure(absltest.TestCase):
     a_pure = a_orig.clone().detach().requires_grad_(True)
     b_pure = b_orig.clone().detach().requires_grad_(True)
 
+    # Act
     # Forward pass
     output_orig = matmul_fn(a_orig, b_orig)
     output_pure = assume_pure(matmul_fn)(a_pure, b_pure)
-
-    # Check forward pass equivalence
-    torch.testing.assert_close(
-        output_orig,
-        output_pure,
-        msg="Forward outputs do not match",
-        check_device=False)
 
     # Backward pass
     loss_orig = output_orig.sum()
@@ -172,7 +174,15 @@ class TestAssumePure(absltest.TestCase):
 
     loss_orig.backward()
     loss_pure.backward()
-    torch_xla.sync()  # Use mark_step or sync to ensure computations complete
+    torch_xla.sync()
+
+    # Assert
+    # Check forward pass equivalence
+    torch.testing.assert_close(
+        output_orig,
+        output_pure,
+        msg="Forward outputs do not match",
+        check_device=False)
 
     # Check gradients
     assert_gradients_close(self, a_orig, a_pure)
@@ -181,6 +191,7 @@ class TestAssumePure(absltest.TestCase):
   def test_assume_pure_einsum_grads(self):
     """Tests einsum with all inputs requiring gradients."""
 
+    # Arrange
     def einsum_fn(x, y):
       return torch.einsum('bij,bjk->bik', x, y)
 
@@ -190,6 +201,7 @@ class TestAssumePure(absltest.TestCase):
     x_pure = x_orig.clone().detach().requires_grad_(True)
     y_pure = y_orig.clone().detach().requires_grad_(True)
 
+    # Act
     # Forward pass
     output_orig = einsum_fn(x_orig, y_orig)
     output_pure = assume_pure(einsum_fn)(x_pure, y_pure)
@@ -204,14 +216,19 @@ class TestAssumePure(absltest.TestCase):
     output_pure.sum().backward()
     torch_xla.sync()
 
+    # Assert
     # Check gradients
     assert_gradients_close(self, x_orig, x_pure)
     assert_gradients_close(self, y_orig, y_pure)
 
   def test_assume_pure_partial_grads_args(self):
-    """Tests a function where only some positional inputs require gradients."""
+    """Tests a function where only some positional inputs require gradients.
+    
+    In this test, tensor a, c require grad; b does not.
+    """
 
-    def fn(a, b, c):  # a, c require grad; b does not
+    # Arrange
+    def fn(a, b, c):
       return a * torch.tanh(b) + c**2
 
     # Prepare inputs
@@ -222,10 +239,11 @@ class TestAssumePure(absltest.TestCase):
     c_orig = torch.randn(3, 3, device='xla', requires_grad=True)
 
     a_pure = a_orig.clone().detach().requires_grad_(True)
-    # Matching requires_grad
+    # No grad for b
     b_pure = b_orig.clone().detach().requires_grad_(False)
     c_pure = c_orig.clone().detach().requires_grad_(True)
 
+    # Act
     # Forward pass
     output_orig = fn(a_orig, b_orig, c_orig)
     output_pure = assume_pure(fn)(a_pure, b_pure, c_pure)
@@ -240,6 +258,7 @@ class TestAssumePure(absltest.TestCase):
     output_pure.sum().backward()
     torch_xla.sync()
 
+    # Assert
     # Check gradients
     assert_gradients_close(self, a_orig, a_pure)
     assert_gradients_close(self, c_orig, c_pure)
@@ -252,6 +271,7 @@ class TestAssumePure(absltest.TestCase):
   def test_assume_pure_partial_grads_kwargs(self):
     """Tests a function where inputs requiring gradients are passed via kwargs."""
 
+    # Arrange
     def fn(x, *, factor, bias):
       # x, bias require grad; factor does not
       # factor is a non-tensor kwarg, bias is a tensor kwarg
@@ -265,6 +285,7 @@ class TestAssumePure(absltest.TestCase):
     x_pure = x_orig.clone().detach().requires_grad_(True)
     bias_pure = bias_orig.clone().detach().requires_grad_(True)
 
+    # Act
     # Forward pass
     output_orig = fn(x_orig, factor=factor_val, bias=bias_orig)
     output_pure = assume_pure(fn)(x_pure, factor=factor_val, bias=bias_pure)
@@ -279,14 +300,16 @@ class TestAssumePure(absltest.TestCase):
     output_pure.sum().backward()
     torch_xla.sync()
 
+    # Assert
     # Check gradients
     assert_gradients_close(self, x_orig, x_pure)
     assert_gradients_close(self, bias_orig, bias_pure)
-    # Factor is not a tensor, so it won't have a .grad attribute
+    # Factor is not a tensor, so it won't have a .grad attribute. Nothing to check here.
 
   def test_assume_pure_no_grads_needed(self):
     """Tests a function where no inputs require gradients."""
 
+    # Arrange
     def original_func(a, b):
       return torch.cos(a) + torch.sin(b)
 
@@ -296,15 +319,21 @@ class TestAssumePure(absltest.TestCase):
     a_pure = a_orig.clone().detach().requires_grad_(False)
     b_pure = b_orig.clone().detach().requires_grad_(False)
 
+    # Act
     # Forward pass
     output_orig = original_func(a_orig, b_orig)
     output_pure = assume_pure(original_func)(a_pure, b_pure)
+    torch_xla.sync()
+
+    # Assert
+    # Check outputs
     torch.testing.assert_close(
         output_orig,
         output_pure,
         msg="Forward outputs do not match",
         check_device=False)
 
+    # Check gradients
     self.assertFalse(output_orig.requires_grad)
     self.assertFalse(output_pure.requires_grad)
     self.assertIsNone(a_orig.grad)
