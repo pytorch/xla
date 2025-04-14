@@ -209,36 +209,34 @@ class SplashAttentionTest(unittest.TestCase):
         f"{{devices=[{n_devices},1,1,1]<=[{n_devices}]}}",
     )
 
-  # TODO(zpcore): Bring the test back after fix
-  # https://github.com/pytorch/xla/issues/8971. The Failure only shows up in the
-  # github CI while local run works fine.
-  # @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
-  #                  "This test only works on TPUv3+.")
-  # @with_jax_high_precision
-  # def test_splash_attention_segment_id(self):
-  #   # test the segment id in splash attention against the flash attention kernel
-  #   q_sa = self.q_sa.clone().detach().requires_grad_(True)
-  #   k_sa = self.k_sa.clone().detach().requires_grad_(True)
-  #   v_sa = self.v_sa.clone().detach().requires_grad_(True)
-  #   for i in [q_sa, k_sa, v_sa]:
-  #     i.retain_grad()
-  #   segment_ids_sa = self.segment_ids_sa.clone().detach()
-  #   o_sa = splash_attention(
-  #       q_sa,
-  #       k_sa,
-  #       v_sa,
-  #       self.config.to_json(),
-  #       decoder_segment_ids=segment_ids_sa.to("xla"))
-  #   loss_sa = torch.sum(o_sa)
-  #   loss_sa.backward()
-  #   q_grad_sa, k_grad_sa, v_grad_sa = q_sa.grad, k_sa.grad, v_sa.grad
-  #   torch_xla.sync()
-  #   torch.testing.assert_close(self.o.cpu(), o_sa.cpu(), rtol=1e-3, atol=1e-5)
-  #   for org_grad, sa_grad in zip([self.q_grad, self.k_grad, self.v_grad],
-  #                                [q_grad_sa, k_grad_sa, v_grad_sa],
-  #                                strict=False):
-  #     torch.testing.assert_close(
-  #         org_grad.cpu(), sa_grad.cpu(), rtol=1e-4, atol=1e-2)
+
+  @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  @with_jax_high_precision
+  def test_splash_attention_segment_id(self):
+    # test the segment id in splash attention against the flash attention kernel
+    q_sa = self.q_sa.clone().detach().requires_grad_(True)
+    k_sa = self.k_sa.clone().detach().requires_grad_(True)
+    v_sa = self.v_sa.clone().detach().requires_grad_(True)
+    for i in [q_sa, k_sa, v_sa]:
+      i.retain_grad()
+    segment_ids_sa = self.segment_ids_sa.clone().detach()
+    o_sa = splash_attention(
+        q_sa,
+        k_sa,
+        v_sa,
+        self.config.to_json(),
+        decoder_segment_ids=segment_ids_sa.to("xla"))
+    loss_sa = torch.sum(o_sa)
+    loss_sa.backward()
+    q_grad_sa, k_grad_sa, v_grad_sa = q_sa.grad, k_sa.grad, v_sa.grad
+    torch_xla.sync()
+    torch.testing.assert_close(self.o.cpu(), o_sa.cpu(), rtol=1e-3, atol=1e-5)
+    for org_grad, sa_grad in zip([self.q_grad, self.k_grad, self.v_grad],
+                                 [q_grad_sa, k_grad_sa, v_grad_sa],
+                                 strict=False):
+      torch.testing.assert_close(
+          org_grad.cpu(), sa_grad.cpu(), rtol=1e-4, atol=1e-2)
 
   @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
                    "This test only works on TPUv3+.")
