@@ -1,36 +1,36 @@
 # Use `@assume_pure` to speed up lazy tensor tracing
 
-This document guides how to use `torch_xla.experimental.assume_pure` to eliminate
-lazy tensor tracing overhead. See [this blog post][lazy-tensor] for a primer on
-how lazy tensor tracing (operation recording) works.
+This document explains how to use `torch_xla.experimental.assume_pure` to
+eliminate lazy tensor tracing overhead. See [this blog post][lazy-tensor] for a
+primer on how lazy tensor tracing (operation recording) works.
 
 ## Background and motivation
 
 PyTorch/XLA's lazy tensor tracing ensures correct execution by recording an
-operation graph (lazy tensor IR) when running PyTorch operations. However, for
-complex models, this tracing overhead can exceed the execution time of the
-graph, leading to performance bottlenecks. When training a model, the layers in
-the model must be re-traced on every training step. That's because in the limit,
-there's no guarantee that the layers will do the same thing in different
-training steps. As an extreme example, a layer's `forward()` function may call
-`math.random()` and decide what code to run based on the roll of a dice.
+operation graph (lazy tensor IR) when running PyTorch operations. For complex
+models, this tracing overhead can exceed the execution time of the graph,
+leading to performance bottlenecks. When training a model, the layers in the
+model must be re-traced on every training step. That's because there's no
+guarantee that the layers will do the same thing in different training steps. As
+an extreme example, a layer's `forward()` function may call `math.random()` and
+decide what code to run based on a pseudo random number.
 
-However, this re-tracing errs on the conservative side too much. In many cases,
-the layers in your model do exactly the same thing when given the same input
-tensor shapes, and they will return the same output if given the same input.
+Re-tracing can introduce unnecessary overhead. In many cases, the layers in your
+model will do exactly the same thing when given the same input tensor shapes. In
+other words, given the same input, the function return the same output. Often,
+the layers also will not will not perform side-effects such as saving the tensor
+to a file or adding it to a global list. Such functions are called
+"[pure functions][pure-function]".
 
-Taking advantage of this, `@assume_pure` can be placed on PyTorch/XLA functions
-and easily eliminate lazy tensor tracing overhead. If you have a
-[pure function][pure-function] that operates on XLA tensors, that function can be
-decorated with `@assume_pure` and will only be traced once for each unique input
-tensor shape and dtype combinations. PyTorch/XLA will cache the traced
-computation instead of repeatedly tracing the same operations.
+Any PyTorch/XLA function decorated with `@assume_pure` will only be traced once
+for each unique input tensor shape and dtype combination. PyTorch/XLA will cache
+the traced computation instead of repeatedly tracing the same operations.
 
 ## How to use `@assume_pure`
 
 ### Using `@assume_pure` with a function
 
-If you know your function is pure, simply decorate it with `@assume_pure`:
+If you know your function is pure, decorate your function with `@assume_pure`:
 
 ```py
 import torch
@@ -113,7 +113,7 @@ No `@assume_pure` time: 140.1342 ms
 `@assume_pure` time: 24.1658 ms
 ```
 
-We can see that the version with `@assume_pure` is much faster.
+The version with `@assume_pure` is much faster.
 
 Importantly, the `@assume_pure` running time does not scale with increasing
 complexity inside the model. That's because we only trace the model once, paying

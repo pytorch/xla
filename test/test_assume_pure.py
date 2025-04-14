@@ -49,7 +49,7 @@ class TestAssumePure(absltest.TestCase):
     # Assert
     expected = torch.sin(torch.ones(3, 3) @ torch.ones(3, 3))
     torch.testing.assert_close(actual, expected, check_device=False)
-    
+
   @unittest.skipUnless(xr.global_runtime_device_count() >= 2,
                        "Multiple devices required")
   def test_assume_pure_other_xla_devices(self):
@@ -89,7 +89,8 @@ class TestAssumePure(absltest.TestCase):
     expected = model(torch.ones(3, 3).to('xla'))
     torch.testing.assert_close(actual, expected, check_device=False)
 
-  @unittest.skipIf(xr.device_type() == 'TPU', "Bug: https://github.com/pytorch/xla/issues/8974")
+  @unittest.skipIf(xr.device_type() == 'TPU',
+                   "Bug: https://github.com/pytorch/xla/issues/8974")
   def test_assume_pure_complex_module(self):
     """Test a module comprising of some linear, conv, and relu layers."""
 
@@ -126,7 +127,8 @@ class TestAssumePure(absltest.TestCase):
 
     # Act: call module in a pure way.
     orig_output = orig_model(orig_x)
-    pure_call = lambda params, x: torch.func.functional_call(pure_model, params, x)
+    pure_call = lambda params, x: torch.func.functional_call(
+        pure_model, params, x)
     pure_output = assume_pure(pure_call)(pure_params, pure_x)
     torch_xla.sync()
 
@@ -212,7 +214,8 @@ class TestAssumePure(absltest.TestCase):
     assert_gradients_close(self, a_pure, a_orig)
     assert_gradients_close(self, b_pure, b_orig)
 
-  @unittest.skipIf(xr.device_type() == 'TPU', "Bug: https://github.com/pytorch/xla/issues/8975")
+  @unittest.skipIf(xr.device_type() == 'TPU',
+                   "Bug: https://github.com/pytorch/xla/issues/8975")
   def test_assume_pure_einsum_grads(self):
     """Tests einsum with all inputs requiring gradients."""
 
