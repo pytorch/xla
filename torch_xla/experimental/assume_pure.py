@@ -1,5 +1,3 @@
-import torch
-
 from torch_xla._internal.jax_workarounds import requires_jax
 import torch_xla.core.xla_builder as xb
 
@@ -34,5 +32,5 @@ def j2t_autograd(fn):
   the PyTorch autograd framework by saving the residuals into the context object.
   """
   import torchax.interop
-  return torchax.interop.j2t_autograd(fn, call_jax=lambda fn, *args: xb.call_jax(fn, args))
-
+  return torchax.interop.j2t_autograd(
+      fn, call_jax=lambda fn, *args: xb.call_jax(fn, args))
