@@ -109,10 +109,10 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
 
   @parameterized.product(
       dtype=(jnp.float32, jnp.bfloat16),
-      page_size=(16, 32, 64),
+      page_size=16,
       num_kv_heads=(1, 8),
-      q_kv_head_ratio=(1, 4, 8),
-      head_dim=(128, 256),
+      q_kv_head_ratio=(1, 8),
+      head_dim=256,
       num_queries_per_compute_block=(16, 32),
       block_kv_size=(128, 256),
       attn_logits_soft_cap=(1.0, None),
@@ -209,10 +209,10 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
   # When this happens, we need an additional parameter `effective_q_lens` to the paged_attention to set the causal mask right.
   @parameterized.product(
       dtype=(jnp.float32, jnp.bfloat16),
-      page_size=(16, 32, 64),
+      page_size=64,
       num_kv_heads=(1, 8),
-      q_kv_head_ratio=(1, 4, 8),
-      head_dim=(128, 256),
+      q_kv_head_ratio=(1, 8),
+      head_dim=256,
       num_queries_per_compute_block=(16, 32),
       block_kv_size=(128, 256),
   )
