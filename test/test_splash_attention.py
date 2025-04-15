@@ -212,7 +212,8 @@ class SplashAttentionTest(unittest.TestCase):
   @with_jax_high_precision
   def test_splash_attention_aot_traceable(self):
     q, k, v, q_sa, k_sa, v_sa = self.ab_comparsion_input_generation()
-    # Repeat the kv tensors to match the q tensor heads. This is required for flash
+    # Repeat the kv tensors to match the q tensor heads. This is required for
+    # flash attention kernel.
     kk = self.maybe_repeat_kv(k)
     vv = self.maybe_repeat_kv(v)
     from functorch.compile import aot_function, make_boxed_func
