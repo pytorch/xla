@@ -19,6 +19,7 @@
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
@@ -431,9 +432,20 @@ void DebugUtil::post_compilation_analysis(
     return;
   }
 
+  std::stringstream ss;
+  // This can be used to verify the hash of the underlying computation proto.
+  // Note that for UserComputation computations, the protobuf is factored in
+  // the graph hash.
+  std::string serialized_computation =
+      ConsumeValue(runtime::util::GetDeterministicSerializedModuleProto(
+          computation->computation().proto()));
+  ss << "\n"
+     << "Computation hash: "
+     << torch::lazy::HashToString(torch::lazy::Hash(serialized_computation))
+     << "\n";
+
   constexpr std::string_view debug_output_prefix =
       "Post Compilation Analysis: ";
-  std::stringstream ss;
   ss << "\n"
      << debug_output_prefix
      << "======================================================================"
