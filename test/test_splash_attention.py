@@ -60,6 +60,13 @@ class SplashAttentionTest(unittest.TestCase):
         segment_ids_partition_spec=segment_ids_partition_spec,
     )
 
+  def _make_attention_mask_from_segment_ids(self, q_segment_ids,
+                                            kv_segment_ids):
+    return q_segment_ids.view(q_segment_ids.shape[0], 1,
+                              q_segment_ids.shape[1], 1) != kv_segment_ids.view(
+                                  kv_segment_ids.shape[0], 1, 1,
+                                  kv_segment_ids.shape[1])
+
   def maybe_repeat_kv(self, hidden_state):
     if hidden_state.size(1) == self.NUM_Q_HEADS:
       return hidden_state
@@ -160,25 +167,21 @@ class SplashAttentionTest(unittest.TestCase):
                    "This test only works on TPUv3+.")
   @with_jax_high_precision
   def test_splash_attention_segment_id(self):
-    # test the segment id in splash attention against the flash attention kernel
     q, k, v, q_sa, k_sa, v_sa = self.ab_comparsion_input_generation()
-    kk = self.maybe_repeat_kv(k)
-    vv = self.maybe_repeat_kv(v)
-    segment_ids = torch.zeros(self.BATCH_SIZE, self.SEQ_LEN).to("xla")
-    for i in range(self.BATCH_SIZE):
-      segment_ids[i, :] = i
+    zeros = torch.zeros(self.BATCH_SIZE, self.SEQ_LEN // 4).to("xla")
+    segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     segment_ids_sa = segment_ids.clone().detach()
 
-    o = flash_attention(
+    # For unknow reason, flash_attention will lose the tensor during backward
+    # when test with splash attention together. This is unable to reproduce
+    # locally and only fail in github CI. So I am testing against vanilla
+    # attention.
+    o = self._attention(
         q,
-        kk,
-        vv,
-        True,
-        segment_ids,
-        segment_ids,
-        partition_spec=self.partition_spec,
-        mesh=xs.get_global_mesh(),
-    )
+        k,
+        v,
+        attn_mask=self._make_attention_mask_from_segment_ids(
+            segment_ids, segment_ids))
     loss = torch.sum(o)
     torch_xla.sync()
     loss.backward()
@@ -190,7 +193,8 @@ class SplashAttentionTest(unittest.TestCase):
         k_sa,
         v_sa,
         self.config.to_json(),
-        decoder_segment_ids=segment_ids_sa)
+        decoder_segment_ids=segment_ids_sa,
+        causal=True)
     loss_sa = torch.sum(o_sa)
     loss_sa.backward()
     q_grad_sa, k_grad_sa, v_grad_sa = q_sa.grad.detach(), k_sa.grad.detach(
