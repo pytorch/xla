@@ -194,7 +194,7 @@ class SplashAttentionTest(unittest.TestCase):
         v_sa,
         self.config.to_json(),
         decoder_segment_ids=segment_ids_sa,
-        causal=True)
+        causal=False)
     loss_sa = torch.sum(o_sa)
     loss_sa.backward()
     q_grad_sa, k_grad_sa, v_grad_sa = q_sa.grad.detach(), k_sa.grad.detach(

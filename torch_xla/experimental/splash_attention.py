@@ -171,10 +171,10 @@ def splash_attention_jax_wrapper(
         k_layout=splash_attention_kernel.QKVLayout[global_k_layout],
         v_layout=splash_attention_kernel.QKVLayout[global_v_layout],
     )
-    if causal:
-      mask = splash_attention_mask.FullMask(_shape=(seq_len, seq_len))
-    else:
+    if not causal:
       mask = splash_attention_mask.CausalMask(shape=(seq_len, seq_len))
+    else:
+      mask = splash_attention_mask.FullMask(_shape=(seq_len, seq_len))
 
     # Apply local masking if local sliding attention is enabled.
     if config.attentiontype_local_sliding:
@@ -231,7 +231,7 @@ def tpu_splash_attention_jax_call_wrapper(
     value: torch.Tensor,
     config: SplashAttentionConfig,
     decoder_segment_ids: torch.Tensor | None,
-    causal: bool = False,
+    causal: bool,
     attn_logits_soft_cap: float | None = None,
     is_forward: bool = True,
     grad_output: torch.Tensor | None = None,
@@ -368,7 +368,7 @@ def splash_attention(
     v: torch.Tensor,
     config: str,
     decoder_segment_ids: torch.Tensor | None = None,
-    causal: bool = False,
+    causal: bool = True,
     attn_logits_soft_cap: float | None = None,
 ) -> torch.Tensor:
   """Splash attention function.
