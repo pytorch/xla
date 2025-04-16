@@ -264,6 +264,7 @@ class TestJaxInterop(absltest.TestCase):
     xb.call_jax(f, (a, a))
     jax.config.update('jax_default_matmul_precision', "default")
     xb.call_jax(f, (a, a))
+    xb.call_jax(f, (a, a))
 
     ending_cache_misses = xb._jax_to_xla_computation_cache_elements()
     self.assertEqual(ending_cache_misses - starting_cache_misses, 2)

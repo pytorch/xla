@@ -936,29 +936,6 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
     return XlaComputation(name, computation, pick_tensor_args, out_spec)
 
 
-class JaxConfigWrapper:
-
-  def __init__(self, value: "jax._src.config"):
-    self.value = value
-
-  def __hash__(self):
-    if isinstance(self.value, tuple):
-      return hash(
-          tuple(
-              hash(item) if hasattr(item, '__hash__') and
-              item.__hash__ is not None else id(item) for item in self.value))
-    else:
-      raise TypeError(
-          f"Unhashable JaxConfigWrapper value: {self.value} of type {type(self.value)}"
-      )
-
-  def __eq__(self, other):
-    return isinstance(other, JaxConfigWrapper) and self.value == other.value
-
-  def __repr__(self):
-    return f"JaxConfigWrapper({self.value})"
-
-
 def _jax_to_xla_computation_cache_get_or_insert(jax_func,
                                                 sample_inputs: tuple[Any, ...],
                                                 input_tree_spec,
@@ -969,16 +946,16 @@ def _jax_to_xla_computation_cache_get_or_insert(jax_func,
   # The first layer uses the `config.trace_context()`, which is strongly referenced.
   # The second layer uses the `jax_func`, which is weakly referenced.
   # The third layer uses the sample inputs and the tree spec, which is strongly referenced.
-  jax_config = JaxConfigWrapper(config.trace_context())
+  # jax_config = JaxConfigWrapper(config.trace_context())
   config_context_dict = _JAX_TO_XLA_COMPUTATION_CACHE.setdefault(
-      jax_config, WeakKeyDictionary())
+      config.trace_context(), WeakKeyDictionary())
   inner_dict = config_context_dict.setdefault(jax_func, {})
   if (sample_inputs, input_tree_spec) in inner_dict:
     return inner_dict[(sample_inputs, input_tree_spec)]
   else:
     hlo = get_xla_computation()
-    _JAX_TO_XLA_COMPUTATION_CACHE[jax_config][jax_func][(sample_inputs,
-                                                         input_tree_spec)] = hlo
+    _JAX_TO_XLA_COMPUTATION_CACHE[config.trace_context()][jax_func][(
+        sample_inputs, input_tree_spec)] = hlo
     return hlo
 
 
