@@ -1,5 +1,6 @@
 import torch
 import unittest
+import torchax
 from torchax import interop
 
 class M1(torch.nn.Module):
@@ -41,6 +42,38 @@ class InteropTest(unittest.TestCase):
         self.assertEqual(m.a.weight.item(), 0)
         self.assertEqual(m.m1.x.item(), 0)
 
+    def test_j2t_autograd_forward(self):
+        with torchax.default_env():
+            # Setup
+            def fn(x):
+                return x + 1
+
+            j2t_fn = interop.j2t_autograd(fn)
+            x = torch.ones(2, 2, requires_grad=True, device='jax')
+            
+            # Act
+            actual = j2t_fn(x)
+            
+            # Assert
+            expected = torch.ones(2, 2) + 1
+            torch.testing.assert_close(actual, expected, check_device=False)
+
+    def test_j2t_autograd_backward(self):
+        with torchax.default_env():
+            # Setup
+            def fn(x):
+                return x * 2
+
+            j2t_fn = interop.j2t_autograd(fn)
+            x = torch.ones(2, 2, device='jax').requires_grad_()
+            
+            # Act
+            actual = j2t_fn(x)
+            actual.sum().backward()
+            
+            # Assert
+            expected = torch.ones(2, 2) * 2
+            torch.testing.assert_close(x.grad, expected, check_device=False)
 
 
 if __name__ == '__main__':
