@@ -7,6 +7,7 @@ import torch
 import torch_xla
 import torch.nn as nn
 from torch_xla.distributed.spmd.xla_sharding import apply_xla_patch_to_nn_linear, Mesh
+from torch_xla.experimental.assume_pure import assume_pure
 from torch_xla.experimental.scan import scan
 from torch_xla.experimental.scan_layers import scan_layers
 from torch_xla.distributed.spmd import mark_sharding, mark_sharding_with_gradients, set_global_mesh, get_1d_mesh, get_global_mesh
@@ -228,6 +229,19 @@ class ScanSpmdTest(unittest.TestCase):
 
   def count_regex(self, hlo_text, regex_str):
     return len(re.findall(regex_str, hlo_text))
+
+  def test_assume_pure_works_with_mark_sharding(self):
+    x = torch.randn((3, 4, 5, 128), device='xla')
+    assume_pure(mark_sharding)(x, self.spmd_mesh, ("model", None, None, None))
+    # assert not throwing
+
+  def test_convert_to_jax_mesh(self):
+    jax_mesh = self.spmd_mesh.maybe_convert_and_get_jax_mesh()
+    self.assertEqual(jax_mesh.devices.shape, self.spmd_mesh.mesh_shape)
+    self.assertEqual(
+        np.array([dev.id for dev in jax_mesh.devices.flatten()]),
+        self.spmd_mesh.device_ids)
+    # assert not throwing
 
 
 if __name__ == '__main__':

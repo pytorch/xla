@@ -10,6 +10,7 @@ import jax.numpy as jnp
 from jax import tree_util as pytree
 from jax.experimental.shard_map import shard_map
 from torchax import tensor
+from torchax import util
 import torchax
 
 from torchax.types import JaxValue, TorchValue, JaxCallable, TorchCallable
@@ -215,17 +216,17 @@ def j2t_autograd(fn, call_jax=call_jax):
 
         class JaxFun(torch.autograd.Function):
             @staticmethod
-            def forward(ctx, tree_def, *flat_inputs):
-                # Reconstruct the original args and kwargs
-                args, kwargs = tree_unflatten(tree_def, flat_inputs)
+            def forward(ctx, tree_def, *flat_args_kwargs):
 
-                # Execute the JAX computation
-                # Pass the reconstructed args/kwargs tuple as the primal
-                y, fun_vjp = call_jax(
-                    _jax_forward,
-                    fn,
-                    (args, kwargs),
-                )
+                tensors, other = util.partition(flat_args_kwargs, lambda x: isinstance(x, torch.Tensor))
+                # We want the arguments that don't require grads to be closured?
+                def fn_wrapper(*tensors):
+                    # Reconstruct the original args and kwargs
+                    flat_inputs = util.merge(tensors, other)
+                    args, kwargs = tree_unflatten(tree_def, flat_inputs)
+                    return fn(*args, **kwargs)
+
+                y, fun_vjp = call_jax(jax.vjp, fn_wrapper, *tensors)
 
                 # Save necessary information for backward
                 # Flatten the vjp function. `vjp_spec` contains a jaxpr for the backward pass.
@@ -233,7 +234,6 @@ def j2t_autograd(fn, call_jax=call_jax):
                 residuals, vjp_spec = tree_flatten(fun_vjp)
                 ctx.vjp_spec = vjp_spec
                 ctx.save_for_backward(*residuals)
-
                 return y
 
             @staticmethod
@@ -265,22 +265,10 @@ def j2t_autograd(fn, call_jax=call_jax):
         bound = sig.bind(*args, **kwargs)
         bound.apply_defaults()
         flat_args_kwargs, tree_def = tree_flatten((bound.args, bound.kwargs))
-        return JaxFun.apply(tree_def, *flat_args_kwargs)
+        y = JaxFun.apply(tree_def, *flat_args_kwargs)
+        return y 
 
     return inner
-
-
-def _jax_forward(fn, primals):
-  """JAX function to compute output and vjp function.
-
-  primals should be a tuple (args, kwargs).
-  """
-  import jax
-
-  def fn_wrapper(a, kw):
-    return fn(*a, **kw)
-
-  return jax.vjp(fn_wrapper, *primals)
 
 
 def _jax_backward(vjp_spec, saved_tensors, grad_out):

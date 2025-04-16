@@ -63,32 +63,6 @@ class SplashAttentionConfig:
     converted_data = {k: list_to_tuple(v) for k, v in json_data.items()}
     return SplashAttentionConfig(**converted_data)
 
-  @requires_jax
-  def maybe_convert_and_get_jax_mesh(self):
-    # Construct a JAX mesh object with the same device ids shape and ordering
-    # from torch_xla device mesh.
-    mesh = Mesh.from_str(self.mesh)
-    import jax
-    import numpy as np
-    from jax._src import mesh as mesh_lib
-
-    assert mesh.axis_names is not None, "Omitting axis names is not yet supported"
-
-    # Create a mapping from device ID to device object
-    all_devices = jax.devices()
-    device_id_to_device = {device.id: device for device in all_devices}
-    device_ids_array = mesh.device_ids.reshape(*mesh.mesh_shape)
-    device_array = np.empty(device_ids_array.shape, dtype=object)
-    for idx in np.ndindex(device_ids_array.shape):
-      device_id = device_ids_array[idx]
-      if device_id in device_id_to_device:
-        device_array[idx] = device_id_to_device[device_id]
-      else:
-        raise ValueError(
-            f"torch_xla device ID {device_id} not found in available JAX devices"
-        )
-    return mesh_lib.Mesh(device_array, axis_names=mesh.axis_names)
-
 
 @xp.trace_me("splash_attention_kernel_wrapper")
 def splash_attention_jax_wrapper(
@@ -112,7 +86,7 @@ def splash_attention_jax_wrapper(
       splash_attention_kernel,
       splash_attention_mask,
   )
-  mesh = config.maybe_convert_and_get_jax_mesh()
+  mesh = Mesh.from_str(config.mesh).maybe_convert_and_get_jax_mesh()
   # input q,k,v shape: [batch, #head, seq_len, head_dim]
   if decoder_segment_ids is not None and not decoder_segment_ids.shape:
     decoder_segment_ids = None
