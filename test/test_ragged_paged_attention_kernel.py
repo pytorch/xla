@@ -601,4 +601,3 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
 if __name__ == "__main__":
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
-
