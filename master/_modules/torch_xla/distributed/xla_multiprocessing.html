@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitcf764ff )
+                  master (2.8.0+gita37a585 )
                 </div>
               
             
@@ -606,7 +606,10 @@
   <span class="k">return</span> <span class="kc">None</span>
 
 
-<span class="n">device_kind_handler_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">List</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],]</span> <span class="o">=</span> <span class="p">{</span>
+<span class="n">device_kind_handler_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span>
+    <span class="nb">str</span><span class="p">,</span>
+    <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">List</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span>
+<span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
     <span class="n">_TPU_V5P</span><span class="p">:</span> <span class="n">_v5p_create_replica_groups</span><span class="p">,</span>
     <span class="n">_TPU_V6E</span><span class="p">:</span> <span class="n">_v6e_create_replica_groups</span>
 <span class="p">}</span>
