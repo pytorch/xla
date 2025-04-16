@@ -171,7 +171,7 @@ def splash_attention_jax_wrapper(
         k_layout=splash_attention_kernel.QKVLayout[global_k_layout],
         v_layout=splash_attention_kernel.QKVLayout[global_v_layout],
     )
-    if not causal:
+    if causal:
       mask = splash_attention_mask.CausalMask(shape=(seq_len, seq_len))
     else:
       mask = splash_attention_mask.FullMask(_shape=(seq_len, seq_len))
