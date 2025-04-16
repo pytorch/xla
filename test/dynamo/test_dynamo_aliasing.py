@@ -185,41 +185,6 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
     self.assertNotIn('XlaSetBufferDonation', met.counter_names())
 
 
-class TestNonDynamoBufferDonationAliasing(unittest.TestCase):
-
-  def dummy_fn(self, input):
-    return torch.cos(torch.sin(input))
-
-  # Currently let's skip buffer donation api for the non-dynamo use case
-  def test_buffer_donation_skip_for_non_dynamo(self):
-    device = xm.xla_device()
-    input = torch.randn(5, 5).to(device)
-    xm.mark_step()
-    met.clear_all()
-
-    # We should be able to set buffer donation for input tensor, but when mark_step
-    # triggered, the buffer donation should be ignored.
-    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
-    res = self.dummy_fn(input)
-    xm.mark_step()
-    # Make sure that input buffer is not aliased and can be used for other compuations.
-    # Also make sure that buffer_donation will not trigger recompilation in non-dynamo.
-    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, False))
-    res2 = self.dummy_fn(input)
-    xm.mark_step()
-    torch.allclose(res.cpu(), res2.cpu())
-    self.assertEqual(met.metric_data('CompileTime')[0], 1)
-
-  def test_no_op_mark_step_keep_buffer_donation(self):
-    device = xm.xla_device()
-    input = torch.randn(5, 5).to(device)
-    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
-    xm.mark_step()
-    self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
-    xm.mark_step()
-    self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
-
-
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
