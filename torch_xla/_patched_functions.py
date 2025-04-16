@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch import inf
 from typing import Iterable, Union, Optional
+from torch_xla.experimental.gru import GRU as ScanGRU
 
 _tensor_or_tensors = Union[torch.Tensor, Iterable[torch.Tensor]]
 
@@ -59,3 +60,4 @@ def clip_grad_norm_(parameters: _tensor_or_tensors,
 
 def _apply_patches():
   nn.utils.clip_grad_norm_ = _patch(nn.utils.clip_grad_norm_, clip_grad_norm_)
+  nn.GRU = ScanGRU
