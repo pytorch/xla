@@ -1,5 +1,6 @@
 import sys
 import os
+
 example_folder = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(
         sys.argv[0])))) + "/examples"
