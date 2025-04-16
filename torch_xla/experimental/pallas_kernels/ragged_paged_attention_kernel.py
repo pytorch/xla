@@ -961,7 +961,9 @@ def ragged_paged_attention(
               "arbitrary",
               "arbitrary",
               "arbitrary",
-          )),
+          ),
+          vmem_limit_bytes=67108864,
+      ),
       out_shape=out_shape,
   )
   buffer_index = jnp.zeros((1,), jnp.int32)
