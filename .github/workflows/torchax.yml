@@ -56,4 +56,5 @@ jobs:
           pytest test/test_libraries.py
           pytest test/test_symbolic_shapes.py
           pytest test/test_exports.py
+          pytest test/test_view.py
           XLA_FLAGS=--xla_force_host_platform_device_count=4 pytest -n 0 test_dist/
