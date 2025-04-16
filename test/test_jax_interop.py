@@ -8,6 +8,9 @@ import torch_xla.core.xla_builder as xb
 
 class TestJaxInterop(absltest.TestCase):
 
+  def setUp(self):
+    xb._JAX_TO_XLA_COMPUTATION_CACHE.clear()
+
   def test_call_jax(self):
     """Test that we can call a JAX function from PyTorch/XLA lazy tensor tracing."""
 
@@ -252,13 +255,12 @@ class TestJaxInterop(absltest.TestCase):
     import jax
     starting_cache_misses = xb._jax_to_xla_computation_cache_elements()
 
-    # Let's trace the same jax function with different static args.
     dev = xm.xla_device()
     a = torch.ones((3, 3), device=dev)
 
-    def f(a, num: float):
+    def f(a, b):
       import jax.numpy as jnp
-      return a + jnp.sin(num)
+      return a + jnp.sin(b)
 
     jax.config.update('jax_default_matmul_precision', "highest")
     xb.call_jax(f, (a, a))

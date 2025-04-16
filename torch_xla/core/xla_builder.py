@@ -946,7 +946,6 @@ def _jax_to_xla_computation_cache_get_or_insert(jax_func,
   # The first layer uses the `config.trace_context()`, which is strongly referenced.
   # The second layer uses the `jax_func`, which is weakly referenced.
   # The third layer uses the sample inputs and the tree spec, which is strongly referenced.
-  # jax_config = JaxConfigWrapper(config.trace_context())
   config_context_dict = _JAX_TO_XLA_COMPUTATION_CACHE.setdefault(
       config.trace_context(), WeakKeyDictionary())
   inner_dict = config_context_dict.setdefault(jax_func, {})
