@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>torch_xla.distributed.xla_multiprocessing &mdash; PyTorch/XLA master documentation</title>
+  <title>Use @assume_pure to speed up lazy tensor tracing &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -25,12 +25,12 @@
 
   
 
-  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" /> -->
-  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-    <link rel="index" title="Index" href="../../../genindex.html" />
-    <link rel="search" title="Search" href="../../../search.html" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -41,16 +41,16 @@
   
 
   
-  <script src="../../../_static/js/modernizr.min.js"></script>
+  <script src="../_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -295,7 +295,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -313,48 +313,48 @@
             
               <p class="caption" role="heading"><span class="caption-text">Learn about Pytorch/XLA</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/xla-overview.html">Pytorch/XLA overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/api-guide.html">PyTorch/XLA API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/dynamic_shape.html">Dynamic shape</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/eager.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/pjrt.html">PJRT Runtime</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/troubleshoot.html">Troubleshoot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic shape</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/pjrt.html">PJRT Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshoot</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Learn about accelerators</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../accelerators/tpu.html">Learn about TPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/pallas.html">Custom Kernels via Pallas</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/scan.html">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/amp.html">Automatic Mixed Precision</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/ddp.html">How to do DistributedDataParallel(DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ddp.html">How to do DistributedDataParallel(DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/configure-environment.html">Configure a development environment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/codegen_migration.html">Codegen migration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/op_lowering.html">OP Lowering Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/plugins.html">Custom Hardware Plugins</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure a development environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
 </ul>
 
             
@@ -387,7 +387,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="../../../index.html">
+        <a href="../index.html">
           
             Docs
           
@@ -395,12 +395,14 @@
       </li>
 
         
-          <li><a href="../../index.html">Module code</a> &gt;</li>
-        
-      <li>torch_xla.distributed.xla_multiprocessing</li>
+      <li>Use <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> to speed up lazy tensor tracing</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/perf/assume_pure.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+          
         
       </li>
     
@@ -429,201 +431,128 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <h1>Source code for torch_xla.distributed.xla_multiprocessing</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch.multiprocessing</span>
+  <div class="section" id="use-assume-pure-to-speed-up-lazy-tensor-tracing">
+<h1>Use <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> to speed up lazy tensor tracing<a class="headerlink" href="#use-assume-pure-to-speed-up-lazy-tensor-tracing" title="Permalink to this heading">¶</a></h1>
+<p>This document explains how to use <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.assume_pure</span></code> to
+eliminate lazy tensor tracing overhead. See <a class="reference external" href="https://pytorch.org/blog/understanding-lazytensor-system-performance-with-pytorch-xla-on-cloud-tpu/">this blog post</a> for a
+primer on how lazy tensor tracing (operation recording) works.</p>
+<div class="section" id="background-and-motivation">
+<h2>Background and motivation<a class="headerlink" href="#background-and-motivation" title="Permalink to this heading">¶</a></h2>
+<p>PyTorch/XLA’s lazy tensor tracing ensures correct execution by recording an
+operation graph (lazy tensor IR) when running PyTorch operations. For complex
+models, this tracing overhead can exceed the execution time of the graph,
+leading to performance bottlenecks. When training a model, the layers in the
+model must be re-traced on every training step. That’s because there’s no
+guarantee that the layers will do the same thing in different training steps. As
+an extreme example, a layer’s <code class="docutils literal notranslate"><span class="pre">forward()</span></code> function may call <code class="docutils literal notranslate"><span class="pre">math.random()</span></code> and
+decide what code to run based on a pseudo random number.</p>
+<p>Re-tracing can introduce unnecessary overhead. In many cases, the layers in your
+model will do exactly the same thing when given the same input tensor shapes. In
+other words, given the same input, the function return the same output. Often,
+the layers also will not will not perform side-effects such as saving the tensor
+to a file or adding it to a global list. Such functions are called
+“<a class="reference external" href="https://en.wikipedia.org/wiki/Pure_function">pure functions</a>“.</p>
+<p>Any PyTorch/XLA function decorated with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> will only be traced once
+for each unique input tensor shape and dtype combination. PyTorch/XLA will cache
+the traced computation instead of repeatedly tracing the same operations.</p>
+</div>
+<div class="section" id="how-to-use-assume-pure">
+<h2>How to use <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code><a class="headerlink" href="#how-to-use-assume-pure" title="Permalink to this heading">¶</a></h2>
+<div class="section" id="using-assume-pure-with-a-function">
+<h3>Using <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> with a function<a class="headerlink" href="#using-assume-pure-with-a-function" title="Permalink to this heading">¶</a></h3>
+<p>If you know your function is pure, decorate your function with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code>:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla</span><span class="w"> </span><span class="kn">import</span> <span class="n">runtime</span> <span class="k">as</span> <span class="n">xr</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla._internal</span><span class="w"> </span><span class="kn">import</span> <span class="n">pjrt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.assume_pure</span><span class="w"> </span><span class="kn">import</span> <span class="n">assume_pure</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cache</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Callable</span>
+<span class="nd">@assume_pure</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">do_some_math</span><span class="p">(</span>
+    <span class="c1"># You can pass any number of XLA tensors.</span>
+    <span class="n">a</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">b</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
 
+    <span class="c1"># Non-tensor arguments are also supported, and passing different values will</span>
+    <span class="c1"># trigger re-tracing and caching more computations.</span>
+    <span class="n">c</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="c1"># Evaluate some pure expressions.</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">@</span> <span class="n">b</span> <span class="o">+</span> <span class="n">c</span>
 
-<div class="viewcode-block" id="spawn"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.distributed.xla_multiprocessing.spawn">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">spawn</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span>
-          <span class="n">args</span><span class="o">=</span><span class="p">(),</span>
-          <span class="n">nprocs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-          <span class="n">join</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-          <span class="n">daemon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-          <span class="n">start_method</span><span class="o">=</span><span class="s1">&#39;spawn&#39;</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Enables multi processing based replication.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    fn (callable): The function to be called for each device which takes part of</span>
-<span class="sd">      the replication. The function will be called with a first argument being</span>
-<span class="sd">      the global index of the process within the replication, followed by the</span>
-<span class="sd">      arguments passed in `args`.</span>
-<span class="sd">    args (tuple): The arguments for `fn`.</span>
-<span class="sd">      Default: Empty tuple</span>
-<span class="sd">    nprocs (int): The number of processes/devices for the replication. At the</span>
-<span class="sd">      moment, if specified, can be either 1 or None (which would automatically</span>
-<span class="sd">      converted to the maximum number of devices). Other numbers would result</span>
-<span class="sd">      in ValueError.</span>
-<span class="sd">    join (bool): Whether the call should block waiting for the completion of the</span>
-<span class="sd">      processes which have being spawned.</span>
-<span class="sd">      Default: True</span>
-<span class="sd">    daemon (bool): Whether the processes being spawned should have the `daemon`</span>
-<span class="sd">      flag set (see Python multi-processing API).</span>
-<span class="sd">      Default: False</span>
-<span class="sd">    start_method (string): The Python `multiprocessing` process creation method.</span>
-<span class="sd">      Default: `spawn`</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    The same object returned by the `torch.multiprocessing.spawn` API. If</span>
-<span class="sd">    `nprocs` is 1 the `fn` function will be called directly, and the API will</span>
-<span class="sd">    return None.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">nprocs</span><span class="p">,</span> <span class="n">start_method</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span></div>
-
-
-<span class="k">class</span><span class="w"> </span><span class="nc">MpModelWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps a model to minimize host memory usage when `fork` method is used.</span>
-
-<span class="sd">  This class should be used together with the `spawn(..., start_method=&#39;fork&#39;)`</span>
-<span class="sd">  API to minimize the use of host memory.</span>
-<span class="sd">  Instead of creating models on each multiprocessing process, hence replicating</span>
-<span class="sd">  the model&#39;s initial host memory, the model is created once at global scope,</span>
-<span class="sd">  and then moved into each device inside the `spawn()` target function.</span>
-<span class="sd">  Example::</span>
-
-<span class="sd">    WRAPPED_MODEL = xmp.MpModelWrapper(MyNetwork())</span>
-
-<span class="sd">    def _mp_fn(index, ...):</span>
-<span class="sd">      device = xm.xla_device()</span>
-<span class="sd">      model = WRAPPED_MODEL.to(device)</span>
-<span class="sd">      ...</span>
-
-<span class="sd">    torch_xla.launch(_mp_fn, ..., start_method=&#39;fork&#39;)</span>
-
-<span class="sd">  This method has two advantages. First it uses only one copy of the memory</span>
-<span class="sd">  pages to host the original model weights, and second it serializes the move</span>
-<span class="sd">  of the wrapped model into each device, by lowering the load onto the system</span>
-<span class="sd">  memory during the process.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a new `MpModelWrapper` object.</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">      model (torch.nn.Module): The model to be wrapped. Should be on PyTorch CPU</span>
-<span class="sd">        device (which is the default when creating new models).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">model</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
-
-  <span class="k">def</span><span class="w"> </span><span class="nf">to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieves the model moved onto the specified device.</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">      device (torch.device): The device where the model should be moved onto.</span>
-<span class="sd">    Returns:</span>
-<span class="sd">      The model on the specified device.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span>
-
-
-<span class="k">class</span><span class="w"> </span><span class="nc">MpSerialExecutor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Utility to run a function in a serialized fashion among multi-core processes.</span>
-
-<span class="sd">  Example::</span>
-
-<span class="sd">    # At global scope.</span>
-<span class="sd">    SERIAL_EXEC = xmp.MpSerialExecutor()</span>
-
-<span class="sd">    def load_dataset(path):</span>
-<span class="sd">      return maybe_download_and_load(path)</span>
-
-<span class="sd">    def _mp_fn(index, ...):</span>
-<span class="sd">      # Avoid all cores downloading the same data with the serial executor.</span>
-<span class="sd">      dataset = SERIAL_EXEC.run(lambda: load_dataset(&#39;/tmp/mnist-data&#39;))</span>
-<span class="sd">      ...</span>
-
-<span class="sd">    torch_xla.launch(_mp_fn, ...)</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
-
-  <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Runs the provided function serialized WRT each per-core process.</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">      fn (callable): The function to run in a serialized fashion.</span>
-<span class="sd">    Returns:</span>
-<span class="sd">      The `fn` return value.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-      <span class="k">return</span> <span class="n">fn</span><span class="p">()</span>
-
-
-<span class="c1">###############################################################################</span>
-<span class="c1">#</span>
-<span class="c1"># The following is modified from JAX: https://github.com/jax-ml/jax/blob/main/jax/_src/mesh_utils.py</span>
-<span class="c1">#</span>
-<span class="c1">###############################################################################</span>
-
-<span class="n">_TPU_V5P</span> <span class="o">=</span> <span class="s2">&quot;v5p&quot;</span>
-<span class="n">_TPU_V6E</span> <span class="o">=</span> <span class="s2">&quot;v6e&quot;</span>
-
-<span class="n">_V5P_2x2x2_ORDER</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
-<span class="n">_V6E_2x4_ORDER</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-
-
-<span class="nd">@cache</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">_get_xyz_bounds</span><span class="p">():</span>
-  <span class="n">devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
-  <span class="n">max_x</span><span class="p">,</span> <span class="n">max_y</span><span class="p">,</span> <span class="n">max_z</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;coords&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">)</span>
-  <span class="n">bound_x</span><span class="p">,</span> <span class="n">bound_y</span><span class="p">,</span> <span class="n">bound_z</span> <span class="o">=</span> <span class="n">max_x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">max_y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">max_z</span> <span class="o">+</span> <span class="mi">1</span>
-  <span class="k">return</span> <span class="n">bound_x</span><span class="p">,</span> <span class="n">bound_y</span><span class="p">,</span> <span class="n">bound_z</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_v5p_create_replica_groups</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Creates optimized replica groups order for selected topologies.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    None or reordered replica groups.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">bound_x</span><span class="p">,</span> <span class="n">bound_y</span><span class="p">,</span> <span class="n">bound_z</span> <span class="o">=</span> <span class="n">_get_xyz_bounds</span><span class="p">()</span>
-
-  <span class="k">if</span> <span class="n">bound_x</span> <span class="o">==</span> <span class="n">bound_y</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">bound_z</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-    <span class="n">replica_group</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">_V5P_2x2x2_ORDER</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">replica_group</span><span class="p">]</span>
-  <span class="k">return</span> <span class="kc">None</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_v6e_create_replica_groups</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Creates optimized replica groups order for selected topologies.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    None or reordered replica groups.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">bound_x</span><span class="p">,</span> <span class="n">bound_y</span><span class="p">,</span> <span class="n">bound_z</span> <span class="o">=</span> <span class="n">_get_xyz_bounds</span><span class="p">()</span>
-
-  <span class="k">if</span> <span class="n">bound_x</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">bound_y</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
-    <span class="n">replica_group</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">_V6E_2x4_ORDER</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">replica_group</span><span class="p">]</span>
-  <span class="k">return</span> <span class="kc">None</span>
-
-
-<span class="n">device_kind_handler_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">List</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="n">_TPU_V5P</span><span class="p">:</span> <span class="n">_v5p_create_replica_groups</span><span class="p">,</span>
-    <span class="n">_TPU_V6E</span><span class="p">:</span> <span class="n">_v6e_create_replica_groups</span>
-<span class="p">}</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">create_optimized_replica_groups</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Creates optimized replica groups order for different TPU types.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    None or reordered replica groups.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">tpu_type</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">tpu</span><span class="o">.</span><span class="n">get_tpu_type</span><span class="p">()</span>
-  <span class="n">handler</span> <span class="o">=</span> <span class="n">device_kind_handler_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tpu_type</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-  <span class="k">if</span> <span class="n">handler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">handler</span><span class="p">()</span>
-  <span class="k">return</span> <span class="kc">None</span>
+<span class="c1"># Simulate a training loop.</span>
+<span class="c1"># Even if we run this function ten times, it will only be traced once.</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">do_some_math</span><span class="p">(</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1.0</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">),</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">2.0</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">),</span>
+        <span class="n">c</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="section" id="using-assume-pure-with-a-nn-module">
+<h3>Using <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> with a <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code><a class="headerlink" href="#using-assume-pure-with-a-nn-module" title="Permalink to this heading">¶</a></h3>
+<p>If you have a pure <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> i.e. its <code class="docutils literal notranslate"><span class="pre">forward</span></code> behavior only depends on the
+input arguments and the model parameters, we can use <code class="docutils literal notranslate"><span class="pre">torch.func.functional_call</span></code>
+to convert the module into a pure function and pass that to <code class="docutils literal notranslate"><span class="pre">assume_pure</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.func</span><span class="w"> </span><span class="kn">import</span> <span class="n">functional_call</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.assume_pure</span><span class="w"> </span><span class="kn">import</span> <span class="n">assume_pure</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyModule</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="c1"># Create module and move to XLA device</span>
+<span class="n">module</span> <span class="o">=</span> <span class="n">MyModule</span><span class="p">()</span>
+<span class="n">module</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+
+<span class="c1"># Convert module&#39;s forward pass into a pure function</span>
+<span class="n">pure_forward</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">params</span><span class="p">,</span> <span class="n">buffers</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">functional_call</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">buffers</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span><span class="p">,))</span>
+
+<span class="c1"># Wrap the pure function with @assume_pure</span>
+<span class="n">cached_forward</span> <span class="o">=</span> <span class="n">assume_pure</span><span class="p">(</span><span class="n">pure_forward</span><span class="p">)</span>
+
+<span class="c1"># Simulate a training loop</span>
+<span class="c1"># Even if we run the model ten times, its forward function will only be traced once.</span>
+<span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">())</span>
+<span class="n">buffers</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">named_buffers</span><span class="p">())</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">cached_forward</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">buffers</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="benchmarks">
+<h2>Benchmarks<a class="headerlink" href="#benchmarks" title="Permalink to this heading">¶</a></h2>
+<p>The unit tests contain a benchmark that traces an example 100 layer decoder-only
+language model:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>~/pytorch/xla
+❯<span class="w"> </span><span class="nv">TESTBRIDGE_TEST_ONLY</span><span class="o">=</span>test_trace_transformer_with_spda_attention<span class="w"> </span>python3<span class="w"> </span>test/test_assume_pure.py<span class="w"> </span>--benchmark_iterations<span class="w"> </span><span class="m">100</span>
+<span class="o">[</span>...<span class="o">]</span>
+No<span class="w"> </span><span class="sb">`</span>@assume_pure<span class="sb">`</span><span class="w"> </span>time:<span class="w"> </span><span class="m">140</span>.1342<span class="w"> </span>ms
+<span class="sb">`</span>@assume_pure<span class="sb">`</span><span class="w"> </span>time:<span class="w"> </span><span class="m">24</span>.1658<span class="w"> </span>ms
+</pre></div>
+</div>
+<p>The version with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> is much faster.</p>
+<p>Importantly, the <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> running time does not scale with increasing
+complexity inside the model. That’s because we only trace the model once, paying
+a fixed up-front cost, and then later runs will reuse the cached XLA computation.</p>
+</div>
+<div class="section" id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this heading">¶</a></h2>
+<p>Currently, all operations in a function wrapped with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> must be
+PyTorch upstream operations (e.g. <code class="docutils literal notranslate"><span class="pre">torch.einsum</span></code>, <code class="docutils literal notranslate"><span class="pre">torch.sin</span></code>, …). More
+PyTorch/XLA operations (e.g. <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code>) will be supported in the future.</p>
+<!-- xrefs --></div>
+</div>
+
 
              </article>
              
@@ -657,7 +586,20 @@
         <div class="pytorch-content-right" id="pytorch-content-right">
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
-              
+              <ul>
+<li><a class="reference internal" href="#">Use <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> to speed up lazy tensor tracing</a><ul>
+<li><a class="reference internal" href="#background-and-motivation">Background and motivation</a></li>
+<li><a class="reference internal" href="#how-to-use-assume-pure">How to use <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a><ul>
+<li><a class="reference internal" href="#using-assume-pure-with-a-function">Using <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> with a function</a></li>
+<li><a class="reference internal" href="#using-assume-pure-with-a-nn-module">Using <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> with a <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#benchmarks">Benchmarks</a></li>
+<li><a class="reference internal" href="#limitations">Limitations</a></li>
+</ul>
+</li>
+</ul>
+
             </div>
           </div>
         </div>
@@ -670,21 +612,21 @@
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-         <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-         <script src="../../../_static/jquery.js"></script>
-         <script src="../../../_static/underscore.js"></script>
-         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-         <script src="../../../_static/doctools.js"></script>
-         <script src="../../../_static/sphinx_highlight.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../_static/doctools.js"></script>
+         <script src="../_static/sphinx_highlight.js"></script>
      
 
   
 
-  <script type="text/javascript" src="../../../_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="../../../_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
-  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -789,7 +731,7 @@
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="../../../_static/images/pytorch-x.svg">
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -940,7 +882,7 @@
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="../../../_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {
