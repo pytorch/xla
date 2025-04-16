@@ -256,7 +256,7 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
   ):
     if jtu.is_device_tpu(version=5, variant="e"):
       self.skipTest(
-          "TPU v5e has small VMEM. It will run into VMEM OOM. Skip the test.") 
+          "TPU v5e has small VMEM. It will run into VMEM OOM. Skip the test.")
     if jtu.is_device_tpu(version=4) and head_dim == 256 and page_size == 32:
       self.skipTest(
           "TPU v4 has small VMEM. It will run into VMEM OOM. Skip the test.")
@@ -290,7 +290,7 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
   ):
     if jtu.is_device_tpu(version=5, variant="e"):
       self.skipTest(
-          "TPU v5e has small VMEM. It will run into VMEM OOM. Skip the test.") 
+          "TPU v5e has small VMEM. It will run into VMEM OOM. Skip the test.")
     if jtu.is_device_tpu(version=4) and head_dim == 256 and page_size == 32:
       self.skipTest(
           "TPU v4 has small VMEM. It will run into VMEM OOM. Skip the test.")
