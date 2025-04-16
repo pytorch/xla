@@ -62,10 +62,10 @@ class SplashAttentionTest(unittest.TestCase):
 
   def _make_attention_mask_from_segment_ids(self, q_segment_ids,
                                             kv_segment_ids):
-    return q_segment_ids.view(q_segment_ids.shape[0], 1,
-                              q_segment_ids.shape[1], 1) != kv_segment_ids.view(
-                                  kv_segment_ids.shape[0], 1, 1,
-                                  kv_segment_ids.shape[1])
+    return q_segment_ids.view(q_segment_ids.shape[0], 1, q_segment_ids.shape[1],
+                              1) != kv_segment_ids.view(kv_segment_ids.shape[0],
+                                                        1, 1,
+                                                        kv_segment_ids.shape[1])
 
   def maybe_repeat_kv(self, hidden_state):
     if hidden_state.size(1) == self.NUM_Q_HEADS:
