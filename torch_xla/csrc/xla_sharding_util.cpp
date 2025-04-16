@@ -620,18 +620,16 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateGlobalShardedData(
     const XLATensor::ShardingSpecPtr& sharding_spec,
     const xla::Shape local_shape) {
 
-  return CreateShardedData(local_shards, devices, sharding_spec);
-  // std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
-
-  // for (int64_t j = 0; j < devices.size(); ++j) {
-  //   auto shard_device = ParseDeviceString(devices[j]);
-  //   auto shard_shape =
-  //       CreateComputationShapeFromTensor(local_shards[j], &shard_device);
-  //   source_tensors.push_back(std::make_shared<runtime::AtenSource>(
-  //       local_shards[j], shard_shape, devices[j]));
-  // }
-  // return runtime::GetComputationClient()->TransferShardsToDevice(
-  //     source_tensors, GetVirtualDevice().toString(), local_shape, sharding_spec->sharding);
+  std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
+  for (int64_t j = 0; j < devices.size(); ++j) {
+    auto shard_device = ParseDeviceString(devices[j]);
+    auto shard_shape =
+        CreateComputationShapeFromTensor(local_shards[j], &shard_device);
+    source_tensors.push_back(std::make_shared<runtime::AtenSource>(
+        local_shards[j], shard_shape, devices[j]));
+  }
+  return runtime::GetComputationClient()->TransferShardsToDevice(
+      source_tensors, GetVirtualDevice().toString(), local_shape, sharding_spec->sharding);
 }
 
 std::vector<int64_t> ShardingUtil::GetAutoShardingMesh() {

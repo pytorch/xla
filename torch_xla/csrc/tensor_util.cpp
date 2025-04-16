@@ -825,17 +825,6 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       runtime::GetComputationClient()->TransferToDevice(source_tensors));
 }
 
-std::vector<torch::lazy::BackendDataPtr> CreateGlobalTensorsData(
-  const std::vector<at::Tensor>& tensors,
-  const std::vector<XLATensor::ShardingSpecPtr>& shardings,
-  const std::vector<std::string>& devices,
-  const xla::Shape local_shape) {
-  TORCH_LAZY_TIMED("CreateGlobalTensorsData");
-  XLA_CHECK_EQ(tensors.size(), devices.size());
-
-  return CreateTensorsData(tensors, shardings, devices);
-}
-
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& shardings,
@@ -866,6 +855,48 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
                                     /*padded=*/true);
       new_handles.push_back(ShardingUtil::CreateShardedData(
           local_shards, local_devices, shardings[i]));
+    } else {
+      source_tensors.push_back(std::make_shared<runtime::AtenSource>(
+          tensors[i], std::move(shape), devices[i]));
+      new_handles =
+          runtime::GetComputationClient()->TransferToDevice(source_tensors);
+    }
+    handles.insert(handles.end(), new_handles.begin(), new_handles.end());
+  }
+  return WrapXlaData(handles);
+}
+
+std::vector<torch::lazy::BackendDataPtr> CreateGlobalTensorsData(
+  const std::vector<at::Tensor>& tensors,
+  const std::vector<XLATensor::ShardingSpecPtr>& shardings,
+  const std::vector<std::string>& devices,
+  const xla::Shape local_shape) {
+  TORCH_LAZY_TIMED("CreateGlobalTensorsData");
+  XLA_CHECK_EQ(tensors.size(), shardings.size());
+  XLA_CHECK_EQ(tensors.size(), devices.size());
+
+  std::vector<runtime::ComputationClient::DataPtr> handles;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
+    xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
+
+    std::vector<std::shared_ptr<const runtime::TensorSource>>
+        source_tensors;                                            // in
+    std::vector<runtime::ComputationClient::DataPtr> new_handles;  // out
+    if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
+      // GetLocalDevices returns the list of local devices specified by their
+      // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
+
+      std::vector<std::string> local_devices =
+          runtime::GetComputationClient()->GetLocalDevices();
+      // Shards the input tensors with padding, to split evenly.
+      // The execution requires consistent shard sizes, and the zero-padded
+      // values should be ignored.
+      std::vector<at::Tensor> local_shards =
+          ShardingUtil::ShardTensor(tensors[i], shardings[i], local_devices,
+                                    /*padded=*/true);
+      new_handles.push_back(ShardingUtil::CreateGlobalShardedData(
+          local_shards, local_devices, shardings[i], local_shape));
     } else {
       source_tensors.push_back(std::make_shared<runtime::AtenSource>(
           tensors[i], std::move(shape), devices[i]));
