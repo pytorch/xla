@@ -151,7 +151,7 @@ class TestAssumePure(absltest.TestCase):
 
     # Arrange: first clear the cache to prevent contamination from other tests.
     xb._JAX_TO_XLA_COMPUTATION_CACHE.clear()
-    starting_lowerings = xb._jax_to_xla_computation_cache_num_misses()
+    starting_lowerings = xb._jax_to_xla_computation_cache_elements()
     trace_counter = 0
 
     @assume_pure
@@ -168,7 +168,7 @@ class TestAssumePure(absltest.TestCase):
       torch_xla.sync()
 
     # Assert
-    ending_lowerings = xb._jax_to_xla_computation_cache_num_misses()
+    ending_lowerings = xb._jax_to_xla_computation_cache_elements()
 
     # Check that we only trace once.
     self.assertEqual(trace_counter, 1)
