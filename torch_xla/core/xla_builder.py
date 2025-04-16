@@ -938,7 +938,7 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
 
 class JaxConfigWrapper:
 
-  def __init__(self, value: "jax_src.config"):
+  def __init__(self, value: "jax._src.config"):
     self.value = value
 
   def __hash__(self):
