@@ -962,7 +962,7 @@ def ragged_paged_attention(
               "arbitrary",
               "arbitrary",
           ),
-          vmem_limit_bytes=67108864,
+          vmem_limit_bytes=64 * 1024 * 1024,
       ),
       out_shape=out_shape,
   )
