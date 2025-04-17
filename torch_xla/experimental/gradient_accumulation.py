@@ -404,7 +404,7 @@ def _gradient_accumulation(accumulation_steps, train_step, iterable_tensors,
     if param.grad is None:
       param.grad = torch.zeros(param.size()).to(
           param.device).requires_grad_(False)
-      param_sharding = torch_xla._XLAC._get_xla_op_sharding(param.grad)
+      param_sharding = torch_xla._XLAC._get_xla_op_sharding(param)
       if param_sharding:
         # Match the gradient sharding to the parameter's.
         torch_xla._XLAC._xla_mark_sharding(param.grad, param_sharding)
