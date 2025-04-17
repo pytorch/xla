@@ -2944,11 +2944,9 @@ class TestDLPack(parameterized.TestCase):
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
-  @parameterized.parameters(*all_types_and_complex_and(torch.half,
-                                                       torch.bfloat16,
-                                                       torch.bool, torch.uint16,
-                                                       torch.uint32,
-                                                       torch.uint64))
+  @parameterized.parameters(
+      *all_types_and_complex_and(torch.half, torch.bfloat16, torch.bool,
+                                 torch.uint16, torch.uint32, torch.uint64))
   def test_dlpack_roundtrip_scalar(self, dtype):
     xla_device = xm.xla_device()
     xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)

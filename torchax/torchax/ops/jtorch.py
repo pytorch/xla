@@ -21,7 +21,8 @@ def register_function(torch_func, **kwargs):
 
 
 @register_function(torch.as_tensor, is_jax_function=False, needs_env=True)
-@op_base.convert_dtype(use_default_dtype=False)  # Attempt to infer type from elements
+@op_base.convert_dtype(
+    use_default_dtype=False)  # Attempt to infer type from elements
 def _as_tensor(data, dtype=None, device=None, env=None):
   if isinstance(data, torch.Tensor):
     return env._to_copy(data, dtype, device)
@@ -33,7 +34,8 @@ def _as_tensor(data, dtype=None, device=None, env=None):
 
 
 @register_function(torch.tensor)
-@op_base.convert_dtype(use_default_dtype=False)  # Attempt to infer type from elements
+@op_base.convert_dtype(
+    use_default_dtype=False)  # Attempt to infer type from elements
 def _tensor(data, *, dtype=None, **kwargs):
   python_types_to_torch_types = {
       bool: jnp.bool,
@@ -72,19 +74,21 @@ def _torch_argsort(input, dim=-1, descending=False, stable=False):
     # behavior is the same as a jnp array of rank 1
     expanded = True
     input = jnp.expand_dims(input, 0)
-  res = jnp.argsort(input, axis=dim, descending=descending,
-                     stable=stable)
+  res = jnp.argsort(input, axis=dim, descending=descending, stable=stable)
   if expanded:
     res = res.squeeze()
   return res
+
 
 @register_function(torch.diag)
 def _diag(input, diagonal=0):
   return jnp.diag(input, k=diagonal)
 
+
 @register_function(torch.einsum)
 @register_function(torch.ops.aten.einsum)
 def _einsum(equation, *operands):
+
   def get_params(*a):
     inner_list = a[0]
     if not isinstance(inner_list, jax.Array):
@@ -95,66 +99,76 @@ def _einsum(equation, *operands):
         A, B = inner_list
         return A, B
     return operands
+
   assert isinstance(equation, str), 'Only accept str equation'
   filtered_operands = get_params(*operands)
   return jnp.einsum(equation, *filtered_operands)
 
 
-def _sdpa_reference(query, key, value, attn_mask=None, dropout_p=0.0,
-        is_causal=False, scale=None, enable_gqa=False) -> torch.Tensor:
-    L, S = query.size(-2), key.size(-2)
-    scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
-    attn_bias = torch.zeros(L, S, dtype=query.dtype, device=query.device)
-    if is_causal:
-        assert attn_mask is None
-        temp_mask = torch.ones(L, S, dtype=torch.bool, device=query.device).tril(diagonal=0)
-        attn_bias.masked_fill_(temp_mask.logical_not(), float("-inf"))
-        attn_bias.to(query.dtype)
-    if attn_mask is not None:
-        if attn_mask.dtype == torch.bool:
-            attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
-        else:
-            attn_bias += attn_mask
-    if enable_gqa:
-        key = key.repeat_interleave(query.size(-3)//key.size(-3), -3)
-        value = value.repeat_interleave(query.size(-3)//value.size(-3), -3)
+def _sdpa_reference(query,
+                    key,
+                    value,
+                    attn_mask=None,
+                    dropout_p=0.0,
+                    is_causal=False,
+                    scale=None,
+                    enable_gqa=False) -> torch.Tensor:
+  L, S = query.size(-2), key.size(-2)
+  scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
+  attn_bias = torch.zeros(L, S, dtype=query.dtype, device=query.device)
+  if is_causal:
+    assert attn_mask is None
+    temp_mask = torch.ones(
+        L, S, dtype=torch.bool, device=query.device).tril(diagonal=0)
+    attn_bias.masked_fill_(temp_mask.logical_not(), float("-inf"))
+    attn_bias.to(query.dtype)
+  if attn_mask is not None:
+    if attn_mask.dtype == torch.bool:
+      attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
+    else:
+      attn_bias += attn_mask
+  if enable_gqa:
+    key = key.repeat_interleave(query.size(-3) // key.size(-3), -3)
+    value = value.repeat_interleave(query.size(-3) // value.size(-3), -3)
 
-    attn_weight = query @ key.transpose(-2, -1) * scale_factor
-    attn_weight += attn_bias
-    attn_weight = torch.softmax(attn_weight, dim=-1)
-    if dropout_p > 0:
-      attn_weight = torch.dropout(attn_weight, dropout_p, train=True)
-    return attn_weight @ value
+  attn_weight = query @ key.transpose(-2, -1) * scale_factor
+  attn_weight += attn_bias
+  attn_weight = torch.softmax(attn_weight, dim=-1)
+  if dropout_p > 0:
+    attn_weight = torch.dropout(attn_weight, dropout_p, train=True)
+  return attn_weight @ value
 
 
 from jax.sharding import PartitionSpec
 
+
 def _tpu_flash_attention(query, key, value, env):
   fsdp_partition = PartitionSpec('fsdp')
+
   def wrap_flash_attention(query, key, value):
     block_sizes = flash_attention.BlockSizes(
-      block_b=min(2, query.shape[0]),
-      block_q=min(512, query.shape[2]),
-      block_k_major=min(512, key.shape[2]),
-      block_k=min(512, key.shape[2]),
-      block_q_major_dkv=min(512, query.shape[2]),
-      block_k_major_dkv=min(512, key.shape[2]),
-      block_k_dkv=min(512, key.shape[2]),
-      block_q_dkv=min(512, query.shape[2]),
-      block_k_major_dq=min(512, key.shape[2]),
-      block_k_dq=min(256, key.shape[2]),
-      block_q_dq=min(1024, query.shape[2]),
+        block_b=min(2, query.shape[0]),
+        block_q=min(512, query.shape[2]),
+        block_k_major=min(512, key.shape[2]),
+        block_k=min(512, key.shape[2]),
+        block_q_major_dkv=min(512, query.shape[2]),
+        block_k_major_dkv=min(512, key.shape[2]),
+        block_k_dkv=min(512, key.shape[2]),
+        block_q_dkv=min(512, query.shape[2]),
+        block_k_major_dq=min(512, key.shape[2]),
+        block_k_dq=min(256, key.shape[2]),
+        block_q_dq=min(1024, query.shape[2]),
     )
     return flash_attention.flash_attention(
         query, key, value, causal=True, block_sizes=block_sizes)
 
   if env.config.shmap_flash_attention:
     wrap_flash_attention = shard_map(
-      wrap_flash_attention,
-      mesh=env._mesh,
-      in_specs=(fsdp_partition, fsdp_partition, fsdp_partition),
-      out_specs=fsdp_partition ,
-      check_rep=False,
+        wrap_flash_attention,
+        mesh=env._mesh,
+        in_specs=(fsdp_partition, fsdp_partition, fsdp_partition),
+        out_specs=fsdp_partition,
+        check_rep=False,
     )
   #return flash_attn_mapped(query, key, value)
   return wrap_flash_attention(query, key, value)
@@ -210,27 +224,42 @@ def pad(tensor, pad, mode="constant", value=None):
     return jnp.pad(tensor[nd_slice], numpy_pad_width, mode=numpy_mode, **kwargs)
 
 
-@register_function(torch.nn.functional.scaled_dot_product_attention, is_jax_function=False, needs_env=True)
-@register_function(torch.ops.aten.scaled_dot_product_attention, is_jax_function=False, needs_env=True)
-def scaled_dot_product_attention(
-   query, key, value, attn_mask=None,
-   dropout_p=0.0, is_causal=False, scale=None, enable_gqa=False, env=None) -> torch.Tensor:
+@register_function(
+    torch.nn.functional.scaled_dot_product_attention,
+    is_jax_function=False,
+    needs_env=True)
+@register_function(
+    torch.ops.aten.scaled_dot_product_attention,
+    is_jax_function=False,
+    needs_env=True)
+def scaled_dot_product_attention(query,
+                                 key,
+                                 value,
+                                 attn_mask=None,
+                                 dropout_p=0.0,
+                                 is_causal=False,
+                                 scale=None,
+                                 enable_gqa=False,
+                                 env=None) -> torch.Tensor:
 
-   if env.config.use_tpu_flash_attention:
+  if env.config.use_tpu_flash_attention:
     jquery, jkey, jvalue = env.t2j_iso((query, key, value))
     res = _tpu_flash_attention(jquery, jkey, jvalue, env)
     return env.j2t_iso(res)
 
-   return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal, scale, enable_gqa)
+  return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal,
+                         scale, enable_gqa)
+
 
 @register_function(torch.Tensor.__getitem__)
 def getitem(self, indexes):
   if isinstance(indexes, list) and isinstance(indexes[0], int):
     # list of int, i.e. x[[1, 2]] NOT x[1, 2] (the second would be tuple of int)
-    indexes = (indexes, )
+    indexes = (indexes,)
   elif isinstance(indexes, list):
     indexes = tuple(indexes)
   return self[indexes]
+
 
 @register_function(torch.corrcoef)
 def _corrcoef(x):
@@ -238,9 +267,11 @@ def _corrcoef(x):
     return jnp.corrcoef(x).astype(jnp.float32)
   return jnp.corrcoef(x)
 
+
 @register_function(torch.sparse.mm, is_jax_function=False)
 def _sparse_mm(mat1, mat2, reduce='sum'):
   return torch.mm(mat1, mat2)
+
 
 @register_function(torch.isclose)
 def _aten_isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
@@ -281,11 +312,18 @@ def empty(*size: Sequence[int], dtype=None, **kwargs):
     size = size[0]
   return jnp.empty(size, dtype=dtype)
 
+
 @register_function(torch.arange, is_jax_function=False)
 def arange(
-  start, end=None, step=None, 
-  out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False,
-  pin_memory=None,
+    start,
+    end=None,
+    step=None,
+    out=None,
+    dtype=None,
+    layout=torch.strided,
+    device=None,
+    requires_grad=False,
+    pin_memory=None,
 ):
   if end is None:
     end = start
@@ -294,9 +332,16 @@ def arange(
     step = 1
   return torch.ops.aten.arange(start, end, step, dtype=dtype)
 
+
 @register_function(torch.empty_strided, is_jax_function=False)
-def empty_strided(
-  size, stride, *, dtype=None, layout=None, device=None, requires_grad=False, pin_memory=False):
+def empty_strided(size,
+                  stride,
+                  *,
+                  dtype=None,
+                  layout=None,
+                  device=None,
+                  requires_grad=False,
+                  pin_memory=False):
   return empty(size, dtype=dtype)
 
 
@@ -306,25 +351,28 @@ def unravel_index(indices, shape):
 
 
 @register_function(torch.rand, is_jax_function=False)
-def rand(
-  *size, **kwargs
-):
+def rand(*size, **kwargs):
   if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
     size = size[0]
   return torch.ops.aten.rand(size, **kwargs)
 
+
 @register_function(torch.randn, is_jax_function=False)
-def randn(
-  *size, generator=None, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False, pin_memory=False
-):
+def randn(*size,
+          generator=None,
+          out=None,
+          dtype=None,
+          layout=torch.strided,
+          device=None,
+          requires_grad=False,
+          pin_memory=False):
   if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
     size = size[0]
   return torch.ops.aten.randn(size, generator=generator, dtype=dtype)
 
+
 @register_function(torch.randint, is_jax_function=False)
-def randint(
-  *args, **kwargs
-):
+def randint(*args, **kwargs):
   return torch.ops.aten.randint(*args, **kwargs)
 
 
@@ -356,13 +404,16 @@ def linalg_solve_ex(a, b):
   res, info = jaten._aten__linalg_solve_ex(a, b)
   return res, info
 
+
 @register_function(torch.linalg.svd)
 def linalg_svd(a, full_matrices=True):
   return jaten._aten__linalg_svd(a, full_matrices=full_matrices)
 
+
 @register_function(torch.linalg.matrix_power)
 def matrix_power(A, n, *, out=None):
   return jnp.linalg.matrix_power(A, n)
+
 
 @register_function(torch.svd)
 def svd(a, some=True, compute_uv=True):
@@ -374,13 +425,15 @@ def svd(a, some=True, compute_uv=True):
   U, S, V = jaten._aten__linalg_svd(a, full_matrices=not some)
   return U, S, jnp.matrix_transpose(V)
 
+
 @register_function(torch.cdist)
 def _cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
-    return jaten._aten_cdist(x1, x2, p, compute_mode)
+  return jaten._aten_cdist(x1, x2, p, compute_mode)
+
 
 @register_function(torch.lu)
 def lu(A, **kwargs):
-  lu,pivots,_ = jax.lax.linalg.lu(A)
+  lu, pivots, _ = jax.lax.linalg.lu(A)
   # JAX pivots are offset by 1 compared to torch
   _pivots = pivots + 1
   info_shape = pivots.shape[:-1]
@@ -389,12 +442,14 @@ def lu(A, **kwargs):
     return lu, _pivots, info
   return lu, _pivots
 
+
 @register_function(torch.lu_solve)
 def lu_solve(b, LU_data, LU_pivots, **kwargs):
   # JAX pivots are offset by 1 compared to torch
   _pivots = LU_pivots - 1
   x = jax.scipy.linalg.lu_solve((LU_data, _pivots), b)
   return x
+
 
 @register_function(torch.linalg.tensorsolve)
 def linalg_tensorsolve(A, b, dims=None):
