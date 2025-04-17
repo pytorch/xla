@@ -2,10 +2,12 @@ import torch
 from diffusers import StableDiffusionPipeline
 
 import torch_xla2
+
 env = torch_xla2.default_env()
 
 # this is now contains torhc.Tensor
-pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2-base")
+pipe = StableDiffusionPipeline.from_pretrained(
+    "stabilityai/stable-diffusion-2-base")
 
 with env:
   pipe.to('jax')

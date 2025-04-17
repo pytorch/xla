@@ -11,23 +11,21 @@ class TrainTest(unittest.TestCase):
   def setUp(self):
     torch.manual_seed(0)
     torchax.enable_accuracy_mode()
-  
+
   def test_scan_module(self):
     x = torch.arange(300).reshape(3, 100).to(torch.float32)
     layers = [
-      torch.nn.Linear(100, 100),
-      torch.nn.Linear(100, 100),
-      torch.nn.Linear(100, 100),
-      torch.nn.Linear(100, 100),
+        torch.nn.Linear(100, 100),
+        torch.nn.Linear(100, 100),
+        torch.nn.Linear(100, 100),
+        torch.nn.Linear(100, 100),
     ]
     # repetitively applies the linear
     result = x
     for layer in layers:
       result = layer(result)
 
-    model = tx.train.ScannedModule(
-      layers
-    )
+    model = tx.train.ScannedModule(layers)
 
     with torchax.default_env():
       x = x.to('jax')

@@ -1,5 +1,6 @@
 import sys
 import os
+
 example_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(example_folder)
 from train_resnet_base import TrainResNetBase

@@ -1,5 +1,6 @@
 import sys
 import os
+
 example_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(example_folder)
 from train_resnet_base import TrainResNetBase
@@ -13,6 +14,7 @@ import torch_xla.core.xla_model as xm
 from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP, checkpoint_module
 from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
                                              transformer_auto_wrap_policy)
+
 
 class TrainResNetXLAFSDP(TrainResNetBase):
 
@@ -52,5 +54,7 @@ def _mp_fn(index):
 
 
 if __name__ == '__main__':
-  print('consider using train_decoder_only_fsdp_v2.py instead to get better performance')
+  print(
+      'consider using train_decoder_only_fsdp_v2.py instead to get better performance'
+  )
   torch_xla.launch(_mp_fn, args=())

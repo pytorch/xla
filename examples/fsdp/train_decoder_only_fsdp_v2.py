@@ -1,5 +1,6 @@
 import sys
 import os
+
 example_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(example_folder)
 import decoder_only_model
@@ -15,6 +16,7 @@ import torch_xla.distributed.parallel_loader as pl
 from torch_xla.experimental.spmd_fully_sharded_data_parallel import SpmdFullyShardedDataParallel as FSDPv2
 from torch_xla import runtime as xr
 from torch_xla.distributed.fsdp.wrap import transformer_auto_wrap_policy
+
 
 # checkout our doc at https://github.com/pytorch/xla/blob/master/docs/fsdpv2.md
 class TrainDecoderOnlyFSDPv2(TrainDecoderOnlyBase):
@@ -46,13 +48,10 @@ class TrainDecoderOnlyFSDPv2(TrainDecoderOnlyBase):
     # Apply FSDP sharding on each DecoderLayer layer.
     auto_wrap_policy = functools.partial(
         transformer_auto_wrap_policy,
-        transformer_layer_cls={
-            decoder_only_model.DecoderLayer
-        },
+        transformer_layer_cls={decoder_only_model.DecoderLayer},
     )
     # FSDPv2 will use the global mesh set above
-    self.model = FSDPv2(
-        self.model, auto_wrap_policy=auto_wrap_policy)
+    self.model = FSDPv2(self.model, auto_wrap_policy=auto_wrap_policy)
     self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0001)
 
 
