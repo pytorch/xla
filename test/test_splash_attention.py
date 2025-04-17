@@ -249,10 +249,10 @@ class SplashAttentionTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != "TPU" or tpu.version() < 3,
                    "This test only works on TPUv3+.")
-  @with_jax_high_precision  # remove the decorator will cause failure in other tests :)
+  @with_jax_high_precision
   def test_splash_attention_cache_hit(self):
     xb._JAX_TO_XLA_COMPUTATION_CACHE.clear()
-    starting_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
+    starting_cache_misses = xb._jax_to_xla_computation_cache_elements()
     q = (
         torch.randn(self.BATCH_SIZE, self.NUM_HEADS, self.SEQ_LEN,
                     self.HEAD_DIM).requires_grad_().to("xla"))
@@ -290,7 +290,7 @@ class SplashAttentionTest(unittest.TestCase):
     loss = torch.sum(o2)
     loss.backward()
     torch_xla.sync()
-    ending_cache_misses = xb._jax_to_xla_computation_cache_num_misses()
+    ending_cache_misses = xb._jax_to_xla_computation_cache_elements()
     # There are 2 misses because we run both forward (+1 miss) and backward (+1
     # miss) pass.
     self.assertEqual(ending_cache_misses - starting_cache_misses, 2)
