@@ -103,16 +103,12 @@ In the output of the `python setup.py develop` command, look for a line that sta
 to make sure your file is correctly being built with debugger symbols. For example:
 
 ``` sh
---   Public CUDA Deps.    : 
---   Private CUDA Deps.   : 
---   USE_COREML_DELEGATE     : OFF
---   BUILD_LAZY_TS_BACKEND   : ON
 --   USE_ROCM_KERNEL_ASSERT : OFF
--- Source files with custom debug infos: torch/nn/functional.py
--- Configuring done (11.2s)
--- Generating done (1.4s)
--- Build files have been written to: /home/yho_google_com/pytorch/build
-[6/34] Building CXX object caffe2/CMakeFiles/torch_cpu.dir/__/aten/src/ATen/native/mkldnn/...
+-- Performing Test HAS_WMISSING_PROTOTYPES
+-- Performing Test HAS_WMISSING_PROTOTYPES - Failed
+-- Performing Test HAS_WERROR_MISSING_PROTOTYPES
+-- Performing Test HAS_WERROR_MISSING_PROTOTYPES - Failed
+-- Source files with custom debug infos: aten/src/ATen/Utils.cpp aten/src/ATen/ScalarOps.cpp aten/src/ATen/EmptyTensor.cpp aten/src/ATen/core/Tensor.cpp aten/src/ATen/native/Linear.cpp
 ```
 
 It may also be helpful to ensure that your previous debugger session is shut down.  
