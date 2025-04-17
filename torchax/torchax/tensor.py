@@ -411,12 +411,15 @@ class Environment(contextlib.ContextDecorator):
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
           return func(*args, **kwargs)
       with jax.default_device(jax_device):
+        requires_grad = kwargs.get('requires_grad', False)
         op = self._ops.get(func)
         if op is None and isinstance(func, torch._ops.OpOverload):
           op = self._ops.get(func.overloadpacket)
         res = op.func(*args, **kwargs)
         if isinstance(res, jax.Array):
           res = Tensor(res, self)
+        if requires_grad:
+          res.requires_grad = True
         return res
 
     def _torch_Tensor_to(self, args, kwargs):
