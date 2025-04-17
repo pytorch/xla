@@ -9,16 +9,16 @@ on:
 
 jobs:
   linter_check:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.7'
+          python-version: '3.10'
           cache: 'pip'
-      - run: pip install yapf==0.30.0
+      - run: pip install yapf==0.40.2
 
       - name: Check no TORCH_PIN
         if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
@@ -34,7 +34,7 @@ jobs:
       - name: Run clang-format
         shell: bash
         env:
-          CLANG_FORMAT: clang-format-11
+          CLANG_FORMAT: clang-format-16
         run: |
           sudo apt-get update
           sudo apt install -y "${CLANG_FORMAT}"
