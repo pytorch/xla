@@ -2,13 +2,13 @@
 # Define common configuration parameters for 2.7 release and nightly
 locals {
   tpu_python_versions = ["3.9", "3.10", "3.11"]
-  release_git_tag         = "v2.7.0-rc4"
-  release_package_version = "2.7.0-rc4"
-  release_pytorch_git_rev = "v2.7.0-rc6"
+  release_git_tag         = "v2.7.0-rc5"
+  release_package_version = "2.7.0-rc5"
+  release_pytorch_git_rev = "v2.7.0-rc10"
   nightly_package_version = "2.8.0"
   cuda_versions = {
     "nightly": ["11.8", "12.1", "12.6", "12.8"],
-    "r2.7": ["11.8", "12.1", "12.6", "12.8"] # PyTorch 2.7 release only needs 11.8, 12.6, 12.8
+    "r2.7": ["12.1", "12.6"] # Note: PyTorch 2.7 release supports 11.8, 12.6, 12.8
   }
 
   # Built once a day from master
