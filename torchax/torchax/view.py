@@ -115,7 +115,12 @@ class NarrowInfo(ViewInfo):
             if isinstance(self.slices, slice) and dim_idx == 0:
                 applied_slice = dim_range[self.slices]
             elif isinstance(self.slices, tuple) and dim_idx < len(self.slices):
-                applied_slice = dim_range[self.slices[dim_idx]]
+                if self.slices[dim_idx] is Ellipsis:  # This checks for ...
+                    applied_slice = dim_range[:]
+                elif self.slices[dim_idx] is None: 
+                    applied_slice = dim_range[:]
+                else:
+                    applied_slice = dim_range[self.slices[dim_idx]]
             else:
                 applied_slice = dim_range
 
@@ -242,6 +247,7 @@ class View(torch.Tensor):
             env: Environment for tensor operations
         """
         shape = view_info.calculate_output_shape(parent.shape)
+        print("initizing view with dtype", parent.dtype)
         return torch.Tensor._make_wrapper_subclass(
             cls,
             shape,
