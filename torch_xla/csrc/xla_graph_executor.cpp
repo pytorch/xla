@@ -2,6 +2,7 @@
 
 #include <Python.h>
 #include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/config.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/helpers.h>
 #include <torch/csrc/lazy/core/ir_util.h>
@@ -10,6 +11,7 @@
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/unique.h>
 #include <torch/csrc/lazy/core/util.h>
+#include <torch/csrc/lazy/python/python_util.h>
 
 #include <algorithm>
 #include <cmath>
@@ -28,6 +30,7 @@
 #include "absl/strings/str_join.h"
 #include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/config.h"
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -484,6 +487,43 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
     std::vector<XLATensorPtr>* tensors) {
   TF_VLOG(4) << "Trying to get the value of " << tensors->size()
              << " tensor(s)";
+  if (FLAGS_torch_xla_graph_execution_log_level > 0) {
+    // Add Python stack trace information
+    auto frames = torch::lazy::GetPythonFrames();
+    if (!frames.empty()) {
+      TF_LOG(WARNING) << "Python call stack:";
+      for (auto& location : frames) {
+        TF_LOG(WARNING) << "  " << location.function << " (" << location.file
+                        << ":" << location.line << ")";
+      }
+    } else {
+      TF_LOG(WARNING) << "Python frame is empty ...";
+    }
+
+    // print tensor shape and type
+    TF_VLOG(4) << "Printing tensor shape and type for investigation ...";
+
+    std::stringstream ss;
+    ss << "[" << __FILE__ << ":" << __LINE__ << "] Tensors:\n";
+
+    for (size_t i = 0; i < tensors->size(); ++i) {
+      const auto& tensor = (*tensors)[i];
+      ss << "  [" << i << "]: shape=" << tensor->shape()
+         << ", dtype=" << tensor->dtype() << "\n";
+    }
+
+    TF_LOG(WARNING) << ss.str();
+
+    if (FLAGS_torch_xla_graph_execution_log_level == 1) {
+      TF_LOG(WARNING)
+          << "Trying to get the value of tensor(s): Use the tensor value "
+             "during tracing may lead to unexpected behavior.";
+    } else {
+      XLA_ERROR() << "Trying to get the value of tensor(s): Use the tensor "
+                     "value during tracing may lead to unexpected behavior.";
+    }
+  }
+
   SyncTensorsConfig config;
   config.force_ltc_data = false;
   auto async = SyncTensorsGraphInternal(tensors, {}, config);
