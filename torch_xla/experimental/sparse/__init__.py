@@ -1,4 +1,6 @@
 from .coo import SparseCOOTensor
-from .embedding_bag import EmbeddingBag, embedding_bag
+from .embedding_bag import EmbeddingBag, embedding_bag, embedding, Embedding
 
-__all__ = ["SparseCOOTensor", "EmbeddingBag", "embedding_bag"]
+__all__ = [
+    "SparseCOOTensor", "EmbeddingBag", "embedding_bag", "Embedding", "embedding"
+]
