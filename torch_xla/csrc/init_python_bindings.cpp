@@ -37,6 +37,7 @@
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/config.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/dl_convertor.h"
 #include "torch_xla/csrc/dtype.h"
@@ -2589,6 +2590,13 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_xla_enable_device_data_cache",
         []() { return FLAGS_torch_lazy_enable_device_data_cache; });
+  m.def("_set_torch_xla_graph_execution_check_level",
+        [](int torch_xla_graph_execution_check_level) {
+          FLAGS_torch_xla_graph_execution_check_level =
+              torch_xla_graph_execution_check_level;
+        });
+  m.def("_get_torch_xla_graph_execution_check_level",
+        []() { return FLAGS_torch_xla_graph_execution_check_level; });
   m.def("_set_use_eager_mode", [](bool use_eager_mode) {
     XLAGraphExecutor::Get()->SetUseEagerMode(use_eager_mode);
   });
