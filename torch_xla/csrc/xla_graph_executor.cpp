@@ -1305,9 +1305,11 @@ std::vector<size_t> XLAGraphExecutor::GetBufferDonors(
     return {};
   }
 
+  bool donate_ltc_data =
+      coll.config.sync_ltc_data && coll.config.force_ltc_data;
   std::vector<size_t> ltc_buffer_donor_indices;
-  if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
-    // We can only alias at the step barrier, when force_ltc_data is true.
+  if (donate_ltc_data) {
+    // We can only alias at the step barrier, when donate_ltc_data is true.
     // Consider the case:
     //   1. Tensor A(DEVICE_DATA)
     //   2. Tensor B = A + 0.9
@@ -1336,7 +1338,10 @@ std::vector<size_t> XLAGraphExecutor::GetBufferDonors(
   }
 
   std::vector<size_t> user_config_buffer_donor_indices;
-  if (GetAliasWithBufferDonorConfig()) {
+  if (donate_ltc_data || GetAliasWithBufferDonorConfig()) {
+    // In case any tensor is explicitly marked for donation, we ensure that it
+    // is donated during step barrier, or if explicitly forced to donate via
+    // GetAliasWithBufferDonorConfig().
     user_config_buffer_donor_indices =
         GetBufferDonorIndexFromUserConfig(parameters_data);
   }
