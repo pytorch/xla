@@ -238,7 +238,7 @@ class ScanSpmdTest(unittest.TestCase):
   def test_convert_to_jax_mesh(self):
     jax_mesh = self.spmd_mesh.maybe_convert_and_get_jax_mesh()
     self.assertEqual(jax_mesh.devices.shape, self.spmd_mesh.mesh_shape)
-    self.assertEqual(
+    np.testing.assert_equal(
         np.array([dev.id for dev in jax_mesh.devices.flatten()]),
         self.spmd_mesh.device_ids)
     # assert not throwing
