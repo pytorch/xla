@@ -85,10 +85,7 @@ else:
   _libtpu_wheel_name = 'libtpu-{_libtpu_version}-py3-none-manylinux_2_31_x86_64'
   _libtpu_storage_directory = 'libtpu-lts-releases'
 
-if USE_NIGHTLY:
-  _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
-else:
-  _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
+_libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
 
 
 def _get_build_mode():
