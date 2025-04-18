@@ -119,10 +119,8 @@ class _EmbeddingBagMode(IntEnum):
 
 def _tensor_factory_kwargs(t):
   return {
-      k: getattr(t, k) for k in {
-          'dtype', 'device', 'layout', 'requires_grad', 'memory_format',
-          'pin_memory'
-      }
+      k: getattr(t, k)
+      for k in {'dtype', 'device', 'layout', 'requires_grad', 'pin_memory'}
   }
 
 
@@ -256,12 +254,12 @@ class SparseEmbedding(Function):
   @staticmethod
   def backward(ctx, grad_: Tensor):
     grad_input = grad_weight = None
-    indices = ctx.saved_tensors
+    indices = ctx.saved_tensors[0]
     if grad_ is not None:
       grad_weight = _sparse_embedding_backward(grad_, indices, ctx.num_weights,
                                                ctx.padding_idx)
 
-    return grad_input, grad_weight
+    return grad_input, grad_weight, None, None, None
 
 
 def embedding_bag(
@@ -411,7 +409,7 @@ def embedding(input: Tensor,
       torch.embedding_renorm_(weight, input, max_norm, norm_type)
 
   impl = SparseEmbedding.apply if sparse and weight.requires_grad else torch.embedding
-  return impl(weight, input, padding_idx, scale_grad_by_freq, sparse)
+  return impl(input, weight, padding_idx, scale_grad_by_freq, sparse)
 
 
 class EmbeddingBag(_NativeEmbeddingBagModule):
@@ -452,7 +450,7 @@ class Embedding(_NativeEmbeddingModule):
   """
 
   def forward(self, input: Tensor) -> Tensor:
-    if self.weight.requires_grad() and self.sparse:
+    if self.weight.requires_grad and self.sparse:
       return embedding(input, self.weight, self.padding_idx, self.max_norm,
                        self.norm_type, self.scale_grad_by_freq, self.sparse)
     return super().forward(input)

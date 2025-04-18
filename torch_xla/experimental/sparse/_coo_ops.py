@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from typing import Tuple
 import torch
 
@@ -143,6 +144,16 @@ def coo_indices(args=(), kwargs=None):
   return self._i.clone()
 
 
+def coo_indices_unsafe(args=(), kwargs=None):
+  self = args[0]
+  return self._i
+
+
+def coo_values_unsafe(args=(), kwargs=None):
+  self = args[0]
+  return self._v
+
+
 def coo_values(args=(), kwargs=None):
   torch._check(len(args) == 1, "values: expected one argument")
   self = args[0]
@@ -156,3 +167,39 @@ def coo_nnz(args=(), kwargs=None):
   self = args[0]
   _check_sparse(self, "nnz", "self")
   return self._v.numel()
+
+
+def coo_clone(args=(), kwargs=None):
+  torch._check(len(args) == 1, "clone: expected one argument")
+  self = args[0]
+  breakpoint()
+  return self.__class__(
+      self._i.clone(),
+      self._v.clone(),
+      size=self.shape,
+      requires_grad=self.requires_grad)
+
+
+@contextmanager
+def _no_dispatch():
+  guard = torch._C._DisableTorchDispatch()
+  try:
+    yield
+  finally:
+    del guard
+
+
+def fallback_dispatch(func):
+
+  def impl(args=(), kwargs=None):
+    with _no_dispatch():
+      return func(*args)
+
+  return impl
+
+
+def coo_detach(args=(), kwargs=None):
+  torch._check(len(args) == 1, "detach: expected 1 argument")
+  _check_no_kwargs(kwargs, "dtach")
+  self = args[0]
+  return self.__class__(self._i, self._v, size=self.shape, requires_grad=False)
