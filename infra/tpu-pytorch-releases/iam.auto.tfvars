@@ -4,7 +4,7 @@ project_admins = [
 ]
 
 project_remote_build_writers = [
-  "group:pytorchxla-general@google.com",
+  # "group:pytorchxla-announce@google.com",
   "serviceAccount:1001674285173@cloudbuild.gserviceaccount.com",
   "group:cloud-tpus-dev-team@twosync.google.com",
 ]

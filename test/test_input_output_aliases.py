@@ -1,5 +1,9 @@
+import contextlib
+import copy
 import os
 import sys
+import unittest
+from absl.testing import parameterized
 
 import torch
 import torch.nn as nn
@@ -7,9 +11,6 @@ import torch.nn.functional as F
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
-import unittest
-import contextlib
-import copy
 
 
 def create_xla_config_context(set_func, get_func):
@@ -34,7 +35,7 @@ alias_with_buffer_donor_config_context = create_xla_config_context(
 
 
 # TODO(alanwaketan): add test for views.
-class InputOutputAliasesTest(unittest.TestCase):
+class InputOutputAliasesTest(parameterized.TestCase):
 
   def test_non_view(self):
     xla_device = xm.xla_device()
@@ -233,7 +234,26 @@ class InputOutputAliasesTest(unittest.TestCase):
     self.assertEqual(t1.item(), 43)
 
   def test_user_config_donation_with_ltc_donation(self):
-    with alias_with_buffer_donor_config_context(True):
+    met.clear_all()
+    xla_device = xm.xla_device()
+    t0 = torch.randn(4, 2, 2).to(xla_device)
+    t1 = torch.randn(4, 2, 2).to(xla_device)
+    self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
+    self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+    self.assertFalse(torch_xla._XLAC._get_buffer_donation(t1))
+    t2 = t0 + t1
+    t1 += 2
+    xm.mark_step(wait=True)
+
+    # We surface the C++ runtime error by checking that the backend data is
+    # no longer present for the IR node.
+    self.assertTrue(torch_xla._XLAC._is_placecholder(t0))
+    self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
+
+  @parameterized.parameters(True, False)
+  def test_user_config_donation_with_ltc_donation_graph_sync(
+      self, enable_buffer_donor_config):
+    with alias_with_buffer_donor_config_context(enable_buffer_donor_config):
       met.clear_all()
       xla_device = xm.xla_device()
       t0 = torch.randn(4, 2, 2).to(xla_device)
@@ -241,26 +261,32 @@ class InputOutputAliasesTest(unittest.TestCase):
       self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
       self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
       self.assertFalse(torch_xla._XLAC._get_buffer_donation(t1))
-      t3 = t0 + t1
+      t2 = t0 + t1
       t1 += 2
-      xm.mark_step(wait=True)
+      # We use _xla_sync_multi to explicitly disable sync_xla_data, which will
+      # in turn avoid using LTC aliasings. This ensures that the resulting
+      # aliasings are due to the buffer donation.
+      torch_xla._XLAC._xla_sync_multi([t0, t1, t2], [str(xla_device)], True,
+                                      False)
 
       # We surface the C++ runtime error by checking that the backend data is
       # no longer present for the IR node.
-      self.assertTrue(torch_xla._XLAC._is_placecholder(t0))
-      self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
+      self.assertEqual(
+          torch_xla._XLAC._is_placecholder(t0), enable_buffer_donor_config)
+      self.assertEqual(
+          met.metric_data("InputOutputAliasCount")[1],
+          enable_buffer_donor_config)
 
   def test_user_config_donation_with_ltc_donation_overlap(self):
-    with alias_with_buffer_donor_config_context(True):
-      met.clear_all()
-      xla_device = xm.xla_device()
-      t0 = torch.randn(4, 2, 2).to(xla_device)
-      self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
-      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
-      t0 += 2
-      xm.mark_step()
+    met.clear_all()
+    xla_device = xm.xla_device()
+    t0 = torch.randn(4, 2, 2).to(xla_device)
+    self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
+    self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+    t0 += 2
+    xm.mark_step()
 
-      self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
+    self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
 
   def test_user_config_donation(self):
     with alias_with_buffer_donor_config_context(True):
@@ -303,6 +329,15 @@ class InputOutputAliasesTest(unittest.TestCase):
       self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
       xm.mark_step()
       self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+
+  def test_no_op_mark_step_keep_buffer_donation(self):
+    xla_device = xm.xla_device()
+    input = torch.randn(5, 5).to(xla_device)
+    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    xm.mark_step()
+    self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
+    xm.mark_step()
+    self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
 
 
 if __name__ == '__main__':
