@@ -74,7 +74,6 @@ _jax_version = '0.5.4'
 _jaxlib_version = '0.5.4'
 
 if USE_NIGHTLY:
-  _libtpu_version += f'.dev{_date}'
   _jax_version += f'.dev{_date}'
   _jaxlib_version += f'.dev{_date}'
   _libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_date}+nightly-py3-none-linux_x86_64'
