@@ -8,6 +8,7 @@ import torch
 import torch_xla
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim.sparse_adam import SparseAdam
 from torch.testing._internal.common_utils import TestCase
 
 from absl.testing import parameterized
@@ -23,7 +24,7 @@ xla_device = torch_xla.device()
 # return upstream_embed(input)
 
 
-class TestEmbeddingNN(TestCase):
+class TestEmbedding(TestCase):
 
   def test_embedding_sparse_basic(self):
     embedding = Embedding(10, 20, sparse=True, device=xla_device)
@@ -35,9 +36,60 @@ class TestEmbeddingNN(TestCase):
     self.assertTrue(embedding.weight.grad.is_sparse)
     self.assertEqual(embedding.weight.grad.shape, embedding.weight.shape)
 
+  def test_embbedding_functional(self):
+    torch_input = torch.tensor([[0, 2, 4, 5], [4, 3, 0, 9]], dtype=torch.long)
+    torch_weights = torch.randn(10, 20, requires_grad=True)
+    xla_input = torch_input.to(xla_device)
+    xla_weights = torch_weights.detach().to(xla_device).requires_grad_(True)
+    torch_out = F.embedding(torch_input, torch_weights, sparse=True)
+    xla_out = xla_embedding(xla_input, xla_weights, sparse=True)
+    self.assertEqual(xla_out.to_dense().to('cpu'), torch_out.to_dense())
+    xla_out.max().backward()
+    self.assertTrue(xla_weights.grad.is_sparse)
+    self.assertEqual(xla_weights.grad.to_dense().to('cpu'), torch_weights.grad)
 
-# test functional variant
-# test w/ optimizer
+  def test_embedding_optimizer(self):
+    context_size = 2
+    embedding_dim = 10
+    # We will use Shakespeare Sonnet 2, first few lines
+    test_sentence = """When forty winters shall besiege thy brow,
+    And dig deep trenches in thy beauty's field,
+    Thy youth's proud livery so gazed on now,
+    Will be a totter'd weed of small worth held:""".split()
+    ngrams = [([test_sentence[i - j - 1]
+                for j in range(context_size)], test_sentence[i])
+              for i in range(context_size, len(test_sentence))]
+    vocab = set(test_sentence)
+    word_to_ix = {word: i for i, word in enumerate(vocab)}
+    vocab_size = len(vocab)
+
+    model = nn.Sequential(
+        Embedding(vocab_size, context_size),
+        nn.Linear(context_size * embedding_dim, 128),
+        nn.ReLU(),
+        nn.Linear(128, vocab_size),
+        nn.LogSoftmax(),
+    ).to(xla_device)
+
+    loss_function = nn.NLLLoss()
+    optimizer = SparseAdam(model.parameters(), lr=0.001)
+    for _ in range(10):
+      total_loss = 0
+      for context, target in ngrams:
+        context_idxs = torch.tensor([word_to_ix[w] for w in context],
+                                    dtype=torch.long)
+        model.zero_grad()
+        log_probs = model(context_idxs)
+        loss = loss_function(
+            log_probs, torch.tensor([word_to_ix[target]], dtype=torch.long))
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+    # getting here without errors is essentially a pass, but we should assert that the optimizer has some state
+    breakpoint()
+    #optimizer.param_groups
+
+
 # repeat for Bag
 
 if __name__ == "__main__":

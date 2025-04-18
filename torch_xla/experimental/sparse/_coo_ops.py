@@ -135,6 +135,19 @@ def coo_add_(args=(), kwargs=None):
   self._v += alpha * other._v
   return self
 
+def coo_add(args=(), kwargs=None):
+  torch._check(len(args) == 1, "add: expected two args")
+  alpha = kwargs.get('alpha', 1.)
+  a, b = args
+  if a.is_sparse:
+    if not b.is_sparse:
+      # normalize to sparse on the LHS for mixed
+      return coo_add(args=(b, a))
+  if not a.is_sparse:
+    if b.is_sparse:
+
+
+
 
 def coo_indices(args=(), kwargs=None):
   torch._check(len(args) == 1, "indices: expected one argument")
@@ -180,26 +193,43 @@ def coo_clone(args=(), kwargs=None):
       requires_grad=self.requires_grad)
 
 
-@contextmanager
-def _no_dispatch():
-  guard = torch._C._DisableTorchDispatch()
-  try:
-    yield
-  finally:
-    del guard
-
-
-def fallback_dispatch(func):
-
-  def impl(args=(), kwargs=None):
-    with _no_dispatch():
-      return func(*args)
-
-  return impl
-
-
 def coo_detach(args=(), kwargs=None):
   torch._check(len(args) == 1, "detach: expected 1 argument")
-  _check_no_kwargs(kwargs, "dtach")
+  _check_no_kwargs(kwargs, "detach")
   self = args[0]
   return self.__class__(self._i, self._v, size=self.shape, requires_grad=False)
+
+
+def coo_to_dense(args=(), kwargs=None):
+  masked_grad = kwargs.pop('masked_grad', False)
+  torch._check(
+      not masked_grad,
+      "to_dense: Masked gradients are not supported for to_dense with xla sparse tensor"
+  )
+  dtype = kwargs.pop('dtype', None)
+  torch._check(not dtype, "to_dense: to_dense does not support the dtype kwarg.")
+  _check_no_kwargs(kwargs, "to_dense")
+  torch._check(len(args) == 1, "to_dense: expected 1 argument")
+  self = args[0]
+  out = torch.zeros(self.size, dtype=self.dtype, device=self.device)
+  return out + self
+
+  
+
+
+## TODO: remove
+# @contextmanager
+# def _no_dispatch():
+#   guard = torch._C._DisableTorchDispatch()
+#   try:
+#     yield
+#   finally:
+#     del guard
+
+# def fallback_dispatch(func):
+
+#   def impl(args=(), kwargs=None):
+#     with _no_dispatch():
+#       return func(*args)
+
+#   return impl
