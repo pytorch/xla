@@ -34,8 +34,8 @@ class SparseCOOTensor(torch.Tensor):
       aten.sparse_mask: coo_sparse_mask,
       aten.resize_as_: coo_resize_as_,
       aten.clone: coo_clone,
-      aten._to_copy: fallback_dispatch(aten._to_copy),
       aten.detach: coo_detach,
+      aten.to_dense: coo_to_dense,
   }
   _v: torch.Tensor
   _i: torch.Tensor
