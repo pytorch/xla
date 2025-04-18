@@ -68,7 +68,10 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
 
 _date = '20250406'
-_libtpu_version = '0.0.13'
+# The postfix can be changed when the version is updated. Check
+# https://storage.googleapis.com/libtpu-wheels/index.html for detailed
+# versioning.
+_libtpu_version = '0.0.13-py3-none-manylinux_2_31_x86_64'
 _jax_version = '0.5.4'
 _jaxlib_version = '0.5.4'
 
@@ -82,7 +85,10 @@ if USE_NIGHTLY:
   _libtpu_wheel_name += f".dev{_date}+nightly"
   _libtpu_storage_directory = 'libtpu-nightly-releases'
 
-_libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}-py3-none-linux_x86_64.whl'
+if USE_NIGHTLY:
+  _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}-py3-none-linux_x86_64.whl'
+else:
+  _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
 
 
 def _get_build_mode():
