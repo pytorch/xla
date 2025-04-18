@@ -30,7 +30,7 @@ using either VS Code or a local container:
   # Install TorchVision if you need to run tests that involve vision modules
   git clone --recursive --depth=1 https://github.com/pytorch/vision.git
 
-  # Clone with HTTPS if you use a GitHub a personal access token
+  # Clone with HTTPS if you use a GitHub personal access token
   git clone https://github.com/pytorch/xla.git pytorch/xla
 
   # Or clone with SSH if you prefer:
