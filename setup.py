@@ -68,10 +68,8 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
 
 _date = '20250406'
-# The postfix can be changed when the version is updated. Check
-# https://storage.googleapis.com/libtpu-wheels/index.html for detailed
-# versioning.
-_libtpu_version = '0.0.13-py3-none-manylinux_2_31_x86_64'
+
+_libtpu_version = '0.0.13'
 _jax_version = '0.5.4'
 _jaxlib_version = '0.5.4'
 
@@ -79,14 +77,19 @@ _libtpu_wheel_name = f'libtpu-{_libtpu_version}'
 _libtpu_storage_directory = 'libtpu-lts-releases'
 
 if USE_NIGHTLY:
-  _libtpu_version += f".dev{_date}"
-  _jax_version += f".dev{_date}"
-  _jaxlib_version += f".dev{_date}"
-  _libtpu_wheel_name += f".dev{_date}+nightly"
+  _libtpu_version += f'.dev{_date}'
+  _jax_version += f'.dev{_date}'
+  _jaxlib_version += f'.dev{_date}'
+  _libtpu_wheel_name += f'.dev{_date}+nightly-py3-none-linux_x86_64'
   _libtpu_storage_directory = 'libtpu-nightly-releases'
+else:
+  # The postfix can be changed when the version is updated. Check
+  # https://storage.googleapis.com/libtpu-wheels/index.html for correct
+  # versioning.
+  _libtpu_wheel_name += '-py3-none-manylinux_2_31_x86_64'
 
 if USE_NIGHTLY:
-  _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}-py3-none-linux_x86_64.whl'
+  _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
 else:
   _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
 
