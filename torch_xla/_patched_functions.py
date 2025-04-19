@@ -8,7 +8,12 @@ from torch_xla.experimental.gru import GRU as ScanGRU
 _tensor_or_tensors = Union[torch.Tensor, Iterable[torch.Tensor]]
 
 
-def _patch(fn, newfn):
+def _pathch_module(m, new_m):
+  new_m._orig = m
+  return new_m
+
+
+def _patch_fn(fn, newfn):
   xfingerprint = inspect.signature(fn)
   fingerprint = inspect.signature(newfn)
   if xfingerprint != fingerprint:
@@ -59,5 +64,6 @@ def clip_grad_norm_(parameters: _tensor_or_tensors,
 
 
 def _apply_patches():
-  nn.utils.clip_grad_norm_ = _patch(nn.utils.clip_grad_norm_, clip_grad_norm_)
-  nn.GRU = ScanGRU
+  nn.utils.clip_grad_norm_ = _patch_fn(nn.utils.clip_grad_norm_,
+                                       clip_grad_norm_)
+  nn.GRU = _pathch_module(nn.GRU, ScanGRU)

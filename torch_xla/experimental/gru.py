@@ -66,7 +66,15 @@ class GRU(nn.GRU):
           "Scan-based GRU only supports unidirectional GRU. (bidirectional = False) "
           "Scan-based GRU falls back to the default nn.GRU implementation instead."
       )
-      return nn.GRU(*args, **kwargs)
+      if nn.GRU._orig is None:
+        # If nn.GRU._orig is None, it means that the original GRU has not been
+        # patched yet for some reason. The patching should happen in _patched_functions.py.
+        # So we need to call the original GRU constructor here.
+        return nn.GRU(*args, **kwargs)
+      else:
+        # If nn.GRU._orig is not None, it means that the original GRU has been
+        # patched already. So we need to call the patched GRU constructor here.
+        return nn.GRU._orig(*args, **kwargs)
     return super().__new__(cls)
 
   @overload
