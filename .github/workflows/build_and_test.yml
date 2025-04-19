@@ -17,7 +17,7 @@ concurrency:
 jobs:
 
   get-torch-commit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       torch_commit: ${{ steps.commit.outputs.torch_commit }}
     steps:
@@ -33,6 +33,7 @@ jobs:
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
+      timeout-minutes: 240
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
@@ -47,6 +48,7 @@ jobs:
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
       # note that to build a torch wheel with CUDA enabled, we do not need a GPU runner.
       runner: linux.24xlarge
+      timeout-minutes: 120
 
   build-cuda-plugin:
     name: "Build XLA CUDA plugin"
@@ -97,6 +99,8 @@ jobs:
     name: "TPU tests"
     uses: ./.github/workflows/_tpu_ci.yml
     needs: build-torch-xla
+    with:
+      timeout-minutes: 300 
     if: github.event_name == 'push' || github.event_name == 'pull_request'
 
   push-docs:
