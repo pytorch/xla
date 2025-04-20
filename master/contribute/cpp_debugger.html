@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Custom Hardware Plugins &mdash; PyTorch/XLA master documentation</title>
+  <title>C++ Debugging &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -31,8 +31,6 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Bazel in Pytorch/XLA" href="bazel.html" />
-    <link rel="prev" title="OP Lowering Guide" href="op_lowering.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -351,11 +349,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="configure-environment.html">Configure a development environment</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codegen_migration.html">Codegen migration Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="op_lowering.html">OP Lowering Guide</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Custom Hardware Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Custom Hardware Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="bazel.html">Bazel in Pytorch/XLA</a></li>
 </ul>
 
@@ -397,13 +395,13 @@
       </li>
 
         
-      <li>Custom Hardware Plugins</li>
+      <li>C++ Debugging</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/contribute/plugins.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/contribute/cpp_debugger.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -433,91 +431,150 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="custom-hardware-plugins">
-<h1>Custom Hardware Plugins<a class="headerlink" href="#custom-hardware-plugins" title="Permalink to this heading">¶</a></h1>
-<p>PyTorch/XLA supports custom hardware through OpenXLA’s PJRT C API. The
-PyTorch/XLA team direclty supports plugins for Cloud TPU (<code class="docutils literal notranslate"><span class="pre">libtpu</span></code>) and
-GPU (<a class="reference external" href="https://github.com/openxla/xla/tree/main/xla/pjrt/gpu">OpenXLA</a>).
-The same plugins may also be used by JAX and TF.</p>
-<div class="section" id="implementing-a-pjrt-plugin">
-<h2>Implementing a PJRT Plugin<a class="headerlink" href="#implementing-a-pjrt-plugin" title="Permalink to this heading">¶</a></h2>
-<p>PJRT C API plugins may be closed-source or open-source. They contain two
-parts:</p>
-<ol class="arabic simple">
-<li><p>Binary exposing a PJRT C API implementation. This part can be shared
-with JAX and TensorFlow.</p></li>
-<li><p>Python package containing the above binary, as well as an
-implementation of our <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code> Python interface, which handles
-additional setup.</p></li>
-</ol>
-<div class="section" id="pjrt-c-api-implementation">
-<h3>PJRT C API Implementation<a class="headerlink" href="#pjrt-c-api-implementation" title="Permalink to this heading">¶</a></h3>
-<p>In short, you must implement a
-<a class="reference external" href="https://github.com/openxla/xla/blob/main/xla/pjrt/pjrt_client.h">PjRtClient</a>
-containing an XLA compiler and runtime for your device. The PJRT C++
-interface is mirrored in C in the
-<a class="reference external" href="https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api.h">PJRT_Api</a>.
-The most straightforward option is to implement your plugin in C++ and
-<a class="reference external" href="https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_wrapper_impl.h">wrap
-it</a>
-as a C API implementation. This process is explained in detail in
-<a class="reference external" href="https://openxla.org/xla/pjrt_integration#how_to_integrate_with_pjrt">OpenXLA’s
-documentation</a>.</p>
-<p>For a concrete example, see the <a class="reference external" href="https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_cpu_internal.cc">example
-implementation</a>.</p>
+  <div class="section" id="c-debugging">
+<h1>C++ Debugging<a class="headerlink" href="#c-debugging" title="Permalink to this heading">¶</a></h1>
+<p>PyTorch has good support for C++ debugging. This guide shows you how build with
+debugging symbols, and how to debug PyTorch using GDB or LLDB with VSCode.</p>
+<div class="section" id="why-would-you-need-this">
+<h2>Why would you need this?<a class="headerlink" href="#why-would-you-need-this" title="Permalink to this heading">¶</a></h2>
+<p>This guide is for contributors to PyTorch or PyTorch/XLA who use C++ to build features like <a class="reference external" href="https://pytorch.org/tutorials/advanced/cpp_custom_ops.html">custom C++ operations</a>.</p>
 </div>
-<div class="section" id="pytorch-xla-plugin-package">
-<h3>PyTorch/XLA Plugin Package<a class="headerlink" href="#pytorch-xla-plugin-package" title="Permalink to this heading">¶</a></h3>
-<p>At this point, you should have a functional PJRT plugin binary, which
-you can test with the placeholder <code class="docutils literal notranslate"><span class="pre">LIBRARY</span></code> device type. For example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ PJRT_DEVICE=LIBRARY PJRT_LIBRARY_PATH=/path/to/your/plugin.so python
-&gt;&gt;&gt; import torch_xla
-&gt;&gt;&gt; torch_xla.devices()
-# Assuming there are 4 devices. Your hardware may differ.
-[device(type=&#39;xla&#39;, index=0), device(type=&#39;xla&#39;, index=1), device(type=&#39;xla&#39;, index=2), device(type=&#39;xla&#39;, index=3)]
+<div class="section" id="install-gdb-the-gnu-project-debugger">
+<h2>Install GDB: The GNU Project Debugger<a class="headerlink" href="#install-gdb-the-gnu-project-debugger" title="Permalink to this heading">¶</a></h2>
+<p>The official instructions are <a class="reference external" href="https://www.sourceware.org/gdb/">here</a> but if you are in a conda environment, you can
+install it with the following command:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>gdb
 </pre></div>
 </div>
-<p>To register your device type automatically for users as well as to
-handle extra setup for e.g. multiprocessing, you may implement the
-<code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code> Python API. PyTorch/XLA plugin packages contain two key
-components:</p>
+</div>
+<div class="section" id="building-pytorch-with-debugging-symbols">
+<h2>Building PyTorch with Debugging Symbols<a class="headerlink" href="#building-pytorch-with-debugging-symbols" title="Permalink to this heading">¶</a></h2>
+<p>Looking into <cite>``setup.py`</cite> &lt;(<a class="reference external" href="https://github.com/pytorch/pytorch/blob/300e0ee13c08ef77e88f32204a2e0925c17ce216/setup.py#L2C1-L11C53">https://github.com/pytorch/pytorch/blob/300e0ee13c08ef77e88f32204a2e0925c17ce216/setup.py#L2C1-L11C53</a>&gt;`_), we see</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Environment variables you are probably interested in:</span>
+<span class="c1">#</span>
+<span class="c1">#   DEBUG</span>
+<span class="c1">#     build with -O0 and -g (debug symbols)</span>
+<span class="c1">#</span>
+<span class="c1">#   REL_WITH_DEB_INFO</span>
+<span class="c1">#     build with optimizations and -g (debug symbols)</span>
+<span class="c1">#</span>
+<span class="c1">#   USE_CUSTOM_DEBINFO=&quot;path/to/file1.cpp;path/to/file2.cpp&quot;</span>
+<span class="c1">#     build with debug info only for specified files</span>
+</pre></div>
+</div>
+<p>Setting <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code> will result in a slow binary, since every single file will
+be unoptimized (<code class="docutils literal notranslate"><span class="pre">-O0</span></code>) and built with debugging symbols.</p>
+<p>In practice, you’ll want to set the <code class="docutils literal notranslate"><span class="pre">USE_CUSTOM_DEBINFO</span></code> instead.</p>
+<p>The challenge becomes knowing which files to build with debugging symbols. A common issue will be debugging a file, then realizing you want to look at data structures or another
+function call in a file that’s not built with debugging symbols.</p>
+<p>Your basic flow as you get started is:</p>
 <ol class="arabic simple">
-<li><p>An implementation of <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code> that (at the very least)
-provides the path to your plugin binary. For example:</p></li>
+<li><p>Identify the source file you want to debug.</p></li>
+<li><p>Build that file with debugger symbols using a command similar to <code class="docutils literal notranslate"><span class="pre">USE_CUSTOM_DEBINFO=&quot;aten/src/ATen/native/Linear.cpp&quot;</span> <span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">develop</span></code>.</p></li>
+<li><p>Start a debugger session with a breakpoint. You’ll discover additional files you want to debug.</p></li>
+<li><p>Add those files to the <code class="docutils literal notranslate"><span class="pre">USE_CUSTOM_DEBINFO</span></code>.</p></li>
+<li><p>Rebuild those files.</p></li>
+<li><p>Rebuild with a command similar to <code class="docutils literal notranslate"><span class="pre">USE_CUSTOM_DEBINFO=&quot;aten/src/ATen/native/Linear.cpp;newfile.cpp&quot;</span> <span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">develop</span></code>.</p></li>
+<li><p>Start your debugger session again.</p></li>
 </ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">CpuPlugin</span><span class="p">(</span><span class="n">plugins</span><span class="o">.</span><span class="n">DevicePlugin</span><span class="p">):</span>
+<p>Again, the key line environment variable to set is <code class="docutils literal notranslate"><span class="pre">USE_CUSTOM_DEBINFO</span></code>. At this point, your PyTorch
+is built with debugging symbols and ready for GDB command line to debug! However, we recommend
+debugging with VSCode, and we will review the instructions to integrate with VSCode shortly.</p>
+<div class="section" id="ensuring-your-file-is-built">
+<h3>Ensuring your file is built<a class="headerlink" href="#ensuring-your-file-is-built" title="Permalink to this heading">¶</a></h3>
+<p>For PyTorch, in our experience, you’ll need to do a full clean and rebuild each time. Unfortunately, touching a file to update its timestamp does not seem to reliably rebuild that file.</p>
+<p>In the output of the <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">develop</span></code> command, look for a line that starts with <code class="docutils literal notranslate"><span class="pre">Source</span> <span class="pre">files</span> <span class="pre">with</span> <span class="pre">custom</span> <span class="pre">debug</span> <span class="pre">infos</span></code>
+to make sure your file is correctly being built with debugger symbols. For example:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--<span class="w">   </span>USE_ROCM_KERNEL_ASSERT<span class="w"> </span>:<span class="w"> </span>OFF
+--<span class="w"> </span>Performing<span class="w"> </span>Test<span class="w"> </span>HAS_WMISSING_PROTOTYPES
+--<span class="w"> </span>Performing<span class="w"> </span>Test<span class="w"> </span>HAS_WMISSING_PROTOTYPES<span class="w"> </span>-<span class="w"> </span>Failed
+--<span class="w"> </span>Performing<span class="w"> </span>Test<span class="w"> </span>HAS_WERROR_MISSING_PROTOTYPES
+--<span class="w"> </span>Performing<span class="w"> </span>Test<span class="w"> </span>HAS_WERROR_MISSING_PROTOTYPES<span class="w"> </span>-<span class="w"> </span>Failed
+--<span class="w"> </span>Source<span class="w"> </span>files<span class="w"> </span>with<span class="w"> </span>custom<span class="w"> </span>debug<span class="w"> </span>infos:<span class="w"> </span>aten/src/ATen/Utils.cpp<span class="w"> </span>aten/src/ATen/ScalarOps.cpp<span class="w"> </span>aten/src/ATen/EmptyTensor.cpp<span class="w"> </span>aten/src/ATen/core/Tensor.cpp<span class="w"> </span>aten/src/ATen/native/Linear.cpp
+</pre></div>
+</div>
+<p>It may also be helpful to ensure that your previous debugger session is shut down.</p>
+</div>
+</div>
+<div class="section" id="vscode-configuration">
+<h2>VSCode Configuration<a class="headerlink" href="#vscode-configuration" title="Permalink to this heading">¶</a></h2>
+<p>Integrating with VSCode will require installing the C/C++ Extension Pack, published by Microsoft. Search in the Extensions tab of VSCode with the identifier <code class="docutils literal notranslate"><span class="pre">ms-vscode.cpptools-extension-pack</span></code>.</p>
+<a class="reference external image-reference" href="../_static/img/debugger0_pack.png"><img alt="Microsoft C/C++ Extension Pack" src="../_images/debugger0_pack.png" /></a>
+<p>Next, you’ll need to create a <code class="docutils literal notranslate"><span class="pre">launch.json</span></code> in the <code class="docutils literal notranslate"><span class="pre">pytorch/.vscode</span></code> folder. Here is
+a sample file to start from. You’ll need to adjust the file paths to match your specific installation.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.2.0&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;configurations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;GDB a python interpreter&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cppdbg&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;request&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;program&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/home/USERNAME/miniconda3/envs/torch310/bin/python&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// Replace with your executable&#39;s path</span>
+<span class="w">            </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">            </span><span class="nt">&quot;cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;${workspaceFolder}&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">            </span><span class="nt">&quot;externalConsole&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;MIMode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gdb&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;setupCommands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Enable pretty-printing for gdb&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;-enable-pretty-printing&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;ignoreFailures&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">                </span><span class="p">},</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Set Disassembly flavor to Intel&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;-gdb-set disassembly-flavor intel&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;ignoreFailures&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">],</span>
+<span class="w">            </span><span class="c1">// &quot;preLaunchTask&quot;: &quot;C/C++: g++ build active file&quot;,</span>
+<span class="w">            </span><span class="nt">&quot;miDebuggerPath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/home/USERNAME/miniconda3/envs/torch310/bin/gdb&quot;</span><span class="w"> </span><span class="c1">// Replace with your gdb location</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="lldb">
+<h2>LLDB<a class="headerlink" href="#lldb" title="Permalink to this heading">¶</a></h2>
+<p>You can also debug with LLDB instead of GDB. In our experience, LLDB is faster. But both have their quirks, and you may benefit from switching between the two.</p>
+<p>Install LLDB for VSCode by searching in the Extensions tab of VSCode with the identifier <code class="docutils literal notranslate"><span class="pre">vadimcn.vscode-lldb</span></code>.</p>
+<p>Then add this to your launch.json file:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;LLDB Python&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lldb&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;request&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;program&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/home/yho_google_com/miniconda3/envs/torch310/bin/python&quot;</span><span class="p">,</span>
 
-  <span class="k">def</span><span class="w"> </span><span class="nf">library_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;lib&#39;</span><span class="p">,</span> <span class="s1">&#39;pjrt_c_api_cpu_plugin.so&#39;</span><span class="p">)</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<ol class="arabic simple">
-<li><p>A <code class="docutils literal notranslate"><span class="pre">torch_xla.plugins</span></code> <a class="reference external" href="https://setuptools.pypa.io/en/latest/userguide/entry_point.html">entry
-point</a>
-that identifies your <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code>. For exmaple, to register the
-<code class="docutils literal notranslate"><span class="pre">EXAMPLE</span></code> device type in a <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>:</p></li>
-</ol>
-<div class="highlight-{=html} notranslate"><div class="highlight"><pre><span></span>&lt;!-- --&gt;
+</div>
+<div class="section" id="using-vscode-s-visual-debugger">
+<h2>Using VSCode’s Visual Debugger<a class="headerlink" href="#using-vscode-s-visual-debugger" title="Permalink to this heading">¶</a></h2>
+<p>First, open the file you want to debug.</p>
+<a class="reference external image-reference" href="../_static/img/debugger1_file.png"><img alt="Opened File" src="../_images/debugger1_file.png" /></a>
+<p>Second, click to the left of the line number you want to set a breakpoint. You’ll see a red dot there, and, in the lower left of the debugger tab.</p>
+<a class="reference external image-reference" href="../_static/img/debugger2_breakpoint.png"><img alt="Breakpoint" src="../_images/debugger2_breakpoint.png" /></a>
+<p>Third, you will start the debugger session. Select the GDB or LLDB configuration using the dropdown to the right of the green play button. Now press the green play button. This triggers the rules we
+set in the launch.json file.</p>
+<p>Notice that the red button now fades to an empty white circle. That’s because you have an active session, but you have not imported torch yet, so the torch library you built with debugger symbols is not yet loaded.</p>
+<a class="reference external image-reference" href="../_static/img/debugger3_session.png"><img alt="Debugger Session" src="../_images/debugger3_session.png" /></a>
+<p>In the python interpretor, <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">torch</span></code>. This loads the torch library you built. Now, the breakpoints become bright red again to indicate that they are active.</p>
+<a class="reference external image-reference" href="../_static/img/debugger4_active.png"><img alt="Active torch" src="../_images/debugger4_active.png" /></a>
+<p>Run a command that will trigger the breakpoint, namely, <code class="docutils literal notranslate"><span class="pre">torch.einsum()</span></code>. Notice the yellow arrow indicating the current file location, and the variables and call stack information on the left. You are debugging!</p>
+<a class="reference external image-reference" href="../_static/img/debugger5_break.png"><img alt="Breakpoint" src="../_images/debugger5_break.png" /></a>
+</div>
+<div class="section" id="a-realistic-build-command">
+<h2>A realistic build command<a class="headerlink" href="#a-realistic-build-command" title="Permalink to this heading">¶</a></h2>
+<p>Over time, you’ll collect additional flags to your build command, such as not building certain libraries to speed up builds, or adding diagnostics. Here is one example that turns off building CUDA and turns on handling an environment variable to print dispatcher traces.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">USE_CUSTOM_DEBINFO</span><span class="o">=</span><span class="s2">&quot;aten/src/ATen/native/Linear.cpp&quot;</span><span class="w"> </span><span class="nv">USE_CUDA</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/home/USERNAME/miniconda3/envs/torch310/lib<span class="w"> </span><span class="nv">CFLAGS</span><span class="o">=</span><span class="s2">&quot;-DHAS_TORCH_SHOW_DISPATCH_TRACE&quot;</span><span class="w"> </span>python<span class="w"> </span>setup.py<span class="w"> </span>develop
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">entry</span><span class="o">-</span><span class="n">points</span><span class="o">.</span><span class="s2">&quot;torch_xla.plugins&quot;</span><span class="p">]</span>
-<span class="n">example</span> <span class="o">=</span> <span class="s2">&quot;torch_xla_cpu_plugin:CpuPlugin&quot;</span>
-</pre></div>
 </div>
-<p>With your package installed, you may then use your <code class="docutils literal notranslate"><span class="pre">EXAMPLE</span></code> device
-directly:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ PJRT_DEVICE=EXAMPLE python
-&gt;&gt;&gt; import torch_xla
-&gt;&gt;&gt; torch_xla.devices()
-[device(type=&#39;xla&#39;, index=0), device(type=&#39;xla&#39;, index=1), device(type=&#39;xla&#39;, index=2), device(type=&#39;xla&#39;, index=3)]
-</pre></div>
-</div>
-<p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/plugins.py">DevicePlugin</a>
-provides additional extension points for multiprocess initialization and
-client options. The API is currently in an experimental state, but it is
-expected to become stable in a future release.</p>
-</div>
+<div class="section" id="future-work">
+<h2>Future Work<a class="headerlink" href="#future-work" title="Permalink to this heading">¶</a></h2>
+<p>This guide has demonstrated how to build debugging symbols for PyTorch C++ files. Future work will demonstrate adding debugging symbols to PyTorch/XLA C++ files.</p>
 </div>
 </div>
 
@@ -526,15 +583,6 @@ expected to become stable in a future release.</p>
              
             </div>
             <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="bazel.html" class="btn btn-neutral float-right" title="Bazel in Pytorch/XLA" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
-      
-      
-        <a href="op_lowering.html" class="btn btn-neutral" title="OP Lowering Guide" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
-      
-    </div>
   
 
   
@@ -564,12 +612,18 @@ expected to become stable in a future release.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Custom Hardware Plugins</a><ul>
-<li><a class="reference internal" href="#implementing-a-pjrt-plugin">Implementing a PJRT Plugin</a><ul>
-<li><a class="reference internal" href="#pjrt-c-api-implementation">PJRT C API Implementation</a></li>
-<li><a class="reference internal" href="#pytorch-xla-plugin-package">PyTorch/XLA Plugin Package</a></li>
+<li><a class="reference internal" href="#">C++ Debugging</a><ul>
+<li><a class="reference internal" href="#why-would-you-need-this">Why would you need this?</a></li>
+<li><a class="reference internal" href="#install-gdb-the-gnu-project-debugger">Install GDB: The GNU Project Debugger</a></li>
+<li><a class="reference internal" href="#building-pytorch-with-debugging-symbols">Building PyTorch with Debugging Symbols</a><ul>
+<li><a class="reference internal" href="#ensuring-your-file-is-built">Ensuring your file is built</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#vscode-configuration">VSCode Configuration</a></li>
+<li><a class="reference internal" href="#lldb">LLDB</a></li>
+<li><a class="reference internal" href="#using-vscode-s-visual-debugger">Using VSCode’s Visual Debugger</a></li>
+<li><a class="reference internal" href="#a-realistic-build-command">A realistic build command</a></li>
+<li><a class="reference internal" href="#future-work">Future Work</a></li>
 </ul>
 </li>
 </ul>
