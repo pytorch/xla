@@ -390,14 +390,6 @@ def _gradient_accumulation(accumulation_steps, train_step, iterable_tensors,
     grads = [param.grad for param in params]
     return (iteri, loss, *iterable_tensors, *carried_tensors, *params, *grads)
 
-  if not torch_xla._XLAC._xla_get_enable_alias_with_buffer_donor_config():
-    warnings.warn(
-        'Buffer donation is currently not enabled for gradient accumulation '
-        'The resulting computed gradients will be unaliased from the initial '
-        'gradient tensors. In order to donate and discard the former gradient '
-        'tensors, consider enabling `_xla_set_enable_alias_with_buffer_donor_config(True)`'
-    )
-
   for param in model_parameters:
     if not param.requires_grad:
       continue
