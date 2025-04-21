@@ -26,9 +26,7 @@ started:
 To install PyTorch/XLA stable build in a new TPU VM:
 
 ```sh
-pip install torch~=2.6.0 'torch_xla[tpu]~=2.6.0' \
-  -f https://storage.googleapis.com/libtpu-releases/index.html \
-  -f https://storage.googleapis.com/libtpu-wheels/index.html
+pip install torch~=2.7.0 'torch_xla[tpu]~=2.7.0'
 
 # Optional: if you're using custom kernels, install pallas dependencies
 pip install 'torch_xla[pallas]' \
