@@ -230,11 +230,13 @@ class ScanSpmdTest(unittest.TestCase):
   def count_regex(self, hlo_text, regex_str):
     return len(re.findall(regex_str, hlo_text))
 
+  @unittest.skipIf(torch.cuda.is_available())
   def test_assume_pure_works_with_mark_sharding(self):
     x = torch.randn((3, 4, 5, 128), device='xla')
     assume_pure(mark_sharding)(x, self.spmd_mesh, ("model", None, None, None))
     # assert not throwing
 
+  @unittest.skipIf(torch.cuda.is_available())
   def test_convert_to_jax_mesh(self):
     jax_mesh = self.spmd_mesh.maybe_convert_and_get_jax_mesh()
     self.assertEqual(jax_mesh.devices.shape, self.spmd_mesh.mesh_shape)
