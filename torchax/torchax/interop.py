@@ -220,13 +220,8 @@ def j2t_autograd(fn, call_jax=call_jax):
 
                 tensors, other = util.partition(flat_args_kwargs, lambda x: isinstance(x, torch.Tensor))
                 # We want the arguments that don't require grads to be closured?
-                def fn_wrapper(*tensors):
-                    # Reconstruct the original args and kwargs
-                    flat_inputs = util.merge(tensors, other)
-                    args, kwargs = tree_unflatten(tree_def, flat_inputs)
-                    return fn(*args, **kwargs)
 
-                y, fun_vjp = call_jax(jax.vjp, fn_wrapper, *tensors)
+                y, fun_vjp = call_jax(_jax_forward, fn, other, tree_def, tensors)
 
                 # Save necessary information for backward
                 # Flatten the vjp function. `vjp_spec` contains a jaxpr for the backward pass.
@@ -245,9 +240,6 @@ def j2t_autograd(fn, call_jax=call_jax):
                     _jax_backward, ctx.vjp_spec, ctx.saved_tensors, grad_out
                 )
 
-                # Flatten the gradients to match the flat inputs to forward
-                flat_input_grads, _ = tree_flatten(input_grads_structured)
-
                 # Construct the gradient tuple to be returned.
                 # It needs to match the inputs to forward: (tree_def, *flat_inputs)
                 # The first gradient (for tree_def) is None.
@@ -255,7 +247,7 @@ def j2t_autograd(fn, call_jax=call_jax):
                 # We need to put a None for inputs that did not require gradients.
                 final_grads = [None]
                 for needs_grad, grad in safe_zip(
-                    ctx.needs_input_grad[1:], flat_input_grads
+                    ctx.needs_input_grad[1:], input_grads_structured 
                 ):
                     final_grads.append(grad if needs_grad else None)
 
@@ -269,6 +261,26 @@ def j2t_autograd(fn, call_jax=call_jax):
         return y 
 
     return inner
+
+
+# NOTE(qihqi): This function cannot be inlined from the callsite
+#  Becuase if it does, then it won't hit the compilation cache for 
+#  call_jax. Call jax uses functions' id as key.
+def _jax_forward(fn, other, tree_def, tensors):
+  """JAX function to compute output and vjp function.
+
+  primals should be a tuple (args, kwargs).
+  """
+  import jax
+  from jax.tree_util import tree_flatten, tree_unflatten
+
+  def fn_wrapper(*tensors):
+    # Reconstruct the original args and kwargs
+    flat_inputs = util.merge(tensors, other)
+    args, kwargs = tree_unflatten(tree_def, flat_inputs)
+    return fn(*args, **kwargs)
+
+  return jax.vjp(fn_wrapper, *tensors)
 
 
 def _jax_backward(vjp_spec, saved_tensors, grad_out):

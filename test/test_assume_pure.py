@@ -377,8 +377,8 @@ class TestAssumePure(absltest.TestCase):
     def f(a, b):
       return xb.call_jax(jax_func, (a, b))
 
-    a = torch.randn(3, 3, device=self.device)
-    b = torch.randn(3, 3, device=self.device)
+    a = torch.randn(3, 3, device='xla')
+    b = torch.randn(3, 3, device='xla')
 
     output_pure = assume_pure(f)(a, b)
     torch.testing.assert_close(
@@ -397,8 +397,8 @@ class TestAssumePure(absltest.TestCase):
       y = torch_func(a, b)
       return y + 1
 
-    a = torch.randn(3, 3, device=self.device)
-    b = torch.randn(3, 3, device=self.device)
+    a = torch.randn(3, 3, device='xla')
+    b = torch.randn(3, 3, device='xla')
 
     output_pure = assume_pure(f)(a, b)
     torch.testing.assert_close(
