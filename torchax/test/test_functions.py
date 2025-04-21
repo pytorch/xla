@@ -22,24 +22,23 @@ class SeqModel(torch.nn.Module):
 class TestTorchFunctions(parameterized.TestCase):
 
   def setUp(self):
-    self.env = torchax.tensor.Environment()
-    self.env.config.use_torch_native_for_cpu_tensor = False
+    torchax.enable_globally()
     torchax.enable_accuracy_mode()
+    self.env = torchax.default_env()
 
   @parameterized.named_parameters(
-      ('tensor_2d', lambda: torch.tensor([[0.1, 1.2], [2.2, 3.1], [4.9, 5.2]])),
-      ('tensor_1d', lambda: torch.tensor([0, 1],)),
-      ('tensor_scalar', lambda: torch.tensor(3.14159,)),
-      ('tensor_empty', lambda: torch.tensor([],)),
-      ('tensor_dtype', lambda: torch.tensor([[0.11111, 0.222222, 0.3333333]],
-                                            dtype=torch.float64)),
+      ('tensor_2d', [[0.1, 1.2], [2.2, 3.1], [4.9, 5.2]]),
+      ('tensor_1d', [0, 1]),
+      ('tensor_scalar', 3.14159),
+      ('tensor_empty', []),
+      ('tensor_dtype', [[0.11111, 0.222222, 0.3333333]], {'dtype': torch.float64})
   )
-  def test_tensor_constructor(self, func: Callable[[], torch.Tensor]):
-    expected = func()
+  def test_tensor_constructor(self, arg, kwargs=None):
+    kwargs = kwargs or {}
+    expected = torch.tensor(arg, **kwargs)
 
-    with self.env:
-      actual = func()
-      self.assertIsInstance(actual, torchax.tensor.Tensor)
+    actual = torch.tensor(arg, device='jax', **kwargs)
+    self.assertIsInstance(actual, torchax.tensor.Tensor)
 
     torch.testing.assert_close(torchax.tensor.j2t(actual._elem), expected)
 
@@ -90,8 +89,9 @@ class TestTorchFunctions(parameterized.TestCase):
       self.assertTrue(
         torch.allclose(res, torchax.tensor.j2t(res2.jax())))
 
-
-
+  def test_randn_requires_grad(self):
+    x = torch.randn((3, 3), requires_grad=True, device='jax')
+    self.assertEqual(x.requires_grad, True)
 
 
 if __name__ == '__main__':
