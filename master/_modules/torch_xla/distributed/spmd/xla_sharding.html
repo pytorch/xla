@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gite9cb086 )
+                  master (2.8.0+git8e6a5e5 )
                 </div>
               
             
@@ -445,7 +445,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="kn">import</span> <span class="n">XLAShardedTensor</span><span class="p">,</span> <span class="n">XLAShard</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.debug.profiler</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xp</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla._internal.jax_workarounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">requires_jax</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla._internal.jax_workarounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">requires_jax</span><span class="p">,</span> <span class="n">maybe_get_torchax</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
@@ -611,7 +611,30 @@
           <span class="n">mesh_shape</span><span class="o">=</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">&#39;mesh_shape&#39;</span><span class="p">],</span>
           <span class="n">axis_names</span><span class="o">=</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">&#39;axis_names&#39;</span><span class="p">])</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">SyntaxError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
-      <span class="k">return</span> <span class="kc">None</span></div>
+      <span class="k">return</span> <span class="kc">None</span>
+
+  <span class="nd">@requires_jax</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">maybe_convert_and_get_jax_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c1"># Construct a JAX mesh object with the same device ids shape and ordering</span>
+    <span class="c1"># from torch_xla device mesh.</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">jax._src</span><span class="w"> </span><span class="kn">import</span> <span class="n">mesh</span> <span class="k">as</span> <span class="n">mesh_lib</span>
+
+    <span class="n">axis_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">(</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">)))</span>
+
+    <span class="c1"># Create a mapping from device ID to device object</span>
+    <span class="n">all_devices</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">devices</span><span class="p">()</span>
+    <span class="n">device_id_to_device</span> <span class="o">=</span> <span class="p">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="p">:</span> <span class="n">device</span> <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">all_devices</span><span class="p">}</span>
+    <span class="n">device_ids_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">device_ids</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">)</span>
+    <span class="n">device_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">device_ids_array</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+    <span class="n">device_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">device_id_to_device</span><span class="o">.</span><span class="n">get</span><span class="p">)(</span><span class="n">device_ids_array</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">device_array</span> <span class="o">==</span> <span class="kc">None</span><span class="p">):</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+          <span class="sa">f</span><span class="s2">&quot;torch_xla device ID </span><span class="si">{</span><span class="n">device_ids_array</span><span class="p">[</span><span class="n">device_array</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">None</span><span class="p">]</span><span class="si">}</span><span class="s2"> not found in available JAX devices&quot;</span>
+      <span class="p">)</span>
+    <span class="k">return</span> <span class="n">mesh_lib</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_array</span><span class="p">,</span> <span class="n">axis_names</span><span class="o">=</span><span class="n">axis_names</span><span class="p">)</span></div>
 
 
 <span class="n">_GLOBAL_MESH</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
@@ -1015,6 +1038,14 @@
   <span class="c1"># where the group assignment may vary with different input ranks.</span>
   <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span> \
     <span class="sa">f</span><span class="s2">&quot;Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">).&quot;</span>
+
+  <span class="n">tx</span> <span class="o">=</span> <span class="n">maybe_get_torchax</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">tx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">tx</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">jax.sharding</span><span class="w"> </span><span class="kn">import</span> <span class="n">PartitionSpec</span> <span class="k">as</span> <span class="n">P</span><span class="p">,</span> <span class="n">NamedSharding</span>
+    <span class="n">op_sharding</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">partition_spec</span><span class="p">)</span>
+    <span class="n">jmesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">maybe_convert_and_get_jax_mesh</span><span class="p">()</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">shard_</span><span class="p">(</span><span class="n">NamedSharding</span><span class="p">(</span><span class="n">jmesh</span><span class="p">,</span> <span class="n">P</span><span class="p">(</span><span class="o">*</span><span class="n">op_sharding</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">t</span>
 
   <span class="n">op_sharding</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_op_sharding</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span>
   <span class="n">annotate_func</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_mark_sharding</span>
