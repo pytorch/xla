@@ -5,11 +5,23 @@ load(
     "xla_cc_test",
 )
 
+def cov_library(
+        deps = [],
+        copts = [],
+        linkopts = [],
+        **kwargs):
+    native.cc_library(
+        copts = copts + ["-fprofile-arcs", "-ftest-coverage", "-O0", "-g"],
+        linkopts = linkopts + ["-fprofile-arcs", "-ftest-coverage"],
+        deps = deps,
+        **kwargs
+    )
+
 def ptxla_cc_library(
         deps = [],
         copts = [],
         **kwargs):
-    native.cc_library(
+    cov_library(
         copts = copts + ["-isystemexternal/torch"],  # Required for system includes.
         deps = deps + [
             "@torch//:headers",
