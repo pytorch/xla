@@ -1,7 +1,7 @@
 # OP Lowering Guide
 
 ## Background
-PyTorch wraps the C++ ATen tensor library that offers a wide range of operations implemented on GPU and CPU. Pytorch/XLA is a PyTorch extension; one of its purposes is to convert PyTorch operations to XLA operations. Lowering defines the process of converting a higher-level representation of an operation to a lower-level representation. PyTorch/XLA forwards operations for which an XLA lowering hasn't been defined to the CPU which calls the ATen implementation of the operation. Operations that are forwarded to the CPU will cause a significant slowdown. To achieve the best performance, all operations used in the model must have a lowering defined. For more information, see [Exyang's Blog post](https://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/).
+PyTorch wraps the C++ ATen tensor library that offers a wide range of operations implemented on GPU and CPU. Pytorch/XLA is a PyTorch extension; one of its purposes is to convert PyTorch operations to XLA operations. Lowering defines the process of converting a higher-level representation of an operation to a lower-level representation. PyTorch/XLA forwards operations for which an XLA lowering hasn't been defined to the CPU which calls the ATen implementation of the operation. Operations that are forwarded to the CPU will cause a significant slowdown. To achieve the best performance, all operations used in the model must have a lowering defined. For more information, see [Ezyang's Blog post](https://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/).
 
 Here's an example of what you might see from the PyTorch/XLA debugging tool for an operation that has not been lowered:
 ```
