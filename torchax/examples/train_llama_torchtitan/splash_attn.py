@@ -1,4 +1,5 @@
 import functools
+from typing import Optional
 
 import jax
 import jax.numpy as jnp
@@ -16,8 +17,8 @@ def tpu_splash_attention(
     query: jax.Array,
     key: jax.Array,
     value: jax.Array,
-    decoder_segment_ids: jax.Array | None,
-    attn_logits_soft_cap: float | None = None,
+    decoder_segment_ids: Optional[jax.Array],
+    attn_logits_soft_cap: Optional[float] = None,
 ) -> jax.Array:
   """TPU Flash Attention."""
   if decoder_segment_ids is not None:

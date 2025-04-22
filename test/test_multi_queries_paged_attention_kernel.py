@@ -5,6 +5,7 @@ from jax._src import test_util as jtu
 from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention
 import jax.numpy as jnp
 import numpy as np
+from typing import Optional
 
 jax.config.parse_flags_with_absl()
 
@@ -45,7 +46,7 @@ def _ref_jax_extended_paged_attention(
     lengths,  # [batch_size], the effective kv_length.
     page_indices,  # [batch_size, pages_per_sequence]
     effective_q_lens,  # [batch_size] the effective q_length
-    attn_logits_soft_cap: float | None = None,
+    attn_logits_soft_cap: Optional[float] = None,
 ):
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape

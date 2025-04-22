@@ -1086,7 +1086,7 @@ def _multi_queries_paged_attention_nonkernel(
     lengths,  # seq_lengths, [batch_size]. nb batch_size = len(seq_lens), the effective kv_length.
     page_indices,  # [batch_size, pages_per_sequence]
     effective_q_lens,  # [batch_size], the effective q_length
-    attn_logits_soft_cap: float | None = None,
+    attn_logits_soft_cap: Optional[float] = None,
 ) -> torch.Tensor:  # [batch_size, query_len, num_heads, head_dim]
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
@@ -1154,7 +1154,7 @@ def multi_queries_paged_attention(
     num_kv_pages_per_compute_block,
     num_queries_per_compute_block,
     use_kernel=True,
-    attn_logits_soft_cap: float | None = None,
+    attn_logits_soft_cap: Optional[float] = None,
 ):  # [batch_size, query_len, num_heads, head_dim]:
   assert len(q.shape) == 4, "q should have 4 dimensions."
   if not use_kernel:
@@ -1672,8 +1672,8 @@ def paged_attention_xla(q: torch.Tensor,
                         lengths: torch.Tensor,
                         page_indices: torch.Tensor,
                         pages_per_compute_block: int,
-                        megacore_mode: str | None = None,
-                        attn_logits_soft_cap: float | None = None):
+                        megacore_mode: Optional[str] = None,
+                        attn_logits_soft_cap: Optional[float] = None):
   return paged_attention(q, k_pages, v_pages, lengths, page_indices,
                          pages_per_compute_block, megacore_mode,
                          attn_logits_soft_cap)
@@ -1686,8 +1686,8 @@ def paged_attention_non_xla(q: torch.Tensor,
                             lengths: torch.Tensor,
                             page_indices: torch.Tensor,
                             pages_per_compute_block: int,
-                            megacore_mode: str | None = None,
-                            attn_logits_soft_cap: float | None = None):
+                            megacore_mode: Optional[str] = None,
+                            attn_logits_soft_cap: Optional[float] = None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 
@@ -1698,17 +1698,17 @@ XLA_LIB.define(
 
 
 @impl(XLA_LIB, "multi_queries_paged_attention", "XLA")
-def multi_queries_paged_attention_xla(q: torch.Tensor,
-                                      k_pages: torch.Tensor,
-                                      v_pages: torch.Tensor,
-                                      lengths: torch.Tensor,
-                                      page_indices: torch.Tensor,
-                                      effective_q_lens: torch.Tensor,
-                                      num_kv_pages_per_compute_block: int,
-                                      num_queries_per_compute_block: int,
-                                      use_kernel: bool,
-                                      attn_logits_soft_cap: float |
-                                      None = None):
+def multi_queries_paged_attention_xla(
+    q: torch.Tensor,
+    k_pages: torch.Tensor,
+    v_pages: torch.Tensor,
+    lengths: torch.Tensor,
+    page_indices: torch.Tensor,
+    effective_q_lens: torch.Tensor,
+    num_kv_pages_per_compute_block: int,
+    num_queries_per_compute_block: int,
+    use_kernel: bool,
+    attn_logits_soft_cap: Optional[float] = None):
   return multi_queries_paged_attention(q, k_pages, v_pages, lengths,
                                        page_indices, effective_q_lens,
                                        num_kv_pages_per_compute_block,
@@ -1717,17 +1717,17 @@ def multi_queries_paged_attention_xla(q: torch.Tensor,
 
 
 @impl(XLA_LIB, "multi_queries_paged_attention", "CompositeExplicitAutograd")
-def multi_queries_paged_attention_non_xla(q: torch.Tensor,
-                                          k_pages: torch.Tensor,
-                                          v_pages: torch.Tensor,
-                                          lengths: torch.Tensor,
-                                          page_indices: torch.Tensor,
-                                          effective_q_lens: torch.Tensor,
-                                          num_kv_pages_per_compute_block: int,
-                                          num_queries_per_compute_block: int,
-                                          use_kernel: bool,
-                                          attn_logits_soft_cap: float |
-                                          None = None):
+def multi_queries_paged_attention_non_xla(
+    q: torch.Tensor,
+    k_pages: torch.Tensor,
+    v_pages: torch.Tensor,
+    lengths: torch.Tensor,
+    page_indices: torch.Tensor,
+    effective_q_lens: torch.Tensor,
+    num_kv_pages_per_compute_block: int,
+    num_queries_per_compute_block: int,
+    use_kernel: bool,
+    attn_logits_soft_cap: Optional[float] = None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 
@@ -1751,8 +1751,8 @@ def ragged_paged_attention_xla(
     num_queries_per_block: int,
     use_kernel: bool,
     sm_scale: float = 1.0,
-    mask_value: float | None = None,
-    vmem_limit_bytes: int | None = None,
+    mask_value: Optional[float] = None,
+    vmem_limit_bytes: Optional[int] = None,
 ):
   return ragged_paged_attention(
       q,
@@ -1782,8 +1782,8 @@ def ragged_paged_attention_non_xla(q: torch.Tensor,
                                    num_queries_per_block: int,
                                    use_kernel: bool,
                                    sm_scale: float = 1.0,
-                                   mask_value: float | None = None,
-                                   vmem_limit_bytes: int | None = None):
+                                   mask_value: Optional[float] = None,
+                                   vmem_limit_bytes: Optional[int] = None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 
