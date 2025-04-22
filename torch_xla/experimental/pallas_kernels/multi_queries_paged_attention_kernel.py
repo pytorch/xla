@@ -116,7 +116,7 @@ def _flash_attention(
     query_len: int,
     page_size: int,
     head_dim: int,
-    attn_logits_soft_cap: float | None,
+    attn_logits_soft_cap: Optional[float],
 ):
   b, kv_head_idx, q_blk_idx, kv_blk_idx = (
       pl.program_id(0),
@@ -271,7 +271,7 @@ def paged_flash_attention_kernel(
     num_kv_pages_per_compute_block: int,
     mask_value: float,
     query_len: int,
-    attn_logits_soft_cap: float | None,
+    attn_logits_soft_cap: Optional[float],
 ):
   """Pallas kernel for paged attention."""
   b, kv_head_idx, q_blk_idx, kv_blk_idx = (
@@ -449,7 +449,7 @@ def paged_attention(
     mask_value: float = DEFAULT_MASK_VALUE,
     num_kv_pages_per_compute_block: int,
     num_queries_per_compute_block: int = 4,
-    attn_logits_soft_cap: float | None = None,
+    attn_logits_soft_cap: Optional[float] = None,
 ) -> jax.Array:
   """Paged grouped query attention.
 

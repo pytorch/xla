@@ -571,7 +571,7 @@ def ragged_paged_attention(
     mask_value: float = DEFAULT_MASK_VALUE,
     num_kv_pages_per_block: int = 16,
     num_queries_per_block: int = 128,
-    vmem_limit_bytes: int | None = None,
+    vmem_limit_bytes: Optional[int] = None,
 ):
   """Ragged paged attention that supports mixed prefill and decode.
 
