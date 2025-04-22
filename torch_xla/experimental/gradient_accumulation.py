@@ -288,8 +288,8 @@ def _gradient_accumulation_impl(context, body_fn, iterable_tensors, params,
       iterable_tensors, fake_iterable_tensors, carried_tensors,
       fake_carried_tensors, params, grads)
 
-  def _body_fn_wrapper(curr_iter: xb.Op, curr_loss: xb.Op,
-                       *while_params: xb.Op):
+  def _body_fn_wrapper(curr_iter: xb.Op, curr_loss: xb.Op, *while_params:
+                       xb.Op):
 
     def dynamic_slice(xs: xb.Op, idx: xb.Op) -> xb.Op:
       indices = [idx] + [idx.zeros_like() for _ in range(xs.shape().rank - 1)]
@@ -390,21 +390,13 @@ def _gradient_accumulation(accumulation_steps, train_step, iterable_tensors,
     grads = [param.grad for param in params]
     return (iteri, loss, *iterable_tensors, *carried_tensors, *params, *grads)
 
-  if not torch_xla._XLAC._xla_get_enable_alias_with_buffer_donor_config():
-    warnings.warn(
-        'Buffer donation is currently not enabled for gradient accumulation '
-        'The resulting computed gradients will be unaliased from the initial '
-        'gradient tensors. In order to donate and discard the former gradient '
-        'tensors, consider enabling `_xla_set_enable_alias_with_buffer_donor_config(True)`'
-    )
-
   for param in model_parameters:
     if not param.requires_grad:
       continue
     if param.grad is None:
       param.grad = torch.zeros(param.size()).to(
           param.device).requires_grad_(False)
-      param_sharding = torch_xla._XLAC._get_xla_op_sharding(param.grad)
+      param_sharding = torch_xla._XLAC._get_xla_op_sharding(param)
       if param_sharding:
         # Match the gradient sharding to the parameter's.
         torch_xla._XLAC._xla_mark_sharding(param.grad, param_sharding)

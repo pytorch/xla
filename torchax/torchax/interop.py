@@ -1,12 +1,16 @@
+import collections
 import copy
 import functools
 import torch
+from inspect import signature
+from functools import wraps
 from torch.nn.utils import stateless as torch_stateless
 import jax
 import jax.numpy as jnp
 from jax import tree_util as pytree
 from jax.experimental.shard_map import shard_map
 from torchax import tensor
+from torchax import util
 import torchax
 
 from torchax.types import JaxValue, TorchValue, JaxCallable, TorchCallable
@@ -49,7 +53,7 @@ def set_all_buffers(m, params, buffers):
 
 class JittableModule(torch.nn.Module):
 
-    def __init__(self, m: torch.nn.Module, extra_jit_args={}):
+    def __init__(self, m: torch.nn.Module, extra_jit_args={}, dedup_parameters=True):
         super().__init__()
         self.params, self.buffers = extract_all_buffers(m)
         self._model = m
@@ -57,6 +61,19 @@ class JittableModule(torch.nn.Module):
 
         self._extra_jit_args = extra_jit_args
 
+        self._extra_dumped_weights = {}
+
+        if dedup_parameters:
+            temp = collections.defaultdict(list)
+            for k, v in self.params.items():
+                temp[id(v)].append(k)
+
+            for v in temp.values():
+                if len(v) > 1:
+                    # duplicated weights with different name
+                    self._extra_dumped_weights[v[0]] = v[1:]
+                    for extra_keys in v[1:]:
+                        del self.params[extra_keys]
 
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
@@ -67,6 +84,10 @@ class JittableModule(torch.nn.Module):
         kwargs = kwargs or {}
         params_copy = copy.copy(params)
         params_copy.update(buffers)
+        # reinflate the state dict so there are not any missing keys
+        for k, v in self._extra_dumped_weights.items():
+            for new_key in v:
+                params_copy[new_key] = params_copy[k]
         with torch_stateless._reparametrize_module(self._model, params_copy):
             res = getattr(self._model, method_name)(*args, **kwargs)
         return res
@@ -180,6 +201,98 @@ def call_torch(torch_func: TorchCallable, *args: JaxValue, **kwargs: JaxValue) -
     return jax_view(res)
 
 
+def j2t_autograd(fn, call_jax=call_jax):
+    """Given a JAX function, returns a PyTorch autograd function implemented with `jax.vjp(fn)`.
+
+    It wraps `fn` with `jax.vjp` to compute both the output and residuals (intermediate
+    activations). The wrapped function is then run via `call_jax` and integrated into
+    the PyTorch autograd framework by saving the residuals into the context object.
+    """
+
+    @wraps(fn)
+    def inner(*args, **kwargs):
+        from jax.tree_util import tree_flatten, tree_unflatten
+        from jax.util import safe_zip
+
+        class JaxFun(torch.autograd.Function):
+            @staticmethod
+            def forward(ctx, tree_def, *flat_args_kwargs):
+
+                tensors, other = util.partition(flat_args_kwargs, lambda x: isinstance(x, torch.Tensor))
+                # We want the arguments that don't require grads to be closured?
+
+                y, fun_vjp = call_jax(_jax_forward, fn, other, tree_def, tensors)
+
+                # Save necessary information for backward
+                # Flatten the vjp function. `vjp_spec` contains a jaxpr for the backward pass.
+                # `residuals` contains the tensors needed for the backward pass.`
+                residuals, vjp_spec = tree_flatten(fun_vjp)
+                ctx.vjp_spec = vjp_spec
+                ctx.save_for_backward(*residuals)
+                return y
+
+            @staticmethod
+            def backward(ctx, *grad_out):
+                assert len(grad_out) > 0
+                grad_out = grad_out if len(grad_out) > 1 else grad_out[0]
+
+                input_grads_structured = call_jax(
+                    _jax_backward, ctx.vjp_spec, ctx.saved_tensors, grad_out
+                )
+
+                # Construct the gradient tuple to be returned.
+                # It needs to match the inputs to forward: (tree_def, *flat_inputs)
+                # The first gradient (for tree_def) is None.
+                # The subsequent gradients correspond to flat_inputs.
+                # We need to put a None for inputs that did not require gradients.
+                final_grads = [None]
+                for needs_grad, grad in safe_zip(
+                    ctx.needs_input_grad[1:], input_grads_structured 
+                ):
+                    final_grads.append(grad if needs_grad else None)
+
+                return tuple(final_grads)
+
+        sig = signature(fn)
+        bound = sig.bind(*args, **kwargs)
+        bound.apply_defaults()
+        flat_args_kwargs, tree_def = tree_flatten((bound.args, bound.kwargs))
+        y = JaxFun.apply(tree_def, *flat_args_kwargs)
+        return y 
+
+    return inner
+
+
+# NOTE(qihqi): This function cannot be inlined from the callsite
+#  Becuase if it does, then it won't hit the compilation cache for 
+#  call_jax. Call jax uses functions' id as key.
+def _jax_forward(fn, other, tree_def, tensors):
+  """JAX function to compute output and vjp function.
+
+  primals should be a tuple (args, kwargs).
+  """
+  import jax
+  from jax.tree_util import tree_flatten, tree_unflatten
+
+  def fn_wrapper(*tensors):
+    # Reconstruct the original args and kwargs
+    flat_inputs = util.merge(tensors, other)
+    args, kwargs = tree_unflatten(tree_def, flat_inputs)
+    return fn(*args, **kwargs)
+
+  return jax.vjp(fn_wrapper, *tensors)
+
+
+def _jax_backward(vjp_spec, saved_tensors, grad_out):
+  """JAX function to compute input gradients.
+
+  Unflattening `saved_tensors` with `vjp_spec` should restore the original vjp function.
+  """
+  from jax.tree_util import tree_unflatten
+  fun_vjp = tree_unflatten(vjp_spec, saved_tensors)
+  return fun_vjp(grad_out)
+
+
 fori_loop = torch_view(jax.lax.fori_loop)
 
 
@@ -190,9 +303,11 @@ def wrap_jax_jit(torch_function, jax_jit_func=jax.jit, kwargs_for_jax=None):
     return torch_view(jitted)
 
 
-def jax_jit(torch_function, kwargs_for_jax_jit=None):
+def jax_jit(torch_function, kwargs_for_jax_jit=None, fix_for_buffer_donation=False):
     return wrap_jax_jit(torch_function, jax_jit_func=jax.jit,
                         kwargs_for_jax=kwargs_for_jax_jit)
+
+
 
 
 def jax_shard_map(torch_function, kwargs_for_jax_shard_map=None):

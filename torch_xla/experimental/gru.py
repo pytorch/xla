@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import logging
 from torch.nn.utils.rnn import PackedSequence
 from typing import overload
 
@@ -58,6 +59,23 @@ class GRU(nn.GRU):
   - Only supports inputs in the `(seq, batch, feature)` format (i.e. `batch_first = False`).
 
   """
+
+  def __new__(cls, *args, **kwargs):
+    if ('bidirectional' in kwargs and kwargs['bidirectional'] == True):
+      logging.warning(
+          "Scan-based GRU only supports unidirectional GRU. (bidirectional = False) "
+          "Scan-based GRU falls back to the default nn.GRU implementation instead."
+      )
+      if nn.GRU._orig is None:
+        # If nn.GRU._orig is None, it means that the original GRU has not been
+        # patched yet for some reason. The patching should happen in _patched_functions.py.
+        # So we need to call the original GRU constructor here.
+        return nn.GRU(*args, **kwargs)
+      else:
+        # If nn.GRU._orig is not None, it means that the original GRU has been
+        # patched already. So we need to call the patched GRU constructor here.
+        return nn.GRU._orig(*args, **kwargs)
+    return super().__new__(cls)
 
   @overload
   def __init__(

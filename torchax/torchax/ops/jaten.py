@@ -1597,12 +1597,14 @@ def _aten_bitwise_not(self):
 
 
 # aten.bitwise_left_shift
+@op(torch.ops.aten.__lshift__)
 @op(torch.ops.aten.bitwise_left_shift)
 def _aten_bitwise_left_shift(input, other):
   return jnp.left_shift(input, other)
 
 
 # aten.bitwise_right_shift
+@op(torch.ops.aten.__rshift__)
 @op(torch.ops.aten.bitwise_right_shift)
 def _aten_bitwise_right_shift(input, other):
   return jnp.right_shift(input, other)

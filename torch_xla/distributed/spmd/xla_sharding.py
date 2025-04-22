@@ -13,7 +13,7 @@ import torch_xla._internal.utils as _utils
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
-from torch_xla._internal.jax_workarounds import requires_jax
+from torch_xla._internal.jax_workarounds import requires_jax, maybe_get_torchax
 
 import numpy as np
 import functools
@@ -180,6 +180,29 @@ class Mesh:
           axis_names=mesh_dict['axis_names'])
     except (ValueError, SyntaxError, KeyError, TypeError):
       return None
+
+  @requires_jax
+  def maybe_convert_and_get_jax_mesh(self):
+    # Construct a JAX mesh object with the same device ids shape and ordering
+    # from torch_xla device mesh.
+    import jax
+    import numpy as np
+    from jax._src import mesh as mesh_lib
+
+    axis_names = self.axis_names or tuple(
+        str(i) for i in range(len(self.mesh_shape)))
+
+    # Create a mapping from device ID to device object
+    all_devices = jax.devices()
+    device_id_to_device = {device.id: device for device in all_devices}
+    device_ids_array = self.device_ids.reshape(*self.mesh_shape)
+    device_array = np.empty(device_ids_array.shape, dtype=object)
+    device_array = np.vectorize(device_id_to_device.get)(device_ids_array)
+    if np.any(device_array == None):
+      raise ValueError(
+          f"torch_xla device ID {device_ids_array[device_array == None]} not found in available JAX devices"
+      )
+    return mesh_lib.Mesh(device_array, axis_names=axis_names)
 
 
 _GLOBAL_MESH: Optional[Mesh] = None
@@ -583,6 +606,14 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   # where the group assignment may vary with different input ranks.
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
+
+  tx = maybe_get_torchax()
+  if tx is not None and isinstance(t, tx.tensor.Tensor):
+    from jax.sharding import PartitionSpec as P, NamedSharding
+    op_sharding = tuple(str(i) if i is not None else i for i in partition_spec)
+    jmesh = mesh.maybe_convert_and_get_jax_mesh()
+    t.shard_(NamedSharding(jmesh, P(*op_sharding)))
+    return t
 
   op_sharding = mesh.get_op_sharding(partition_spec)
   annotate_func = torch_xla._XLAC._xla_mark_sharding

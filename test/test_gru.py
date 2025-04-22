@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch_xla
 import inspect
-from torch_xla.experimental.gru import GRU
+from torch_xla.experimental.gru import GRU as ScanGRU
 
 from absl.testing import absltest, parameterized
 
@@ -14,27 +14,31 @@ class TestGRU(parameterized.TestCase):
     torch.manual_seed(0)
     torch_xla.manual_seed(0)
 
-  def build_models(self,
-                   input_size,
-                   hidden_size,
-                   num_layers,
-                   bias,
-                   batch_first=False):
-    gru = nn.GRU(
+  def build_models(
+      self,
+      input_size,
+      hidden_size,
+      num_layers,
+      bias,
+      batch_first=False,
+      bidirectional=False,
+  ):
+    gru = nn.GRU._orig(
         input_size,
         hidden_size,
         num_layers=num_layers,
         bias=bias,
         batch_first=batch_first,
         dropout=0.0,
-        bidirectional=False)
-    scan_gru = GRU(
+        bidirectional=bidirectional)
+    scan_gru = nn.GRU(
         input_size,
         hidden_size,
         num_layers=num_layers,
         bias=bias,
         batch_first=batch_first,
-        dropout=0.0)
+        dropout=0.0,
+        bidirectional=bidirectional)
 
     # Copy parameters from the upstream GRU to our scan-based GRU.
     # This ensures that the scan-based GRU has the same parameters as the
@@ -91,12 +95,45 @@ class TestGRU(parameterized.TestCase):
             atol=atol,
             rtol=rtol)
 
+  def test_patch_happened(self):
+    """
+    Ensures that the GRU class is patched correctly. The patch should happen in _patched_functions.py before
+    this test is run.
+    """
+    # Check if the GRU class is patched.
+    assert type(nn.GRU) is type(ScanGRU), (
+        "GRU class should be patched. "
+        "Check if the patching code is executed before this test.")
+    assert hasattr(
+        nn.GRU,
+        '_orig'), ("GRU class should be patched. "
+                   "Check if the patching code is executed before this test.")
+    assert nn.GRU._orig is not None, (
+        "GRU class should have the original GRU class as _orig. "
+        "Check if the patching code is executed before this test.")
+
+  def test_scan_gru_fallback_to_upstream_gru(self):
+    """
+    Ensures that the scan-based GRU falls back to the upstream GRU when
+    unsupported parameters are set.
+    """
+    input_size, hidden_size, num_layers = 16, 32, 2
+    _, scan_gru = self.build_models(input_size, hidden_size, num_layers, True)
+    assert type(scan_gru) is nn.GRU, (
+        "Scan-based GRU should create scan-based GRU when *no* unsupported parameters are set."
+    )
+    _, scan_gru = self.build_models(
+        input_size, hidden_size, num_layers, True, bidirectional=True)
+    assert type(scan_gru) is nn.GRU._orig, (
+        "Scan-based GRU should fall back to upstream GRU when `bidirectional` is set to True."
+    )
+
   def test_scan_gru_and_upstream_gru_interchangeability(self):
     """
     Ensures that the scan-based GRU and upstream GRU are interchangeable.
     """
-    nn_gru = nn.GRU
-    scan_gru = GRU
+    nn_gru = nn.GRU._orig
+    scan_gru = nn.GRU
     nn_gru_members = dict(inspect.getmembers(nn_gru, inspect.isroutine))
     scan_gru_members = dict(inspect.getmembers(scan_gru, inspect.isroutine))
 
@@ -114,7 +151,10 @@ class TestGRU(parameterized.TestCase):
 
     # Check that the methods of the GRU and scan-based GRU have the same signature.
     common_methods = nn_gru_names & scan_gru_names
+    exempt_methods = ['__new__']
     for method_name in common_methods:
+      if method_name in exempt_methods:
+        continue
       try:
         nn_gru_method = nn_gru_members[method_name]
         scan_gru_method = scan_gru_members[method_name]

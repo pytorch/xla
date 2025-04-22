@@ -4,7 +4,7 @@ from weakref import WeakKeyDictionary
 import torch
 import torch_xla
 from torch.utils._pytree import tree_flatten
-from torch_xla._internal.jax_workarounds import jax_env_context, jax_import_guard, requires_jax
+from torch_xla._internal.jax_workarounds import jax_env_context, jax_import_guard, requires_jax, maybe_get_torchax
 
 
 class Type:
@@ -869,19 +869,16 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
   # then the MegaScale device discovery will hang.
   with jax_env_context():
     import jax
-    import torchax.ops.mappings as mappings
+    tx = maybe_get_torchax()
 
     flattened_inputs, spec = jax.tree.flatten((args, kwargs))
 
     def abstractify(a):  # make a pytree leaf abstract
-      import jax
-      import torch_xla
       if a is None:
         return None
       if isinstance(a, torch.Tensor):
-        assert a.device == torch_xla.device(
-        ), f"Inputs must be XLA tensors. Got {a.device}"
-        return jax.ShapeDtypeStruct(a.shape, mappings.t2j_dtype(a.dtype))
+        assert a.device.type == 'xla', f"Inputs must be XLA tensors. Got {a.device}"
+        return jax.ShapeDtypeStruct(a.shape, tx.ops.mappings.t2j_dtype(a.dtype))
       return a
 
     sample_inputs = tuple(abstractify(a) for a in flattened_inputs)
@@ -943,38 +940,35 @@ def _jax_to_xla_computation_cache_get_or_insert(jax_func,
                                                 sample_inputs: tuple[Any, ...],
                                                 input_tree_spec,
                                                 get_xla_computation):
+  from jax._src import config
   global _JAX_TO_XLA_COMPUTATION_CACHE
-  # Use two layers of dictionary lookup.
-  # The first layer uses the `jax_func`, which is only weakly referenced.
-  # The second layer uses the sample inputs and the tree spec, which is strongly referenced.
-  inner_dict = _JAX_TO_XLA_COMPUTATION_CACHE.get(jax_func, None)
-  if inner_dict is not None:
-    hlo = inner_dict.get((sample_inputs, input_tree_spec), None)
-    if hlo is not None:
-      return hlo
-
-  # Compile jax function to XLA computation (wraps an HLO module).
-  hlo = get_xla_computation()
-  if inner_dict is None:
-    _JAX_TO_XLA_COMPUTATION_CACHE[jax_func] = {}
-  _JAX_TO_XLA_COMPUTATION_CACHE[jax_func][(sample_inputs,
-                                           input_tree_spec)] = hlo
-  return hlo
+  # Use three layers of dictionary lookup.
+  # The first layer uses the `config.trace_context()`, which is strongly referenced.
+  # The second layer uses the `jax_func`, which is weakly referenced.
+  # The third layer uses the sample inputs and the tree spec, which is strongly referenced.
+  config_context_dict = _JAX_TO_XLA_COMPUTATION_CACHE.setdefault(
+      config.trace_context(), WeakKeyDictionary())
+  inner_dict = config_context_dict.setdefault(jax_func, {})
+  if (sample_inputs, input_tree_spec) in inner_dict:
+    return inner_dict[(sample_inputs, input_tree_spec)]
+  else:
+    hlo = get_xla_computation()
+    _JAX_TO_XLA_COMPUTATION_CACHE[config.trace_context()][jax_func][(
+        sample_inputs, input_tree_spec)] = hlo
+    return hlo
 
 
-def _jax_to_xla_computation_cache_num_misses() -> int:
+def _jax_to_xla_computation_cache_elements() -> int:
   size = 0
-  for inner_dict in _JAX_TO_XLA_COMPUTATION_CACHE.values():
-    size += len(inner_dict)
+  for jax_config in _JAX_TO_XLA_COMPUTATION_CACHE:
+    config_dict = _JAX_TO_XLA_COMPUTATION_CACHE[jax_config]
+    for jax_func in config_dict:
+      inner_dict = config_dict[jax_func]
+      size += len(inner_dict)
   return size
 
 
-# Be cautious about using cache. JAX config changes
-# (https://github.com/jax-ml/jax/blob/3864c4f335d1d236d5367264f3885dfce8721d9d/jax/_src/config.py#L254)
-# will not be reflected in the call_jax function argument. However, the config
-# will be embedded in the HLO level (e.g., data precision), which potentially
-# causes computations with different JAX config to reuse the same HLO.
-_JAX_TO_XLA_COMPUTATION_CACHE = WeakKeyDictionary()
+_JAX_TO_XLA_COMPUTATION_CACHE = {}
 
 
 @requires_jax
@@ -1025,6 +1019,10 @@ def call_jax(jax_func,
   import jax
   kwargs = kwargs or {}
   flattened, _spec = jax.tree.flatten((args, kwargs))
+  tx = maybe_get_torchax()
+  if tx is not None and any(isinstance(a, tx.tensor.Tensor) for a in flattened):
+    return tx.interop.call_jax(jax_func, *args, **kwargs)
+
   xla_computation = jax_func_to_xla_computation(jax_func, args, kwargs, name)
   return xla_computation(flattened)
 

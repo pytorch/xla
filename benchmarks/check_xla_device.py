@@ -12,6 +12,7 @@ def use_torch_xla2():
 
 
 import os
+
 os.environ["PJRT_DEVICE"] = devkind
 
 if not use_torch_xla2():

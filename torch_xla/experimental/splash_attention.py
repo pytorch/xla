@@ -63,32 +63,6 @@ class SplashAttentionConfig:
     converted_data = {k: list_to_tuple(v) for k, v in json_data.items()}
     return SplashAttentionConfig(**converted_data)
 
-  @requires_jax
-  def maybe_convert_and_get_jax_mesh(self):
-    # Construct a JAX mesh object with the same device ids shape and ordering
-    # from torch_xla device mesh.
-    mesh = Mesh.from_str(self.mesh)
-    import jax
-    import numpy as np
-    from jax._src import mesh as mesh_lib
-
-    assert mesh.axis_names is not None, "Omitting axis names is not yet supported"
-
-    # Create a mapping from device ID to device object
-    all_devices = jax.devices()
-    device_id_to_device = {device.id: device for device in all_devices}
-    device_ids_array = mesh.device_ids.reshape(*mesh.mesh_shape)
-    device_array = np.empty(device_ids_array.shape, dtype=object)
-    for idx in np.ndindex(device_ids_array.shape):
-      device_id = device_ids_array[idx]
-      if device_id in device_id_to_device:
-        device_array[idx] = device_id_to_device[device_id]
-      else:
-        raise ValueError(
-            f"torch_xla device ID {device_id} not found in available JAX devices"
-        )
-    return mesh_lib.Mesh(device_array, axis_names=mesh.axis_names)
-
 
 @xp.trace_me("splash_attention_kernel_wrapper")
 def splash_attention_jax_wrapper(
@@ -96,6 +70,7 @@ def splash_attention_jax_wrapper(
     key,
     value,
     decoder_segment_ids,
+    causal: bool,
     config: SplashAttentionConfig,
     attn_logits_soft_cap,
 ):
@@ -111,7 +86,7 @@ def splash_attention_jax_wrapper(
       splash_attention_kernel,
       splash_attention_mask,
   )
-  mesh = config.maybe_convert_and_get_jax_mesh()
+  mesh = Mesh.from_str(config.mesh).maybe_convert_and_get_jax_mesh()
   # input q,k,v shape: [batch, #head, seq_len, head_dim]
   if decoder_segment_ids is not None and not decoder_segment_ids.shape:
     decoder_segment_ids = None
@@ -170,8 +145,10 @@ def splash_attention_jax_wrapper(
         k_layout=splash_attention_kernel.QKVLayout[global_k_layout],
         v_layout=splash_attention_kernel.QKVLayout[global_v_layout],
     )
-
-    mask = splash_attention_mask.CausalMask(shape=(seq_len, seq_len))
+    if causal:
+      mask = splash_attention_mask.CausalMask(shape=(seq_len, seq_len))
+    else:
+      mask = splash_attention_mask.FullMask(_shape=(seq_len, seq_len))
 
     # Apply local masking if local sliding attention is enabled.
     if config.attentiontype_local_sliding:
@@ -207,12 +184,13 @@ def splash_attention_jax_wrapper(
 
 
 @requires_jax
-def _jax_grad_f(query, key, value, decoder_segment_ids, config,
+def _jax_grad_f(query, key, value, decoder_segment_ids, causal, config,
                 attn_logits_soft_cap, grad_output):
   import jax
   differentiated_fun = functools.partial(
       splash_attention_jax_wrapper,
       decoder_segment_ids=decoder_segment_ids,
+      causal=causal,
       config=config,
       attn_logits_soft_cap=attn_logits_soft_cap,
   )
@@ -227,6 +205,7 @@ def tpu_splash_attention_jax_call_wrapper(
     value: torch.Tensor,
     config: SplashAttentionConfig,
     decoder_segment_ids: torch.Tensor | None,
+    causal: bool,
     attn_logits_soft_cap: float | None = None,
     is_forward: bool = True,
     grad_output: torch.Tensor | None = None,
@@ -236,7 +215,8 @@ def tpu_splash_attention_jax_call_wrapper(
   key = key.contiguous()
   value = value.contiguous()
   input_args = [
-      query, key, value, decoder_segment_ids, config, attn_logits_soft_cap
+      query, key, value, decoder_segment_ids, causal, config,
+      attn_logits_soft_cap
   ]
   if is_forward:
     output = call_jax(splash_attention_jax_wrapper, input_args, {},
@@ -260,6 +240,7 @@ def sa_custom_forward(
     v: torch.Tensor,
     config: str,
     decoder_segment_ids: torch.Tensor | None,
+    causal: bool | None,
     attn_logits_soft_cap: float | None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
   config = SplashAttentionConfig.from_json(config)
@@ -269,6 +250,7 @@ def sa_custom_forward(
       v,
       config,
       decoder_segment_ids,
+      causal,
       attn_logits_soft_cap,
       is_forward=True,
       grad_output=None,
@@ -282,6 +264,7 @@ def sa_custom_forward_fake(
     v: torch.Tensor,
     config: str,
     decoder_segment_ids: torch.Tensor | None,
+    causal: bool | None,
     attn_logits_soft_cap: float | None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
   # q.shape: batch_size, seq_length, num_heads, head_dim
@@ -296,6 +279,7 @@ def sa_custom_backward(
     v: torch.Tensor,
     config: str,
     decoder_segment_ids: torch.Tensor | None,
+    causal: bool | None,
     attn_logits_soft_cap: float | None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
   config = SplashAttentionConfig.from_json(config)
@@ -305,6 +289,7 @@ def sa_custom_backward(
       v,
       config,
       decoder_segment_ids,
+      causal,
       attn_logits_soft_cap,
       is_forward=False,
       grad_output=grad_output,
@@ -320,6 +305,7 @@ def sa_custom_backward_fake(
     v: torch.Tensor,
     config: str,
     decoder_segment_ids: torch.Tensor | None,
+    causal: bool | None,
     attn_logits_soft_cap: float | None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
   return (torch.empty_like(q), torch.empty_like(k), torch.empty_like(v))
@@ -329,11 +315,13 @@ class SplashAttention(torch.autograd.Function):
 
   @staticmethod
   @requires_jax
-  def forward(ctx, q, k, v, config, decoder_segment_ids, attn_logits_soft_cap):
-    output = sa_custom_forward(q, k, v, config, decoder_segment_ids,
+  def forward(ctx, q, k, v, config, decoder_segment_ids, causal,
+              attn_logits_soft_cap):
+    output = sa_custom_forward(q, k, v, config, decoder_segment_ids, causal,
                                attn_logits_soft_cap)[0]
     ctx.save_for_backward(q, k, v, decoder_segment_ids, attn_logits_soft_cap)
     ctx.config = config
+    ctx.causal = causal
     return output
 
   @staticmethod
@@ -341,10 +329,11 @@ class SplashAttention(torch.autograd.Function):
   def backward(ctx, grad_output):
     q, k, v, decoder_segment_ids, attn_logits_soft_cap = ctx.saved_tensors
     config = ctx.config
+    causal = ctx.causal
     grad_q, grad_k, grad_v = sa_custom_backward(grad_output, q, k, v, config,
-                                                decoder_segment_ids,
+                                                decoder_segment_ids, causal,
                                                 attn_logits_soft_cap)
-    return grad_q, grad_k, grad_v, None, None, None
+    return grad_q, grad_k, grad_v, None, None, None, None
 
 
 def splash_attention(
@@ -353,6 +342,7 @@ def splash_attention(
     v: torch.Tensor,
     config: str,
     decoder_segment_ids: torch.Tensor | None = None,
+    causal: bool = True,
     attn_logits_soft_cap: float | None = None,
 ) -> torch.Tensor:
   """Splash attention function.
@@ -367,5 +357,5 @@ def splash_attention(
   Returns:
     The attention output tensor.
   """
-  return SplashAttention.apply(q, k, v, config, decoder_segment_ids,
+  return SplashAttention.apply(q, k, v, config, decoder_segment_ids, causal,
                                attn_logits_soft_cap)
