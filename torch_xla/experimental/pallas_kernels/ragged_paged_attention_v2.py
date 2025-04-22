@@ -7,6 +7,8 @@ during inference.
 """
 
 import functools
+from typing import Optional
+
 import jax
 from jax import lax
 from jax.experimental import pallas as pl
