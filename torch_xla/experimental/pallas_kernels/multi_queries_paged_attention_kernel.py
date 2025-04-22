@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 import functools
-from typing import Literal, cast
+from typing import Literal, cast, Union, Optional
 
 import jax
 from jax import lax
@@ -440,8 +440,8 @@ MIN_BLOCK_SIZE = 128
 )
 def paged_attention(
     q: jax.Array,
-    k_pages: jax.Array | quantization_utils.QuantizedTensor,
-    v_pages: jax.Array | quantization_utils.QuantizedTensor,
+    k_pages: Union[jax.Array, quantization_utils.QuantizedTensor],
+    v_pages: Union[jax.Array, quantization_utils.QuantizedTensor],
     lengths: jax.Array,
     page_indices: jax.Array,
     effective_q_lens: jax.Array,
