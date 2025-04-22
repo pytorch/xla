@@ -323,7 +323,7 @@ DECOMPOSITIONS = decomp.get_decompositions(
     torch.ops.aten.channel_shuffle,
     torch.ops.aten.nll_loss2d_forward,
     torch.ops.aten.nll_loss2d_backward,
-    torch.ops.aten.bernoulli_.Tensor,
+    torch.ops.aten.bernoulli_.Tensor, 
     torch.ops.aten.bernoulli_.float,
     torch.ops.aten.log_normal,
     torch.ops.aten.addcdiv.default,
@@ -772,3 +772,8 @@ DECOMPOSITIONS = decomp.get_decompositions(
     torch.ops.aten._weight_norm_interface.out,
   ]
 )
+
+MUTABLE_DECOMPOSITION = [
+  torch.ops.aten.bernoulli_.Tensor, 
+  torch.ops.aten.bernoulli_.float,
+]

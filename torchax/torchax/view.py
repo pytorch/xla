@@ -4,6 +4,7 @@ import jax
 from enum import Enum
 from typing import Union, List, Tuple, Optional, Any, cast
 from abc import ABC, abstractmethod
+
 # Reference to original PyTorch native functions
 # https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/native_functions.yaml
 
@@ -41,7 +42,7 @@ class ViewInfo(ABC):
     @abstractmethod
     def update_tensor(self, new_value: jax.Array, jax_array: jax.Array) -> jax.Array:
         """
-        Apply this view transformation to a JAX array and update its value. 
+        Apply this view transformation to a JAX array and update its value.
 
         Args:
             new_value: The new values to set in the view
@@ -66,12 +67,12 @@ class ViewInfo(ABC):
         pass
 
     @abstractmethod
-    def calculate_output_shape(self, source_shape: List[int]) -> List[int]:
+    def calculate_output_shape(self, source: jax.Array) -> List[int]:
         """
         Calculate the resulting shape after applying this view.
 
         Args:
-            source_shape: Original shape before transformation
+            source: Original jax array before transformation
 
         Returns:
             Resulting shape after transformation
@@ -100,37 +101,16 @@ class NarrowInfo(ViewInfo):
         return self.slices == other.slices
 
     def transform_tensor(self, jax_array: jax.Array) -> jax.Array:
-        return jax_array[self.slices]
+        try:
+            return jax_array[self.slices]
+        except IndexError as e:
+            raise IndexError("Invalid slice operation") from e
 
     def update_tensor(self, new_value: jax.Array, jax_array: jax.Array) -> jax.Array:
         return jax_array.at[self.slices].set(new_value)
 
-    def calculate_output_shape(self, source_shape: List[int]) -> List[int]:
-        result_shape = []
-        for dim_idx, dim_size in enumerate(source_shape):
-            # Create range for the original dimension
-            dim_range = range(dim_size)
-
-            # Apply appropriate slice to this dimension
-            if isinstance(self.slices, slice) and dim_idx == 0:
-                applied_slice = dim_range[self.slices]
-            elif isinstance(self.slices, tuple) and dim_idx < len(self.slices):
-                if self.slices[dim_idx] is Ellipsis:  # This checks for ...
-                    applied_slice = dim_range[:]
-                elif self.slices[dim_idx] is None: 
-                    applied_slice = dim_range[:]
-                else:
-                    applied_slice = dim_range[self.slices[dim_idx]]
-            else:
-                applied_slice = dim_range
-
-            # Determine dimension size in result
-            if isinstance(applied_slice, int):
-                result_shape.append(1)
-            else:
-                result_shape.append(len(applied_slice))
-
-        return result_shape
+    def calculate_output_shape(self, source: jax.Array) -> List[int]:
+        return source[self.slices].shape
 
 
 class SelectInfo(ViewInfo):
@@ -164,7 +144,7 @@ class SelectInfo(ViewInfo):
     def update_tensor(self, new_value: jax.Array, jax_array: jax.Array) -> jax.Array:
         raise NotImplementedError("SelectInfo.update not implemented")
 
-    def calculate_output_shape(self, source_shape: List[int]) -> List[int]:
+    def calculate_output_shape(self, source: jax.Array) -> List[int]:
         raise NotImplementedError("SelectInfo.calculate_output_shape not implemented")
 
 
@@ -189,8 +169,10 @@ class AsStridedInfo(ViewInfo):
     def update_tensor(self, new_value: jax.Array, jax_array: jax.Array) -> jax.Array:
         raise NotImplementedError("AsStridedInfo.update not implemented")
 
-    def calculate_output_shape(self, source_shape: List[int]) -> List[int]:
-        raise NotImplementedError("AsStridedInfo.calculate_output_shape not implemented")
+    def calculate_output_shape(self, source: jax.Array) -> List[int]:
+        raise NotImplementedError(
+            "AsStridedInfo.calculate_output_shape not implemented"
+        )
 
 
 class DiagonalInfo(ViewInfo):
@@ -226,7 +208,7 @@ class DiagonalInfo(ViewInfo):
     def update(self, new_value: jax.Array, parent: jax.Array) -> jax.Array:
         raise NotImplementedError("DiagonalInfo.update not implemented")
 
-    def calculate_output_shape(self, source_shape: List[int]) -> List[int]:
+    def calculate_output_shape(self, source: jax.Array) -> List[int]:
         raise NotImplementedError("DiagonalInfo.calculate_output_shape not implemented")
 
 
@@ -246,8 +228,7 @@ class View(torch.Tensor):
             view_info: Information about the view transformation
             env: Environment for tensor operations
         """
-        shape = view_info.calculate_output_shape(parent.shape)
-        print("initizing view with dtype", parent.dtype)
+        shape = view_info.calculate_output_shape(parent.jax())
         return torch.Tensor._make_wrapper_subclass(
             cls,
             shape,
@@ -283,7 +264,7 @@ class View(torch.Tensor):
             return self.parent.source_jax()
         else:
             return self.parent._elem
-    
+
     def replace_source_jax(self, new_value: jax.Array) -> None:
         """
         Update the source tensor with new values.
@@ -293,7 +274,7 @@ class View(torch.Tensor):
         else:
             assert new_value.shape == self.parent._elem.shape
             self.parent._elem = new_value
-        
+
     def torch(self) -> "torchax.Tensor":
         """
         Returns a Torchax tensor representing this view after all transformations
@@ -316,6 +297,7 @@ class View(torch.Tensor):
 
         # Get the new value
         from torchax.tensor import Tensor
+
         if isinstance(new_values, View) or isinstance(new_values, Tensor):
             new_values = new_values.jax()
         assert isinstance(new_values, jax.Array), "Update value must be a JAX array"
@@ -324,7 +306,9 @@ class View(torch.Tensor):
         # And store intermediate values
         intermediate_values = [source_array]
         for view_info in view_infos[:-1]:
-            intermediate_values.append(view_info.transform_tensor(intermediate_values[-1]))
+            intermediate_values.append(
+                view_info.transform_tensor(intermediate_values[-1])
+            )
 
         # Update the source array with the new value by
         # applying inverse transformations in reverse order
@@ -336,20 +320,6 @@ class View(torch.Tensor):
 
         # Update the source tensor with the new values
         self.replace_source_jax(new_values)
-
-    def __getitem__(
-        self, indices: Union[int, slice, Tuple[Union[int, slice], ...]]
-    ) -> "View":
-        """
-        Get a slice of this view.
-
-        Args:
-            indices: Indices for slicing
-
-        Returns:
-            New view representing the slice
-        """
-        return self.create_sub_view(NarrowInfo(indices))
 
     @classmethod
     def __torch_dispatch__(
@@ -379,7 +349,7 @@ class View(torch.Tensor):
 
     def __str__(self) -> str:
         return f"View({self.torch()})"
-    
+
     def jax(self) -> jax.Array:
         """
         Returns a copy of the source tensor after transformations.

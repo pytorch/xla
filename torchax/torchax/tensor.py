@@ -110,9 +110,6 @@ class Tensor(torch.Tensor):
     return Tensor(new_elem, self._env)
     # return torch.reshape(self, new_shape)
 
-  def __getitem__(self, index):
-    return View(self, view_info=NarrowInfo(index), env=self._env)
-
   def __setitem__(self, key, val):
     key, val = self._env.t2j_iso((key, val))
     self._elem = self._elem.at[key].set(val)
@@ -372,12 +369,17 @@ class Environment(contextlib.ContextDecorator):
 
     self._ops.update(ops_registry.all_aten_ops)
     self._ops.update(ops_registry.all_torch_functions)
-    from torchax.decompositions import DECOMPOSITIONS
+    from torchax.decompositions import DECOMPOSITIONS, MUTABLE_DECOMPOSITION
 
     for k, v in DECOMPOSITIONS.items():
       if k not in self._ops:
         self._ops[k] = ops_registry.Operator(
-          k, v, is_jax_function=False, is_user_defined=False, needs_env=False
+          k,
+          v,
+          is_jax_function=False,
+          is_user_defined=False,
+          needs_env=False,
+          is_view_op=k in MUTABLE_DECOMPOSITION,
         )
 
   def _to_copy(self, the_tensor, new_dtype, new_device):
@@ -503,6 +505,9 @@ class Environment(contextlib.ContextDecorator):
         torch.distributed._functional_collectives.wait_tensor,
         (args, kwargs),
       )
+      if not op.is_view_op:
+        args, kwargs = self.v2t_iso((args, kwargs))
+
       try:
         if op.is_jax_function:
           args, kwargs = self.t2j_iso((args, kwargs))
@@ -575,6 +580,15 @@ class Environment(contextlib.ContextDecorator):
       return x.jax()
 
     res = torch_pytree.tree_map_only(torch.Tensor, to_jax, torchtensors)
+    return res
+
+  def v2t_iso(self, views):
+    def to_tensor(x):
+      if isinstance(x, View):
+        return x.torch()
+      return x
+
+    res = torch_pytree.tree_map_only(View, to_tensor, views)
     return res
 
   def j2t_iso(self, jaxarray):

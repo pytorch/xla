@@ -73,7 +73,7 @@ def make_mutation(op):
 
 for op in mutation_ops_to_functional.keys():
   ops_registry.register_torch_dispatch_op(
-    op, make_mutation(op), is_jax_function=False
+    op, make_mutation(op), is_jax_function=False, is_view_op=True
   )
 
 
@@ -122,7 +122,7 @@ def _aten_add(x, y, *, alpha=1):
   return res
 
 
-@op(torch.ops.aten.copy_, is_jax_function=False)
+@op(torch.ops.aten.copy_, is_jax_function=False, is_view_op=True)
 def _aten_copy(x, y, memory_format=None):
   
   if isinstance(x, View):
