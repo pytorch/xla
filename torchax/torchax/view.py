@@ -286,11 +286,15 @@ class View(torch.Tensor):
     def update(
         self,
         new_values: Union[jax.Array, "View", "torchax.Tensor"],
+        view_infos: Optional[List[ViewInfo]] = None,
     ) -> None:
         """
         Update this view with new values, propagating changes back to source.
+        If view_infos is None, it will use the transformation chain 
+        from the source tensor.
         """
-        view_infos = self.get_transformation_chain()
+        if view_infos is None:
+            view_infos = self.get_transformation_chain()
 
         # Get the source JAX array
         source_array = self.source_jax()
@@ -300,7 +304,6 @@ class View(torch.Tensor):
 
         if isinstance(new_values, View) or isinstance(new_values, Tensor):
             new_values = new_values.jax()
-        assert isinstance(new_values, jax.Array), "Update value must be a JAX array"
 
         # Apply all view transformations to the source array
         # And store intermediate values
@@ -359,6 +362,23 @@ class View(torch.Tensor):
             result = view_info.transform_tensor(result)
         return result
 
-    # Use the same string representation for all string conversion methods
+    def __setitem__(self, indexes, val):
+        view_infos = self.get_transformation_chain() + [NarrowInfo(indexes)]
+        self.update(view_infos=view_infos, new_values=val)
+    
+    def dim(self):
+        return self.ndim
+
+    @property
+    def device(self):
+        return torch.device("jax:0")
+
+    @property
+    def jax_device(self):
+        return self.jax().device
+
+    @property
+    def ndim(self):
+        return len(self.shape)
+
     __repr__ = __str__
-    __format__ = __str__

@@ -68,6 +68,13 @@ class TrainTest(unittest.TestCase):
         self.assertEqual(type(res), Tensor)
         self.assertEqual(res.sum(), 20)
       
+    def test_setitem(self):
+        a = torch.zeros(10, device = "jax")
+        a[0:5][0:3] = 1
+        self.assertEqual(type(a), Tensor)
+        self.assertEqual(a.shape, (10,))
+        self.assertEqual(a.sum(), 3)
+
     # Test all in-place operations
     def test_add_(self):
         x = torch.zeros((10, 10), device="jax")
@@ -373,3 +380,4 @@ class TrainTest(unittest.TestCase):
         # Check specific values were reduced
         self.assertTrue(torch.all(x[0, 0] == 5.0))
         self.assertEqual(x.sum(), 37.0)
+
