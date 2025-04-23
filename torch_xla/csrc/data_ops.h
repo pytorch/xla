@@ -7,7 +7,7 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 // Collection of XLA lowerings for operations which only involve some form of
 // data movement and no computation.

@@ -5,7 +5,7 @@
 #include <string_view>
 
 #include "absl/container/inlined_vector.h"
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 #include "xla/xla_data.pb.h"
 
 namespace torch_xla {

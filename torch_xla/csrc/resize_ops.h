@@ -4,7 +4,7 @@
 #include <string>
 
 #include "absl/types/span.h"
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 namespace resize {

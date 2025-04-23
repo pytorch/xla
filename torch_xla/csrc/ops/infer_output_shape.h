@@ -2,7 +2,7 @@
 #define XLA_TORCH_XLA_CSRC_OPS_INFER_OUTPUT_SHAPE_H_
 
 #include "absl/types/span.h"
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 

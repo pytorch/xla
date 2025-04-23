@@ -11,11 +11,11 @@
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
-#include "xla/client/lib/arithmetic.h"
-#include "xla/client/lib/constants.h"
-#include "xla/client/lib/pooling.h"
-#include "xla/client/lib/slicing.h"
+#include "xla/hlo/builder/lib/arithmetic.h"
+#include "xla/hlo/builder/lib/constants.h"
 #include "xla/hlo/builder/lib/loops.h"
+#include "xla/hlo/builder/lib/pooling.h"
+#include "xla/hlo/builder/lib/slicing.h"
 
 namespace torch_xla {
 namespace {

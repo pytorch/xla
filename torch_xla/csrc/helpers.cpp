@@ -15,7 +15,7 @@
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "xla/client/lib/constants.h"
+#include "xla/hlo/builder/lib/constants.h"
 #include "xla/primitive_util.h"
 #include "xla/shape_util.h"
 
