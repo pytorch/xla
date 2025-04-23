@@ -26,9 +26,7 @@ started:
 To install PyTorch/XLA stable build in a new TPU VM:
 
 ```sh
-pip install torch~=2.6.0 'torch_xla[tpu]~=2.6.0' \
-  -f https://storage.googleapis.com/libtpu-releases/index.html \
-  -f https://storage.googleapis.com/libtpu-wheels/index.html
+pip install torch~=2.7.0 'torch_xla[tpu]~=2.7.0'
 ```
 
 To install PyTorch/XLA nightly build in a new TPU VM:
@@ -86,12 +84,12 @@ batch size 1024:
 PyTorch/XLA now provides GPU support through a plugin package similar to `libtpu`:
 
 ```
-pip install torch~=2.5.0 torch_xla~=2.5.0 https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla_cuda_plugin-2.5.0-py3-none-any.whl
+pip install torch~=2.7.0 torch_xla~=2.7.0 https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla_cuda_plugin-2.7.0-py3-none-any.whl
 ```
 
 The newest stable version where PyTorch/XLA:GPU wheel is available is `torch_xla`
-2.5. We do not offer a PyTorch/XLA:GPU wheel in the PyTorch/XLA 2.6 release. We
-understand this is important and plan to [reinstate GPU support](https://github.com/pytorch/xla/issues/8577) by the 2.7 release.
+2.7.
+
 PyTorch/XLA remains an open-source project and we welcome contributions from the
 community to help maintain and improve the project. To contribute, please start
 with the [contributors guide](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md).
@@ -267,20 +265,17 @@ pip install torch_xla[tpu] \
   -f https://storage.googleapis.com/libtpu-releases/index.html
 ```
 
-GPU and nightly builds are available in our public GCS bucket.
+GPU release builds and GPU/TPU nightly builds are available in our public GCS bucket.
 
 | Version | Cloud GPU VM Wheels |
 | --- | ----------- |
-| 2.5 (CUDA 12.1 + Python 3.9) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.5.0-cp39-cp39-manylinux_2_28_x86_64.whl` |
-| 2.5 (CUDA 12.1 + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.5.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
-| 2.5 (CUDA 12.1 + Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.5.0-cp311-cp311-manylinux_2_28_x86_64.whl` |
-| 2.5 (CUDA 12.4 + Python 3.9) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.4/torch_xla-2.5.0-cp39-cp39-manylinux_2_28_x86_64.whl` |
-| 2.5 (CUDA 12.4 + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.4/torch_xla-2.5.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
-| 2.5 (CUDA 12.4 + Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.4/torch_xla-2.5.0-cp311-cp311-manylinux_2_28_x86_64.whl` |
-| nightly (Python 3.9) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev-cp39-cp39-linux_x86_64.whl` |
-| nightly (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev-cp310-cp310-linux_x86_64.whl` |
-| nightly (Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev-cp311-cp311-linux_x86_64.whl` |
-| nightly (CUDA 12.1 + Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.6.0.dev-cp38-cp38-linux_x86_64.whl` |
+| 2.7 (CUDA 12.6 + Python 3.9) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla-2.7.0-cp39-cp39-manylinux_2_28_x86_64.whl` |
+| 2.7 (CUDA 12.6 + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla-2.7.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
+| 2.7 (CUDA 12.6 + Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.5.0-cp311-cp311-manylinux_2_28_x86_64.whl` |
+| nightly (Python 3.9) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp39-cp39-linux_x86_64.whl` |
+| nightly (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp310-cp310-linux_x86_64.whl` |
+| nightly (Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp311-cp311-linux_x86_64.whl` |
+| nightly (CUDA 12.6 + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla-2.8.0.dev-cp310-cp310-linux_x86_64.whl` |
 
 #### Use nightly build
 
@@ -288,11 +283,11 @@ You can also add `yyyymmdd` like `torch_xla-2.8.0.devyyyymmdd` (or the latest de
 to get the nightly wheel of a specified date. Here is an example:
 
 ```
-pip3 install torch==2.8.0.dev20250318+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev20250318-cp310-cp310-linux_x86_64.whl
+pip3 install torch==2.8.0.dev20250423+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev20250423-cp310-cp310-linux_x86_64.whl
 ```
 
-The torch wheel version `2.8.0.dev20250318+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
+The torch wheel version `2.8.0.dev20250423+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
 
 <details>
 
@@ -332,9 +327,10 @@ The torch wheel version `2.8.0.dev20250318+cpu` can be found at https://download
 </details>
 
 ### Docker
-
+(C++11 ABI enable by default since 2.7 release)
 | Version | Cloud TPU VMs Docker |
 | --- | ----------- |
+| 2.7 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.7.0_3.10_tpuvm` |
 | 2.6 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm` |
 | 2.6 (C++11 ABI) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm_cxx11` |
 | 2.5 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.5.0_3.10_tpuvm` |
@@ -343,12 +339,17 @@ The torch wheel version `2.8.0.dev20250318+cpu` can be found at https://download
 | 2.2 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm` |
 | 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_tpuvm` |
 | nightly python | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm` |
-| nightly python (C++11 ABI) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm_cxx11` |
 
 To use the above dockers, please pass `--privileged --net host --shm-size=16G` along. Here is an example:
 ```bash
 docker run --privileged --net host --shm-size=16G -it us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm /bin/bash
 ```
+<br/>
+
+| Version | GPU CUDA 12.6 Docker |
+| --- | ----------- |
+| 2.7 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.7.0_3.10_cuda_12.6` |
+
 
 <br/>
 
