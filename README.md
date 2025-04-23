@@ -26,7 +26,7 @@ started:
 To install PyTorch/XLA stable build in a new TPU VM:
 
 ```sh
-pip install torch~=2.7.0 'torch_xla[tpu]~=2.7.0'
+pip install torch==2.7.0 'torch_xla[tpu]==2.7.0'
 ```
 
 To install PyTorch/XLA nightly build in a new TPU VM:
@@ -84,7 +84,7 @@ batch size 1024:
 PyTorch/XLA now provides GPU support through a plugin package similar to `libtpu`:
 
 ```
-pip install torch~=2.7.0 torch_xla~=2.7.0 https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla_cuda_plugin-2.7.0-py3-none-any.whl
+pip install torch==2.7.0 torch_xla==2.7.0 https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla_cuda_plugin-2.7.0-py3-none-any.whl
 ```
 
 The newest stable version where PyTorch/XLA:GPU wheel is available is `torch_xla`
