@@ -44,10 +44,6 @@ python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 export USE_CUDA=1
 python setup.py install
 
-if ! install_post_deps_pytorch_xla; then
-  exit 1
-fi
-
 sccache --show-stats
 
 source $XLA_DIR/xla_env
