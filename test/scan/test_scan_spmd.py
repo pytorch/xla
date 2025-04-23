@@ -1,3 +1,4 @@
+import os
 import sys
 import re
 import unittest
@@ -231,7 +232,7 @@ class ScanSpmdTest(unittest.TestCase):
     return len(re.findall(regex_str, hlo_text))
 
   @unittest.skipIf(
-      torch.cuda.is_available(),
+      torch.cuda.is_available() or os.environ.get('PJRT_DEVICE') == 'CUDA',
       "TODO(https://github.com/pytorch/xla/issues/9017): Get these tests working on GPU"
   )
   def test_assume_pure_works_with_mark_sharding(self):
@@ -240,7 +241,7 @@ class ScanSpmdTest(unittest.TestCase):
     # assert not throwing
 
   @unittest.skipIf(
-      torch.cuda.is_available(),
+      torch.cuda.is_available() or os.environ.get('PJRT_DEVICE') == 'CUDA',
       "TODO(https://github.com/pytorch/xla/issues/9017): Get these tests working on GPU"
   )
   def test_convert_to_jax_mesh(self):
