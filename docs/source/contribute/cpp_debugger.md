@@ -23,7 +23,7 @@ conda install -c conda-forge gdb
 Debugging options are described in [`setup.py`]((https://github.com/pytorch/pytorch/blob/300e0ee13c08ef77e88f32204a2e0925c17ce216/setup.py#L2C1-L11C53)):
 
 ``` python
-# Debugging environment variables
+# Environment variables you are probably interested in:
 #
 #   DEBUG
 #     build with -O0 and -g (debug symbols)
@@ -34,15 +34,13 @@ Debugging options are described in [`setup.py`]((https://github.com/pytorch/pyto
 #     build with debug info only for specified files
 ```
 
-Set an environment variable called `DEBUG` to any value to generate debug symbols
-for all source code. The binary generated with this setting will not be optimized
-and will contain debug symbols for all source code, therefore it will run slower
-than a non debug build.
-
-To improve performance while debugging, set the `USE_CUSTOM_DEBINFO` environment
-variable to a semicolon list of source files for which you want to generate
-debug symbols. You will need to choose which source files to generate debug
-symbols.
+When defined, the `DEBUG` will cause the build process to generate debug symbols
+for all source files. It will also prevent the compiler from performing any
+optimizations, which will cause the geenrated binary to run too slow to perform
+meaningful work. We recommend using the `USE_CUSTOM_DEBINFO` environment variable
+to specify a semicolon separated list of source files for which you want to
+generate debug symbols. This lets you generate debug symbols for only the source
+files you want to debug. All other source files are built and optimized as usual.
 
 We suggest the following steps:
 
@@ -69,7 +67,7 @@ starts with `Source files with custom debug infos` to make sure your file was
 built with debug symbols. For example:
 
 ``` sh
--- USE_ROCM_KERNEL_ASSERT : OFF
+--  USE_ROCM_KERNEL_ASSERT : OFF
 -- Performing Test HAS_WMISSING_PROTOTYPES
 -- Performing Test HAS_WMISSING_PROTOTYPES - Failed
 -- Performing Test HAS_WERROR_MISSING_PROTOTYPES
