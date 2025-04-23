@@ -262,7 +262,6 @@ def scaled_dot_product_attention(
 )
 def getitem(self, indexes):
 
-    print("indexes", indexes)
     if isinstance(indexes, list) and isinstance(indexes[0], int):
         # list of int, i.e. x[[1, 2]] NOT x[1, 2] (the second would be tuple of int)
         indexes = (indexes,)

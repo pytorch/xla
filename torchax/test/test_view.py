@@ -78,8 +78,7 @@ class TrainTest(unittest.TestCase):
     # Test all in-place operations
     def test_add_(self):
         x = torch.zeros((10, 10), device="jax")
-        res = x[0:5, :][:, 0:5].add_(1)
-        print(res)
+        x[0:5, :][:, 0:5].add_(1)
         self.assertEqual(type(x), Tensor)
         self.assertEqual(x.shape, (10, 10))
         self.assertEqual(x.sum(), 25)
