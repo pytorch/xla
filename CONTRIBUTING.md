@@ -1,27 +1,27 @@
 # Contribute To PyTorch/XLA
 
-We appreciate all contributions. If you are planning to contribute a bug fix for 
+We appreciate all contributions. If you are planning to contribute a bug fix for
 an open issue, please comment on the thread and we're happy to provide guidance.
-You are welcome to pick issues with [good first issue](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) 
-and [help wanted](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) 
+You are welcome to pick issues with [good first issue](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+and [help wanted](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
 labels to get started.
 
-If you plan to contribute new features or extensions to this repository, first 
-open an issue and discuss the feature with us. Sending a PR without discussion 
-might result in a rejected PR, because we might be taking the repository in a 
+If you plan to contribute new features or extensions to this repository, first
+open an issue and discuss the feature with us. Sending a PR without discussion
+might result in a rejected PR, because we might be taking the repository in a
 different direction.
 
 ## Building from source
 
-We recommend you use our prebuilt Docker image to start your development work 
+We recommend you use our prebuilt Docker image to start your development work
 using either VS Code or a local container:
 
 ### Visual Studio Code Dev Container
 
-* Create an empty directory for your workspace on your development host. These 
-  instructions assume you are using a remote host and are connecting to it over 
+* Create an empty directory for your workspace on your development host. These
+  instructions assume you are using a remote host and are connecting to it over
   SSH.
-  
+
 * Clone PyTorch, TorchVision, and PyTorch/XLA into your workspace directory:
 
 ```bash
@@ -51,17 +51,17 @@ using either VS Code or a local container:
   [`Dev Containers`](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
   extensions.
 
-* From VS Code, connect to your remote host and open your workspace directory. 
-  You will be prompted to reopen your workspace in container. Choose the 
-  appropriate container. Use `tpu-contributor` if you are unsure of which to use. 
-  If you are not prompted to reopen in a container, in the VS Code command 
-  pallete, type `Dev Containers: Reopen in Container` to open your workspace in 
-  one of our pre-built Docker containers. Select the correct container based on 
+* From VS Code, connect to your remote host and open your workspace directory.
+  You will be prompted to reopen your workspace in container. Choose the
+  appropriate container. Use `tpu-contributor` if you are unsure of which to use.
+  If you are not prompted to reopen in a container, in the VS Code command
+  pallete, type `Dev Containers: Reopen in Container` to open your workspace in
+  one of our pre-built Docker containers. Select the correct container based on
   your local accelerator. If you're a Googler, you should use the `tpu-internal`
   container, which is set up for [bazel remote build caching](https://github.com/pytorch/xla/blob/master/docs/source/contribute/bazel.md#remote-caching)
   for faster builds.
 
-* Open a new terminal window in VS Code. Since you are running as root in this 
+* Open a new terminal window in VS Code. Since you are running as root in this
   container, mark the repository directories as safe. The commands below assume
   your workspace directory is `torch`, update the commands to use your workspace
   directory.
@@ -71,7 +71,7 @@ using either VS Code or a local container:
   git config --global --add safe.directory /workspaces/torch/pytorch/xla
   git config --global --add safe.directory /workspaces/torch/vision
 ```
-* In the terminal window, run the following commands to build PyTorch, 
+* In the terminal window, run the following commands to build PyTorch,
   TorchVision, and  PyTorch/XLA:
 
 ```bash
@@ -89,7 +89,7 @@ using either VS Code or a local container:
     -f https://storage.googleapis.com/libtpu-releases/index.html
   ```
 
-* If you are running on a TPU VM, ensure `torch` and `torch_xla` were built and 
+* If you are running on a TPU VM, ensure `torch` and `torch_xla` were built and
   installed correctly:
 
 ```bash
@@ -97,7 +97,7 @@ using either VS Code or a local container:
   # Output: xla:0
 ```
 
-**Subsequent builds**: after building the packages from source code for the 
+**Subsequent builds**: after building the packages from source code for the
 first time, you may need to build everything again, for example, after a
 `git pull`. You can run `scripts/build_developer.sh` which will rebuild PyTorch,
 TorchVision, and PyTorch/XLA.
