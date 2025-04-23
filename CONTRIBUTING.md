@@ -75,8 +75,11 @@ using either VS Code or a local container:
   TorchVision, and  PyTorch/XLA:
 
 ```bash
-  cd pytorch
+  # Uninstall any existing torch torch-xla torchvision installation
+  # Run multiple times if needed
+  pip uninstall torch torch-xla torchvision
   # pytorch/xla requires pytorch wheel to be presented under pytorch/dist
+  cd pytorch
   python setup.py bdist_wheel
   python setup.py install
   cd ../vision
