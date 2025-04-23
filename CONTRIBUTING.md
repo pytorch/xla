@@ -140,7 +140,7 @@ TorchVision, and PyTorch/XLA.
 
 ### Additional steps for GPU
 
-Please refer to this [guide](https://github.com/pytorch/xla/blob/master/README.md#gpu-plugin).
+Please refer to this [guide](https://github.com/pytorch/xla/blob/v2.5.0/plugins/cuda/README.md).
 
 ## Before Submitting A Pull Request:
 
