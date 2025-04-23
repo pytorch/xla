@@ -69,7 +69,7 @@ starts with `Source files with custom debug infos` to make sure your file was
 built with debug symbols. For example:
 
 ``` sh
---   USE_ROCM_KERNEL_ASSERT : OFF
+-- USE_ROCM_KERNEL_ASSERT : OFF
 -- Performing Test HAS_WMISSING_PROTOTYPES
 -- Performing Test HAS_WMISSING_PROTOTYPES - Failed
 -- Performing Test HAS_WERROR_MISSING_PROTOTYPES
