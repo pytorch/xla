@@ -46,10 +46,10 @@ class ViewInfo(ABC):
 
         Args:
             new_value: The new values to set in the view
-            parent: The parent array to update
+            jax_array: The parent array to update
 
         Returns:
-            Updated parent array
+            Updated array
         """
         pass
 
@@ -202,10 +202,10 @@ class DiagonalInfo(ViewInfo):
             and self.dim2 == other.dim2
         )
 
-    def apply(self, jax_array: jax.Array) -> jax.Array:
+    def transform_tensor(self, jax_array: jax.Array) -> jax.Array:
         raise NotImplementedError("DiagonalInfo.apply not implemented")
 
-    def update(self, new_value: jax.Array, parent: jax.Array) -> jax.Array:
+    def update_tensor(self, new_value: jax.Array, jax_array: jax.Array) -> jax.Array:
         raise NotImplementedError("DiagonalInfo.update not implemented")
 
     def calculate_output_shape(self, source: jax.Array) -> List[int]:
@@ -250,7 +250,9 @@ class View(torch.Tensor):
         Get all view transformations from the source tensor to this view.
         """
         if isinstance(self.parent, View):
-            return self.parent.get_transformation_chain() + [self.view_info]
+            transformations = self.parent.get_transformation_chain()
+            transformations.append(self.view_info)
+            return transformations
         else:
             return [self.view_info]
 
@@ -263,7 +265,7 @@ class View(torch.Tensor):
         if isinstance(self.parent, View):
             return self.parent.source_jax()
         else:
-            return self.parent._elem
+            return self.parent.jax()
 
     def replace_source_jax(self, new_value: jax.Array) -> None:
         """
@@ -313,6 +315,7 @@ class View(torch.Tensor):
                 view_info.transform_tensor(intermediate_values[-1])
             )
 
+        # TODO: Investigate efficiency of this algorithm
         # Update the source array with the new value by
         # applying inverse transformations in reverse order
         for view_info, parent_array in zip(
