@@ -105,13 +105,6 @@ function install_pre_deps_pytorch_xla() {
   fi
 }
 
-
-# TODO(https://github.com/pytorch/xla/issues/8934): Remove PyTorch usage of this function, then
-# remove this function from the script.
-function install_post_deps_pytorch_xla() {
-  true
-}
-
 function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
