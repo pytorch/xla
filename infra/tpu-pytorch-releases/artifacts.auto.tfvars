@@ -3,6 +3,73 @@ manual_nightly_builds = [
 ]
 
 manual_versioned_builds = [
+
+  {
+    git_tag         = "v2.7.0"
+    package_version = "2.7.0"
+    pytorch_git_rev = "v2.7.0"
+    accelerator     = "tpu"
+    python_version  = "3.9"
+    bundle_libtpu   = "0"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.7.0"
+    package_version = "2.7.0"
+    pytorch_git_rev = "v2.7.0"
+    accelerator     = "tpu"
+    python_version  = "3.10"
+    bundle_libtpu   = "0"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.7.0"
+    package_version = "2.7.0"
+    pytorch_git_rev = "v2.7.0"
+    accelerator     = "tpu"
+    python_version  = "3.10"
+    bundle_libtpu   = "1"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.7.0"
+    package_version = "2.7.0"
+    pytorch_git_rev = "v2.7.0"
+    accelerator     = "tpu"
+    python_version  = "3.11"
+    bundle_libtpu   = "0"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.7.0"
+    package_version = "2.7.0"
+    pytorch_git_rev = "v2.7.0"
+    accelerator     = "cuda"
+    cuda_version    = "12.6"
+    python_version  = "3.9"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.7.0"
+    package_version = "2.7.0"
+    pytorch_git_rev = "v2.7.0"
+    accelerator     = "cuda"
+    cuda_version    = "12.6"
+    python_version  = "3.10"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.7.0"
+    package_version = "2.7.0"
+    pytorch_git_rev = "v2.7.0"
+    accelerator     = "cuda"
+    cuda_version    = "12.6"
+    python_version  = "3.11"
+    cxx11_abi       = "1"
+  },
+
+
+
   # Remove libtpu from PyPI builds, pre-C++11 ABI builds
   {
     git_tag         = "v2.6.1"
