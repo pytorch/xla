@@ -248,4 +248,5 @@ build:linux --copt="-Wno-unused-command-line-argument"
 
 # Only include debug info for files not under XLA.
 build:dbg -c dbg
+build:dbg --copt=-gdwarf-4
 build:dbg --per_file_copt=external/xla/.*@-g0,-DNDEBUG
