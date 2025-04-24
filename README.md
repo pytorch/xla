@@ -79,20 +79,6 @@ batch size 1024:
 - Pre-C++11 ABI MFU: 33%
 - C++ ABI MFU: 39%
 
-### GPU Plugin
-
-PyTorch/XLA now provides GPU support through a plugin package similar to `libtpu`:
-
-```
-pip install torch==2.7.0 torch_xla==2.7.0 https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla_cuda_plugin-2.7.0-py3-none-any.whl
-```
-
-The newest stable version where PyTorch/XLA:GPU wheel is available is `torch_xla`
-2.7.
-
-PyTorch/XLA remains an open-source project and we welcome contributions from the
-community to help maintain and improve the project. To contribute, please start
-with the [contributors guide](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md).
 
 ## Github Doc Map
 
