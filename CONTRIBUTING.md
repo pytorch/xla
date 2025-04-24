@@ -77,7 +77,7 @@ using either VS Code or a local container:
 ```bash
   # Uninstall any existing torch torch-xla torchvision installation
   # Run multiple times if needed
-  pip uninstall torch torch-xla torchvision
+  pip uninstall torch torch-xla torchvision libtpu-nightly
   # pytorch/xla requires pytorch wheel to be presented under pytorch/dist
   cd pytorch
   python setup.py bdist_wheel
