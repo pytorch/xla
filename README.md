@@ -327,7 +327,7 @@ The torch wheel version `2.8.0.dev20250423+cpu` can be found at https://download
 </details>
 
 ### Docker
-(C++11 ABI enable by default since 2.7 release)
+NOTE: Since PyTorch/XLA 2.7, all builds will use the C++11 ABI by default
 | Version | Cloud TPU VMs Docker |
 | --- | ----------- |
 | 2.7 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.7.0_3.10_tpuvm` |

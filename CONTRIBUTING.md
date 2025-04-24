@@ -165,11 +165,11 @@ find -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format-11 -i -st
 
 ### Python Style Guide
 
-`pytorch/xla` uses `yapf`(specially version 0.30.0 in case it's not backward compatible) with a customized style config.
+`pytorch/xla` uses `yapf`(specially version 0.40.2 in case it's not backward compatible) with a customized style config.
 If your PR touches the Python source files, please run the following command before submitting a PR.
 
 ```Shell
-# How to install: pip install yapf==0.30.0
+# How to install: pip install yapf==0.40.2
 yapf --recursive -i *.py test/ scripts/ torch_xla/ benchmarks/
 ```
 
