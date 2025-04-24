@@ -243,8 +243,8 @@ def make_sequence_metadata(
   #
   # Remove tile visits that belong to a sequence not in our shard.
   iota = jnp.arange(num_sequences, dtype=jnp.int32)
-  active_sequence_mask = jnp.logical_and(iota <= end_sequence, iota
-                                         >= start_sequence)
+  active_sequence_mask = jnp.logical_and(iota <= end_sequence,
+                                         iota >= start_sequence)
   sequence_tiles = jnp.where(active_sequence_mask,
                              sequence_tiles[:num_sequences], 0)
   num_tiles = sequence_tiles.sum()
@@ -375,8 +375,8 @@ def _flash_attention(
                                      logical_q_blk_idx - 1, 0)
   is_first_processed_logical_q_blk = logical_q_blk_idx == 0
   physical_q_blk_changed = (
-      physical_q_tile_ids[logical_q_blk_idx]
-      != physical_q_tile_ids[prev_logical_q_blk_idx])
+      physical_q_tile_ids[logical_q_blk_idx] !=
+      physical_q_tile_ids[prev_logical_q_blk_idx])
   first_time_seeing_physical_q_blk = jnp.logical_or(
       is_first_processed_logical_q_blk, physical_q_blk_changed)
   is_first_kv_blk = (kv_blk_idx == 0)
@@ -509,8 +509,8 @@ def _flash_attention(
       logical_q_blk_idx + 1)
   is_last_logical_q_blk = (logical_q_blk_idx == num_logical_q_blks - 1)
   physical_q_blk_will_change = (
-      physical_q_tile_ids[logical_q_blk_idx]
-      != physical_q_tile_ids[next_logical_q_blk_idx])
+      physical_q_tile_ids[logical_q_blk_idx] !=
+      physical_q_tile_ids[next_logical_q_blk_idx])
   last_time_seeing_cur_physical_q_blk = jnp.logical_or(
       is_last_logical_q_blk, physical_q_blk_will_change)
   should_store_to_output = jnp.logical_and(is_last_kv_blk_idx,
