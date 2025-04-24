@@ -33,9 +33,7 @@ To install PyTorch/XLA nightly build in a new TPU VM:
 
 ```sh
 pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
-pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp310-cp310-linux_x86_64.whl' \
-  -f https://storage.googleapis.com/libtpu-releases/index.html \
-  -f https://storage.googleapis.com/libtpu-wheels/index.html
+pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp310-cp310-linux_x86_64.whl'
 ```
 
 ### C++11 ABI builds
@@ -246,9 +244,7 @@ can now install the main build with `pip install torch_xla`. To also install the
 Cloud TPU plugin corresponding to your installed `torch_xla`, install the optional `tpu` dependencies after installing the main build with
 
 ```
-pip install torch_xla[tpu] \
-  -f https://storage.googleapis.com/libtpu-wheels/index.html \
-  -f https://storage.googleapis.com/libtpu-releases/index.html
+pip install torch_xla[tpu]
 ```
 
 GPU release builds and GPU/TPU nightly builds are available in our public GCS bucket.
