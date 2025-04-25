@@ -4,7 +4,7 @@ This is a guide for using `scan` and `scan_layers` in PyTorch/XLA.
 
 ## When should you use this
 
-You should consider using [`scan_layers`][scan_layers] if you have a model with
+Consider using [`scan_layers`][scan_layers] if you have a model with
 many homogenous (same shape, same logic) layers, for example LLMs. These models
 can be slow to compile. `scan_layers` is a drop-in replacement for a for loop over
 homogenous layers, such as a bunch of decoder layers. `scan_layers` traces the
@@ -12,15 +12,15 @@ first layer and reuses the compiled result for all subsequent layers, significan
 reducing the model compile time.
 
 [`scan`][scan] on the other hand is a lower level higher-order-op modeled after
-[`jax.lax.scan`][jax-lax-scan]. Its primary purpose is to help implement
-`scan_layers` under the hood. However, you may find it useful if you would like
-to program some sort of loop logic where the loop itself has a first-class
-representation in the compiler (specifically, an XLA `While` op).
+[`jax.lax.scan`][jax-lax-scan]. Its primary purpose is to implement
+`scan_layers` under the hood. However, you may find it useful 
+to program loop logic where the loop itself has a first-class
+representation in the compiler (specifically, the XLA `while` op).
 
 ## `scan_layers` example
 
 Typically, a transformer model passes the input embedding through a sequence of
-homogenous decoder layers like the following:
+homogenous decoder layers:
 
 ```python
 def run_decoder_layers(self, hidden_states):
@@ -31,7 +31,7 @@ def run_decoder_layers(self, hidden_states):
 
 When this function is lowered into an HLO graph, the for loop is unrolled into a
 flat list of operations, resulting in long compile times. To reduce compile
-times, you can replace the for loop with a call to `scan_layers`, as shown in 
+times, replace the for loop with `scan_layers`, as shown in 
 [`decoder_with_scan.py`][decoder_with_scan]:
 
 ```python
@@ -61,7 +61,7 @@ def scan(
   ...
 ```
 
-You can use it to loop over the leading dimension of tensors efficiently. If `xs`
+Use it to loop over the leading dimension of tensors efficiently. If `xs`
 is a single tensor, this function is roughly equal to the following Python code:
 
 ```python
@@ -74,8 +74,8 @@ def scan(fn, init, xs):
   return carry, torch.stack(ys, dim=0)
 ```
 
-Under the hood, `scan` is implemented much more efficiently by lowering the loop
-into an XLA `While` operation. This ensures that only one iteration of the loop
+Under the hood, `scan` is implemented efficiently by lowering the loop
+into an XLA `while` operation. This ensures that only one iteration of the loop
 is compiled by XLA.
 
 [`scan_examples.py`][scan_examples] contains some example code showing how to use
@@ -114,19 +114,18 @@ Means over time: tensor([[1.0000],
 The functions/modules passed to `scan` and `scan_layers` must be AOTAutograd
 traceable. In particular, as of PyTorch/XLA 2.6, `scan` and `scan_layers` cannot
 trace functions with custom Pallas kernels. That means if your decoder uses,
-for example flash attention, then it's incompatible with `scan`. We are working on
-[supporting this important use case][flash-attn-issue] in nightly and the next
-releases.
+for example flash attention, then it is incompatible with `scan`. We are working on
+[supporting this important use case][flash-attn-issue].
 
 ### AOTAutograd overhead
 
 Because `scan` uses AOTAutograd to figure out the backward pass of the input 
-function/module on every iteration, it's easy to become tracing bound compared to 
+function/module on every iteration, it is easy to become tracing-bound compared to 
 a for loop implementation. In fact, the  `train_decoder_only_base.py` example runs 
 slower under `scan` than with for loop as of PyTorch/XLA 2.6 due to this overhead.
 We are working on [improving tracing speed][retracing-issue]. This is less of a 
 problem when your model is very large or has many layers, which are the situations 
-you would want to use `scan` anyways.
+you would want to use `scan`.
 
 ## Compile time experiments
 
@@ -180,7 +179,7 @@ Metric: CompileTime
   99%=18s995ms301.667us
 ```
 
-We can see that the maximum compile time dropped from `1m03s` to `19s` by
+The maximum compile time dropped from `1m03s` to `19s` by
 switching to `scan_layers`.
 
 ## References
