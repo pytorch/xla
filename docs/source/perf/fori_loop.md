@@ -1,4 +1,4 @@
-# Optimize memory utilization using `while_loop` 
+# Optimize Memory Utilization with `while_loop` 
 
 ## `while_loop`
 

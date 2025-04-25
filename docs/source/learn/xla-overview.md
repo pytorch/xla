@@ -1,4 +1,4 @@
-# Pytorch/XLA overview
+# Pytorch/XLA Overview
 
 This section provides a brief overview of the basic details of PyTorch
 XLA, which should help readers better understand the required

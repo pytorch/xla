@@ -50,7 +50,8 @@ Tutorials
    perf/spmd_distributed_checkpoint
    features/torch_distributed
    perf/ddp
-   perf/fsdpv2
+   perf/fsdp_collectives
+   perf/fsdp_spmd
 
 .. toctree::
    :glob:

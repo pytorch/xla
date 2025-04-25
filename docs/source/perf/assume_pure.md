@@ -1,4 +1,4 @@
-# Speed up tracing with `@assume_pure`
+# Speed Up Tracing with `@assume_pure`
 
 This document explains how to use `torch_xla.experimental.assume_pure` to
 eliminate lazy tensor tracing overhead. See [this blog post][lazy-tensor] for a

@@ -1,4 +1,4 @@
-# How to do DistributedDataParallel(DDP)
+# Distributed Data Parallel (DDP)
 
 This document shows how to use torch.nn.parallel.DistributedDataParallel
 in xla, and further describes its difference against the native xla data
