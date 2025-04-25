@@ -4,7 +4,7 @@
 Python-level JIT compiler designed to make unmodified PyTorch programs
 faster. It provides a clean API for compiler backends to hook in and its
 biggest feature is to dynamically modify Python bytecode right before it
-is executed. In the pytorch/xla 2.0 release, PyTorch/XLA provided an
+is executed. In the 2.0 release, PyTorch/XLA provided an
 experimental backend for the TorchDynamo for both inference and
 training.
 
@@ -52,7 +52,7 @@ def eval_model(loader):
 ```
 
 With the `torch.compile` you will see that PyTorch/XLA only traces the
-resent18 model once during the init time and executes the compiled
+ResNet-18 model once during the init time and executes the compiled
 binary every time `dynamo_resnet18` is invoked, instead of tracing the
 model every time. Here is a inference speed analysis to compare Dynamo
 and Lazy using torch bench on Cloud TPU v4-8
@@ -112,7 +112,7 @@ and Lazy using torch bench on Cloud TPU v4-8
 
 PyTorch/XLA also supports Dynamo for training, but it is experimental
 and we are working with the PyTorch Compiler team to iterate on the
-implementation. Here is an example of training a resnet18 with
+implementation. Here is an example of training a ResNet-18 with
 `torch.compile`
 
 ``` python
@@ -218,7 +218,7 @@ training.
 
 ## Take away
 
-TorchDynamo provides a really promising way for the compiler backend to
+TorchDynamo provides a promising way for the compiler backend to
 hide the complexity from the user and easily retrieve the modeling code
 in a graph format. Compared with PyTorch/XLA's traditional Lazy Tensor
 way of extracting the graph, TorchDynamo can skip the graph tracing for
@@ -228,6 +228,5 @@ Most models supported by PyTorch/XLA, have seen significant speedup when
 running inference with the new dynamo-xla bridge. Our community is
 working hard to expand the set of supported models. Regarding the
 training feature gaps mentioned above, the PyTorch/XLA community is
-super excited to improve the training gap in our upcoming development
-work. The team continues to heavily invest in TorchDynamo and work with
-the upstream to mature the training story.
+excited to improve the training gap in our upcoming development
+work. The team continues to invest in TorchDynamo.
