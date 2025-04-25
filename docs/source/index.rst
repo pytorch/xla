@@ -5,12 +5,12 @@ PyTorch/XLA documentation
 ``torch_xla`` is a Python package that implements \
 `XLA <https://openxla.org/xla>`_ as a backend for PyTorch.
 
-+---------------------------------------------+---------------------------------------------+---------------------------------------------+
-| **Familiar API**                            | **High-Performance Distributed Training**   | **TPU Support**                             |
-|                                             |                                             |                                             |          
-| Create and train deep learning models       | Train on thousands of TPUs while maintaining| Unlock the cost efficiency of TPUs while    |
-| using the PyTorch API with minimal changes. | a high Model Flop Utilization (MFU).        | staying within the PyTorch ecosystem.       |
-+---------------------------------------------+---------------------------------------------+---------------------------------------------+
++------------------------------------------------+------------------------------------------------+------------------------------------------------+
+| **Familiar APIs**                              | **High Performance**                           | **Cost Efficient**                             |
+|                                                |                                                |                                                |          
+| Create and train PyTorch models on TPUs,       | Scale training jobs across thousands of        | TPU hardware and the XLA compiler are optimized|
+| with only minimal changes required.            | TPU cores while maintaining high MFU.          | for cost-efficient training and inference.     |
++------------------------------------------------+------------------------------------------------+------------------------------------------------+
 
 Getting Started
 ---------------
