@@ -86,7 +86,7 @@ def splash_attention_jax_wrapper(
       splash_attention_kernel,
       splash_attention_mask,
   )
-  mesh = Mesh.from_str(config.mesh).maybe_convert_and_get_jax_mesh()
+  mesh = Mesh.from_str(config.mesh).get_jax_mesh()
   # input q,k,v shape: [batch, #head, seq_len, head_dim]
   if decoder_segment_ids is not None and not decoder_segment_ids.shape:
     decoder_segment_ids = None

@@ -920,8 +920,19 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
       import torch_xla.debug.profiler as xp
       # If we see this trace span in the profiler, we'll know that there's a cache miss.
       with xp.Trace('jax_to_xla_computation'):
-        lowered = jax.jit(fn, keep_unused=True).lower(*sample_tensor_args)
-        hlo_ir = lowered.compiler_ir('hlo')
+        jitted = jax.jit(fn, keep_unused=True)
+
+        def do_lower():
+          import torch_xla.runtime as xr
+          import torch_xla.distributed.spmd as xs
+          if xr.is_spmd():
+            mesh = xs.get_global_mesh()
+            if mesh is not None:
+              with mesh.get_jax_mesh():
+                return jitted.lower(*sample_tensor_args)
+          return jitted.lower(*sample_tensor_args)
+
+        hlo_ir = do_lower().compiler_ir('hlo')
         assert len(traced_out_spec) == 1, \
             "fn must be traced to obtain the output tree spec"
         spec = traced_out_spec[0]
