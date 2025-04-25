@@ -618,9 +618,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   # avoid calling xr.addressable_device_count here otherwise it will init the test
   # in non-spmd mode.
-  @unittest.skipIf(xr.device_type() == 'CPU',
-                   "sharding will be the same for both tensors on single device"
-                  )
+  @unittest.skipIf(
+      xr.device_type() == 'CPU',
+      "sharding will be the same for both tensors on single device")
   def test_shard_hashing(self):
     xt1 = torch.ones(2, 2).to(xm.xla_device())
     xt2 = torch.ones(2, 2).to(xm.xla_device())
@@ -1383,8 +1383,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(mesh_without_name.mesh_shape,
                      (xr.global_runtime_device_count(),))
 
-  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
-                       "Multiple devices required for dataloader sharding test")
+  @unittest.skipUnless(
+      xr.global_runtime_device_count() > 1,
+      "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_sharding(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
@@ -1405,8 +1406,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
     )
 
-  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
-                       "Multiple devices required for dataloader sharding test")
+  @unittest.skipUnless(
+      xr.global_runtime_device_count() > 1,
+      "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_non_batch_size(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
@@ -1427,8 +1429,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
     )
 
-  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
-                       "Multiple devices required for dataloader sharding test")
+  @unittest.skipUnless(
+      xr.global_runtime_device_count() > 1,
+      "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_non_batch_size_and_mini_batch(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
@@ -1660,9 +1663,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(logical_mesh.shape, mesh_shape)
     np.testing.assert_array_equal(np.sort(logical_mesh.flatten()), device_ids)
 
-  @unittest.skipIf(xr.device_type() == 'CPU',
-                   "sharding will be the same for both tensors on single device"
-                  )
+  @unittest.skipIf(
+      xr.device_type() == 'CPU',
+      "sharding will be the same for both tensors on single device")
   def test_shard_as(self):
     mesh = self._get_mesh((self.n_devices,))
     partition_spec = (0,)

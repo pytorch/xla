@@ -28,7 +28,7 @@ pip:
       - tqdm
       - typing_extensions
       - sympy
-      - yapf==0.30.0
+      - yapf==0.40.2
 
     build_amd64:
       - mkl
