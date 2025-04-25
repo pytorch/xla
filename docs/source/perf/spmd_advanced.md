@@ -1,9 +1,15 @@
 # SPMD advanced topics
-In this doc we will cover some advance topic on GSPMD. Please read [SPMD user guide](https://github.com/pytorch/xla/blob/master/docs/spmd_basic.md) before procedding to this doc.
+
+This guide covers advanced topics with SPMD. Please read the 
+[SPMD user guide](https://github.com/pytorch/xla/blob/master/docs/spmd_basic.md) as a prerequisite.
 
 ### Sharding-Aware Host-to-Device Data Loading
 
-PyTorch/XLA SPMD takes a single-device program, shards and executes it in parallel. The SPMD execution requires using the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step. To improve the native data loading performance, we made PyTorch/XLA ParallelLoader support input sharding directly (src), when passed the optional kwarg _input\_sharding_:
+SPMD takes a single-device program, shards it, and executes it in parallel. 
+
+SPMD execution does not work well with the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step. 
+
+To improve the native data loading performance, use PyTorch/XLA's ParallelLoader, which shards the directly when passed the optional kwarg _input\_sharding_:
 
 ```python
 # MpDeviceLoader returns ParallelLoader.per_device_loader as iterator
@@ -32,12 +38,12 @@ train_loader = pl.MpDeviceLoader(
 )
 ```
 
-### Virtual Device Optimization
+### Virtual device optimization
 
-PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because GSPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.
+PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because SPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.
 
 
-## Hybrid Mesh
+## Hybrid mesh
 
 Mesh nicely abstracts how the physical device mesh is constructed. Users can arrange devices in any shape and order using the logical mesh. However, one can define a more performant mesh based on the physical topology, especially when it involves Data Center Network (DCN) cross slice connections. HybridMesh creates a mesh which gives good performance out of the box for such multislice environments. It accepts ici\_mesh\_shape and dcn\_mesh\_shape which denote logical mesh shapes of inner and outer network.
 
@@ -90,7 +96,7 @@ This feature is experimental and stay tuned for more updates, examples and tutor
 
 ### Activation Sharding for torch.compile
 
-In the 2.3 release, PyTorch/XLA added the custom op `dynamo_mark_sharding` which can be used to perform the activation sharding in a `torch.compile` region. This is part of our ongoing effort to make `torch.compile` + `GSPMD` to be the recommended way of doing the model inference using PyTorch/XLA. Example of using this custom op:
+In the 2.3 release, PyTorch/XLA added the custom op `dynamo_mark_sharding` which can be used to perform the activation sharding in a `torch.compile` region. This is part of our ongoing effort to make `torch.compile` + `SPMD` to be the recommended way of doing the model inference using PyTorch/XLA. Example of using this custom op:
 ```
 # Activation output sharding
 device_ids = [i for i in range(self.num_devices)] # List[int]
