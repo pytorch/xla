@@ -30,6 +30,7 @@ class Operator:
     is_jax_function: bool
     is_user_defined: bool
     needs_env: bool
+    is_view_op: bool
 ```
 
 The `torch_op` is the corresponding torch callable, and `func` the implementation. `is_jax_function` is True if `func` is implemented using Jax, False if `func` is implemented using other torch ops. We can use this information to decide how to call it.

@@ -4,6 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 import torch
 from torchax.ops import mappings
+from torchax.view import View
 from torchax import types
 import sys
 
@@ -19,12 +20,21 @@ class InplaceOp:
 
     def __call__(self, *args, **kwargs):
         to_mutate = args[0]
-        if self.replace:
-          to_mutate._elem = self.functional(*args, **kwargs)._elem
+        if isinstance(to_mutate, View):
+            view_value = to_mutate.torch()
+            # Convert the target View to a Tensor, and 
+            # leave the rest args as is. If other args are
+            # also View, they will be converted to tensors
+            # in the self.functional dispatch.
+            new_value = self.functional(view_value, *args[1:], **kwargs)
+            to_mutate.update(new_value)
+            return to_mutate 
         else:
-          to_mutate.copy_(self.functional(*args, **kwargs))
+          if self.replace:
+            to_mutate._elem = self.functional(*args, **kwargs)._elem
+          else:
+            to_mutate.copy_(self.functional(*args, **kwargs))
         return to_mutate
-
 
 class OutVariant:
 

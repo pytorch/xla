@@ -15,7 +15,8 @@ from torchax.ops import ops_registry
 from torchax.ops import op_base, mappings
 from torchax import interop
 from torchax.ops import jax_reimplement
-
+from torchax.view import View
+from torchax.tensor import Tensor
 # Keys are OpOverload, value is a callable that takes
 # Tensor
 all_ops = {}
@@ -72,7 +73,7 @@ def make_mutation(op):
 
 for op in mutation_ops_to_functional.keys():
   ops_registry.register_torch_dispatch_op(
-    op, make_mutation(op), is_jax_function=False
+    op, make_mutation(op), is_jax_function=False, is_view_op=True
   )
 
 
@@ -121,8 +122,13 @@ def _aten_add(x, y, *, alpha=1):
   return res
 
 
-@op(torch.ops.aten.copy_, is_jax_function=False)
+@op(torch.ops.aten.copy_, is_jax_function=False, is_view_op=True)
 def _aten_copy(x, y, memory_format=None):
+  
+  if isinstance(x, View):
+    x.update(y)
+    return x
+
   if x.ndim == 1 and y.ndim == 0:
     # case of torch.empty((1,)).copy_(tensor(N))
     # we need to return 0D tensor([N]) and not scalar tensor(N)
@@ -800,6 +806,7 @@ def split_with_sizes(x, sizes, dim=0):
 @op(torch.ops.aten.permute)
 @op(torch.ops.aten.permute_copy)
 def permute(t, dims):
+  # TODO: return a View instead
   return jnp.transpose(t, dims)
 
 
@@ -2514,9 +2521,9 @@ def _aten_eq(input1, input2):
 
 
 # aten.equal
-@op(torch.ops.aten.equal, is_jax_function=False)
+@op(torch.ops.aten.equal)
 def _aten_equal(input, other):
-  res = jnp.array_equal(input._elem, other._elem)
+  res = jnp.array_equal(input, other)
   return bool(res)
 
 

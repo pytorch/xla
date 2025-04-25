@@ -772,3 +772,8 @@ DECOMPOSITIONS = decomp.get_decompositions(
     torch.ops.aten._weight_norm_interface.out,
   ]
 )
+
+MUTABLE_DECOMPOSITION = [
+  torch.ops.aten.bernoulli_.Tensor,
+  torch.ops.aten.bernoulli_.float,
+]
