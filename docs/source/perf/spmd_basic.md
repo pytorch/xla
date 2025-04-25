@@ -1,4 +1,4 @@
-# PyTorch/XLA SPMD User Guide
+# SPMD User Guide
 
 In this user guide, we discuss how
 [GSPMD](https://arxiv.org/abs/2105.04663) is integrated in PyTorch/XLA,

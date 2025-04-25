@@ -1,4 +1,4 @@
-# Fully Sharded Data Parallel using SPMD
+# Fully Sharded Data Parallel (FSDP) using SPMD
 
 Fully Sharded Data Parallel via SPMD or FSDPv2 is an utility that
 re-expresses the famous FSDP algorithm in SPMD.

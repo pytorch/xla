@@ -1,6 +1,9 @@
-# Support of Torch Distributed API in PyTorch/XLA
-Before the 2.5 release, PyTorch/XLA only supported collective ops through our custom API call `torch_xla.core.xla_model.*`.  In the 2.5 release, we adopt `torch.distributed.*` in PyTorch/XLA for both Dynamo and non-Dynamo cases.
+# Support for Torch Distributed
+
+Before the 2.5 release, PyTorch/XLA only supported collective ops through the custom API call `torch_xla.core.xla_model.*`.  In the 2.5 release, we adopted `torch.distributed.*` in PyTorch/XLA for both Dynamo and non-Dynamo cases.
+
 ## Collective ops lowering
+
 ### Collective ops lowering stack
 After introducing the [traceable collective communication APIs](https://github.com/pytorch/pytorch/issues/93173), dynamo can support the collective ops with reimplementing lowering in PyTorch/XLA. The collective op is only traceable through `torch.ops._c10d_functional` call. Below is the figure that shows how the collective op, `all_reduce` in this case, is lowered between torch and torch_xla:
 

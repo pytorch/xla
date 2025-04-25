@@ -1,4 +1,4 @@
-# Bazel in Pytorch/XLA
+# Building with Bazel
 
 [Bazel](https://bazel.build/) is a free software tool used for the
 automation of building and testing software.

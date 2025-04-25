@@ -1,4 +1,4 @@
-# TorchDynamo integration in PyTorch XLA
+# TorchDynamo Integration
 
 [TorchDynamo](https://pytorch.org/docs/stable/torch.compiler.html) is a
 Python-level JIT compiler designed to make unmodified PyTorch programs

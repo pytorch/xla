@@ -1,4 +1,4 @@
-# OP Lowering Guide
+# Op Lowering Guide
 
 PyTorch wraps the C++ ATen tensor library that offers a wide range of
 operations implemented on GPU and CPU. Pytorch/XLA is a PyTorch

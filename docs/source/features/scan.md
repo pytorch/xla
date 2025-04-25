@@ -1,4 +1,4 @@
-# Guide for using `scan` and `scan_layers`
+Optimizing Repeated Layers with `scan` and `scan_layers`
 
 This is a guide for using `scan` and `scan_layers` in PyTorch/XLA.
 

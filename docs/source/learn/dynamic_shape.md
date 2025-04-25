@@ -1,4 +1,4 @@
-# Dynamic shape
+# Dynamic Shapes
 
 Dynamic shape refers to the variable nature of a tensor shape where its shape depends on the value of another upstream tensor. For example:
 ```

@@ -1,4 +1,4 @@
-# PyTorch/XLA SPMD advanced topics
+# SPMD advanced topics
 In this doc we will cover some advance topic on GSPMD. Please read [SPMD user guide](https://github.com/pytorch/xla/blob/master/docs/spmd_basic.md) before procedding to this doc.
 
 ### Sharding-Aware Host-to-Device Data Loading
