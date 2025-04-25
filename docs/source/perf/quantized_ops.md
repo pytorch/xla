@@ -1,4 +1,4 @@
-# Quantized Operations for XLA (Experimental feature)
+# Quantized Operations for XLA
 
 This document outlines how to utilize quantized operations to enable
 quantization on XLA devices.
