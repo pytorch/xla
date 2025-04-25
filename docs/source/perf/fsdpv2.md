@@ -87,8 +87,3 @@ from torch_xla.distributed.fsdp import checkpoint_module
 
 model = FSDPv2(checkpoint_module(my_module), mesh)
 ```
-
-## HuggingFace Llama 2 Example
-
-We have a fork of HF Llama 2 to demonstrate a potential integration
-[here](https://github.com/huggingface/transformers/compare/main...pytorch-tpu:transformers:llama2-spmd-fsdp).
