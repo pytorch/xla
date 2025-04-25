@@ -1,9 +1,16 @@
 name: TPU Integration Test
 on:
   workflow_call:
+    inputs:
+      timeout-minutes:
+        required: false
+        type: number
+        description: Timeout in minutes for the job run
+        default: 120
 jobs:
   tpu-test:
     runs-on: v4-runner-set
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - name: Checkout actions
         uses: actions/checkout@v4
