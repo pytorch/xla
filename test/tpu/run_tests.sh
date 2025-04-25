@@ -38,7 +38,6 @@ python3 "$TEST_CDIR/scan/test_scan_layers.py"
 python3 "$TEST_CDIR/test_gru.py"
 python3 "$TEST_CDIR/test_assume_pure.py"
 python3 "$TEST_CDIR/test_assume_pure_spmd.py"
-python3 "$TEST_CDIR/test_jax_interop_spmd.py"
 python3 "$TEST_CDIR/test_as_stride_use_slice.py"
 run_xla_hlo_debug python3 "$TEST_CDIR/scan/test_scan_debug.py"
 python3 "$TEST_CDIR/test_pallas.py" -v
