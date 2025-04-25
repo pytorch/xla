@@ -288,8 +288,8 @@ def _gradient_accumulation_impl(context, body_fn, iterable_tensors, params,
       iterable_tensors, fake_iterable_tensors, carried_tensors,
       fake_carried_tensors, params, grads)
 
-  def _body_fn_wrapper(curr_iter: xb.Op, curr_loss: xb.Op, *while_params:
-                       xb.Op):
+  def _body_fn_wrapper(curr_iter: xb.Op, curr_loss: xb.Op,
+                       *while_params: xb.Op):
 
     def dynamic_slice(xs: xb.Op, idx: xb.Op) -> xb.Op:
       indices = [idx] + [idx.zeros_like() for _ in range(xs.shape().rank - 1)]
