@@ -12,10 +12,12 @@ from torch_xla.distributed.spmd import mark_sharding, set_global_mesh, get_1d_me
 
 class AssumePureSpmdTest(unittest.TestCase):
 
-  def setUp(self):
+  @classmethod
+  def setUpClass(cls):
     # Activate SPMD
     xr.use_spmd()
 
+  def setUp(self):
     # Set up a simple SPMD mesh for these tests.
     self.spmd_mesh = get_1d_mesh(axis_name="model")
     set_global_mesh(self.spmd_mesh)
