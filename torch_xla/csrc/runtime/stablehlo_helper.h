@@ -1,7 +1,7 @@
 #ifndef STABLEHLO_HELPER_H_
 #define STABLEHLO_HELPER_H_
 
-#include "xla/client/xla_computation.h"
+#include "xla/hlo/builder/xla_computation.h"
 
 namespace mlir {
 class ModuleOp;

@@ -8,7 +8,7 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_builder.h"
 #include "torch_xla/csrc/shape_helper.h"
-#include "xla/client/lib/constants.h"
+#include "xla/hlo/builder/lib/constants.h"
 #include "xla/shape_util.h"
 #include "xla/util.h"
 

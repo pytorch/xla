@@ -14,7 +14,7 @@
 #include "torch_xla/csrc/runtime/util.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/threadpool.h"
-#include "xla/client/xla_computation.h"
+#include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_client.h"

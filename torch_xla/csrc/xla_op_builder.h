@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 namespace op_builder {

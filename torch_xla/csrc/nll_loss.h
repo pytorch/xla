@@ -3,7 +3,7 @@
 
 #include "absl/types/optional.h"
 #include "torch_xla/csrc/reduction.h"
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 

@@ -21,7 +21,7 @@
 #include "absl/types/span.h"
 #include "torch_xla/csrc/dynamic_shape_detector.h"
 #include "torch_xla/csrc/runtime/types.h"
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 
