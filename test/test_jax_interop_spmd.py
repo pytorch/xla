@@ -11,11 +11,14 @@ from torch_xla.distributed.spmd import set_global_mesh, get_1d_mesh
 
 class TestJaxInteropSpmd(unittest.TestCase):
 
-  def setUp(self):
-    xb._JAX_TO_XLA_COMPUTATION_CACHE.clear()
+  @classmethod
+  def setUpClass(cls):
     # Activate SPMD
     xr.use_spmd()
 
+  def setUp(self):
+    # Clear cached HLO between test cases.
+    xb._JAX_TO_XLA_COMPUTATION_CACHE.clear()
     # Set up a simple SPMD mesh for these tests.
     self.spmd_mesh = get_1d_mesh(axis_name="model")
     set_global_mesh(self.spmd_mesh)
