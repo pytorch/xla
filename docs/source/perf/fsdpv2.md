@@ -66,7 +66,7 @@ tensor 2. A tuple of tensors where the 0th element is the activation.
 
 Example usage:
 
-``` python3
+```python
 def shard_output(output, mesh):
     xs.mark_sharding(output.logits, mesh, ('fsdp', None, None))
 
@@ -82,7 +82,7 @@ future releases.
 
 Example usage:
 
-``` python3
+```python
 from torch_xla.distributed.fsdp import checkpoint_module
 
 model = FSDPv2(checkpoint_module(my_module), mesh)
