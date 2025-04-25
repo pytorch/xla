@@ -11,7 +11,11 @@ on:
         type: string
         description: Runner type for the test
         default: linux.12xlarge
-
+      timeout-minutes:
+        required: false
+        type: number
+        description: Timeout in minutes for the build job
+        default: 120
     secrets:
       gcloud-service-key:
         required: true
@@ -19,6 +23,7 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     container:
       image: ${{ inputs.dev-image }}
     env:
