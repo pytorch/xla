@@ -122,8 +122,13 @@ a fixed up-front cost, and then later runs will reuse the cached XLA computation
 ## Limitations
 
 Currently, all operations in a function wrapped with `@assume_pure` must be
-PyTorch upstream operations (e.g. `torch.einsum`, `torch.sin`, ...). More
-PyTorch/XLA operations (e.g. `mark_sharding`) will be supported in the future.
+PyTorch upstream operations (e.g. `torch.einsum`, `torch.sin`, ...), or these
+PyTorch/XLA operations:
+  * `torch_xla.experimental.assume_pure` (recursive `assume_pure`)
+  * `torch_xla.distributed.spmd.mark_sharding`
+
+More PyTorch/XLA operations (e.g. `flash_attention`) will be supported in the
+future.
 
 <!-- xrefs -->
 

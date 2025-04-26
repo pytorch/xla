@@ -182,7 +182,7 @@ class Mesh:
       return None
 
   @requires_jax
-  def maybe_convert_and_get_jax_mesh(self):
+  def get_jax_mesh(self):
     # Construct a JAX mesh object with the same device ids shape and ordering
     # from torch_xla device mesh.
     import jax
@@ -611,7 +611,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   if tx is not None and isinstance(t, tx.tensor.Tensor):
     from jax.sharding import PartitionSpec as P, NamedSharding
     op_sharding = tuple(str(i) if i is not None else i for i in partition_spec)
-    jmesh = mesh.maybe_convert_and_get_jax_mesh()
+    jmesh = mesh.get_jax_mesh()
     t.shard_(NamedSharding(jmesh, P(*op_sharding)))
     return t
 
