@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitcaa40cc )
+                  master (2.8.0+git7d681a9 )
                 </div>
               
             
@@ -558,8 +558,14 @@ a fixed up-front cost, and then later runs will reuse the cached XLA computation
 <div class="section" id="limitations">
 <h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this heading">¶</a></h2>
 <p>Currently, all operations in a function wrapped with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> must be
-PyTorch upstream operations (e.g. <code class="docutils literal notranslate"><span class="pre">torch.einsum</span></code>, <code class="docutils literal notranslate"><span class="pre">torch.sin</span></code>, …). More
-PyTorch/XLA operations (e.g. <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code>) will be supported in the future.</p>
+PyTorch upstream operations (e.g. <code class="docutils literal notranslate"><span class="pre">torch.einsum</span></code>, <code class="docutils literal notranslate"><span class="pre">torch.sin</span></code>, …), or these
+PyTorch/XLA operations:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.assume_pure</span></code> (recursive <code class="docutils literal notranslate"><span class="pre">assume_pure</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">torch_xla.distributed.spmd.mark_sharding</span></code></p></li>
+</ul>
+<p>More PyTorch/XLA operations (e.g. <code class="docutils literal notranslate"><span class="pre">flash_attention</span></code>) will be supported in the
+future.</p>
 <!-- xrefs --></div>
 </div>
 

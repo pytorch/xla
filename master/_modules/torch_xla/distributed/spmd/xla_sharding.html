@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitcaa40cc )
+                  master (2.8.0+git7d681a9 )
                 </div>
               
             
@@ -622,7 +622,7 @@
       <span class="k">return</span> <span class="kc">None</span>
 
   <span class="nd">@requires_jax</span>
-  <span class="k">def</span><span class="w"> </span><span class="nf">maybe_convert_and_get_jax_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">get_jax_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="c1"># Construct a JAX mesh object with the same device ids shape and ordering</span>
     <span class="c1"># from torch_xla device mesh.</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
@@ -1051,7 +1051,7 @@
   <span class="k">if</span> <span class="n">tx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">tx</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">jax.sharding</span><span class="w"> </span><span class="kn">import</span> <span class="n">PartitionSpec</span> <span class="k">as</span> <span class="n">P</span><span class="p">,</span> <span class="n">NamedSharding</span>
     <span class="n">op_sharding</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">partition_spec</span><span class="p">)</span>
-    <span class="n">jmesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">maybe_convert_and_get_jax_mesh</span><span class="p">()</span>
+    <span class="n">jmesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_jax_mesh</span><span class="p">()</span>
     <span class="n">t</span><span class="o">.</span><span class="n">shard_</span><span class="p">(</span><span class="n">NamedSharding</span><span class="p">(</span><span class="n">jmesh</span><span class="p">,</span> <span class="n">P</span><span class="p">(</span><span class="o">*</span><span class="n">op_sharding</span><span class="p">)))</span>
     <span class="k">return</span> <span class="n">t</span>
 
