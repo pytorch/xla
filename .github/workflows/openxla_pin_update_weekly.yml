@@ -6,7 +6,7 @@ on:
 
 jobs:
   update_and_create_pr:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
