@@ -31,7 +31,7 @@ static bool IsXlaMarkTensorOp(mlir::Operation* op) {
     return false;
   }
   auto target_name =
-      op->getAttr("call_target_name").dyn_cast<mlir::StringAttr>();
+      mlir::dyn_cast<mlir::StringAttr>(op->getAttr("call_target_name"));
   if (target_name == nullptr || target_name.str() != "xla_mark_tensor") {
     return false;
   }
@@ -178,7 +178,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       return mlir::FailureOr(nullptr);
     }
     auto backend_config =
-        op->getAttr("backend_config").dyn_cast<mlir::StringAttr>();
+        mlir::dyn_cast<mlir::StringAttr>(op->getAttr("backend_config"));
     if (backend_config == nullptr) {
       return mlir::FailureOr(nullptr);
     }
@@ -360,7 +360,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         if (curr_metadata->is_input &&
             curr_metadata->boundary_key() == metadata.boundary_key()) {
           // Terminal condition: boundary input op.
-          arg_pos_setvec.insert({curr_op->getResult(0).dyn_cast<mlir::Value>(),
+          arg_pos_setvec.insert({mlir::dyn_cast<mlir::Value>(curr_op->getResult(0)),
                                  curr_metadata->pos});
           continue;
         }
