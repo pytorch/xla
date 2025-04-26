@@ -1198,6 +1198,11 @@ def _aten_relu(self):
 
 @op(torch.ops.aten.cat)
 def _aten_cat(tensors, dims=0):
+  # handle it as a special case if the first tensor is empty.
+  # torch.cat will ignore the empty tensor, while jnp.concatenate
+  # will error if the dims > 0.
+  if tensors[0].ndim == 1 and tensors[0].shape[0] == 0:
+    return jnp.concatenate(tensors[1:], dims)
   return jnp.concatenate(tensors, dims)
 
 

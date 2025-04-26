@@ -14,7 +14,6 @@ skiplist = {
     "_segment_reduce",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
-    "cat",
     "cholesky_solve",
     "diagonal_copy",
     "geqrf",
