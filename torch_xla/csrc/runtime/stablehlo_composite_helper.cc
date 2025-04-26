@@ -360,8 +360,9 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         if (curr_metadata->is_input &&
             curr_metadata->boundary_key() == metadata.boundary_key()) {
           // Terminal condition: boundary input op.
-          arg_pos_setvec.insert({mlir::dyn_cast<mlir::Value>(curr_op->getResult(0)),
-                                 curr_metadata->pos});
+          arg_pos_setvec.insert(
+              {mlir::dyn_cast<mlir::Value>(curr_op->getResult(0)),
+               curr_metadata->pos});
           continue;
         }
       }
