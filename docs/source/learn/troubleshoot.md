@@ -1,4 +1,4 @@
-# Troubleshoot
+# Troubleshooting Basics
 
 Note that the information in this section is subject to be removed in
 future releases of the *PyTorch/XLA* software, since many of them are

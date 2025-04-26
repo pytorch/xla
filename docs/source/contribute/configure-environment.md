@@ -1,4 +1,4 @@
-# Configure a development environment
+# Configure A Development Environment
 
 The goal of this guide is to set up an interactive development
 environment on a Cloud TPU with PyTorch/XLA installed. If this is your

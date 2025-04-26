@@ -1,7 +1,11 @@
-# Fully Sharded Data Parallel in PyTorch XLA
+# Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator
 
-Fully Sharded Data Parallel (FSDP) in PyTorch XLA is a utility for
-sharding Module parameters across data-parallel workers.
+FSDP in PyTorch/XLA is a utility for
+sharding Module parameters across data-parallel workers. 
+
+This differs
+from the [other](./fsdp_spmd.md) implementation of FSDP in PyTorch/XLA
+in that this implementation runs one process per accelerator. 
 
 Example usage:
 

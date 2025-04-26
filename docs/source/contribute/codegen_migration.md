@@ -1,4 +1,4 @@
-# Codegen migration Guide
+# Codegen Migration Guide
 
 As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean
 up the existing stub code (which spans over 6+ files) that were used to
