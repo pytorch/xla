@@ -86,7 +86,7 @@ else:
   _libtpu_storage_directory = 'libtpu-lts-releases'
 
 _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
-print(_libtpu_storage_path)
+
 
 def _get_build_mode():
   for i in range(1, len(sys.argv)):
