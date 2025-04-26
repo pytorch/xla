@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>torch_xla.debug.metrics &mdash; PyTorch/XLA master documentation</title>
+  <title>Support for Torch Distributed &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -25,12 +25,14 @@
 
   
 
-  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" /> -->
-  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-    <link rel="index" title="Index" href="../../../genindex.html" />
-    <link rel="search" title="Search" href="../../../search.html" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Distributed Data Parallel (DDP)" href="../perf/ddp.html" />
+    <link rel="prev" title="Distributed Checkpointing" href="../perf/spmd_distributed_checkpoint.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -41,16 +43,16 @@
   
 
   
-  <script src="../../../_static/js/modernizr.min.js"></script>
+  <script src="../_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -295,7 +297,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -313,56 +315,56 @@
             
               <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../accelerators/tpu.html">Learn about TPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_basic.html">SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_advanced.html">SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/torch_distributed.html">Support for Torch Distributed</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/ddp.html">Distributed Data Parallel (DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Support for Torch Distributed</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">Distributed Data Parallel (DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Advanced Techniques</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/pallas.html">Custom Kernels via Pallas</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/amp.html">Automatic Mixed Precision</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/dynamic_shape.html">Dynamic Shapes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/dynamo.html">TorchDynamo Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/quantized_ops.html">Quantized Operations</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic Shapes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/troubleshoot.html">Troubleshooting Basics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/eager.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/recompilation.html">Troubleshooting recompilations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Troubleshooting recompilations</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../accelerators/gpu.html">Learn about GPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/bazel.html">Building with Bazel</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/configure-environment.html">Configure A Development Environment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/cpp_debugger.html">C++ Debugging</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/op_lowering.html">Op Lowering Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/plugins.html">Custom Hardware Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Building with Bazel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure A Development Environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/cpp_debugger.html">C++ Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">Op Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/api-guide.html">PyTorch/XLA API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
 </ul>
 
             
@@ -395,7 +397,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="../../../index.html">
+        <a href="../index.html">
           
             Docs
           
@@ -403,12 +405,14 @@
       </li>
 
         
-          <li><a href="../../index.html">Module code</a> &gt;</li>
-        
-      <li>torch_xla.debug.metrics</li>
+      <li>Support for Torch Distributed</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/features/torch_distributed.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+          
         
       </li>
     
@@ -437,99 +441,106 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <h1>Source code for torch_xla.debug.metrics</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+  <div class="section" id="support-for-torch-distributed">
+<h1>Support for Torch Distributed<a class="headerlink" href="#support-for-torch-distributed" title="Permalink to this heading">¶</a></h1>
+<p>Before the 2.5 release, PyTorch/XLA only supported collective ops through the custom API call <code class="docutils literal notranslate"><span class="pre">torch_xla.core.xla_model.*</span></code>.  In the 2.5 release, we adopted <code class="docutils literal notranslate"><span class="pre">torch.distributed.*</span></code> in PyTorch/XLA for both Dynamo and non-Dynamo cases.</p>
+<div class="section" id="collective-ops-lowering">
+<h2>Collective ops lowering<a class="headerlink" href="#collective-ops-lowering" title="Permalink to this heading">¶</a></h2>
+<div class="section" id="collective-ops-lowering-stack">
+<h3>Collective ops lowering stack<a class="headerlink" href="#collective-ops-lowering-stack" title="Permalink to this heading">¶</a></h3>
+<p>After introducing the <a class="reference external" href="https://github.com/pytorch/pytorch/issues/93173">traceable collective communication APIs</a>, dynamo can support the collective ops with reimplementing lowering in PyTorch/XLA. The collective op is only traceable through <code class="docutils literal notranslate"><span class="pre">torch.ops._c10d_functional</span></code> call. Below is the figure that shows how the collective op, <code class="docutils literal notranslate"><span class="pre">all_reduce</span></code> in this case, is lowered between torch and torch_xla:</p>
+<p><span class="raw-html-m2r"><img src="../_static/img/dist_op_stack.png" alt="Alt Text" width="500" height="400"></span></p>
+<p><a href="#id1"><span class="problematic" id="id2">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Collective ops lowering stack</span></span>*</p>
+</div>
+<div class="section" id="non-dynamo-case">
+<h3>non-Dynamo case<a class="headerlink" href="#non-dynamo-case" title="Permalink to this heading">¶</a></h3>
+<p>Collective ops are lowered through registering the <code class="docutils literal notranslate"><span class="pre">ProcessGroupXla</span></code>, which is derived from <code class="docutils literal notranslate"><span class="pre">ProcessGroup</span></code>:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># torch_xla/distributed/xla_backend.py</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_create_xla_process_group</span><span class="p">(</span><span class="n">prefix_store</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
+  <span class="k">assert</span> <span class="ow">not</span> <span class="n">xr</span><span class="o">.</span><span class="n">is_spmd</span><span class="p">(</span>
+  <span class="p">),</span> <span class="s2">&quot;XLA backend is not supported with SPMD. Please use a CPU process group instead.&quot;</span>
+  <span class="k">return</span> <span class="n">ProcessGroupXla</span><span class="p">(</span><span class="n">prefix_store</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="counter_names"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.counter_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">counter_names</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves all the currently active counter names.&quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_counter_names</span><span class="p">()</span></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">_register_xla_backend</span><span class="p">():</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">Backend</span><span class="o">.</span><span class="n">register_backend</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">_create_xla_process_group</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="counter_value"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.counter_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">counter_value</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the value of an active counter.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    name (string): The name of the counter whose value needs to be retrieved.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    The counter value as integer.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_counter_value</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">clear_counters</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all counters.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_clear_xla_counters</span><span class="p">()</span>
-
-
-<div class="viewcode-block" id="metric_names"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metric_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metric_names</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves all the currently active metric names.&quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metric_names</span><span class="p">()</span></div>
-
-
-<div class="viewcode-block" id="metric_data"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metric_data">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metric_data</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the data of an active metric.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    name (string): The name of the metric whose data needs to be retrieved.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    The metric data, which is a tuple of (TOTAL_SAMPLES, ACCUMULATOR, SAMPLES).</span>
-<span class="sd">    The `TOTAL_SAMPLES` is the total number of samples which have been posted to</span>
-<span class="sd">    the metric. A metric retains only a given number of samples (in a circular</span>
-<span class="sd">    buffer).</span>
-<span class="sd">    The `ACCUMULATOR` is the sum of the samples over `TOTAL_SAMPLES`.</span>
-<span class="sd">    The `SAMPLES` is a list of (TIME, VALUE) tuples.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metric_data</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">clear_metrics</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all metrics.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_clear_xla_metrics</span><span class="p">()</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">clear_all</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all metrics and all counters.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">clear_metrics</span><span class="p">()</span>
-  <span class="n">clear_counters</span><span class="p">()</span>
-
-
-<div class="viewcode-block" id="metrics_report"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metrics_report">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metrics_report</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a string containing the full metrics and counters report.&quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metrics_report</span><span class="p">()</span></div>
-
-
-<div class="viewcode-block" id="short_metrics_report"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.short_metrics_report">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">short_metrics_report</span><span class="p">(</span><span class="n">counter_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">metric_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a string containing the full metrics and counters report.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    counter_names (list): The list of counter names whose data needs to be printed.</span>
-<span class="sd">    metric_names (list): The list of metric names whose data needs to be printed.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">counter_names</span><span class="p">:</span>
-    <span class="n">counter_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CachedCompile&#39;</span><span class="p">,</span> <span class="s1">&#39;MarkStep&#39;</span><span class="p">,</span> <span class="s1">&#39;DynamoSyncInputExecuteTime&#39;</span><span class="p">]</span>
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">metric_names</span><span class="p">:</span>
-    <span class="n">metric_names</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s1">&#39;CompileTime&#39;</span><span class="p">,</span> <span class="s1">&#39;ExecuteTime&#39;</span><span class="p">,</span> <span class="s1">&#39;ExecuteReplicatedTime&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;TransferToDeviceTime&#39;</span><span class="p">,</span> <span class="s1">&#39;TransferFromDeviceTime&#39;</span>
-    <span class="p">]</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_short_xla_metrics_report</span><span class="p">(</span><span class="n">counter_names</span><span class="p">,</span> <span class="n">metric_names</span><span class="p">)</span></div>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">executed_fallback_ops</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a list of operations that were run in fallback mode.&quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_executed_fallback_ops</span><span class="p">()</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProcessGroupXla</span><span class="p">(</span><span class="n">ProcessGroup</span><span class="p">):</span>
+  <span class="o">...</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensors</span><span class="p">,</span> <span class="n">all_reduce_options</span><span class="p">):</span>
+    <span class="o">...</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">allgather</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_tensors_list</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">opts</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="o">...</span>
 </pre></div>
+</div>
+<p>The corresponding xla dist backend is initialized when we call:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">_mp_fn</span><span class="p">(</span><span class="n">rank</span><span class="p">):</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
+
+<span class="n">In</span> <span class="n">this</span> <span class="n">way</span><span class="p">,</span> <span class="n">collective</span> <span class="n">ops</span> <span class="n">will</span> <span class="n">be</span> <span class="n">called</span> <span class="n">based</span> <span class="n">on</span> <span class="n">the</span> <span class="n">progress</span> <span class="n">group</span> <span class="n">instance</span><span class="p">:</span>
+
+  <span class="c1"># E.g., pytorch/pytorch/blob/main/torch/distributed/distributed_c10d.py</span>
+  <span class="nd">@_exception_logger</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">all_gather</span><span class="p">(</span><span class="n">tensor_list</span><span class="p">,</span> <span class="n">tensor</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">async_op</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="n">group</span> <span class="o">=</span> <span class="n">group</span> <span class="ow">or</span> <span class="n">_get_default_group</span><span class="p">()</span>
+    <span class="n">work</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">allgather</span><span class="p">([</span><span class="n">tensor_list</span><span class="p">],</span> <span class="p">[</span><span class="n">tensor</span><span class="p">])</span> <span class="c1"># uses ProcessGroupXla.allgather instead</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="dynamo-case">
+<h3>Dynamo case<a class="headerlink" href="#dynamo-case" title="Permalink to this heading">¶</a></h3>
+<p>For dynamo case, certain collective ops are remapped to the new function in <a class="reference external" href="https://github.com/pytorch/pytorch/blob/v2.5.0-rc10/torch/distributed/_functional_collectives.py#L1129-L1150">pytorch/torch/distributed/_functional_collectives.py</a>. For example, <code class="docutils literal notranslate"><span class="pre">all_reduce()</span></code> will be mapped to <code class="docutils literal notranslate"><span class="pre">all_reduce_inplace()</span></code>, where eventually <code class="docutils literal notranslate"><span class="pre">torch.ops._c10d_functional.all_reduce()</span></code>. Once we reach the _c10d_functional, we can rewrite the op through PyTorch/Xla lowering:</p>
+<div class="highlight-C++ notranslate"><div class="highlight"><pre><span></span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">all_reduce</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">reduceOp</span><span class="p">,</span>
+<span class="w">                      </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="cm">/*group_name*/</span><span class="p">)</span><span class="w">  </span><span class="p">{...}</span>
+
+<span class="n">TORCH_LIBRARY_IMPL</span><span class="p">(</span><span class="n">_c10d_functional</span><span class="p">,</span><span class="w"> </span><span class="n">XLA</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">m</span><span class="p">.</span><span class="n">impl</span><span class="p">(</span><span class="s">&quot;all_reduce&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">all_reduce</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="api-description">
+<h2>API description<a class="headerlink" href="#api-description" title="Permalink to this heading">¶</a></h2>
+<p>For release 2.5, we now support four collective operations for both Dynamo and non-Dynamo cases. Our goal is to align the distributed operation (dist op) APIs with PyTorch’s upstream implementation. While the function signatures remain consistent, certain input restrictions still apply.
+For instance, specifying multiple groups for distributed collective operations is not yet supported. For usage examples, refer to <a class="reference external" href="https://github.com/pytorch/xla/blob/v2.5.0-rc10/test/pjrt/test_collective_ops_tpu.py">test_collective_ops_tpu.py</a>, which demonstrates the use of dist ops in both Dynamo and non-Dynamo scenarios.
+Below are the details for each operation:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">dist</span><span class="o">.</span><span class="n">all_reduce</span><span class="p">(</span><span class="nb">input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span> <span class="o">=</span> <span class="n">ReduceOp</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">all_reduce</span></code> performs an in-place reduction on the <code class="docutils literal notranslate"><span class="pre">input</span></code> tensor by aggregating data from all nodes.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">dist</span><span class="o">.</span><span class="n">all_gather_into_tensor</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">input</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">all_gather_into_tensor</span></code> gathers the input tensor from all nodes and updates the <code class="docutils literal notranslate"><span class="pre">output</span></code> tensor in-place. It also returns an alias of the output.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">dist</span><span class="o">.</span><span class="n">reduce_scatter_tensor</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span> <span class="o">=</span> <span class="n">ReduceOp</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">reduce_scatter_tensor</span></code> reduces the input tensor across all nodes and distributes the result to the <code class="docutils literal notranslate"><span class="pre">output</span></code> tensor in-place. It returns an alias of the output.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">dist</span><span class="o">.</span><span class="n">all_to_all_single</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">output_split_sizes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">input_split_sizes</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">all_to_all_single</span></code> function performs an all-to-all communication, updating the output tensor in-place and returning its alias.</p>
+<p>Note: Although <code class="docutils literal notranslate"><span class="pre">output_split_sizes</span></code> and <code class="docutils literal notranslate"><span class="pre">input_split_sizes</span></code> are accepted as arguments, they must be either None or set to all 1s. This limitation reflects a compromise between maintaining PyTorch’s API signature and the constraints of the XLA AllToAll operation.</p>
+</div>
+</div>
+
 
              </article>
              
             </div>
             <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../perf/ddp.html" class="btn btn-neutral float-right" title="Distributed Data Parallel (DDP)" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="../perf/spmd_distributed_checkpoint.html" class="btn btn-neutral" title="Distributed Checkpointing" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
   
 
   
@@ -558,7 +569,19 @@
         <div class="pytorch-content-right" id="pytorch-content-right">
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
-              
+              <ul>
+<li><a class="reference internal" href="#">Support for Torch Distributed</a><ul>
+<li><a class="reference internal" href="#collective-ops-lowering">Collective ops lowering</a><ul>
+<li><a class="reference internal" href="#collective-ops-lowering-stack">Collective ops lowering stack</a></li>
+<li><a class="reference internal" href="#non-dynamo-case">non-Dynamo case</a></li>
+<li><a class="reference internal" href="#dynamo-case">Dynamo case</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#api-description">API description</a></li>
+</ul>
+</li>
+</ul>
+
             </div>
           </div>
         </div>
@@ -571,21 +594,21 @@
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-         <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-         <script src="../../../_static/jquery.js"></script>
-         <script src="../../../_static/underscore.js"></script>
-         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-         <script src="../../../_static/doctools.js"></script>
-         <script src="../../../_static/sphinx_highlight.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../_static/doctools.js"></script>
+         <script src="../_static/sphinx_highlight.js"></script>
      
 
   
 
-  <script type="text/javascript" src="../../../_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="../../../_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
-  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -690,7 +713,7 @@
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="../../../_static/images/pytorch-x.svg">
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -841,7 +864,7 @@
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="../../../_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {

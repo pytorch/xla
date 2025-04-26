@@ -1,0 +1,1248 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>PJRT Runtime &mdash; PyTorch/XLA master documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','');</script>
+    <!-- End Google Tag Manager -->
+  
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+
+          <li class="main-menu-item">
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Learn
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/get-started">
+                  <span class=dropdown-title>Get Started</span>
+                  <p>Run PyTorch locally or get started quickly with one of the supported cloud platforms</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials">
+                  <span class="dropdown-title">Tutorials</span>
+                  <p>Whats new in PyTorch tutorials</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/basics/intro.html">
+                  <span class="dropdown-title">Learn the Basics</span>
+                  <p>Familiarize yourself with PyTorch concepts and modules</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/recipes/recipes_index.html">
+                  <span class="dropdown-title">PyTorch Recipes</span>
+                  <p>Bite-size, ready-to-deploy PyTorch code examples</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/introyt.html">
+                  <span class="dropdown-title">Intro to PyTorch - YouTube Series</span>
+                  <p>Master PyTorch basics with our engaging YouTube tutorial series</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Ecosystem
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem">
+                  <span class="dropdown-title">Tools</span>
+                  <p>Learn about the tools and frameworks in the PyTorch Ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class=dropdown-title>Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class=dropdown-title>Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class=dropdown-title>Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2024">
+                  <span class="dropdown-title">Contributor Awards - 2024</span>
+                  <p>Award winners announced at this year's PyTorch Conference</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Edge
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/edge">
+                  <span class="dropdown-title">About PyTorch Edge</span>
+                  <p>Build innovative and privacy-aware AI experiences for edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
+                  <span class="dropdown-title">ExecuTorch</span>
+                  <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch/stable/index.html">
+                  <span class="dropdown-title">ExecuTorch Docs</span>
+                </a>
+              </div>
+            </div>  
+          </li>
+
+          <li class="main-menu-item">
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p>Explore the documentation for comprehensive guidance on how to use PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/pytorch-domains">
+                  <span class="dropdown-title">PyTorch Domains</span>
+                  <p>Read the PyTorch Domains documentation to learn more about domain-specific libraries</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Blogs & News 
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/blog/">
+                  <span class="dropdown-title">PyTorch Blog</span>
+                  <p>Catch up on the latest technical news and happenings</p>
+                </a>
+                 <a class="nav-dropdown-item" href="https://pytorch.org/community-blog">
+                  <span class="dropdown-title">Community Blog</span>
+                  <p>Stories from the PyTorch ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/videos">
+                  <span class="dropdown-title">Videos</span>
+                  <p>Learn about the latest PyTorch tutorials, new, and more </p>
+                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
+                  <span class="dropdown-title">Community Stories</span>
+                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/events">
+                  <span class="dropdown-title">Events</span>
+                  <p>Find events, webinars, and podcasts</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/newsletter">
+                  <span class="dropdown-title">Newsletter</span>
+                  <p>Stay up-to-date with the latest updates</p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                About
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
+                  <span class="dropdown-title">PyTorch Foundation</span>
+                  <p>Learn more about the PyTorch Foundation</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
+                  <span class="dropdown-title">Governing Board</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/credits">
+                  <span class="dropdown-title">Cloud Credit Program</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tac">
+                  <span class="dropdown-title">Technical Advisory Council</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/staff">
+                  <span class="dropdown-title">Staff</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
+                  <span class="dropdown-title">Contact Us</span>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li class="main-menu-item">
+            <div class="no-dropdown">
+              <a href="https://pytorch.org/join" data-cta="join">
+                Become a Member
+              </a>
+            </div>
+          </li>
+          <li>
+           <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="github-icon">
+             </a>
+           </div>
+          </li>
+          <!--- TODO: This block adds the search icon to the nav bar. We will enable it later. 
+          <li>
+            <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="search-icon">
+             </a>
+            </div>
+          </li>
+          --->
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+                <div class="version">
+                  master (2.8.0+gitcaa40cc )
+                </div>
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xla-overview.html">Pytorch/XLA Overview</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/torch_distributed.html">Support for Torch Distributed</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">Distributed Data Parallel (DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Techniques</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dynamic_shape.html">Dynamic Shapes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="troubleshoot.html">Troubleshooting Basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Troubleshooting recompilations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Building with Bazel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure A Development Environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/cpp_debugger.html">C++ Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">Op Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api-guide.html">PyTorch/XLA API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="../index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+      <li>PJRT Runtime</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/learn/_pjrt.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          <!-- Google Tag Manager (noscript) -->
+          <noscript><iframe src="https://www.googletagmanager.com/ns.html?id="
+          height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+          <!-- End Google Tag Manager (noscript) -->
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <div class="section" id="pjrt-runtime">
+<h1>PJRT Runtime<a class="headerlink" href="#pjrt-runtime" title="Permalink to this heading">¶</a></h1>
+<p>PyTorch/XLA has migrated from the TensorFlow-based XRT runtime to the
+<a class="reference external" href="https://github.com/openxla/xla/tree/main/xla/pjrt">PJRT runtime</a> used
+by <a class="reference external" href="https://github.com/google/jax">JAX</a>.</p>
+<p>If you encounter a bug with PJRT, please file an issue on GitHub with
+the <code class="docutils literal notranslate"><span class="pre">runtime</span></code> tag.</p>
+<p><em>New features in PyTorch/XLA r2.1</em>:</p>
+<ul class="simple">
+<li><p>PJRT is stable in PyTorch/XLA r2.1!</p></li>
+<li><p>Public runtime APIs have moved from <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt</span></code> to
+<code class="docutils literal notranslate"><span class="pre">torch_xla.runtime</span></code>.</p>
+<ul>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> init method has been renamed to <code class="docutils literal notranslate"><span class="pre">xla://</span></code>, and it
+is registered by <code class="docutils literal notranslate"><span class="pre">torch_xla.distributed.xla_backend</span></code>.</p></li>
+<li><p>The previous <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.*</span></code> names are still
+available in this release for compatibility.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">torchrun</span></code> is now supported when using <code class="docutils literal notranslate"><span class="pre">init_method='xla://'</span></code>.</p></li>
+<li><p>New plugins for XPU and Neuron via the PJRT C API.</p></li>
+</ul>
+<p><em>New features in PyTorch/XLA r2.0</em>:</p>
+<ul class="simple">
+<li><p>PJRT will be configured by default if you don’t pass in any other
+runtime configuration. If you continue to set XRT configuration
+(<code class="docutils literal notranslate"><span class="pre">XRT_TPU_CONFIG</span></code>), this change has no impact</p></li>
+<li><p>New TPU runtime implementation in <code class="docutils literal notranslate"><span class="pre">libtpu</span></code> improves performance by
+up to 30%.</p></li>
+<li><p>New <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> implementation that scales to thousands of TPU
+cores</p></li>
+<li><p>[experimental] <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> support for TPU v2 and v3,
+including <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code></p></li>
+</ul>
+<div class="section" id="tl-dr">
+<h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>To use the PJRT preview runtime, set the <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment
+variable to <code class="docutils literal notranslate"><span class="pre">CPU</span></code>, <code class="docutils literal notranslate"><span class="pre">TPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">CUDA</span></code></p></li>
+<li><p>In XRT, all distributed workloads are multiprocess, with one process
+per device. On TPU v2 and v3 in PJRT, workloads are multiprocess and
+multithreaded (4 processes with 2 threads each), so your workload
+should be thread-safe. See <a class="reference external" href="#multithreading-on-tpu-v2v3">Multithreading on TPU
+v2/v3</a> and the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing">Multiprocessing section
+of the API
+guide</a>
+for more information. Key differences to keep in mind:</p>
+<ul>
+<li><p>To initialize a model in a thread-safe way, either broadcast the
+parameters across replicas after initialization
+(<code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt.broadcast_master_param</span></code>) or load
+each replica’s parameters from a common checkpoint.</p></li>
+<li><p>For other random number generation, use <code class="docutils literal notranslate"><span class="pre">torch.Generator</span></code> where
+possible. The global <code class="docutils literal notranslate"><span class="pre">torch</span></code> RNG is <em>not</em> thread-safe, even if
+you set the same <code class="docutils literal notranslate"><span class="pre">torch.manual_seed</span></code> across replicas.</p></li>
+<li><p>To use <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code>, import
+<code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt_backend</span></code> and use the <code class="docutils literal notranslate"><span class="pre">xla://</span></code>
+<code class="docutils literal notranslate"><span class="pre">init_method</span></code>.</p></li>
+<li><p>These steps are optional for GPU and TPU v4.</p></li>
+</ul>
+</li>
+</ul>
+<p>Sample diff from XRT to PJRT:</p>
+<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span>import os
+
+import torch
+import torch.nn as nn
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.optim as optim
+import torch.distributed as dist
+import torch_xla
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.parallel_loader as pl
+import torch_xla.distributed.xla_backend
+<span class="gi">+import torch_xla.runtime as xr</span>
+
+
+def _mp_fn(index):
+<span class="w"> </span> device = xm.xla_device()
+<span class="gd">-  dist.init_process_group(&#39;xla&#39;, rank=xr.global_ordinal(), world_size=xr.world_size())</span>
+<span class="gi">+  dist.init_process_group(&#39;xla&#39;, init_method=&#39;xla://&#39;)</span>
+
+<span class="w"> </span> torch.manual_seed(42)
+<span class="w"> </span> model = nn.Linear(128, 10).to(device)
+
+<span class="gi">+  # Optional for TPU v4 and GPU</span>
+<span class="gi">+  xm.broadcast_master_param(model)</span>
+<span class="w"> </span> model = DDP(model, gradient_as_bucket_view=True)
+
+<span class="w"> </span> loss_fn = nn.MSELoss()
+<span class="w"> </span> optimizer = optim.SGD(model.parameters(), lr=.001)
+
+<span class="w"> </span> for i in range(10):
+<span class="w"> </span>   data, target = torch.randn((128, 128), device=device), torch.randn((128, 10), device=device)
+
+<span class="w"> </span>   optimizer.zero_grad()
+<span class="w"> </span>   output = model(data)
+<span class="w"> </span>   loss = loss_fn(output, target)
+<span class="w"> </span>   loss.backward()
+
+<span class="w"> </span>   optimizer.step()
+<span class="w"> </span>   xm.mark_step()
+
+<span class="w"> </span> # Print mean parameters so we can confirm they&#39;re the same across replicas
+<span class="w"> </span> print([p.mean() for p in model.parameters()])
+
+if __name__ == &#39;__main__&#39;:
+<span class="gd">-  os.environ[&#39;XRT_TPU_CONFIG&#39;] = &#39;localservice;0;localhost:51011&#39;</span>
+<span class="gd">-  os.environ[&#39;MASTER_ADDR&#39;] = &#39;localhost&#39;</span>
+<span class="gd">-  os.environ[&#39;MASTER_PORT&#39;] = &#39;12355&#39;</span>
+
+<span class="gi">+  # Recommended: set PJRT_DEVICE to your local device type</span>
+<span class="gi">+  os.environ[&#39;PJRT_DEVICE&#39;] = &#39;TPU&#39;</span>
+
+<span class="w"> </span> torch_xla.launch(_mp_fn)
+</pre></div>
+</div>
+</div>
+<div class="section" id="benefits">
+<h2>Benefits<a class="headerlink" href="#benefits" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Simple runtime configuration: just set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> to <code class="docutils literal notranslate"><span class="pre">TPU</span></code>,
+<code class="docutils literal notranslate"><span class="pre">CPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">CUDA</span></code> and start using XLA! Or, let PJRT select a device
+automatically based on your environment.</p></li>
+<li><p>Improved performance: reduced overhead from gRPC means faster
+end-to-end execution. On TorchBench 2.0, we observed a &amp;gt;35%
+improvement in training time on TPU v4.</p></li>
+<li><p>Easy pod execution: just copy your code to each TPU worker, and
+execute them all at the same time with
+<code class="docutils literal notranslate"><span class="pre">gcloud</span> <span class="pre">compute</span> <span class="pre">tpus</span> <span class="pre">tpuvm</span> <span class="pre">ssh</span> <span class="pre">--worker=all</span></code>.</p></li>
+<li><p>Better scaling: removes <a class="reference external" href="https://github.com/pytorch/xla/pull/3920">XRT’s limitation on parameter
+sizes</a> and supports up to
+2048 TPU chips.</p></li>
+</ul>
+</div>
+<div class="section" id="quickstart">
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this heading">¶</a></h2>
+<p>To start using PJRT with PyTorch/XLA, all you need to do is set the
+<code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment variable. If you’re working on a TPU v2 or v3,
+keep reading to learn about the differences between TPU v2 and v3 and
+v4.</p>
+<div class="section" id="cpu">
+<h3>CPU<a class="headerlink" href="#cpu" title="Permalink to this heading">¶</a></h3>
+<p>On any machine with PyTorch/XLA installed, you can run our MNIST example
+on CPU like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_mnist</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="tpu">
+<h3>TPU<a class="headerlink" href="#tpu" title="Permalink to this heading">¶</a></h3>
+<p>To create a new TPU with PyTorch/XLA r2.0 installed:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm create $USER-pjrt --accelerator-type=v4-8 --version=tpu-vm-v4-pt-2.0 --zone=us-central2-b --project=$PROJECT
+</pre></div>
+</div>
+<p>On a v4-8, you can run our ResNet50 example like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="o">--</span><span class="n">depth</span><span class="o">=</span><span class="mi">1</span> <span class="o">--</span><span class="n">branch</span> <span class="n">r2</span><span class="mf">.0</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">.</span><span class="n">git</span>
+<span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">256</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<p>By default, PJRT will use all TPU chips. To use only one TPU chip,
+configure <code class="docutils literal notranslate"><span class="pre">TPU_PROCESS_BOUNDS</span></code> and <code class="docutils literal notranslate"><span class="pre">TPU_VISIBLE_CHIPS</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">TPU_PROCESS_BOUNDS</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span> <span class="n">TPU_VISIBLE_CHIPS</span><span class="o">=</span><span class="mi">0</span> <span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">256</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<div class="section" id="pods">
+<h4>Pods<a class="headerlink" href="#pods" title="Permalink to this heading">¶</a></h4>
+<p>On TPU Pods, use <code class="docutils literal notranslate"><span class="pre">gcloud</span></code> to run your command on each TPU in parallel:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command=&quot;git clone --depth=1 --branch r1.13 https://github.com/pytorch/xla.git&quot;
+gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command=&quot;PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1&quot;
+</pre></div>
+</div>
+</div>
+<div class="section" id="docker">
+<h4>Docker<a class="headerlink" href="#docker" title="Permalink to this heading">¶</a></h4>
+<p>You can also use Docker to run your workload in a container with
+PyTorch/XLA preinstalled:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export DOCKER_IMAGE=gcr.io/...
+
+# Optional: authenticate docker if your image is in a private GCP repository
+gcloud compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command &quot;sudo gcloud auth configure-docker&quot;
+
+# Run your workload
+gcloud compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command &quot;sudo docker run --rm --privileged --net=host -e PJRT_DEVICE=TPU $DOCKER_IMAGE python pytorch/xla/test/test_train_mp_imagenet.py --fake_data&quot;
+</pre></div>
+</div>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">run</span></code> requires privileged access to the host
+(<code class="docutils literal notranslate"><span class="pre">--privileged</span></code>) to expose the TPU device to the container. Docker on
+TPU pods is only supported with host networking <code class="docutils literal notranslate"><span class="pre">--net=host</span></code> at this
+time. See the <a class="reference external" href="https://cloud.google.com/tpu/docs/run-in-container">Cloud TPU
+documentation</a> for
+more information.</p>
+</div>
+</div>
+<div class="section" id="gpu">
+<h3>GPU<a class="headerlink" href="#gpu" title="Permalink to this heading">¶</a></h3>
+</div>
+<div class="section" id="single-node-gpu-training">
+<h3>Single-node GPU training<a class="headerlink" href="#single-node-gpu-training" title="Permalink to this heading">¶</a></h3>
+<p>To use GPUs with PJRT, simply set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=CUDA</span></code> and configure
+<code class="docutils literal notranslate"><span class="pre">GPU_NUM_DEVICES</span></code> to the number of devices on the host. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CUDA</span> <span class="n">GPU_NUM_DEVICES</span><span class="o">=</span><span class="mi">4</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<p>You can also use <code class="docutils literal notranslate"><span class="pre">torchrun</span></code> to initiate the single-node multi-GPU
+training. For example,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+</pre></div>
+</div>
+<p>In the above example, <code class="docutils literal notranslate"><span class="pre">--nnodes</span></code> means how many machines (physical
+machines or VMs) to be used (it is 1 since we do single-node training).
+<code class="docutils literal notranslate"><span class="pre">--nproc-per-node</span></code> means how many GPU devices to be used.</p>
+</div>
+<div class="section" id="multi-node-gpu-training">
+<h3>Multi-node GPU training<a class="headerlink" href="#multi-node-gpu-training" title="Permalink to this heading">¶</a></h3>
+<p><strong>Note that this feature only works for cuda 12+</strong>. Similar to how
+PyTorch uses multi-node training, you can run the command as below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun \
+--nnodes=${NUMBER_GPU_VM} \
+--node_rank=${CURRENT_NODE_RANK} \
+--nproc_per_node=${NUMBER_LOCAL_GPU_DEVICES} \
+--rdzv_endpoint=&lt;internal_ip_address:port&gt; multinode_training.py
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--nnodes</span></code>: how many GPU machines to be used.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--node_rank</span></code>: the index of the current GPU machines. The value can
+be 0, 1, …, ${NUMBER_GPU_VM}-1.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--nproc_per_node</span></code>: the number of GPU devices to be used on the
+current machine.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--rdzv_endpoint</span></code>: the endpoint of the GPU machine with
+node_rank==0, in the form <code class="docutils literal notranslate"><span class="pre">host:port</span></code>. The <code class="docutils literal notranslate"><span class="pre">host</span></code> will be the
+internal IP address. The <code class="docutils literal notranslate"><span class="pre">port</span></code> can be any available port on the
+machine. For single-node training/inference, this parameter can be
+omitted.</p></li>
+</ul>
+<p>For example, if you want to train on 2 GPU machines: machine_0 and
+machine_1, on the first GPU machine machine_0, run</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=CUDA torchrun \</span>
+<span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
+<span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">0</span> \
+<span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">4</span> \
+<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot;</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span>  <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<p>On the second GPU machine, run</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=CUDA torchrun \</span>
+<span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
+<span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">1</span> \
+<span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">4</span> \
+<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot;</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span>  <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<p>the difference between the 2 commands above are <code class="docutils literal notranslate"><span class="pre">--node_rank</span></code> and
+potentially <code class="docutils literal notranslate"><span class="pre">--nproc_per_node</span></code> if you want to use different number of
+GPU devices on each machine. All the rest are identical. For more
+information about <code class="docutils literal notranslate"><span class="pre">torchrun</span></code>, please refer to this
+<a class="reference external" href="https://pytorch.org/docs/stable/elastic/run.html">page</a>.</p>
+</div>
+</div>
+<div class="section" id="differences-from-xrt">
+<h2>Differences from XRT<a class="headerlink" href="#differences-from-xrt" title="Permalink to this heading">¶</a></h2>
+<p>Although in most cases we expect PJRT and XRT to work mostly
+interchangeably from the end-user’s perspective (especially on TPU v4),
+there are some subtle differences that are important to keep in mind.
+Importantly, XRT was designed around the TPU Node architecture, so it
+will always spawn a client and a server process, even on TPU VMs. Thus,
+every batch of inputs has additional latency from serializing and
+deserializing data to send it over the network.</p>
+<p>PJRT uses the local device directly with no intermediate server process.
+In the default configuration, PJRT will create one process per TPU chip,
+or 4 processes per TPU host. See the <a class="reference external" href="https://cloud.google.com/tpu/docs/system-architecture-tpu-vm">Cloud TPU
+documentation</a>
+for more information about TPU architecture.</p>
+<ul class="simple">
+<li><p>Performance gains are possible for workloads constrained overhead
+from .</p></li>
+<li><p>Under XRT, the server process is the only process that interacts
+with the TPU devices, and client processes don’t have direct access
+to the TPU devices. When profiling a single-host TPU (e.g. v3-8 or
+v4-8), you would normally see 8 device traces (one for each TPU
+core). With PJRT, each process has one chip, and a profile from that
+process will show only 2 TPU cores.</p>
+<ul>
+<li><p>For the same reason, profiling does not work on TPU Pods with
+XRT, because the server process runs independently from the
+user’s model code. PJRT does not have that constraint, so it is
+possible to profile 2 TPU cores per process in a TPU Pod.</p></li>
+</ul>
+</li>
+<li><p>PJRT only supports the TPU VM architecture and we have no plans to
+support the TPU Node architecture with PJRT.</p></li>
+<li><p>Runtime configuration is significantly simpler with PJRT. <code class="docutils literal notranslate"><span class="pre">xla_dist</span></code>
+is not required to run TPU Pod workloads. Instead, copy your code to
+each TPU host
+(<code class="docutils literal notranslate"><span class="pre">[gcloud</span> <span class="pre">compute</span> <span class="pre">tpus</span> <span class="pre">tpu-vm</span>&#160;&#160; <span class="pre">scp](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/scp)</span></code>)
+and run the code on each host in parallel
+(e.g. <code class="docutils literal notranslate"><span class="pre">[gcloud</span> <span class="pre">compute</span> <span class="pre">tpus</span> <span class="pre">tpu-vm</span>&#160;&#160; <span class="pre">ssh</span> <span class="pre">--workers=all</span> <span class="pre">--command=&quot;PJRT_DEVICE=TPU</span> <span class="pre">python</span>&#160;&#160; <span class="pre">run.py&quot;](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/ssh)</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> has been reimplemented using XLA-native collective
+communication to enhance stability on large TPU pods. See below for
+more details.</p></li>
+</ul>
+<div class="section" id="id3">
+<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<p>On TPU v2 and v3, <strong>distributed workloads always run multithreaded</strong>,
+since each TPU core exposes two TPU cores as devices and only one
+process may open a TPU chip at a time. In its default configuration,
+<code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code> automatically spawns as many processes as possible (4 per
+TPU host) and creates two threads per process (one per TPU core).</p>
+<p>Note: on TPU v4, each TPU chip is represented as one PyTorch device, so
+distributed workloads will run across 4 processes, each with only one
+thread. This is identical to XRT’s behavior.</p>
+<p>In most cases, this will not require substantial changes to your
+existing code. The main change you will have to make in most cases is to
+model initialization. Because <code class="docutils literal notranslate"><span class="pre">torch</span></code>‘s global RNG is shared between
+threads, results will vary between threads and runs even if you set
+<code class="docutils literal notranslate"><span class="pre">torch.manual_seed</span></code> to the same value in every replica. To get
+consistent parameters between replicas, either use
+<code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt.broadcast_master_param</span></code> to broadcast one
+replica’s parameters to all other replicas, or load each replica’s
+parameters from a common checkpoint.</p>
+</div>
+<div class="section" id="changes-to-xm-rendezvous">
+<h3>Changes to xm.rendezvous<a class="headerlink" href="#changes-to-xm-rendezvous" title="Permalink to this heading">¶</a></h3>
+<p><em>New in PyTorch/XLA r2.0</em></p>
+<p>With XRT, worker 0 runs a mesh master service, and all processes on all
+workers connect to that service over gRPC. In practice, we found that
+running a single mesh master process was unreliable on TPU pods with
+thousands of chips due to the number of inbound connections to worker 0.
+A single client process timing out could cause a failure and force the
+entire workload to restart.</p>
+<p>Thus, we have reimplemented <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> with native XLA collective
+communication, which is much more stable and well-tested on large TPU
+pods. This imposes two new constraints compared to the XRT
+implementation:</p>
+<ul class="simple">
+<li><p>Because the payload has to become part of the XLA graph,
+<code class="docutils literal notranslate"><span class="pre">xm.mark_step</span></code> is called both before and after the data is
+transferred. Calling <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> in the middle of model code may
+force an unwanted compilation.</p></li>
+<li><p>Because XLA does not permit collective operations to run on a subset
+of workers, all workers must participate in the <code class="docutils literal notranslate"><span class="pre">rendezvous</span></code>.</p></li>
+</ul>
+<p>If you require the old behavior of <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> (i.e. communicating
+data without altering the XLA graph and/or synchronizing a subset of
+workers), consider using <code class="docutils literal notranslate"><span class="pre">`torch.distributed.barrier</span></code>
+&lt;<a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier&amp;gt;[__">https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier&amp;gt;[__</a>
+or ]{.title-ref}<code class="docutils literal notranslate"><span class="pre">torch.distributed.all_gather_object</span></code>
+&lt;<a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object&amp;gt;[__">https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object&amp;gt;[__</a>
+with a ]{.title-ref}[gloo]{.title-ref}[ process group. If you are also
+using the ]{.title-ref}[xla]{.title-ref}[
+]{.title-ref}[torch.distributed]{.title-ref}[ backend, you can use
+]{.title-ref}[torch.new<a href="#id4"><span class="problematic" id="id5">*</span></a>group]{.title-ref}[ to create a
+]{.title-ref}[gloo]{.title-ref}[ subgroup. See <a href="#id6"><span class="problematic" id="id7">`</span></a>this example
+https://pytorch.org/docs/stable/distributed.html#monitored-barrier]{.title-ref}*_
+from the PyTorch documentation. Keep in mind these constraints:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> is not fully supported on TPU v2/v3. Only a
+subset of operations with the <code class="docutils literal notranslate"><span class="pre">xla</span></code> backend are implemented, and
+<code class="docutils literal notranslate"><span class="pre">gloo</span></code> will likely not work as expected in a multithreaded context.</p></li>
+<li><p>In our experiments, <code class="docutils literal notranslate"><span class="pre">gloo</span></code> does not scale well to thousands of TPU
+chips, so expect this alternative to be less reliable than using
+<code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> with PJRT at large scales.</p></li>
+</ul>
+</div>
+<div class="section" id="pjrt-and-torch-distributed">
+<h3>PJRT and torch.distributed<a class="headerlink" href="#pjrt-and-torch-distributed" title="Permalink to this heading">¶</a></h3>
+<p><em>New in PyTorch/XLA r2.0</em></p>
+<p>When using PJRT with <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> and
+<code class="docutils literal notranslate"><span class="pre">[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/ddp.md)</span></code>
+we strongly recommend using the new <code class="docutils literal notranslate"><span class="pre">xla://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code>, which
+automatically finds the replica IDs, world size, and master IP by
+querying the runtime. For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.distributed</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dist</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental</span><span class="w"> </span><span class="kn">import</span> <span class="n">pjrt</span>
+
+<span class="c1"># Required for `xla://` init_method and `xla` backend</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.xla_backend</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_all_gather</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+  <span class="c1"># No need to pass in `rank` or `world_size`</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
+
+  <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+  <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">get_world_size</span><span class="p">())]</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">all_gather</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+
+  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">_all_gather</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note: Although the <code class="docutils literal notranslate"><span class="pre">xla://</span></code> init_method is not required on TPU v4, it is
+still recommended. If you use <code class="docutils literal notranslate"><span class="pre">env://</span></code>, <code class="docutils literal notranslate"><span class="pre">MASTER_ADDR</span></code> must be set to IP
+host that has device 0, which is <em>not</em> always worker 0. The <code class="docutils literal notranslate"><span class="pre">xla://</span></code>
+init_method finds this IP automatically.</p>
+<p>Note: For TPU v2/v3, you still need to import
+<code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt_backend</span></code>, as TPU v2/v3 support in
+<code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> is still experimental.</p>
+<p>For more information about using <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code> on
+PyTorch/XLA, see <a class="reference external" href="./ddp.md">ddp.md</a> on TPU V4. For an example that uses
+DDP and PJRT together, run the following <a class="reference external" href="../test/test_train_mp_imagenet.py">example
+script</a> on a TPU:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>TPU<span class="w"> </span>python<span class="w"> </span>xla/test/test_train_mp_mnist.py<span class="w"> </span>--ddp<span class="w"> </span>--pjrt_distributed<span class="w"> </span>--fake_data<span class="w"> </span>--num_epochs<span class="w"> </span><span class="m">1</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="performance">
+<h2>Performance<a class="headerlink" href="#performance" title="Permalink to this heading">¶</a></h2>
+<p>TorchBench shows improvements in average training time across tasks with
+PJRT compared to XRT, with an average improvement of over 35% on TPU
+v4-8. The benefits vary significantly by task and model type, ranging
+from 0% to 175%. The following chart shows the breakdown by task:</p>
+<a class="reference external image-reference" href="../_static/img/torchbench_pjrt_vs_xrt.svg"><img alt="PJRT vs XRT" src="../_images/torchbench_pjrt_vs_xrt.svg" /></a>
+<div class="section" id="new-tpu-runtime">
+<h3>New TPU runtime<a class="headerlink" href="#new-tpu-runtime" title="Permalink to this heading">¶</a></h3>
+<p><em>New in PyTorch/XLA r2.0</em></p>
+<p>The PyTorch/XLA r2.0 release introduces support for the <a class="reference external" href="https://github.com/openxla/community/blob/main/rfcs/20230123-pjrt-plugin.md#rfc-openxla-pjrt-plugin">PJRT Plugin
+API</a>,
+used to access the new TFRT-based TPU runtime in <code class="docutils literal notranslate"><span class="pre">libtpu</span></code>. This is now
+the default runtime when <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=TPU</span></code> is set. The legacy
+StreamExecutor-based TPU runtime used in 1.13 will still be available
+with <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=TPU_LEGACY</span></code> in the 2.0 release, but it will be removed
+in a future version. If you encounter an issue that only happens on
+<code class="docutils literal notranslate"><span class="pre">TPU</span></code> and not <code class="docutils literal notranslate"><span class="pre">TPU_LEGACY</span></code>, please file an issue on GitHub.</p>
+<p>In most cases, we expect performance to be similar between the two
+runtimes, but in some cases, the new runtime may be up to 30% faster.
+The following chart shows the breakdown by task:</p>
+<a class="reference external image-reference" href="../_static/img/torchbench_tfrt_vs_se.svg"><img alt="TFRT vs StreamExecutor" src="../_images/torchbench_tfrt_vs_se.svg" /></a>
+<p>Note: the improvements shown in this chart are also included in the PJRT
+vs XRT comparison.</p>
+</div>
+</div>
+</div>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright .
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">PJRT Runtime</a><ul>
+<li><a class="reference internal" href="#tl-dr">TL;DR</a></li>
+<li><a class="reference internal" href="#benefits">Benefits</a></li>
+<li><a class="reference internal" href="#quickstart">Quickstart</a><ul>
+<li><a class="reference internal" href="#cpu">CPU</a></li>
+<li><a class="reference internal" href="#tpu">TPU</a><ul>
+<li><a class="reference internal" href="#pods">Pods</a></li>
+<li><a class="reference internal" href="#docker">Docker</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#gpu">GPU</a></li>
+<li><a class="reference internal" href="#single-node-gpu-training">Single-node GPU training</a></li>
+<li><a class="reference internal" href="#multi-node-gpu-training">Multi-node GPU training</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#differences-from-xrt">Differences from XRT</a><ul>
+<li><a class="reference internal" href="#id3">Multithreading on TPU v2/v3</a></li>
+<li><a class="reference internal" href="#changes-to-xm-rendezvous">Changes to xm.rendezvous</a></li>
+<li><a class="reference internal" href="#pjrt-and-torch-distributed">PJRT and torch.distributed</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#performance">Performance</a><ul>
+<li><a class="reference internal" href="#new-tpu-runtime">New TPU runtime</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../_static/doctools.js"></script>
+         <script src="../_static/sphinx_highlight.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">Stay up to date</li>
+            <li><a href="https://www.facebook.com/pytorch" target="_blank">Facebook</a></li>
+            <li><a href="https://twitter.com/pytorch" target="_blank">Twitter</a></li>
+            <li><a href="https://www.youtube.com/pytorch" target="_blank">YouTube</a></li>
+            <li><a href="https://www.linkedin.com/company/pytorch" target="_blank">LinkedIn</a></li>
+          </ul>  
+          </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">PyTorch Podcasts</li>
+            <li><a href="https://open.spotify.com/show/6UzHKeiy368jKfQMKKvJY5" target="_blank">Spotify</a></li>
+            <li><a href="https://podcasts.apple.com/us/podcast/pytorch-developer-podcast/id1566080008" target="_blank">Apple</a></li>
+            <li><a href="https://www.google.com/podcasts?feed=aHR0cHM6Ly9mZWVkcy5zaW1wbGVjYXN0LmNvbS9PQjVGa0lsOA%3D%3D" target="_blank">Google</a></li>
+            <li><a href="https://music.amazon.com/podcasts/7a4e6f0e-26c2-49e9-a478-41bd244197d0/PyTorch-Developer-Podcast?" target="_blank">Amazon</a></li>
+          </ul>
+         </div>
+        </div>
+        
+        <div class="privacy-policy">
+          <ul>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/terms/" target="_blank">Terms</a></li>
+            <li class="privacy-policy-links">|</li>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/privacy-policy/" target="_blank">Privacy</a></li>
+          </ul>
+        </div>
+        <div class="copyright">
+        <p>© Copyright The Linux Foundation. The PyTorch Foundation is a project of The Linux Foundation.
+          For web site terms of use, trademark policy and other policies applicable to The PyTorch Foundation please see
+          <a href="https://www.linuxfoundation.org/policies/">www.linuxfoundation.org/policies/</a>. The PyTorch Foundation supports the PyTorch open source
+          project, which has been established as PyTorch Project a Series of LF Projects, LLC. For policies applicable to the PyTorch Project a Series of LF Projects, LLC,
+          please see <a href="https://www.lfprojects.org/policies/">www.lfprojects.org/policies/</a>.</p>
+      </div>
+     </div>
+
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+           <li class="resources-mobile-menu-title">
+             <a>Learn</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/get-started">Get Started</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials">Tutorials</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/basics/intro.html">Learn the Basics</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/recipes/recipes_index.html">PyTorch Recipes</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/introyt.html">Introduction to PyTorch - YouTube Series</a>
+             </li>
+           </ul>
+           <li class="resources-mobile-menu-title">
+             <a>Ecosystem</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/ecosystem">Tools</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/#community-module">Community</a>
+             </li>
+             <li>
+               <a href="https://discuss.pytorch.org/">Forums</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/resources">Developer Resources</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2024</a>
+             </li>
+           </ul>
+
+           <li class="resources-mobile-menu-title">
+             <a>Edge</a>
+           </li>
+
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/edge">About PyTorch Edge</a>
+             </li>
+             
+             <li>
+               <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/executorch/stable/index.html">ExecuTorch Documentation</a>
+             </li>
+           </ul>
+
+           <li class="resources-mobile-menu-title">
+             <a>Docs</a>
+           </li>
+
+           <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/pytorch-domains">PyTorch Domains</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            <a>Blog & News</a>
+          </li>
+            
+           <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/blog/">PyTorch Blog</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/community-blog">Community Blog</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/videos">Videos</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/community-stories">Community Stories</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/events">Events</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/newsletter">Newsletter</a>
+             </li>
+          </ul>
+          
+          <li class="resources-mobile-menu-title">
+            <a>About</a>
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/credits">Cloud Credit Program</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/tac">Technical Advisory Council</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/staff">Staff</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/contact-us">Contact Us</a>
+            </li>
+          </ul>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>

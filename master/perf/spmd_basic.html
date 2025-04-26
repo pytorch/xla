@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>PyTorch/XLA SPMD User Guide &mdash; PyTorch/XLA master documentation</title>
+  <title>SPMD User Guide &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -31,8 +31,8 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="PyTorch/XLA SPMD advanced topics" href="spmd_advanced.html" />
-    <link rel="prev" title="Automatic Mixed Precision" href="amp.html" />
+    <link rel="next" title="SPMD advanced topics" href="spmd_advanced.html" />
+    <link rel="prev" title="Learn about TPUs" href="../accelerators/tpu.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git047de24 )
+                  master (2.8.0+gitcaa40cc )
                 </div>
               
             
@@ -313,50 +313,58 @@
               
             
             
-              <p class="caption" role="heading"><span class="caption-text">Learn about Pytorch/XLA</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic shape</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/pjrt.html">PJRT Runtime</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshoot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Learn about accelerators</span></p>
-<ul>
+<p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/torch_distributed.html">Support for Torch Distributed</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ddp.html">Distributed Data Parallel (DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
+<p class="caption" role="heading"><span class="caption-text">Advanced Techniques</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
-<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="amp.html">Automatic Mixed Precision</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_gpu.html">Running SPMD on GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ddp.html">How to do DistributedDataParallel(DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
-<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic Shapes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dynamo.html">TorchDynamo Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
+<p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure a development environment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen migration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recompilation.html">Troubleshooting recompilations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_gpu.html">Running SPMD on GPU</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Building with Bazel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure A Development Environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/cpp_debugger.html">C++ Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">Op Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
 </ul>
 
             
@@ -397,7 +405,7 @@
       </li>
 
         
-      <li>PyTorch/XLA SPMD User Guide</li>
+      <li>SPMD User Guide</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
@@ -433,18 +441,16 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="pytorch-xla-spmd-user-guide">
-<h1>PyTorch/XLA SPMD User Guide<a class="headerlink" href="#pytorch-xla-spmd-user-guide" title="Permalink to this heading">¶</a></h1>
-<p>In this user guide, we discuss how
-<a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is integrated in PyTorch/XLA,
-and provide a design overview to illustrate how the SPMD sharding
-annotation API and its constructs work.</p>
-<p>For a conceptual guide of the SPMD model of computation, you may refer to the
+  <div class="section" id="spmd-user-guide">
+<h1>SPMD User Guide<a class="headerlink" href="#spmd-user-guide" title="Permalink to this heading">¶</a></h1>
+<p>In this user guide, you will learn how
+<a class="reference external" href="https://arxiv.org/abs/2105.04663">SPMD</a> is integrated in PyTorch/XLA.</p>
+<p>For a conceptual guide of the SPMD model of computation, refer to the
 <a class="reference external" href="https://jax-ml.github.io/scaling-book/sharding/">Sharded Matrices and How to Multiply Them</a>
 section of the <em>How to Scale Your Model</em> book.</p>
 <div class="section" id="what-is-pytorch-xla-spmd">
 <h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
-<p><a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is an automatic
+<p><a class="reference external" href="https://arxiv.org/abs/2105.04663">SPMD</a> is an automatic
 parallelization system for common ML workloads. The XLA compiler will
 transform the single device program into a partitioned one with proper
 collectives, based on the user provided sharding hints. This feature
@@ -456,7 +462,7 @@ collective communications to scale.</p>
 </div>
 <div class="section" id="how-to-use-pytorch-xla-spmd">
 <h2>How to use PyTorch/XLA SPMD?<a class="headerlink" href="#how-to-use-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
-<p>Here is an simple example of using SPMD</p>
+<p>Here is an example of using SPMD</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
@@ -464,10 +470,8 @@ collective communications to scale.</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xs</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mesh</span>
 
-
 <span class="c1"># Enable XLA SPMD execution mode.</span>
 <span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
-
 
 <span class="c1"># Device mesh, this and partition spec as well as the input tensor shape define the individual shard shape.</span>
 <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
@@ -475,34 +479,31 @@ collective communications to scale.</p>
 <span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
 <span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
 
-
 <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
-
 
 <span class="c1"># Mesh partitioning, each device holds 1/8-th of the input</span>
 <span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">)</span>
 <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Let’s explain these concepts one by one</p>
 <div class="section" id="spmd-mode">
 <h3>SPMD Mode<a class="headerlink" href="#spmd-mode" title="Permalink to this heading">¶</a></h3>
 <p>In order to use SPMD, you need to enable it via <code class="docutils literal notranslate"><span class="pre">xr.use_spmd()</span></code>. In SPMD
 mode there is only one logical device. Distributed computation and
-collective is handled by the <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code>. Note that user can not mix
+collective is handled by the <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code>. Note that you can not mix
 SPMD with other distributed libraries.</p>
 </div>
 <div class="section" id="mesh">
 <h3>Mesh<a class="headerlink" href="#mesh" title="Permalink to this heading">¶</a></h3>
-<p>The SPMD programming model is built around the concept of a device mesh,
-commonly referred to as a mesh. A device mesh is a logical N-dimensional
+<p>The SPMD programming model is built around the concept of a device mesh.
+A device mesh is a logical N-dimensional
 arrangement of compute devices (e.g. TPU cores) where MPI-style collective
 operations may be requested for devices along an axis. The device mesh shape
 shape does not necessarily reflect the physical network layout. You
-can create differently shaped device meshes over the same set of physical
-devices. For example, a 512-core TPU slice could be treated as a 3D mesh of
+can create different device mesh shapes over the same set of physical
+devices. For example, a 512-core TPU slice can be treated as a 3D mesh of
 16×16×2, a 2D mesh of 32×16, or a 1D mesh of 512, depending on how you want to
-partition tensors. You can use the <code class="docutils literal notranslate"><span class="pre">Mesh</span></code> class to create a device mesh.</p>
+partition tensors. Use the <code class="docutils literal notranslate"><span class="pre">Mesh</span></code> class to create a device mesh.</p>
 <p>In the following snippet:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 <span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
@@ -526,7 +527,7 @@ dimension of tensors over specific mesh axes to achieve the desired
 parallelization. In the previous example, the first mesh dimension is the
 <code class="docutils literal notranslate"><span class="pre">data</span></code> dimension and the second mesh dimension is the <code class="docutils literal notranslate"><span class="pre">model</span></code> dimension.</p></li>
 </ul>
-<p>You can also check more mesh info via</p>
+<p>Retrieve more mesh info via:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
 <span class="go">OrderedDict([(&#39;data&#39;, 4), (&#39;model&#39;, 1)])</span>
 
@@ -541,7 +542,7 @@ parallelization. In the previous example, the first mesh dimension is the
 <span class="go"> {&#39;core_on_chip&#39;: 0, &#39;num_cores&#39;: 1, &#39;coords&#39;: [1, 1, 0], &#39;name&#39;: &#39;TPU:3&#39;}]</span>
 </pre></div>
 </div>
-<p>If your workload is run on <a class="reference external" href="https://cloud.google.com/tpu/docs/multislice-introduction">multiple TPU slices</a> simultaneously, the
+<p>If your workload is run on [multiple TPU slices][multislice] simultaneously, the
 device attributes will include a <code class="docutils literal notranslate"><span class="pre">slice_index</span></code> indicating the containing slice:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Details about 8 TPUs allocated over 2 slices</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
@@ -599,7 +600,7 @@ and <code class="docutils literal notranslate"><span class="pre">b</span> <span 
 <p>This assumes that <code class="docutils literal notranslate"><span class="pre">M</span></code> and <code class="docutils literal notranslate"><span class="pre">N</span></code> are divisible by <code class="docutils literal notranslate"><span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">Y</span></code>, respectively. If not,
 the last device may hold some padding.</p>
 <p>You can also visualize how a tensor is sharded over devices with our
-<a class="reference external" href="./spmd_advanced.md#spmd-debugging-tool">SPMD debugging tool</a>.</p>
+[SPMD debugging tool][debug-tool].</p>
 </div>
 </div>
 <div class="section" id="further-reading">
@@ -611,6 +612,8 @@ to use SPMD to express data parallelism.</p></li>
 to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
 <li><p><a class="reference external" href="./spmd_advanced.md">SPMD advanced topics</a></p></li>
 <li><p><a class="reference external" href="./spmd_distributed_checkpoint.md">Spmd Distributed Checkpoint</a></p></li>
+<li><p>[multislice]: <a class="reference external" href="https://cloud.google.com/tpu/docs/multislice-introduction">https://cloud.google.com/tpu/docs/multislice-introduction</a></p></li>
+<li><p>[debug-tool]: ./spmd_advanced.md#spmd-debugging-tool</p></li>
 </ol>
 </div>
 </div>
@@ -623,10 +626,10 @@ to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="spmd_advanced.html" class="btn btn-neutral float-right" title="PyTorch/XLA SPMD advanced topics" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="spmd_advanced.html" class="btn btn-neutral float-right" title="SPMD advanced topics" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="amp.html" class="btn btn-neutral" title="Automatic Mixed Precision" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="../accelerators/tpu.html" class="btn btn-neutral" title="Learn about TPUs" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -658,7 +661,7 @@ to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">PyTorch/XLA SPMD User Guide</a><ul>
+<li><a class="reference internal" href="#">SPMD User Guide</a><ul>
 <li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
 <li><a class="reference internal" href="#how-to-use-pytorch-xla-spmd">How to use PyTorch/XLA SPMD?</a><ul>
 <li><a class="reference internal" href="#spmd-mode">SPMD Mode</a></li>

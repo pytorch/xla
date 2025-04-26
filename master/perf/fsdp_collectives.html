@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Op Lowering Guide &mdash; PyTorch/XLA master documentation</title>
+  <title>Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -31,8 +31,8 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Codegen Migration Guide" href="codegen_migration.html" />
-    <link rel="prev" title="C++ Debugging" href="cpp_debugger.html" />
+    <link rel="next" title="Fully Sharded Data Parallel (FSDP) using SPMD" href="fsdp_spmd.html" />
+    <link rel="prev" title="Distributed Data Parallel (DDP)" href="ddp.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -319,49 +319,49 @@
 <li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/torch_distributed.html">Support for Torch Distributed</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">Distributed Data Parallel (DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ddp.html">Distributed Data Parallel (DDP)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Advanced Techniques</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amp.html">Automatic Mixed Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic Shapes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dynamo.html">TorchDynamo Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Troubleshooting recompilations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recompilation.html">Troubleshooting recompilations</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_gpu.html">Running SPMD on GPU</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="bazel.html">Building with Bazel</a></li>
-<li class="toctree-l1"><a class="reference internal" href="configure-environment.html">Configure A Development Environment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="cpp_debugger.html">C++ Debugging</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Op Lowering Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="codegen_migration.html">Codegen Migration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="plugins.html">Custom Hardware Plugins</a></li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Building with Bazel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure A Development Environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/cpp_debugger.html">C++ Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">Op Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
@@ -405,13 +405,13 @@
       </li>
 
         
-      <li>Op Lowering Guide</li>
+      <li>Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/contribute/op_lowering.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/perf/fsdp_collectives.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -441,181 +441,181 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="op-lowering-guide">
-<h1>Op Lowering Guide<a class="headerlink" href="#op-lowering-guide" title="Permalink to this heading">¶</a></h1>
-<p>PyTorch wraps the C++ ATen tensor library that offers a wide range of
-operations implemented on GPU and CPU. Pytorch/XLA is a PyTorch
-extension; one of its purposes is to convert PyTorch operations to XLA
-operations. Lowering defines a process of converting a higher-level
-representation to a lower-level representation. In this document, I will
-refer to the process of converting PyTorch operation to XLA operation as
-the lowering. XLA Compiler will also lower XlaOp to HLO, but that’s
-beyond the scope of this documentation. We will forward operations that
-we haven’t provided an XLA lowering yet to CPU and call ATen
-implementations. Operations that are forwarded to the CPU will cause a
-significant slowdown. We must lower all operations used in the model to
-achieve the best performance.</p>
-<p>Here’s an example of what you might see from the PyTorch/XLA debugging
-tool for an operation that has not been lowered:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pt-xla-profiler: Op(s) not lowered: aten::_ctc_loss, aten::_ctc_loss_backward,  Please open a GitHub issue with the above op lowering requests.
-</pre></div>
-</div>
-<div class="section" id="before-you-start">
-<h2>Before you start<a class="headerlink" href="#before-you-start" title="Permalink to this heading">¶</a></h2>
-<p>You should follow the instructions in
-<a class="reference external" href="https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md">Contributing to Pytorch/XLA</a> to
-install required dependencies and build pytorch and pytorch/XLA from the
-source. You do not need access to TPU to implement the lowering. It is
-recommended to experiment on a workstation and configure it to use
-XLA:CPU. You can configure Pytorch/XLA to use XLA:CPU by running</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>CPU
-</pre></div>
-</div>
-</div>
-<div class="section" id="understanding-the-operation">
-<h2>Understanding the operation<a class="headerlink" href="#understanding-the-operation" title="Permalink to this heading">¶</a></h2>
-<p>You can find the definition of the C++ ATen operations in
-<a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/native_functions.yaml">native_functions.yaml</a>.
-After you build Pytorch/XLA from source, you will also find our default
-implementation (a boxed kernel which forwards calls to either PyTorch
-native kernels) in <code class="docutils literal notranslate"><span class="pre">xla/torch_xla/csrc/aten_fallback.h/cpp</span></code>. Pytorch
-operations can usually be mapped to <a class="reference external" href="https://pytorch.org/docs/stable/index.html">PyTorch tensor
-api</a> easily. If that is not
-the case searching the PyTorch native implementation under <a class="reference external" href="https://github.com/pytorch/pytorch">PyTorch
-repo</a> is recommended. The goal is to
-lower the PyTorch operations into a sequence of XLA operations defined
-in <a class="reference external" href="https://www.tensorflow.org/xla/operation_semantics">XLA operation semantics</a>.</p>
-</div>
-<div class="section" id="file-structure">
-<h2>File structure<a class="headerlink" href="#file-structure" title="Permalink to this heading">¶</a></h2>
-<p>All file mentioned below lives under the <code class="docutils literal notranslate"><span class="pre">xla/torch_xla/csrc</span></code> folder,
-with the exception of <code class="docutils literal notranslate"><span class="pre">codegen/xla_native_functions.yaml</span></code></p>
-<ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code> contains the list of all operators (from
-the <a class="reference external" href="https://pytorch.org/docs/stable/torch.compiler_ir.html">Core Aten
-list</a>) that
-are explicitly lowered. Composed operators are not listed here. Each
-operator name here must directly match a pytorch operator listed in
-<a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/native_functions.yaml">native_functions.yaml</a>.
-This file serves as the interface to adding new xla operators, and
-is an input to PyTorch’s <a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torchgen/gen_backend_stubs.py">codegen
-machinery</a>.
-It generates the below 3 files: <code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code>,
-<code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code>, and <code class="docutils literal notranslate"><span class="pre">RegisterAutogradXLA.cpp</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code> and <code class="docutils literal notranslate"><span class="pre">aten_xla_type.cpp</span></code> are entry points of
-PyTorch to the pytorch_xla world, and contain the manually written
-lowerings to XLA for each operator. <code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code> is
-auto-generated through a combination of <code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code>
-and the PyTorch core <code class="docutils literal notranslate"><span class="pre">native_functions.yaml</span></code> file, and contains
-declarations for kernels that need to be defined in
-<code class="docutils literal notranslate"><span class="pre">aten_xla_type.cpp</span></code>. The kernels written here need to construct
-‘XLATensor’ using the input <code class="docutils literal notranslate"><span class="pre">at::Tensor</span></code> and other parameters. The
-resulting <code class="docutils literal notranslate"><span class="pre">XLATensor</span></code> needs to be converted back to the <code class="docutils literal notranslate"><span class="pre">at::Tensor</span></code>
-before returning to the PyTorch world.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code> and <code class="docutils literal notranslate"><span class="pre">RegisterAutogradXLA.cpp</span></code> are auto-generated
-files that register all lowerings to the PyTorch Dispatcher. They
-also include auto-generated wrapper implementations of <code class="docutils literal notranslate"><span class="pre">out=</span></code> and
-<code class="docutils literal notranslate"><span class="pre">inplace</span></code> operators.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">aten_fallback.h/.cpp</span></code> contain our boxed fallback implementation.
-The boxed fallback kernel will be used if a lowering is not
-explicitly defined in <code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code> +
-<code class="docutils literal notranslate"><span class="pre">aten_xla_type.cpp</span></code>, and the operator is not composite.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tensor_methods.h</span></code> contains the <code class="docutils literal notranslate"><span class="pre">XLATensor</span></code> declarations. These
-declarations are usually a one to one mapping of the <code class="docutils literal notranslate"><span class="pre">at::Tensor</span></code>
-nodes we declared in <code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tensor_methods.cpp</span></code> contains the implementation of <code class="docutils literal notranslate"><span class="pre">XLATensor</span> <span class="pre">node</span></code>
-defined in <code class="docutils literal notranslate"><span class="pre">tensor_methods.h</span></code>. We constructed the corresponding
-<code class="docutils literal notranslate"><span class="pre">ir::op</span></code> from the parameter’s <code class="docutils literal notranslate"><span class="pre">ir::Value</span></code> and wrapped it inside a
-<code class="docutils literal notranslate"><span class="pre">XLATensor</span></code>. Ir stands for intermediate representation.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ops/</span></code> directory contains all <code class="docutils literal notranslate"><span class="pre">ir::ops</span></code> declaration and definition.
-Smaller nodes can be put in <code class="docutils literal notranslate"><span class="pre">ops/ops.h/.cpp</span></code>. More complicated nodes
-can be put into a separate file. All ops inherit from
-<code class="docutils literal notranslate"><span class="pre">ir::ops::Node</span></code> and provide a way to lower input <code class="docutils literal notranslate"><span class="pre">ir::Value</span></code> to a
-sequence of <code class="docutils literal notranslate"><span class="pre">XlaOp</span></code>.</p></li>
-</ol>
-</div>
-<div class="section" id="unit-test">
-<h2>Unit Test<a class="headerlink" href="#unit-test" title="Permalink to this heading">¶</a></h2>
-<p>Our CI runs PyTorch native python tests for every change and every day.
-Those tests will use XLA implementation if we provide a lowering. We
-usually don’t need to add additional python tests for PyTorch/XLA unless
-we want to verify some xla behaviors(like dynamic shape) or we skipped
-the pytorch native test for some reason. The python test should be added
-to <code class="docutils literal notranslate"><span class="pre">xla/test/test_operations.py</span></code> if it is required. We also need to add
-CPP tests in <code class="docutils literal notranslate"><span class="pre">xla/test/cpp/test_aten_xla_tensor.cpp</span></code>. This test should
-call PyTorch c++ API and verify our implementation yields the same
-result as PyTorch native implementation. We also need to verify if the
-xla implementation is called when the tensor is a XLA tensor by checking
-the <code class="docutils literal notranslate"><span class="pre">aten::op</span></code> and <code class="docutils literal notranslate"><span class="pre">xla::op</span></code> counters.</p>
-</div>
-<div class="section" id="tips">
-<h2>Tips<a class="headerlink" href="#tips" title="Permalink to this heading">¶</a></h2>
-<p>The process of lowering is breaking down the PyTorch operations into a
-sequence of XlaOp. To provide a good lowering of the PyTorch operation,
-one needs to have a good grasp of what XLA is capable of. Reading the
-XlaOp document and looking into how similar ops is lowered is the best
-way to achieve that. You can find a minimal Op lowering example in <a class="reference external" href="https://github.com/pytorch/xla/pull/2969">this Op lowering PR</a>. You can also find a
-slightly more complicated example with backward lowering in <a class="reference external" href="https://github.com/pytorch/xla/pull/2972">this backward lowering PR</a>.</p>
-<p>We have auto-generated wrapper implementations of <code class="docutils literal notranslate"><span class="pre">out=</span></code> and <code class="docutils literal notranslate"><span class="pre">inplace</span></code>
-operators for some operators in <code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code>. We only need to lower
-the vanilla op in this case. An example would be <code class="docutils literal notranslate"><span class="pre">lerp</span></code> operator which
-has 6 variants in <code class="docutils literal notranslate"><span class="pre">native_functions.yaml</span></code>, they are</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span> <span class="n">lerp_</span><span class="o">.</span><span class="n">Scalar</span>
-<span class="o">-</span> <span class="n">lerp_</span><span class="o">.</span><span class="n">Tensor</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Scalar_out</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Tensor_out</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Scalar</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Tensor</span>
-</pre></div>
-</div>
-<p>and will generate function prototypes</p>
-<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">lerp</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">lerp</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_out</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">,</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">out</span><span class="p">);</span>
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_out</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">,</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">out</span><span class="p">);</span>
-</pre></div>
-</div>
-<p>in <code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code> if we add all of them to the
-<code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code>. However if we only lower <code class="docutils literal notranslate"><span class="pre">lerp.Scalar</span></code> and
-<code class="docutils literal notranslate"><span class="pre">lerp.Tensor</span></code> and check <code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code>, we will see</p>
-<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">namespace</span><span class="w"> </span><span class="p">{</span>
+  <div class="section" id="fully-sharded-data-parallel-fsdp-with-one-process-per-accelerator">
+<h1>Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator<a class="headerlink" href="#fully-sharded-data-parallel-fsdp-with-one-process-per-accelerator" title="Permalink to this heading">¶</a></h1>
+<p>FSDP in PyTorch/XLA is a utility for
+sharding Module parameters across data-parallel workers.</p>
+<p>This differs
+from the <a class="reference external" href="./fsdp_spmd.md">other</a> implementation of FSDP in PyTorch/XLA
+in that this implementation runs one process per accelerator.</p>
+<p>Example usage:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.fsdp</span><span class="w"> </span><span class="kn">import</span> <span class="n">XlaFullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDP</span>
 
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">wrapper_Scalar_lerp</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// No device check</span>
-
-
-<span class="w">  </span><span class="c1">// DeviceGuard omitted</span>
-<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">torch_xla</span><span class="o">::</span><span class="n">lerp</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDP</span><span class="p">(</span><span class="n">my_module</span><span class="p">)</span>
+<span class="n">optim</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+<span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>It is also possible to shard individual layers separately and have an
+outer wrapper handle any leftover parameters.</p>
+<p>Notes: The <code class="docutils literal notranslate"><span class="pre">XlaFullyShardedDataParallel</span></code> class supports both the ZeRO-2
+optimizer (sharding gradients and optimizer states) and the ZeRO-3
+optimizer (sharding parameters, gradients, and optimizer states) in
+<a class="reference external" href="https://arxiv.org/abs/1910.02054">https://arxiv.org/abs/1910.02054</a>. The ZeRO-3 optimizer should be
+implemented via nested FSDP with <code class="docutils literal notranslate"><span class="pre">reshard_after_forward=True</span></code>. See
+<code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> and
+<code class="docutils literal notranslate"><span class="pre">test/test_train_mp_imagenet_fsdp.py</span></code> for an example. * For large
+models that cannot fit into a single TPU memory or the host CPU memory,
+one should interleave submodule construction with inner FSDP wrapping.
+See
+<a class="reference external" href="https://github.com/ronghanghu/vit_10b_fsdp_example/blob/master/run_vit_training.py">FSDPViTModel</a>
+for an example. a simple wrapper <code class="docutils literal notranslate"><span class="pre">checkpoint_module</span></code> is provided (based
+on <code class="docutils literal notranslate"><span class="pre">torch_xla.utils.checkpoint.checkpoint</span></code> from
+<a class="reference external" href="https://github.com/pytorch/xla/pull/3524">https://github.com/pytorch/xla/pull/3524</a>) to perform <a class="reference external" href="https://spell.ml/blog/gradient-checkpointing-pytorch-YGypLBAAACEAefHs">gradient
+checkpointing</a>
+over a given <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> instance. See
+<code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> and
+<code class="docutils literal notranslate"><span class="pre">test/test_train_mp_imagenet_fsdp.py</span></code> for an example. Auto-wrapping
+submodules: instead of manually nested FSDP wrapping, one can also
+specify an <code class="docutils literal notranslate"><span class="pre">auto_wrap_policy</span></code> argument to automatically wrap the
+submodules with inner FSDP. <code class="docutils literal notranslate"><span class="pre">size_based_auto_wrap_policy</span></code> in
+<code class="docutils literal notranslate"><span class="pre">torch_xla.distributed.fsdp.wrap</span></code> is an example of <code class="docutils literal notranslate"><span class="pre">auto_wrap_policy</span></code>
+callable, this policy wraps layers with the number of parameters larger
+than 100M. <code class="docutils literal notranslate"><span class="pre">transformer_auto_wrap_policy</span></code> in
+<code class="docutils literal notranslate"><span class="pre">torch_xla.distributed.fsdp.wrap</span></code> is an example of <code class="docutils literal notranslate"><span class="pre">auto_wrap_policy</span></code>
+callable for transformer-like model architectures.</p>
+<p>For example, to automatically wrap all <code class="docutils literal notranslate"><span class="pre">torch.nn.Conv2d</span></code> submodules with
+inner FSDP, one can use:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.fsdp.wrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">transformer_auto_wrap_policy</span>
+<span class="n">auto_wrap_policy</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">transformer_auto_wrap_policy</span><span class="p">,</span> <span class="n">transformer_layer_cls</span><span class="o">=</span><span class="p">{</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>Additionally, one can also specify an <code class="docutils literal notranslate"><span class="pre">auto_wrapper_callable</span></code> argument
+to use a custom callable wrapper for the submodules (the default wrapper
+is just the <code class="docutils literal notranslate"><span class="pre">XlaFullyShardedDataParallel</span></code> class itself). For example,
+one can use the following to apply gradient checkpointing (i.e.
+activation checkpointing/rematerialization) to each auto-wrapped
+submodule.</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.fsdp</span><span class="w"> </span><span class="kn">import</span> <span class="n">checkpoint_module</span>
+<span class="n">auto_wrapper_callable</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">m</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">XlaFullyShardedDataParallel</span><span class="p">(</span>
+    <span class="n">checkpoint_module</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>When stepping the optimizer, directly call <code class="docutils literal notranslate"><span class="pre">optimizer.step</span></code> and do
+not call <code class="docutils literal notranslate"><span class="pre">xm.optimizer_step</span></code>. The latter reduces the gradient across
+ranks, which is not needed for FSDP (where the parameters are
+already sharded).</p></li>
+<li><p>When saving model and optimizer checkpoints during training, each
+training process needs to save its own checkpoint of the (sharded)
+model and optimizer state dicts (use <code class="docutils literal notranslate"><span class="pre">master_only=False</span></code> and set
+different paths for each rank in <code class="docutils literal notranslate"><span class="pre">xm.save</span></code>). When resuming, it needs
+to load the checkpoint for the corresponding rank.</p></li>
+<li><p>Please also save <code class="docutils literal notranslate"><span class="pre">model.get_shard_metadata()</span></code> along with
+<code class="docutils literal notranslate"><span class="pre">model.state_dict()</span></code> as follows and use
+<code class="docutils literal notranslate"><span class="pre">consolidate_sharded_model_checkpoints</span></code> to stitch the sharded model
+checkpoints together into a full model state dict. See
+<code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> for an example.</p></li>
+</ul>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">ckpt</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+    <span class="s1">&#39;shard_metadata&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">get_shard_metadata</span><span class="p">(),</span>
+    <span class="s1">&#39;optimizer&#39;</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
 <span class="p">}</span>
-
-<span class="p">}</span><span class="w"> </span><span class="c1">// anonymous namespace</span>
-
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp__tmp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="w">  </span><span class="n">at</span><span class="o">::</span><span class="n">_copy_from</span><span class="p">(</span><span class="n">wrapper_Scalar_lerp__tmp</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p">);</span>
-<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="p">...</span>
-<span class="w">  </span><span class="n">m</span><span class="p">.</span><span class="n">impl</span><span class="p">(</span><span class="s">&quot;lerp_.Scalar&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">TORCH_FN</span><span class="p">(</span><span class="n">wrapper_Scalar_lerp_</span><span class="p">));</span>
+<span class="n">ckpt_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;/tmp/rank-</span><span class="si">{</span><span class="n">xr</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span><span class="si">}</span><span class="s1">-of-</span><span class="si">{</span><span class="n">xr</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span><span class="si">}</span><span class="s1">.pth&#39;</span>
+<span class="n">xm</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">ckpt</span><span class="p">,</span> <span class="n">ckpt_path</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The codegen will automatically generate lowerings for <code class="docutils literal notranslate"><span class="pre">lerp_.Scalar</span></code> and
-<code class="docutils literal notranslate"><span class="pre">lerp.Scalar_out</span></code> that use our <code class="docutils literal notranslate"><span class="pre">lerp.Scalar</span></code> implementation, without us
-having to provide an explicit lowering.</p>
-<p>In general, if there is an operator in pytorch core that has both an
-out-of-place and an out= variant, it’s better to write a lowering for
-the out-of-place variant, since you’ll get a code-generated out=
-lowering for free.</p>
-<p>For each node we need to pass an <code class="docutils literal notranslate"><span class="pre">ir::OpKind</span></code>. Here is an
-(<a class="reference external" href="https://github.com/pytorch/xla/blob/5ce99bff336325feb41a982dc80299fb53166b29/torch_xla/csrc/ops/var_mean.cpp#L36">example</a>).
-You can find the <code class="docutils literal notranslate"><span class="pre">OpKind</span></code> definition in
-<a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/core/interned_strings.h">interned_strings.h</a>.
-If the aten symbol is missing, you can submit a PR like
-<a class="reference external" href="https://github.com/pytorch/pytorch/pull/36851">this</a>.</p>
+<ul class="simple">
+<li><p>The checkpoint consolidation script can also be launched from the
+command line as follows.</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># consolidate the saved checkpoints via command line tool</span>
+python3<span class="w"> </span>-m<span class="w"> </span>torch_xla.distributed.fsdp.consolidate_sharded_ckpts<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ckpt_prefix<span class="w"> </span>/path/to/your_sharded_checkpoint_files<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ckpt_suffix<span class="w"> </span><span class="s2">&quot;_rank-*-of-*.pth&quot;</span>
+</pre></div>
+</div>
+<p>The implementation of this class is largely inspired by and mostly
+follows the structure of <code class="docutils literal notranslate"><span class="pre">fairscale.nn.FullyShardedDataParallel</span></code> in
+<a class="reference external" href="https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html">https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html</a>. One of
+the biggest differences from <code class="docutils literal notranslate"><span class="pre">fairscale.nn.FullyShardedDataParallel</span></code> is
+that in XLA we don’t have explicit parameter storage, so here we resort
+to a different approach to free full parameters for ZeRO-3.</p>
+<div class="section" id="example-training-scripts-on-mnist-and-imagenet">
+<h2>Example training scripts on MNIST and ImageNet<a class="headerlink" href="#example-training-scripts-on-mnist-and-imagenet" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Minimum example :
+<a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_resnet_fsdp_auto_wrap.py">examples/fsdp/train_resnet_fsdp_auto_wrap.py</a></p></li>
+<li><p>MNIST:
+<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py">test/test_train_mp_mnist_fsdp_with_ckpt.py</a>
+(it also tests checkpoint consolidation)</p></li>
+<li><p>ImageNet:
+<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py">test/test_train_mp_imagenet_fsdp.py</a></p></li>
+</ul>
+<div class="section" id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">¶</a></h3>
+<p>FSDP is available on PyTorch/XLA 1.12 release and newer nightly. Please
+refer to <a class="reference external" href="https://github.com/pytorch/xla#-available-images-and-wheels">https://github.com/pytorch/xla#-available-images-and-wheels</a>
+for installation guide.</p>
+</div>
+<div class="section" id="clone-pytorch-xla-repo">
+<h3>Clone PyTorch/XLA repo<a class="headerlink" href="#clone-pytorch-xla-repo" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="w"> </span>https://github.com/pytorch/pytorch
+<span class="nb">cd</span><span class="w"> </span>pytorch/
+git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="w"> </span>https://github.com/pytorch/xla.git
+<span class="nb">cd</span><span class="w"> </span>~/
+</pre></div>
+</div>
+</div>
+<div class="section" id="train-mnist-on-v3-8-tpu">
+<h3>Train MNIST on v3-8 TPU<a class="headerlink" href="#train-mnist-on-v3-8-tpu" title="Permalink to this heading">¶</a></h3>
+<p>It gets around 98.9 accuracy for 2 epochs:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>~/pytorch/xla/test/test_train_mp_mnist_fsdp_with_ckpt.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--batch_size<span class="w"> </span><span class="m">16</span><span class="w"> </span>--drop_last<span class="w"> </span>--num_epochs<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--use_nested_fsdp<span class="w"> </span>--use_gradient_checkpointing
+</pre></div>
+</div>
+<p>This script automatically tests checkpoint consolidation at the end. You
+can also manually consolidate the sharded checkpoints via</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># consolidate the saved checkpoints via command line tool</span>
+python3<span class="w"> </span>-m<span class="w"> </span>torch_xla.distributed.fsdp.consolidate_sharded_ckpts<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ckpt_prefix<span class="w"> </span>/tmp/mnist-fsdp/final_ckpt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ckpt_suffix<span class="w"> </span><span class="s2">&quot;_rank-*-of-*.pth&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="train-imagenet-with-resnet-50-on-v3-8-tpu">
+<h3>Train ImageNet with ResNet-50 on v3-8 TPU<a class="headerlink" href="#train-imagenet-with-resnet-50-on-v3-8-tpu" title="Permalink to this heading">¶</a></h3>
+<p>It gets around 75.9 accuracy for 100 epochs; download
+<a class="reference external" href="https://github.com/pytorch/examples/tree/master/imagenet#requirements">ImageNet-1k</a>
+to <code class="docutils literal notranslate"><span class="pre">/datasets/imagenet-1k</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>~/pytorch/xla/test/test_train_mp_imagenet_fsdp.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--datadir<span class="w"> </span>/datasets/imagenet-1k<span class="w"> </span>--drop_last<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model<span class="w"> </span>resnet50<span class="w"> </span>--test_set_batch_size<span class="w"> </span><span class="m">64</span><span class="w"> </span>--eval_interval<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--lr<span class="w"> </span><span class="m">0</span>.4<span class="w"> </span>--batch_size<span class="w"> </span><span class="m">128</span><span class="w"> </span>--num_warmup_epochs<span class="w"> </span><span class="m">5</span><span class="w"> </span>--lr_scheduler_divide_every_n_epochs<span class="w"> </span><span class="m">30</span><span class="w"> </span>--lr_scheduler_divisor<span class="w"> </span><span class="m">10</span><span class="w"> </span>--num_epochs<span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--use_nested_fsdp
+</pre></div>
+</div>
+<p>You can also add <code class="docutils literal notranslate"><span class="pre">--use_gradient_checkpointing</span></code> (which needs to be used
+along with <code class="docutils literal notranslate"><span class="pre">--use_nested_fsdp</span></code> or <code class="docutils literal notranslate"><span class="pre">--auto_wrap_policy</span></code>) to apply
+gradient checkpointing on the residual blocks.</p>
+</div>
+</div>
+<div class="section" id="example-training-scripts-on-tpu-pod-with-10-billion-parameters">
+<h2>Example training scripts on TPU pod (with 10 billion parameters)<a class="headerlink" href="#example-training-scripts-on-tpu-pod-with-10-billion-parameters" title="Permalink to this heading">¶</a></h2>
+<p>To train large models that cannot fit into a single TPU, one should
+apply auto-wrap or manually wrap the submodules with inner FSDP when
+building the entire model to implement the ZeRO-3 algorithm.</p>
+<p>Please see <a class="reference external" href="https://github.com/ronghanghu/vit_10b_fsdp_example">https://github.com/ronghanghu/vit_10b_fsdp_example</a> for an
+example of sharded training of a Vision Transformer (ViT) model using
+this XLA FSDP PR.</p>
 </div>
 </div>
 
@@ -627,10 +627,10 @@ If the aten symbol is missing, you can submit a PR like
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="codegen_migration.html" class="btn btn-neutral float-right" title="Codegen Migration Guide" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="fsdp_spmd.html" class="btn btn-neutral float-right" title="Fully Sharded Data Parallel (FSDP) using SPMD" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="cpp_debugger.html" class="btn btn-neutral" title="C++ Debugging" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="ddp.html" class="btn btn-neutral" title="Distributed Data Parallel (DDP)" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -662,12 +662,15 @@ If the aten symbol is missing, you can submit a PR like
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Op Lowering Guide</a><ul>
-<li><a class="reference internal" href="#before-you-start">Before you start</a></li>
-<li><a class="reference internal" href="#understanding-the-operation">Understanding the operation</a></li>
-<li><a class="reference internal" href="#file-structure">File structure</a></li>
-<li><a class="reference internal" href="#unit-test">Unit Test</a></li>
-<li><a class="reference internal" href="#tips">Tips</a></li>
+<li><a class="reference internal" href="#">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a><ul>
+<li><a class="reference internal" href="#example-training-scripts-on-mnist-and-imagenet">Example training scripts on MNIST and ImageNet</a><ul>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#clone-pytorch-xla-repo">Clone PyTorch/XLA repo</a></li>
+<li><a class="reference internal" href="#train-mnist-on-v3-8-tpu">Train MNIST on v3-8 TPU</a></li>
+<li><a class="reference internal" href="#train-imagenet-with-resnet-50-on-v3-8-tpu">Train ImageNet with ResNet-50 on v3-8 TPU</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#example-training-scripts-on-tpu-pod-with-10-billion-parameters">Example training scripts on TPU pod (with 10 billion parameters)</a></li>
 </ul>
 </li>
 </ul>

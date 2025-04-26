@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>TorchDynamo integration in PyTorch XLA &mdash; PyTorch/XLA master documentation</title>
+  <title>TorchDynamo Integration &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -31,8 +31,8 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Optimize memory utilization using while_loop" href="fori_loop.html" />
-    <link rel="prev" title="How to do DistributedDataParallel(DDP)" href="ddp.html" />
+    <link rel="next" title="Quantized Operations" href="quantized_ops.html" />
+    <link rel="prev" title="Dynamic Shapes" href="../learn/dynamic_shape.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git047de24 )
+                  master (2.8.0+gitcaa40cc )
                 </div>
               
             
@@ -313,50 +313,58 @@
               
             
             
-              <p class="caption" role="heading"><span class="caption-text">Learn about Pytorch/XLA</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic shape</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/pjrt.html">PJRT Runtime</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshoot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Learn about accelerators</span></p>
+<p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/torch_distributed.html">Support for Torch Distributed</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ddp.html">Distributed Data Parallel (DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
-<ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Techniques</span></p>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
-<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="amp.html">Automatic Mixed Precision</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_gpu.html">Running SPMD on GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ddp.html">How to do DistributedDataParallel(DDP)</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">TorchDynamo integration in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
-<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic Shapes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">TorchDynamo Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
+<p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure a development environment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen migration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recompilation.html">Troubleshooting recompilations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_gpu.html">Running SPMD on GPU</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Building with Bazel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure A Development Environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/cpp_debugger.html">C++ Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">Op Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
 </ul>
 
             
@@ -397,7 +405,7 @@
       </li>
 
         
-      <li>TorchDynamo integration in PyTorch XLA</li>
+      <li>TorchDynamo Integration</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
@@ -433,13 +441,13 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="torchdynamo-integration-in-pytorch-xla">
-<h1>TorchDynamo integration in PyTorch XLA<a class="headerlink" href="#torchdynamo-integration-in-pytorch-xla" title="Permalink to this heading">¶</a></h1>
+  <div class="section" id="torchdynamo-integration">
+<h1>TorchDynamo Integration<a class="headerlink" href="#torchdynamo-integration" title="Permalink to this heading">¶</a></h1>
 <p><a class="reference external" href="https://pytorch.org/docs/stable/torch.compiler.html">TorchDynamo</a> is a
 Python-level JIT compiler designed to make unmodified PyTorch programs
 faster. It provides a clean API for compiler backends to hook in and its
 biggest feature is to dynamically modify Python bytecode right before it
-is executed. In the pytorch/xla 2.0 release, PyTorch/XLA provided an
+is executed. In the 2.0 release, PyTorch/XLA provided an
 experimental backend for the TorchDynamo for both inference and
 training.</p>
 <p>The way that XLA bridge works is that Dynamo will provide a TorchFX
@@ -482,7 +490,7 @@ compiled function.</p>
 </pre></div>
 </div>
 <p>With the <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> you will see that PyTorch/XLA only traces the
-resent18 model once during the init time and executes the compiled
+ResNet-18 model once during the init time and executes the compiled
 binary every time <code class="docutils literal notranslate"><span class="pre">dynamo_resnet18</span></code> is invoked, instead of tracing the
 model every time. Here is a inference speed analysis to compare Dynamo
 and Lazy using torch bench on Cloud TPU v4-8</p>
@@ -540,7 +548,7 @@ and Lazy using torch bench on Cloud TPU v4-8</p>
 <h2>Training<a class="headerlink" href="#training" title="Permalink to this heading">¶</a></h2>
 <p>PyTorch/XLA also supports Dynamo for training, but it is experimental
 and we are working with the PyTorch Compiler team to iterate on the
-implementation. Here is an example of training a resnet18 with
+implementation. Here is an example of training a ResNet-18 with
 <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torchvision</span>
@@ -641,7 +649,7 @@ training.</p>
 </div>
 <div class="section" id="take-away">
 <h2>Take away<a class="headerlink" href="#take-away" title="Permalink to this heading">¶</a></h2>
-<p>TorchDynamo provides a really promising way for the compiler backend to
+<p>TorchDynamo provides a promising way for the compiler backend to
 hide the complexity from the user and easily retrieve the modeling code
 in a graph format. Compared with PyTorch/XLA’s traditional Lazy Tensor
 way of extracting the graph, TorchDynamo can skip the graph tracing for
@@ -650,9 +658,8 @@ every iteration, hence providing a much better inference response time.</p>
 running inference with the new dynamo-xla bridge. Our community is
 working hard to expand the set of supported models. Regarding the
 training feature gaps mentioned above, the PyTorch/XLA community is
-super excited to improve the training gap in our upcoming development
-work. The team continues to heavily invest in TorchDynamo and work with
-the upstream to mature the training story.</p>
+excited to improve the training gap in our upcoming development
+work. The team continues to invest in TorchDynamo.</p>
 </div>
 </div>
 
@@ -664,10 +671,10 @@ the upstream to mature the training story.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="fori_loop.html" class="btn btn-neutral float-right" title="Optimize memory utilization using while_loop" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="quantized_ops.html" class="btn btn-neutral float-right" title="Quantized Operations" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="ddp.html" class="btn btn-neutral" title="How to do DistributedDataParallel(DDP)" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="../learn/dynamic_shape.html" class="btn btn-neutral" title="Dynamic Shapes" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -699,7 +706,7 @@ the upstream to mature the training story.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">TorchDynamo integration in PyTorch XLA</a><ul>
+<li><a class="reference internal" href="#">TorchDynamo Integration</a><ul>
 <li><a class="reference internal" href="#integration">Integration</a></li>
 <li><a class="reference internal" href="#inference">Inference</a></li>
 <li><a class="reference internal" href="#training">Training</a></li>

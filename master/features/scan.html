@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Guide for using scan and scan_layers &mdash; PyTorch/XLA master documentation</title>
+  <title>Optimizing Repeated Layers with scan and scan_layers &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -31,8 +31,8 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Automatic Mixed Precision" href="../perf/amp.html" />
-    <link rel="prev" title="Custom GPU Kernels via Triton" href="triton.html" />
+    <link rel="next" title="Optimize Memory Utilization with while_loop" href="../perf/fori_loop.html" />
+    <link rel="prev" title="Quantized Operations" href="../perf/quantized_ops.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git047de24 )
+                  master (2.8.0+gitcaa40cc )
                 </div>
               
             
@@ -313,50 +313,58 @@
               
             
             
-              <p class="caption" role="heading"><span class="caption-text">Learn about Pytorch/XLA</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic shape</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/pjrt.html">PJRT Runtime</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshoot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Learn about accelerators</span></p>
+<p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torch_distributed.html">Support for Torch Distributed</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">Distributed Data Parallel (DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
+<p class="caption" role="heading"><span class="caption-text">Advanced Techniques</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="pallas.html">Custom Kernels via Pallas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
-<ul>
 <li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">How to do DistributedDataParallel(DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic Shapes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
+<p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure a development environment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen migration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Troubleshooting recompilations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Building with Bazel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure A Development Environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/cpp_debugger.html">C++ Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">Op Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
 </ul>
 
             
@@ -397,7 +405,7 @@
       </li>
 
         
-      <li>Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></li>
+      <li>Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></li>
     
     
       <li class="pytorch-breadcrumbs-aside">
@@ -433,27 +441,27 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="guide-for-using-scan-and-scan-layers">
-<h1>Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code><a class="headerlink" href="#guide-for-using-scan-and-scan-layers" title="Permalink to this heading">¶</a></h1>
+  <div class="section" id="optimizing-repeated-layers-with-scan-and-scan-layers">
+<h1>Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code><a class="headerlink" href="#optimizing-repeated-layers-with-scan-and-scan-layers" title="Permalink to this heading">¶</a></h1>
 <p>This is a guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> in PyTorch/XLA.</p>
 <div class="section" id="when-should-you-use-this">
 <h2>When should you use this<a class="headerlink" href="#when-should-you-use-this" title="Permalink to this heading">¶</a></h2>
-<p>You should consider using <cite>``scan_layers`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py</a>&gt;`_ if you have a model with
+<p>Consider using <cite>``scan_layers`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py</a>&gt;`_ if you have a model with
 many homogenous (same shape, same logic) layers, for example LLMs. These models
 can be slow to compile. <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> is a drop-in replacement for a for loop over
 homogenous layers, such as a bunch of decoder layers. <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> traces the
 first layer and reuses the compiled result for all subsequent layers, significantly
 reducing the model compile time.</p>
 <p><cite>``scan`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py</a>&gt;`_ on the other hand is a lower level higher-order-op modeled after
-<cite>``jax.lax.scan`</cite> &lt;<a class="reference external" href="https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html">https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html</a>&gt;`_. Its primary purpose is to help implement
-<code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> under the hood. However, you may find it useful if you would like
-to program some sort of loop logic where the loop itself has a first-class
-representation in the compiler (specifically, an XLA <code class="docutils literal notranslate"><span class="pre">While</span></code> op).</p>
+<cite>``jax.lax.scan`</cite> &lt;<a class="reference external" href="https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html">https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html</a>&gt;`_. Its primary purpose is to implement
+<code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> under the hood. However, you may find it useful
+to program loop logic where the loop itself has a first-class
+representation in the compiler (specifically, the XLA <code class="docutils literal notranslate"><span class="pre">while</span></code> op).</p>
 </div>
 <div class="section" id="scan-layers-example">
 <h2><code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> example<a class="headerlink" href="#scan-layers-example" title="Permalink to this heading">¶</a></h2>
 <p>Typically, a transformer model passes the input embedding through a sequence of
-homogenous decoder layers like the following:</p>
+homogenous decoder layers:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run_decoder_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">):</span>
   <span class="k">for</span> <span class="n">decoder_layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
     <span class="n">hidden_states</span> <span class="o">=</span> <span class="n">decoder_layer</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span>
@@ -462,7 +470,7 @@ homogenous decoder layers like the following:</p>
 </div>
 <p>When this function is lowered into an HLO graph, the for loop is unrolled into a
 flat list of operations, resulting in long compile times. To reduce compile
-times, you can replace the for loop with a call to <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>, as shown in
+times, replace the for loop with <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>, as shown in
 <cite>``decoder_with_scan.py`</cite> &lt;/examples/scan/decoder_with_scan.py&gt;`_:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run_decoder_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">):</span>
   <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.scan_layers</span><span class="w"> </span><span class="kn">import</span> <span class="n">scan_layers</span>
@@ -487,7 +495,7 @@ dimension of tensors while carrying along state:</p>
   <span class="o">...</span>
 </pre></div>
 </div>
-<p>You can use it to loop over the leading dimension of tensors efficiently. If <code class="docutils literal notranslate"><span class="pre">xs</span></code>
+<p>Use it to loop over the leading dimension of tensors efficiently. If <code class="docutils literal notranslate"><span class="pre">xs</span></code>
 is a single tensor, this function is roughly equal to the following Python code:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">scan</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">init</span><span class="p">,</span> <span class="n">xs</span><span class="p">):</span>
   <span class="n">ys</span> <span class="o">=</span> <span class="p">[]</span>
@@ -498,8 +506,8 @@ is a single tensor, this function is roughly equal to the following Python code:
   <span class="k">return</span> <span class="n">carry</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">ys</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Under the hood, <code class="docutils literal notranslate"><span class="pre">scan</span></code> is implemented much more efficiently by lowering the loop
-into an XLA <code class="docutils literal notranslate"><span class="pre">While</span></code> operation. This ensures that only one iteration of the loop
+<p>Under the hood, <code class="docutils literal notranslate"><span class="pre">scan</span></code> is implemented efficiently by lowering the loop
+into an XLA <code class="docutils literal notranslate"><span class="pre">while</span></code> operation. This ensures that only one iteration of the loop
 is compiled by XLA.</p>
 <p><cite>``scan_examples.py`</cite> &lt;/examples/scan/scan_examples.py&gt;`_ contains some example code showing how to use
 <code class="docutils literal notranslate"><span class="pre">scan</span></code>. In that file, <code class="docutils literal notranslate"><span class="pre">scan_example_cumsum</span></code> uses <code class="docutils literal notranslate"><span class="pre">scan</span></code> to implement a cumulative
@@ -533,19 +541,18 @@ sum. <code class="docutils literal notranslate"><span class="pre">scan_example_p
 <p>The functions/modules passed to <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> must be AOTAutograd
 traceable. In particular, as of PyTorch/XLA 2.6, <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> cannot
 trace functions with custom Pallas kernels. That means if your decoder uses,
-for example flash attention, then it’s incompatible with <code class="docutils literal notranslate"><span class="pre">scan</span></code>. We are working on
-<a class="reference external" href="https://github.com/pytorch/xla/issues/8633">supporting this important use case</a> in nightly and the next
-releases.</p>
+for example flash attention, then it is incompatible with <code class="docutils literal notranslate"><span class="pre">scan</span></code>. We are working on
+<a class="reference external" href="https://github.com/pytorch/xla/issues/8633">supporting this important use case</a>.</p>
 </div>
 <div class="section" id="aotautograd-overhead">
 <h3>AOTAutograd overhead<a class="headerlink" href="#aotautograd-overhead" title="Permalink to this heading">¶</a></h3>
 <p>Because <code class="docutils literal notranslate"><span class="pre">scan</span></code> uses AOTAutograd to figure out the backward pass of the input
-function/module on every iteration, it’s easy to become tracing bound compared to
+function/module on every iteration, it is easy to become tracing-bound compared to
 a for loop implementation. In fact, the  <code class="docutils literal notranslate"><span class="pre">train_decoder_only_base.py</span></code> example runs
 slower under <code class="docutils literal notranslate"><span class="pre">scan</span></code> than with for loop as of PyTorch/XLA 2.6 due to this overhead.
 We are working on <a class="reference external" href="https://github.com/pytorch/xla/issues/8632">improving tracing speed</a>. This is less of a
 problem when your model is very large or has many layers, which are the situations
-you would want to use <code class="docutils literal notranslate"><span class="pre">scan</span></code> anyways.</p>
+you would want to use <code class="docutils literal notranslate"><span class="pre">scan</span></code>.</p>
 </div>
 </div>
 <div class="section" id="compile-time-experiments">
@@ -599,7 +606,7 @@ Metric:<span class="w"> </span>CompileTime
 <span class="w">  </span><span class="m">99</span>%<span class="o">=</span>18s995ms301.667us
 </pre></div>
 </div>
-<p>We can see that the maximum compile time dropped from <code class="docutils literal notranslate"><span class="pre">1m03s</span></code> to <code class="docutils literal notranslate"><span class="pre">19s</span></code> by
+<p>The maximum compile time dropped from <code class="docutils literal notranslate"><span class="pre">1m03s</span></code> to <code class="docutils literal notranslate"><span class="pre">19s</span></code> by
 switching to <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>.</p>
 </div>
 <div class="section" id="references">
@@ -619,10 +626,10 @@ for details on how to use them.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../perf/amp.html" class="btn btn-neutral float-right" title="Automatic Mixed Precision" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="../perf/fori_loop.html" class="btn btn-neutral float-right" title="Optimize Memory Utilization with while_loop" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="triton.html" class="btn btn-neutral" title="Custom GPU Kernels via Triton" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="../perf/quantized_ops.html" class="btn btn-neutral" title="Quantized Operations" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -654,7 +661,7 @@ for details on how to use them.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a><ul>
+<li><a class="reference internal" href="#">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a><ul>
 <li><a class="reference internal" href="#when-should-you-use-this">When should you use this</a></li>
 <li><a class="reference internal" href="#scan-layers-example"><code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> example</a></li>
 <li><a class="reference internal" href="#scan-example"><code class="docutils literal notranslate"><span class="pre">scan</span></code> example</a></li>

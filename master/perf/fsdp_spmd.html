@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>torch_xla.debug.metrics &mdash; PyTorch/XLA master documentation</title>
+  <title>Fully Sharded Data Parallel (FSDP) using SPMD &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -25,12 +25,14 @@
 
   
 
-  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" /> -->
-  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-    <link rel="index" title="Index" href="../../../genindex.html" />
-    <link rel="search" title="Search" href="../../../search.html" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Custom Kernels via Pallas" href="../features/pallas.html" />
+    <link rel="prev" title="Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator" href="fsdp_collectives.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -41,16 +43,16 @@
   
 
   
-  <script src="../../../_static/js/modernizr.min.js"></script>
+  <script src="../_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -295,7 +297,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -313,56 +315,56 @@
             
               <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../accelerators/tpu.html">Learn about TPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_basic.html">SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_advanced.html">SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/torch_distributed.html">Support for Torch Distributed</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/ddp.html">Distributed Data Parallel (DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/torch_distributed.html">Support for Torch Distributed</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ddp.html">Distributed Data Parallel (DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Advanced Techniques</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/pallas.html">Custom Kernels via Pallas</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/amp.html">Automatic Mixed Precision</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/dynamic_shape.html">Dynamic Shapes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/dynamo.html">TorchDynamo Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/quantized_ops.html">Quantized Operations</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic Shapes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dynamo.html">TorchDynamo Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/troubleshoot.html">Troubleshooting Basics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/eager.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/recompilation.html">Troubleshooting recompilations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recompilation.html">Troubleshooting recompilations</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../accelerators/gpu.html">Learn about GPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../features/triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd_gpu.html">Running SPMD on GPU</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/bazel.html">Building with Bazel</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/configure-environment.html">Configure A Development Environment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/cpp_debugger.html">C++ Debugging</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/op_lowering.html">Op Lowering Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../contribute/plugins.html">Custom Hardware Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Building with Bazel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure A Development Environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/cpp_debugger.html">C++ Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">Op Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../learn/api-guide.html">PyTorch/XLA API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
 </ul>
 
             
@@ -395,7 +397,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="../../../index.html">
+        <a href="../index.html">
           
             Docs
           
@@ -403,12 +405,14 @@
       </li>
 
         
-          <li><a href="../../index.html">Module code</a> &gt;</li>
-        
-      <li>torch_xla.debug.metrics</li>
+      <li>Fully Sharded Data Parallel (FSDP) using SPMD</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/perf/fsdp_spmd.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+          
         
       </li>
     
@@ -437,99 +441,101 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <h1>Source code for torch_xla.debug.metrics</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+  <div class="section" id="fully-sharded-data-parallel-fsdp-using-spmd">
+<h1>Fully Sharded Data Parallel (FSDP) using SPMD<a class="headerlink" href="#fully-sharded-data-parallel-fsdp-using-spmd" title="Permalink to this heading">¶</a></h1>
+<p>FSDP in PyTorch/XLA is a utility for
+sharding Module parameters across data-parallel workers.</p>
+<p>This differs from the <a class="reference external" href="./fsdp_spmd.md">other</a> implementation of FSDP in PyTorch/XLA
+in that this implementation uses SPMD.</p>
+<p>Please review the <a class="reference external" href="./spmd_basic.html">SPMD user guide</a> before
+proceeding. You can also find a minimum runnable example
+<a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py">here</a>.</p>
+<p>Example usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.spmd_fully_sharded_data_parallel</span><span class="w"> </span><span class="kn">import</span> <span class="n">SpmdFullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDPv2</span>
 
+<span class="c1"># Define the mesh following common SPMD practice</span>
+<span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
+<span class="c1"># To be noted, the mesh must have an axis named &#39;fsdp&#39;, which the weights and activations will be sharded on.</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
 
-<div class="viewcode-block" id="counter_names"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.counter_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">counter_names</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves all the currently active counter names.&quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_counter_names</span><span class="p">()</span></div>
+<span class="c1"># Shard the input, and assume x is a 2D tensor.</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
 
-
-<div class="viewcode-block" id="counter_value"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.counter_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">counter_value</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the value of an active counter.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    name (string): The name of the counter whose value needs to be retrieved.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    The counter value as integer.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_counter_value</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">clear_counters</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all counters.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_clear_xla_counters</span><span class="p">()</span>
-
-
-<div class="viewcode-block" id="metric_names"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metric_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metric_names</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves all the currently active metric names.&quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metric_names</span><span class="p">()</span></div>
-
-
-<div class="viewcode-block" id="metric_data"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metric_data">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metric_data</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the data of an active metric.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    name (string): The name of the metric whose data needs to be retrieved.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    The metric data, which is a tuple of (TOTAL_SAMPLES, ACCUMULATOR, SAMPLES).</span>
-<span class="sd">    The `TOTAL_SAMPLES` is the total number of samples which have been posted to</span>
-<span class="sd">    the metric. A metric retains only a given number of samples (in a circular</span>
-<span class="sd">    buffer).</span>
-<span class="sd">    The `ACCUMULATOR` is the sum of the samples over `TOTAL_SAMPLES`.</span>
-<span class="sd">    The `SAMPLES` is a list of (TIME, VALUE) tuples.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metric_data</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">clear_metrics</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all metrics.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_clear_xla_metrics</span><span class="p">()</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">clear_all</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all metrics and all counters.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">clear_metrics</span><span class="p">()</span>
-  <span class="n">clear_counters</span><span class="p">()</span>
-
-
-<div class="viewcode-block" id="metrics_report"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metrics_report">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metrics_report</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a string containing the full metrics and counters report.&quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metrics_report</span><span class="p">()</span></div>
-
-
-<div class="viewcode-block" id="short_metrics_report"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.short_metrics_report">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">short_metrics_report</span><span class="p">(</span><span class="n">counter_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">metric_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a string containing the full metrics and counters report.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    counter_names (list): The list of counter names whose data needs to be printed.</span>
-<span class="sd">    metric_names (list): The list of metric names whose data needs to be printed.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">counter_names</span><span class="p">:</span>
-    <span class="n">counter_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CachedCompile&#39;</span><span class="p">,</span> <span class="s1">&#39;MarkStep&#39;</span><span class="p">,</span> <span class="s1">&#39;DynamoSyncInputExecuteTime&#39;</span><span class="p">]</span>
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">metric_names</span><span class="p">:</span>
-    <span class="n">metric_names</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s1">&#39;CompileTime&#39;</span><span class="p">,</span> <span class="s1">&#39;ExecuteTime&#39;</span><span class="p">,</span> <span class="s1">&#39;ExecuteReplicatedTime&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;TransferToDeviceTime&#39;</span><span class="p">,</span> <span class="s1">&#39;TransferFromDeviceTime&#39;</span>
-    <span class="p">]</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_short_xla_metrics_report</span><span class="p">(</span><span class="n">counter_names</span><span class="p">,</span> <span class="n">metric_names</span><span class="p">)</span></div>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">executed_fallback_ops</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a list of operations that were run in fallback mode.&quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_executed_fallback_ops</span><span class="p">()</span>
+<span class="c1"># As normal FSDP, but an extra mesh is needed.</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span><span class="n">my_module</span><span class="p">,</span> <span class="n">mesh</span><span class="p">)</span>
+<span class="n">optim</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+<span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
 </pre></div>
+</div>
+<p>It is also possible to shard individual layers separately and have an
+outer wrapper handle any leftover parameters. Here is an example to
+autowrap each <code class="docutils literal notranslate"><span class="pre">DecoderLayer</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.fsdp.wrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">transformer_auto_wrap_policy</span>
+
+<span class="c1"># Apply FSDP sharding on each DecoderLayer layer.</span>
+<span class="n">auto_wrap_policy</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span>
+    <span class="n">transformer_auto_wrap_policy</span><span class="p">,</span>
+    <span class="n">transformer_layer_cls</span><span class="o">=</span><span class="p">{</span>
+        <span class="n">decoder_only_model</span><span class="o">.</span><span class="n">DecoderLayer</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">auto_wrap_policy</span><span class="o">=</span><span class="n">auto_wrap_policy</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="sharding-output">
+<h2>Sharding output<a class="headerlink" href="#sharding-output" title="Permalink to this heading">¶</a></h2>
+<p>To ensure the XLA compiler correctly implements the FSDP algorithm, we
+need to shard both weights and activations. This means sharding the
+output of the forward method. Since the forward function output can
+vary, we offer shard_output to shard activations in cases where your
+module output doesn’t fall into one of these categories: 1. A single
+tensor 2. A tuple of tensors where the 0th element is the activation.</p>
+<p>Example usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">shard_output</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
+    <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">logits</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span><span class="n">my_module</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">shard_output</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="gradient-checkpointing">
+<h2>Gradient checkpointing<a class="headerlink" href="#gradient-checkpointing" title="Permalink to this heading">¶</a></h2>
+<p>Currently, gradient checkpointing needs to be applied to the module
+before the FSDP wrapper. Otherwise, recursively loop into children
+modules will end up with infinite loop. We will fix this issue in the
+future releases.</p>
+<p>Example usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.fsdp</span><span class="w"> </span><span class="kn">import</span> <span class="n">checkpoint_module</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span><span class="n">checkpoint_module</span><span class="p">(</span><span class="n">my_module</span><span class="p">),</span> <span class="n">mesh</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
 
              </article>
              
             </div>
             <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../features/pallas.html" class="btn btn-neutral float-right" title="Custom Kernels via Pallas" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="fsdp_collectives.html" class="btn btn-neutral" title="Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
   
 
   
@@ -558,7 +564,14 @@
         <div class="pytorch-content-right" id="pytorch-content-right">
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
-              
+              <ul>
+<li><a class="reference internal" href="#">Fully Sharded Data Parallel (FSDP) using SPMD</a><ul>
+<li><a class="reference internal" href="#sharding-output">Sharding output</a></li>
+<li><a class="reference internal" href="#gradient-checkpointing">Gradient checkpointing</a></li>
+</ul>
+</li>
+</ul>
+
             </div>
           </div>
         </div>
@@ -571,21 +584,21 @@
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-         <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-         <script src="../../../_static/jquery.js"></script>
-         <script src="../../../_static/underscore.js"></script>
-         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-         <script src="../../../_static/doctools.js"></script>
-         <script src="../../../_static/sphinx_highlight.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../_static/doctools.js"></script>
+         <script src="../_static/sphinx_highlight.js"></script>
      
 
   
 
-  <script type="text/javascript" src="../../../_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="../../../_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
-  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -690,7 +703,7 @@
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="../../../_static/images/pytorch-x.svg">
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -841,7 +854,7 @@
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="../../../_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {

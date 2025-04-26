@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Dynamic shape &mdash; PyTorch/XLA master documentation</title>
+  <title>Dynamic Shapes &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -31,8 +31,8 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Eager Mode + Compile API" href="eager.html" />
-    <link rel="prev" title="PyTorch/XLA API" href="api-guide.html" />
+    <link rel="next" title="TorchDynamo Integration" href="../perf/dynamo.html" />
+    <link rel="prev" title="Automatic Mixed Precision" href="../perf/amp.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git047de24 )
+                  master (2.8.0+gitcaa40cc )
                 </div>
               
             
@@ -313,50 +313,58 @@
               
             
             
-              <p class="caption" role="heading"><span class="caption-text">Learn about Pytorch/XLA</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="xla-overview.html">Pytorch/XLA overview</a></li>
+              <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api-guide.html">PyTorch/XLA API</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Dynamic shape</a></li>
-<li class="toctree-l1"><a class="reference internal" href="eager.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pjrt.html">PJRT Runtime</a></li>
-<li class="toctree-l1"><a class="reference internal" href="troubleshoot.html">Troubleshoot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xla-overview.html">Pytorch/XLA Overview</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Learn about accelerators</span></p>
+<p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/torch_distributed.html">Support for Torch Distributed</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">Distributed Data Parallel (DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
-<ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Techniques</span></p>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
-<ul>
 <li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">How to do DistributedDataParallel(DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Dynamic Shapes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
+<p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure a development environment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen migration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshoot.html">Troubleshooting Basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Troubleshooting recompilations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Building with Bazel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure A Development Environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/cpp_debugger.html">C++ Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">Op Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api-guide.html">PyTorch/XLA API</a></li>
 </ul>
 
             
@@ -397,7 +405,7 @@
       </li>
 
         
-      <li>Dynamic shape</li>
+      <li>Dynamic Shapes</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
@@ -433,31 +441,31 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="dynamic-shape">
-<h1>Dynamic shape<a class="headerlink" href="#dynamic-shape" title="Permalink to this heading">¶</a></h1>
-<p>Dynamic shape refers to the variable nature of a tensor shape where its shape depends on the value of another upstream tensor. For example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span><span class="o">,</span><span class="w"> </span><span class="nn">torch_xla</span>
+  <div class="section" id="dynamic-shapes">
+<h1>Dynamic Shapes<a class="headerlink" href="#dynamic-shapes" title="Permalink to this heading">¶</a></h1>
+<p>Dynamic shapes means a tensor’s shape depends on the value of another tensor. For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span><span class="o">,</span><span class="w"> </span><span class="nn">torch_xla</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">in_tensor</span>  <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">out_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">in_tensor</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>the shape of <code class="docutils literal notranslate"><span class="pre">out_tensor</span></code> depends on the value of <code class="docutils literal notranslate"><span class="pre">in_tensor</span></code> and is bounded by the shape of <code class="docutils literal notranslate"><span class="pre">in_tensor</span></code>. In other words, if you do</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">out_tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<p>The shape of <code class="docutils literal notranslate"><span class="pre">out_tensor</span></code> depends on the value of <code class="docutils literal notranslate"><span class="pre">in_tensor</span></code> and is bounded by the shape of <code class="docutils literal notranslate"><span class="pre">in_tensor</span></code>. In other words, if you do</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">out_tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 <span class="go">torch.Size([&lt;=25, 2])</span>
 </pre></div>
 </div>
-<p>you can see the first dimension depends on the value of <code class="docutils literal notranslate"><span class="pre">in_tensor</span></code> and its maximum value is 25. We call the first dimension the dynamic dimension. The second dimension does not depend on any upstream tensors so we call it the static dimension.</p>
+<p>the first dimension depends on the value of <code class="docutils literal notranslate"><span class="pre">in_tensor</span></code> and its maximum value is 25. We call the first dimension the dynamic dimension. The second dimension does not depend on any upstream tensors so we call it the static dimension.</p>
 <p>Dynamic shape can be further categorized into bounded dynamic shape and unbounded dynamic shape.</p>
 <ul class="simple">
-<li><p>bounded dynamic shape: refers to a shape whose dynamic dimensions are bounded by static values. It works for accelerators that require static memory allocation (e.g. TPU).</p></li>
-<li><p>unbounded dynamic shape: refers to a shape whose dynamic dimensions can be infinitely large. It works for accelerators that don’t require static memory allocation (e.g. GPU).</p></li>
+<li><p>Bounded dynamic shape: refers to a shape whose dynamic dimensions are bounded by static values. It works for accelerators that require static memory allocation (e.g. TPU).</p></li>
+<li><p>Unbounded dynamic shape: refers to a shape whose dynamic dimensions can be infinitely large. It works for accelerators that don’t require static memory allocation (e.g. GPU).</p></li>
 </ul>
 <p>Today, only the bounded dynamic shape is supported and it is in the experimental phase.</p>
 <div class="section" id="bounded-dynamic-shape">
 <h2>Bounded dynamic shape<a class="headerlink" href="#bounded-dynamic-shape" title="Permalink to this heading">¶</a></h2>
 <p>Currently, we support multi-layer perceptron models (MLP) with dynamic size input on TPU.</p>
-<p>This feature is controlled by a flag <code class="docutils literal notranslate"><span class="pre">XLA_EXPERIMENTAL=&quot;nonzero:masked_select&quot;</span></code>. To run a model with the feature enabled, you can do:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_EXPERIMENTAL</span><span class="o">=</span><span class="s2">&quot;nonzero:masked_select:masked_scatter&quot;</span> <span class="n">python</span> <span class="n">your_scripts</span><span class="o">.</span><span class="n">py</span>
+<p>This feature is controlled by a flag <code class="docutils literal notranslate"><span class="pre">XLA_EXPERIMENTAL=&quot;nonzero:masked_select&quot;</span></code>. To run a model with the feature enabled, launch Python with the following environment variable:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">XLA_EXPERIMENTAL</span><span class="o">=</span><span class="s2">&quot;nonzero:masked_select:masked_scatter&quot;</span><span class="w"> </span>python<span class="w"> </span>your_scripts.py
 </pre></div>
 </div>
 <p>Here are some numbers we get when we run the MLP model for 100 iterations:</p>
@@ -490,11 +498,10 @@
 </table>
 <a class="reference external image-reference" href="../_static/img/dynamic_shape_mlp_perf.png"><img alt="Performance comparison (a) without dynamic shape  (b) with dynamic shape" src="../_images/dynamic_shape_mlp_perf.png" /></a>
 <p>One of the motivations of the dynamic shape is to reduce the number of excessive recompilation when the shape keeps changing between iterations. From the figure above, you can see the number of compilations reduced by half which results in the drop of the training time.</p>
-<p>To try it out, run</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_EXPERIMENTAL</span><span class="o">=</span><span class="s2">&quot;nonzero:masked_select&quot;</span> <span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">ds</span><span class="o">/</span><span class="n">test_dynamic_shape_models</span><span class="o">.</span><span class="n">py</span> <span class="n">TestDynamicShapeModels</span><span class="o">.</span><span class="n">test_backward_pass_with_dynamic_input</span>
+<p>To try it:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">XLA_EXPERIMENTAL</span><span class="o">=</span><span class="s2">&quot;nonzero:masked_select&quot;</span><span class="w"> </span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>TPU<span class="w"> </span>python3<span class="w"> </span>pytorch/xla/test/ds/test_dynamic_shape_models.py<span class="w"> </span>TestDynamicShapeModels.test_backward_pass_with_dynamic_input
 </pre></div>
 </div>
-<p>For more details on how we plan to expand the dynamic shape support on PyTorch/XLA in the future, feel free to review our <a class="reference external" href="https://github.com/pytorch/xla/issues/3884">RFC</a>.</p>
 </div>
 </div>
 
@@ -506,10 +513,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="eager.html" class="btn btn-neutral float-right" title="Eager Mode + Compile API" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="../perf/dynamo.html" class="btn btn-neutral float-right" title="TorchDynamo Integration" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="api-guide.html" class="btn btn-neutral" title="PyTorch/XLA API" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="../perf/amp.html" class="btn btn-neutral" title="Automatic Mixed Precision" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -541,7 +548,7 @@
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Dynamic shape</a><ul>
+<li><a class="reference internal" href="#">Dynamic Shapes</a><ul>
 <li><a class="reference internal" href="#bounded-dynamic-shape">Bounded dynamic shape</a></li>
 </ul>
 </li>
