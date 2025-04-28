@@ -24,7 +24,7 @@ jobs:
           pip install fsspec
           pip install rich
           # libtpu is needed for pallas tests.
-          pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
+          pip install --pre torch_xla[tpu] -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
           pip install --upgrade protobuf
       - name: Run Tests
         env:
