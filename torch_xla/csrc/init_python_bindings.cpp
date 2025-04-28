@@ -2897,50 +2897,62 @@ void InitXlaModuleBindings(py::module m) {
   // -------------Dynamo Integration API Start-------------------------
   /*
    * Return tensor ids and at::tensors for all DeviceData nodes that is needed
-   * to compute the value of tensors.
+   * to compute the value of tensors. In case we choose to keep the prior
+   * tensor IDs (keep_prior_values), then we do not return a new XLA tensor in
+   * place of the device data nodes.
    */
-  m.def("_get_tensors_xla_device_data_node",
-        [](const std::vector<at::Tensor>& tensors)
-            -> std::pair<std::vector<int64_t>, std::vector<at::IValue>> {
-          std::vector<int64_t> tensor_ids;
-          std::vector<at::IValue> ivalues;
-          std::vector<const torch::lazy::Node*> roots;
-          for (const at::Tensor& tensor : tensors) {
-            auto xtensor = bridge::TryGetXlaTensor(tensor);
-            if (xtensor) {
-              roots.push_back(xtensor->GetIrValue().node.get());
-            }
+  m.def(
+      "_get_tensors_xla_device_data_node",
+      [](const std::vector<at::Tensor>& tensors, bool keep_prior_values)
+          -> std::pair<std::vector<int64_t>,
+                       std::vector<std::optional<at::IValue>>> {
+        std::vector<int64_t> prior_tensor_ids;
+        std::vector<const torch::lazy::Node*> roots;
+        for (const at::Tensor& tensor : tensors) {
+          auto xtensor = bridge::TryGetXlaTensor(tensor);
+          if (xtensor) {
+            roots.push_back(xtensor->GetIrValue().node.get());
+            prior_tensor_ids.push_back(xtensor->GetUniqueId());
           }
-          auto post_order = torch::lazy::Util::ComputePostOrder(roots);
-          std::unordered_set<torch::lazy::BackendData::Handle> data_handles;
+        }
+        auto post_order = torch::lazy::Util::ComputePostOrder(roots);
+        std::unordered_set<torch::lazy::BackendData::Handle> data_handles;
 
-          for (const torch::lazy::Node* nodeptr : post_order) {
-            const auto backend_data =
-                torch::lazy::getBackend()->GetComputationDataFromNode(nodeptr);
-            if (!backend_data) {
-              continue;
-            }
+        std::vector<int64_t> tensor_ids;
+        std::vector<std::optional<at::IValue>> ivalues;
+        for (const torch::lazy::Node* nodeptr : post_order) {
+          const auto backend_data =
+              torch::lazy::getBackend()->GetComputationDataFromNode(nodeptr);
+          if (!backend_data) {
+            continue;
+          }
 
-            // Dedup by handle
-            torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
-            if (!data_handles.insert(handle).second) {
-              continue;
-            }
-            auto* infoptr =
-                static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
-                    backend_data->info());
-            if (infoptr) {
-              tensor_ids.push_back(infoptr->tensor_id);
-            } else {
-              // TODO(JackCaoG): Make sure this device data is actually seed.
-              tensor_ids.push_back(seed_info_id);
-            }
+          // Dedup by handle
+          torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
+          if (!data_handles.insert(handle).second) {
+            continue;
+          }
+          auto* infoptr =
+              static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
+                  backend_data->info());
+
+          // TODO(JackCaoG): Make sure this device data is actually seed.
+          int64_t tensor_id = infoptr ? infoptr->tensor_id : seed_info_id;
+          tensor_ids.push_back(tensor_id);
+
+          if (keep_prior_values &&
+              std::find(prior_tensor_ids.begin(), prior_tensor_ids.end(),
+                        tensor_id) != prior_tensor_ids.end()) {
+            ivalues.emplace_back(std::nullopt);
+          } else {
             at::Tensor tensor = bridge::AtenFromXlaTensor(
                 torch_xla::XLATensor::Create(backend_data));
             ivalues.emplace_back(tensor);
           }
-          return std::make_pair(tensor_ids, ivalues);
-        });
+        }
+        return std::make_pair(tensor_ids, ivalues);
+      },
+      py::arg("tensors"), py::arg("keep_prior_values") = false);
 
   m.def("_get_seed_info_id", []() -> int64_t { return seed_info_id; });
 
