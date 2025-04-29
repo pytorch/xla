@@ -487,7 +487,8 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
     std::vector<XLATensorPtr>* tensors) {
   TF_VLOG(4) << "Trying to get the value of " << tensors->size()
              << " tensor(s)";
-  if (FLAGS_torch_xla_graph_execution_check_level > 0 and FLAGS_torch_xla_graph_execution_check_level <= 2) {
+  if (FLAGS_torch_xla_graph_execution_check_level > 0 and
+      FLAGS_torch_xla_graph_execution_check_level <= 2) {
     // Add Python stack trace information
     auto frames = torch::lazy::GetPythonFrames();
     if (!frames.empty()) {
