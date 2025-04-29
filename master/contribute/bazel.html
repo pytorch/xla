@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc4b45a9 )
+                  master (2.8.0+gitd16766f )
                 </div>
               
             
@@ -450,21 +450,33 @@ automation of building and testing software.
 good fit for PyTorch/XLA as well.</p>
 <div class="section" id="bazel-dependencies">
 <h2>Bazel dependencies<a class="headerlink" href="#bazel-dependencies" title="Permalink to this heading">¶</a></h2>
-<p>Tensorflow is a <a class="reference external" href="https://bazel.build/external/overview">bazel external dependency</a> for PyTorch/XLA,
+<p>Openxla is a <a class="reference external" href="https://bazel.build/external/overview">bazel external dependency</a> for PyTorch/XLA,
 which can be seen in the <code class="docutils literal notranslate"><span class="pre">WORKSPACE</span></code> file:</p>
 <p><code class="docutils literal notranslate"><span class="pre">WORKSPACE</span></code></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">http_archive</span><span class="p">(</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;org_tensorflow&quot;</span><span class="p">,</span>
-    <span class="n">strip_prefix</span> <span class="o">=</span> <span class="s2">&quot;tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef&quot;</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;xla&quot;</span><span class="p">,</span>
+    <span class="n">patch_args</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;-l&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;-p1&quot;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="n">patch_tool</span> <span class="o">=</span> <span class="s2">&quot;patch&quot;</span><span class="p">,</span>
+    <span class="n">patches</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;//openxla_patches:gpu_nvml.diff&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;//openxla_patches:gpu_race_condition.diff&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;//openxla_patches:count_down.diff&quot;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="n">strip_prefix</span> <span class="o">=</span> <span class="s2">&quot;xla-&quot;</span> <span class="o">+</span> <span class="n">xla_hash</span><span class="p">,</span>
     <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s2">&quot;https://github.com/tensorflow/tensorflow/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;https://github.com/openxla/xla/archive/&quot;</span> <span class="o">+</span> <span class="n">xla_hash</span> <span class="o">+</span> <span class="s2">&quot;.tar.gz&quot;</span><span class="p">,</span>
     <span class="p">],</span>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p>TensorFlow pin can be updated by pointing this repository to a different
-revision. Patches may be added as needed. Bazel will resolve the
-dependency, prepare the code and patch it hermetically.</p>
+<p>You can specify the revision of OpenXLA you want to use in the <code class="docutils literal notranslate"><span class="pre">urls</span></code> field
+in the WORKSPACE file. PyTorch/XLA always builds with a deterministic
+OpenXLA commit (<code class="docutils literal notranslate"><span class="pre">xla_hash</span></code>), aka “OpenXLA pin”. Patches may be added as
+needed. Bazel will resolve the dependency, prepare the code and patch it
+hermetically.</p>
 <p>For PyTorch, a different dependency mechanism is deployed because a
 local <a class="reference external" href="https://github.com/pytorch/pytorch">PyTorch</a> checkout is used,
 and this local checkout has to be <code class="docutils literal notranslate"><span class="pre">built</span></code> from source and ideally
