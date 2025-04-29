@@ -29,6 +29,7 @@ runs:
       run: |
         ls -la
         rm -rvf ${GITHUB_WORKSPACE}/*
+        pip uninstall torch torch_xla libtpu
     - name: Setup CUDA environment
       shell: bash
       run: |
