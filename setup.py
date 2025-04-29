@@ -82,6 +82,7 @@ else:
   # The postfix can be changed when the version is updated. Check
   # https://storage.googleapis.com/libtpu-wheels/index.html for correct
   # versioning.
+  _libtpu_version += f".dev{_date}"
   _libtpu_wheel_name = f'libtpu-{_libtpu_version}-py3-none-manylinux_2_31_x86_64'
   _libtpu_storage_directory = 'libtpu-lts-releases'
 

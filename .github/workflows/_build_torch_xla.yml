@@ -47,12 +47,7 @@ jobs:
         shell: bash
         run: |
           cd pytorch/xla/infra/ansible
-          ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=1 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
-      - name: Upload libtpu
-        uses: actions/upload-artifact@v4
-        with:
-          name: libtpu
-          path: pytorch/xla/torch_xla/lib/libtpu.so
+          ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
