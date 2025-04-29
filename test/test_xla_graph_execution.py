@@ -22,7 +22,7 @@ XLA_DISABLE_FUNCTIONALIZATION = bool(
     os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', False))
 
 
-class TestXlaGraphExecutionLogLevel(test_utils.XlaTestCase):
+class TestXlaGraphExecutionCheckLevel(test_utils.XlaTestCase):
 
   def test_graph_execution_check_level_disabled(self):
     # Test disabled checking
