@@ -33,9 +33,11 @@ http_archive(
 )
 ```
 
-Openxla pin can be updated by pointing this repository to a different
-revision. Patches may be added as needed. Bazel will resolve the
-dependency, prepare the code and patch it hermetically.
+You can specify the revision of OpenXLA you want to use in the `urls` field 
+in the WORKSPACE file. PyTorch/XLA always builds with a deterministic
+OpenXLA commit (`xla_hash`), aka "OpenXLA pin". Patches may be added as 
+needed. Bazel will resolve the dependency, prepare the code and patch it
+hermetically.
 
 For PyTorch, a different dependency mechanism is deployed because a
 local [PyTorch](https://github.com/pytorch/pytorch) checkout is used,
