@@ -51,7 +51,8 @@ class TestXlaGraphExecutionCheckLevel(test_utils.XlaTestCase):
 
   def test_graph_execution_check_level_error(self):
     # Test ERROR level
-    print("Test check level as runtime error with warning messages before that.")
+    print(
+        "Test check level as runtime error with warning messages before that.")
     torch_xla._XLAC._set_torch_xla_graph_execution_check_level(2)
     start_time = time.time()
     x = torch.ones(2, device=xm.xla_device())
