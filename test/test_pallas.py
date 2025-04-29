@@ -637,8 +637,8 @@ class PallasTest(parameterized.TestCase):
       sm_scale=1.0,
       sliding_window=None,
       soft_cap=None,
-      num_kv_pages_per_block=16,
-      num_queries_per_block=128,
+      num_kv_pages_per_block=None,
+      num_queries_per_block=None,
       pad_tokens_and_seqs=False,
       use_dynamo=True,
   ):
@@ -751,16 +751,6 @@ class PallasTest(parameterized.TestCase):
     num_seqs_jax = jnp.array([num_seqs], dtype=jnp.int32)
 
     from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as jax_ragged_paged_attention
-    from torch_xla.experimental.tuned_block_sizes import get_ragged_attention_tuned_block_size
-    if num_kv_pages_per_block is None:
-      assert num_queries_per_block is None
-      token_num, q_head_num, _ = q.shape
-      _, page_size, num_combined_kv_heads, _ = kv_pages.shape
-      _, pages_per_seq = page_indices.shape
-      num_kv_heads = num_combined_kv_heads // 2
-      max_model_len = pages_per_seq * page_size
-      num_kv_pages_per_block, num_queries_per_block = get_ragged_attention_tuned_block_size(
-          q_head_num, num_kv_heads, token_num, max_model_len)
     jax_kernel_output = torch.from_numpy(
         np.array(
             jax_ragged_paged_attention(
@@ -790,8 +780,7 @@ class PallasTest(parameterized.TestCase):
       sm_scale=[1.0, 0.5],
       sliding_window=[None, 128],
       soft_cap=[None, 10.0],
-      pad_tokens_and_seqs=[False, True],
-      block_sizes=[(16, 128), (None, None)])
+      pad_tokens_and_seqs=[False, True])
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
   def test_ragged_paged_attention_wrapper_with_dynamo(
@@ -803,12 +792,10 @@ class PallasTest(parameterized.TestCase):
       sliding_window,
       soft_cap,
       pad_tokens_and_seqs,
-      block_sizes,
   ):
     head_dim = 128
     page_size = 16
     num_pages = 1000
-    num_kv_pages_per_block, num_queries_per_block = block_sizes
 
     self._test_ragged_paged_attention(
         seq_lens,
@@ -822,8 +809,6 @@ class PallasTest(parameterized.TestCase):
         soft_cap=soft_cap,
         pad_tokens_and_seqs=pad_tokens_and_seqs,
         use_dynamo=True,
-        num_kv_pages_per_block=num_kv_pages_per_block,
-        num_queries_per_block=num_queries_per_block,
     )
 
   @parameterized.product(
@@ -834,7 +819,6 @@ class PallasTest(parameterized.TestCase):
       sliding_window=[None, 128],
       soft_cap=[None, 10.0],
       pad_tokens_and_seqs=[False, True],
-      block_sizes=[(16, 128), (None, None)],
   )
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
@@ -847,12 +831,10 @@ class PallasTest(parameterized.TestCase):
       sliding_window,
       soft_cap,
       pad_tokens_and_seqs,
-      block_sizes,
   ):
     head_dim = 128
     page_size = 16
     num_pages = 1000
-    num_kv_pages_per_block, num_queries_per_block = block_sizes
 
     self._test_ragged_paged_attention(
         seq_lens,
@@ -866,8 +848,6 @@ class PallasTest(parameterized.TestCase):
         soft_cap=soft_cap,
         pad_tokens_and_seqs=pad_tokens_and_seqs,
         use_dynamo=False,
-        num_kv_pages_per_block=num_kv_pages_per_block,
-        num_queries_per_block=num_queries_per_block,
     )
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
