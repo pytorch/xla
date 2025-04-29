@@ -11,6 +11,9 @@ inputs:
     type: string
     description: |
       Artifact containing `torch` (cpu) and `torch-xla` wheels to install
+  libtpu-artifact:
+    type: string
+    description: Artifact containing `libtpu.so`
   cuda-plugin-artifact:
     type: string
     description: Artifact containing `torch-xla-cuda-plugin` to install
@@ -59,6 +62,12 @@ runs:
         name: ${{ inputs.wheels-artifact }}
         path: /tmp/wheels/
       if: ${{ inputs.wheels-artifact }}
+    - name: Fetch libtpu
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.libtpu-artifact }}
+        path: /tmp/libtpu/
+      if: ${{ inputs.libtpu-artifact }}
     - name: Fetch CUDA plugin
       uses: actions/download-artifact@v4
       with:
