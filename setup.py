@@ -74,6 +74,7 @@ _jax_version = '0.6.1'
 _jaxlib_version = '0.6.1'
 
 if USE_NIGHTLY:
+  _libtpu_version += f".dev{_date}"
   _jax_version += f'.dev{_date}'
   _jaxlib_version += f'.dev{_date}'
   _libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_date}+nightly-py3-none-manylinux_2_31_x86_64'
@@ -82,12 +83,10 @@ else:
   # The postfix can be changed when the version is updated. Check
   # https://storage.googleapis.com/libtpu-wheels/index.html for correct
   # versioning.
-  _libtpu_version += f".dev{_date}"
   _libtpu_wheel_name = f'libtpu-{_libtpu_version}-py3-none-manylinux_2_31_x86_64'
   _libtpu_storage_directory = 'libtpu-lts-releases'
 
 _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
-
 
 def _get_build_mode():
   for i in range(1, len(sys.argv)):
