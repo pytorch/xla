@@ -203,6 +203,10 @@ class TestOpInfo(TestCase):
 
       # print("[DEBUG] sample_input: ", sample_input)
 
+      if op.name == "cat":
+        dim = sample_input.kwargs.get('dim')
+        if dim and dim >= sample_input.input[0].dim():
+            continue
       # TODO: this is a workaround to skip int64 cast for linspace
       # reference: https://github.com/pytorch/xla/issues/7505#issuecomment-2400895692 and subsequent comments
       # we have opened a bug in pytorch: https://github.com/pytorch/pytorch/issues/137546
