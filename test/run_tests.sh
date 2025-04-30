@@ -168,7 +168,11 @@ function run_xla_op_tests1 {
 
   run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$CDIR/pjrt/test_internal_tpu.py"
-  run_test "$CDIR/pjrt/test_ddp.py"
+
+  # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
+  # Re-enable this test on GPU.
+  PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$CDIR/pjrt/test_ddp.py"
+
   run_test "$CDIR/pjrt/test_mesh_service.py"
   run_test "$CDIR/test_python_ops.py"
   run_test "$CDIR/test_ops.py"
@@ -213,7 +217,7 @@ function run_xla_op_tests2 {
 
   # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
   # Re-enable this test on GPU.
-  PJRT_DEVICE=CPU run_test "$CDIR/eager/test_eager_all_reduce_in_place.py"
+  PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$CDIR/eager/test_eager_all_reduce_in_place.py"
 
   run_test "$CDIR/eager/test_eager_spmd.py"
   run_test "$CDIR/test_callback.py"
@@ -258,7 +262,7 @@ function run_xla_op_tests3 {
 
   # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
   # Re-enable this test on GPU.
-  PJRT_DEVICE=CPU run_torchrun "$CDIR/pjrt/test_torchrun.py"
+  PJRT_DEVICE=CPU XLA_CUDA=0 run_torchrun "$CDIR/pjrt/test_torchrun.py"
 
   run_test "$CDIR/test_compilation_cache_utils.py"
   run_test "$CDIR/test_persistent_cache.py"
@@ -362,7 +366,7 @@ function run_tests {
 
     # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
     # Re-enable this test on GPU.
-    PJRT_DEVICE=CPU run_mp_op_tests
+    PJRT_DEVICE=CPU XLA_CUDA=0 run_mp_op_tests
   else
     # Run full tests without sharding, respects XLA_SKIP_*
     if [[ "$XLA_SKIP_XLA_OP_TESTS" != "1" ]]; then
