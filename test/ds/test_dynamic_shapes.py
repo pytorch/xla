@@ -188,7 +188,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # index type is s64 on cpu and gpu, but s32 on TPU. We should be
     # able to cast it to any other type without error.
     t2 = torch.nonzero(t1.int()).float()
-    xm.mark_step()
+    torch_xla.sync()
 
   def test_expand_symint_correctness(self):
     dev = xm.xla_device()

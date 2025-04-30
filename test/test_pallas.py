@@ -411,7 +411,7 @@ class PallasTest(parameterized.TestCase):
         128,
         False,
         static_argnums=range(5, 13))
-    xm.mark_step()
+    torch_xla.sync()
 
     # TODO: I don't really know how to test the value. Let's do the shape check for now.
     self.assertEqual(l.shape, (3, 2, 128, MIN_BLOCK_SIZE))
@@ -467,7 +467,7 @@ class PallasTest(parameterized.TestCase):
         [q, k, v, l, m, grad_o, grad_i], payload, [k.shape, v.shape],
         [k.dtype, v.dtype])
 
-    xm.mark_step()
+    torch_xla.sync()
 
     # TODO: I don't really know how to test the value. Let's do the shape check for now.
     self.assertEqual(output[0].shape, (3, 2, 128, 4))
@@ -519,7 +519,7 @@ class PallasTest(parameterized.TestCase):
     output = torch_xla._XLAC._xla_tpu_custom_call(
         [q, k, v, l, m, grad_o, grad_i], payload, [q.shape], [q.dtype])
 
-    xm.mark_step()
+    torch_xla.sync()
 
     # TODO: I don't really know how to test the value. Let's do the shape check for now.
     self.assertEqual(output[0].shape, (3, 2, 128, 4))
@@ -541,7 +541,7 @@ class PallasTest(parameterized.TestCase):
     o = flash_attention(q, k, v)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
@@ -558,7 +558,7 @@ class PallasTest(parameterized.TestCase):
     o = self._attention(q, k, v)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
@@ -1362,7 +1362,7 @@ class PallasTest(parameterized.TestCase):
     o = flash_attention(q, k, v, False, segment_ids, segment_ids)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
@@ -1386,7 +1386,7 @@ class PallasTest(parameterized.TestCase):
             segment_ids, segment_ids))
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
@@ -1424,7 +1424,7 @@ class PallasTest(parameterized.TestCase):
     o = flash_attention(q, k, v, False, None, None, sm_scale)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
@@ -1441,7 +1441,7 @@ class PallasTest(parameterized.TestCase):
     o = self._attention(q * sm_scale, k, v)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     # Hmm, the gradients are the same even the autograd graph seems different.
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
@@ -1485,7 +1485,7 @@ class PallasTest(parameterized.TestCase):
     o = flash_attention(q, k, v, ab=ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
@@ -1498,7 +1498,7 @@ class PallasTest(parameterized.TestCase):
     o = self._attention(q, k, v, ab=ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
@@ -1525,7 +1525,7 @@ class PallasTest(parameterized.TestCase):
     o = flash_attention(q, k, v, ab=ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
@@ -1540,7 +1540,7 @@ class PallasTest(parameterized.TestCase):
     o = self._attention(q, k, v, ab=ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad), (ab, ab_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
@@ -1573,14 +1573,14 @@ class PallasTest(parameterized.TestCase):
         flash_attention, fw_compiler=compiler)
     o_actual = compiled_flash_attention(q, k, v, causal, q_segment_ids,
                                         kv_segment_ids, sm_scale)
-    xm.mark_step()
+    torch_xla.sync()
     if causal:
       attention_mask = torch.triu(torch.ones(SEQ, SEQ), diagonal=1).to("xla")
     else:
       attention_mask = None
 
     expected_output = self._attention(q, k, v, attn_mask=attention_mask)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(
         torch.allclose(o_actual.cpu(), expected_output.cpu(), atol=1e-5))
 
@@ -1612,10 +1612,10 @@ class PallasTest(parameterized.TestCase):
         flash_attention, fw_compiler=compiler)
     o_actual = compiled_flash_attention(
         q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale, ab=ab)
-    xm.mark_step()
+    torch_xla.sync()
 
     expected_output = self._attention(q, k, v, ab=ab)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(
         torch.allclose(o_actual.cpu(), expected_output.cpu(), atol=1e-5))
 
@@ -1653,7 +1653,7 @@ class PallasTest(parameterized.TestCase):
         q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale, ab=ab)
     loss = o_actual.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
@@ -1674,7 +1674,7 @@ class PallasTest(parameterized.TestCase):
     o = self._attention(expected_q, expected_k, expected_v, ab=expected_ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for expected_tensor, actual_tensor_grad in [(expected_q, q_grad),
                                                 (expected_k, k_grad),

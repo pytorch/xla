@@ -63,7 +63,7 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
     xt1 = t1.to(xm.xla_device())
     xt2 = t2.to(xm.xla_device())
     xt3 = (xt1 @ xt2).sum()
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.counter_value("CompileWithAutoSharding"), 1)
     self.assertTrue(torch.allclose(t3, xt3.cpu()))
 
@@ -84,7 +84,7 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
     cnt = met.counter_value("CompileWithAutoSharding")
     self.assertTrue((cnt is not None) and (cnt <= 3))
 

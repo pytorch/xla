@@ -649,7 +649,7 @@ class OptimizerCheckpointTest(DistributedCheckpointTestBase):
     torch.manual_seed(42)
     model(torch.ones(10, 128).to('xla')).square().sum().backward()
     optim.step()
-    xm.mark_step()
+    torch_xla.sync()
 
   def _test_optimizer(self, tmpdir, optim_cls):
     model, optim = self._get_model_and_optimizer(optim_cls)

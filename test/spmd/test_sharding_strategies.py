@@ -159,7 +159,7 @@ xs.mark_sharding(data, mesh, data_sharding)
 
 model = Model(args.num_layers).to(device)
 model.train()
-xm.mark_step()
+torch_xla.sync()
 
 for name, layer in model.named_modules():
   if 'EMB2FF_linear' in name:

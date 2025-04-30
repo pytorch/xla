@@ -23,7 +23,7 @@ def _mp_fn(index):
       xinputs = inputs.to(device)
       xinputs_list.append(xinputs)
       dist.all_reduce(xinputs)
-    xm.mark_step()
+    torch_xla.sync()
     for i in range(num_all_reduces):
       expected = torch.ones((2, 3)) * i * world_size
       xinputs = xinputs_list[i]

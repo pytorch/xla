@@ -19,7 +19,7 @@ def _mp_fn(index):
   device = xm.xla_device()
   t1 = torch.randn(10, 10, device=device)
   t2 = t1 * 100
-  xm.mark_step()
+  torch_xla.sync()
   xm.wait_device_ops()
 
   if index == 0:

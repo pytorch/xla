@@ -93,13 +93,13 @@ for data, target in train_loader:
   loss.backward()
 
   optimizer.step()
-  xm.mark_step()
+  torch_xla.sync()
 ```
 
 This snippet highlights how easy it is to switch your model to run on
 XLA. The model definition, dataloader, optimizer and training loop can
 work on any device. The only XLA-specific code is a couple lines that
-acquire the XLA device and mark the step. Calling `xm.mark_step()` at
+acquire the XLA device and mark the step. Calling `torch_xla.sync()` at
 the end of each training iteration causes XLA to execute its current
 graph and update the model's parameters. See [XLA Tensor Deep
 Dive](#xla-tensor-deep-dive) for more on how XLA creates graphs and runs

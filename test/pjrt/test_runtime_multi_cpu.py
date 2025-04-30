@@ -71,7 +71,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     x = torch.ones(1, requires_grad=True, device=xm.xla_device())
     y = _CustomBackwards.apply(x)
     y.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     return results
 
@@ -111,7 +111,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     os.environ['XLA_SAVE_TENSORS_FILE'] = os.path.join(tmpdir, 'save.hlo')
 
     x = torch.randn((3, 3), device=xm.xla_device())
-    xm.mark_step()
+    torch_xla.sync()
     x.cpu()
 
   def test_hlo_dump(self):
@@ -125,7 +125,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
   @staticmethod
   def _all_reduce_hlo():
     ones = torch.ones((3, 3), device=xm.xla_device())
-    xm.mark_step()
+    torch_xla.sync()
     reduced = xm.all_reduce(xm.REDUCE_SUM, ones)
 
     return torch_xla._XLAC._get_xla_tensors_hlo([reduced])

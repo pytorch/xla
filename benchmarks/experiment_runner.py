@@ -482,7 +482,7 @@ class ExperimentRunner:
         import jax
         jax.block_until_ready(tensors_to_check)
       else:
-        xm.mark_step()
+        torch_xla.sync()
 
   def _synchronize(self, benchmark_experiment: BenchmarkExperiment):
     if benchmark_experiment.torch_xla2:

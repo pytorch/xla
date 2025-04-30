@@ -97,7 +97,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     torch.allclose(xt2.cpu(), xt1.cpu() / 0.5)
 
   def test_mark_step_on_virtual_device(self):
-    xm.mark_step()
+    torch_xla.sync()
     sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
     # tensor will have device as `SPMD:0` in c++
     xt1 = xm.send_cpu_data_to_device([torch.randn(3, 3)],

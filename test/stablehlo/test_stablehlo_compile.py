@@ -23,7 +23,7 @@ class StableHloCompileTest(unittest.TestCase):
     # Run ResNet on XLA device.
     device = xm.xla_device()
     # materalize the fake data for test purpose
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
     xla_resnet18 = torchvision.models.resnet18()

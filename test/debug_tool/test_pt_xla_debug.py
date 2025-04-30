@@ -33,7 +33,7 @@ class PtXLADebugTest(unittest.TestCase):
     with torch_xla.experimental.eager_mode_context(True):
       device = xm.xla_device()
       t1 = torch.randn(5, 9, device=device)
-      xm.mark_step()
+      torch_xla.sync()
       with open(self.debug_file_name, 'rb') as f:
         lines = f.readlines()
       # We expect PT_XLA_BUDEG not to output anything under the eager mode
@@ -43,7 +43,7 @@ class PtXLADebugTest(unittest.TestCase):
   def test_user_mark_step(self):
     device = xm.xla_device()
     t1 = torch.randn(2, 2, device=device)
-    xm.mark_step()
+    torch_xla.sync()
     with open(self.debug_file_name, 'rb') as f:
       lines = f.readlines()
       executation_causes = extract_execution_cause(lines)
@@ -317,7 +317,7 @@ class PtXLADebugTest(unittest.TestCase):
   def test_frame(self):
     device = xm.xla_device()
     t1 = torch.randn(6, 6, device=device)
-    xm.mark_step()
+    torch_xla.sync()
     with open(self.debug_file_name, 'rb') as f:
       lines = f.readlines()
       frames = extract_python_frames(lines)

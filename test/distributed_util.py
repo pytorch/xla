@@ -79,7 +79,7 @@ def train_step(model, inputs, labels, optimizer, loss_fn):
   loss.backward()
   optimizer.step()
 
-  xm.mark_step()
+  torch_xla.sync()
 
   return loss
 

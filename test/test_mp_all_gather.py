@@ -18,7 +18,7 @@ def _mp_fn(index):
     # Testing with a single replica group
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = xm.all_gather(ordinal_tensor, dim=0)
-    xm.mark_step()
+    torch_xla.sync()
 
     cpu_result = result.cpu()
     expected = torch.arange(0, world_size, dtype=torch.float)
