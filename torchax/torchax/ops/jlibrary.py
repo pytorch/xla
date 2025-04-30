@@ -26,7 +26,7 @@ def register_jax_composite(composite_name, impl, *ops, **jit_args):
     impl           - A JAX lowering for the library operation
     *ops           - Variadic torch.ops to lower using `impl`.
     **jit_args     - Additional parameters to forward to JAX jit.
-  
+
   This is used to register custom lowerings with an explicit jaxpr
   implementation, such as preserving a specific aten op using a jaten impl.
 
@@ -53,7 +53,7 @@ def register_torch_composite(composite_name, impl, *ops, **jit_args):
   For jit params and troubleshooting see:
   https://jax.readthedocs.io/en/latest/_autosummary/jax.jit.html
   """
-  
+
   @jaten.op(*ops)
   def _composite_impl(*args):
     class ImplWrapper(torch.nn.Module):

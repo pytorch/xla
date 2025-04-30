@@ -96,11 +96,11 @@ model. Some example output would be:
 Compilation Analysis: ================================================================================
 Compilation Analysis: Compilation Cause
 Compilation Analysis:   mark_step in parallel loader at step end
-Compilation Analysis: Graph Info: 
+Compilation Analysis: Graph Info:
 Compilation Analysis:   Graph Hash: c74c3b91b855b2b123f833b0d5f86943
 Compilation Analysis:   Number of Graph Inputs: 35
 Compilation Analysis:   Number of Graph Outputs: 107
-Compilation Analysis: Python Frame Triggered Execution: 
+Compilation Analysis: Python Frame Triggered Execution:
 Compilation Analysis:   mark_step (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
 Compilation Analysis:   next (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44)
 Compilation Analysis:   __next__ (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32)
@@ -122,11 +122,11 @@ Post Compilation Analysis: =====================================================
 Execution Analysis: ================================================================================
 Execution Analysis: Execution Cause
 Execution Analysis:   mark_step in parallel loader at step end
-Execution Analysis: Graph Info: 
+Execution Analysis: Graph Info:
 Execution Analysis:   Graph Hash: c74c3b91b855b2b123f833b0d5f86943
 Execution Analysis:   Number of Graph Inputs: 35
 Execution Analysis:   Number of Graph Outputs: 107
-Execution Analysis: Python Frame Triggered Execution: 
+Execution Analysis: Python Frame Triggered Execution:
 Execution Analysis:   mark_step (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
 Execution Analysis:   next (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44)
 Execution Analysis:   __next__ (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32)
@@ -449,7 +449,7 @@ degradation, so they should only be enabled for debugging.
 
 -   Record the graph execution in the IR format
 
-        XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="text" XLA_SAVE_TENSORS_FILE="/tmp/save1.ir"  
+        XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="text" XLA_SAVE_TENSORS_FILE="/tmp/save1.ir"
 
 -   Record the graph execution in the HLO format
 

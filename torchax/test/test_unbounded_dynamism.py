@@ -37,7 +37,7 @@ def wrap_func_as_nn_module(f):
   class M(torch.nn.Module):
     def __init__(self):
       super().__init__()
-      
+
     def forward(self, *args):
       return f(*args)
   return M().eval()

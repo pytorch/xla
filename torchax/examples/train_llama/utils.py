@@ -75,7 +75,7 @@ class FSDPv2(torch.nn.Module):
         args[0] = self.shard(args[0])
         res = self.mod(*args)
         return self.shard(res)
-    
+
     def shard(self, x):
         return torchax.interop.call_jax(
             jax.lax.with_sharding_constraint,
@@ -149,12 +149,12 @@ class JaxTrainer:
                     gradient, opt_state, jax_weights)
                 jax_weights = optax.apply_updates(jax_weights, updates)
             return loss, jax_weights, opt_state
-            
+
         print('Start compiling')
         start = time.perf_counter()
         lowered = step.lower(
-            jax_params, opt_state, 
-            (jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding), 
+            jax_params, opt_state,
+            (jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding),
              jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding)),
         )
         # print(lowered.as_text())
@@ -172,7 +172,7 @@ class JaxTrainer:
         print('start training')
         min_loop_time = 10000
         for i, item in enumerate(group_data(data_loader, SEQLEN)):
-            inputs, labels = sharded_device_put(jax_view(xla_env.to_xla(item)), 
+            inputs, labels = sharded_device_put(jax_view(xla_env.to_xla(item)),
                                             self.x_sharding)
             print('INPUT shape', inputs.shape)
 
@@ -213,7 +213,7 @@ class JaxTrainer:
 
 
         jittable_mod = JittableModule(lightning_mod)
-        jax_params = self._shard_fsdp_style(jittable_mod.params) 
+        jax_params = self._shard_fsdp_style(jittable_mod.params)
         jax_buffers = self._shard_fsdp_style(jittable_mod.buffers)
 
         @jax.checkpoint
@@ -243,7 +243,7 @@ class JaxTrainer:
         # NOTE: explicitly set sharding so the sharding of opt_state wont change
         # if it changes, it would trigger recompile
         @functools.partial(
-            jax.jit, 
+            jax.jit,
             donate_argnums=(0, 2),
             #in_shardings=(self.x_sharding, self.x_sharding, opt_state_sharding, self.x_sharding, self.replicated),
             #out_shardings=(self.replicated, self.x_sharding, opt_state_sharding),
@@ -264,8 +264,8 @@ class JaxTrainer:
 
         print('Total number of params: ', total_param_size)
         # print(jax.jit(jax.grad(lightning_mod_loss)).lower(
-        #     jax_params, jax_buffers, 
-        #     (jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32')), 
+        #     jax_params, jax_buffers,
+        #     (jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32')),
         #      jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'))),
         #     0
         # ).as_text())
@@ -273,8 +273,8 @@ class JaxTrainer:
         print('Start compiling')
         start = time.perf_counter()
         lowered = step.lower(
-            jax_params, jax_buffers, opt_state, 
-            (jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding), 
+            jax_params, jax_buffers, opt_state,
+            (jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding),
              jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding)),
             0
         )
@@ -293,7 +293,7 @@ class JaxTrainer:
         print('start training')
         min_loop_time = 10000
         for i, item in enumerate(group_data(data_loader, SEQLEN)):
-            inputs, labels = sharded_device_put(jax_view(xla_env.to_xla(item)), 
+            inputs, labels = sharded_device_put(jax_view(xla_env.to_xla(item)),
                                             self.x_sharding)
             print('INPUT shape', inputs.shape)
 
@@ -311,4 +311,3 @@ class JaxTrainer:
                 break
         jax.profiler.stop_trace()
         return min_loop_time, compile_time
-            

@@ -1,13 +1,13 @@
 # SPMD advanced topics
 
-This guide covers advanced topics with SPMD. Please read the 
+This guide covers advanced topics with SPMD. Please read the
 [SPMD user guide](https://github.com/pytorch/xla/blob/master/docs/spmd_basic.md) as a prerequisite.
 
 ### Sharding-Aware Host-to-Device Data Loading
 
-SPMD takes a single-device program, shards it, and executes it in parallel. 
+SPMD takes a single-device program, shards it, and executes it in parallel.
 
-SPMD execution does not work well with the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step. 
+SPMD execution does not work well with the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step.
 
 To improve the native data loading performance, use PyTorch/XLA's ParallelLoader, which shards the directly when passed the optional kwarg _input\_sharding_:
 
@@ -32,7 +32,7 @@ train_loader = pl.MpDeviceLoader(
          device,
 	 # specify different sharding for each input of the batch.
          input_sharding={
-          'x': xs.ShardingSpec(input_mesh, ('data', None, None, None)), 
+          'x': xs.ShardingSpec(input_mesh, ('data', None, None, None)),
           'y': xs.ShardingSpec(input_mesh, ('data', None))
         }
 )

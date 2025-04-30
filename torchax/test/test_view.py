@@ -67,7 +67,7 @@ class TrainTest(unittest.TestCase):
         self.assertEqual(type(y1), View)
         self.assertEqual(type(res), Tensor)
         self.assertEqual(res.sum(), 20)
-      
+
     def test_setitem(self):
         a = torch.zeros(10, device = "jax")
         a[0:5][0:3] = 1

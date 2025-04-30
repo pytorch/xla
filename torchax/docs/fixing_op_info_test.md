@@ -17,7 +17,7 @@ Context:
 ### Remove one op from skiplist
 
 Open [test/test_ops.py](../test/test_ops.py) with your
-favorite text editor. 
+favorite text editor.
 Remove one line from the `skiplist` set.
 
 i.e.
@@ -49,7 +49,7 @@ For errors you might get after running test, there are two kind:
 Error gotten:
 
 ```
-(base) hanq-macbookpro:torchax hanq$ python test/test_ops.py 
+(base) hanq-macbookpro:torchax hanq$ python test/test_ops.py
 ...
 E         RuntimeError: ('No lowering found for\n\nTo execute this test, run the following from the base repo dir:\n     python test/test_ops.py -k test_reference_eager_addbmm_cpu_int64\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0', 'aten::addbmm')
 ```
@@ -60,10 +60,10 @@ From here we have 2 strategies for fixing this test:
 2. Add an  implementation `aten::addbmm` operator using torch ops (this commonly known as "decompositions").
 
 Either way works for torchax. For ops that are not "Core Aten" sometimes we implement in torch ops with the goal of
-upstreaming this decomposition to [pytorch decompositon](https://github.com/pytorch/pytorch/blob/main/torch/_decomp/decompositions.py) 
+upstreaming this decomposition to [pytorch decompositon](https://github.com/pytorch/pytorch/blob/main/torch/_decomp/decompositions.py)
 so other projects can benefit from it.
 
-For illustration purposes, let's implement this op in Jax. 
+For illustration purposes, let's implement this op in Jax.
 
 (NOTE: this doesn't stop us from upstreaming a decomposition later if we want)
 
@@ -104,7 +104,7 @@ Please try to fix it by following these steps:
 
 ### First Impl
 
-To implement this op using jax ops, we first find what 
+To implement this op using jax ops, we first find what
 is the exact semantics in this page:
 https://pytorch.org/docs/stable/generated/torch.addbmm.html
 
@@ -124,7 +124,7 @@ Now running test again:
 python test/test_ops.py -k test_reference_eager_addbmm_cpu_int64
 ```
 
-(NOTE: the exact test command is printed out when we run 
+(NOTE: the exact test command is printed out when we run
 `pytest test/test_ops.py` so we can only run the failed test instead of running all tests.)
 
 We now see this error:
@@ -140,14 +140,14 @@ Traceback (most recent call last):
 AssertionError: False is not true
 ```
 
-This is telling me that our implementation did not produce 
+This is telling me that our implementation did not produce
 the same result as the ops in PyTorch.
 
 To debug this, let's figure out what exact input caused this.
-We can achieve this by setting a break point [here](https://github.com/pytorch/xla/blob/master/experimental/torchax/test/test_ops.py#L644), right before the diff. Here we can 
+We can achieve this by setting a break point [here](https://github.com/pytorch/xla/blob/master/experimental/torchax/test/test_ops.py#L644), right before the diff. Here we can
 inspect values of `res` and `res2`, as well as the `sample_input`.
 
-The sample input we get is 
+The sample input we get is
 ```
 SampleInput(input=tensor([[-3, -3,  9,  8, -8, -3, -4,  2,  2,  2],
         [-5,  1, -9,  9,  1, -5,  6,  1, -4, -5],
@@ -212,7 +212,7 @@ SampleInput(input=tensor([[-3, -3,  9,  8, -8, -3, -4,  2,  2,  2],
          [ 7,  3,  0,  1,  1, -9,  5, -8, -1, -7]]])), kwargs={'beta': 0.6, 'alpha': 0.2}, broadcasts_input=False, name='')
 ```
 
-And the `res` from torch is 
+And the `res` from torch is
 
 ```
 tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

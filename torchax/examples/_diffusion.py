@@ -57,7 +57,7 @@ class CompiledModule:
         if self._func_jitted_torch is None:
             self._func_jitted_torch = self._make_jitted(args, kwargs)
         return self._func_jitted_torch(
-            self._weights, 
+            self._weights,
             *args,
             **kwargs
         )

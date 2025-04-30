@@ -11,7 +11,7 @@ import torchvision
 import torchvision.transforms as transforms
 import torchax
 import torchax.interop
-import jax 
+import jax
 import optax
 import numpy as np
 

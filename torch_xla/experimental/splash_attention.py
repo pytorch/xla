@@ -346,7 +346,7 @@ def splash_attention(
     attn_logits_soft_cap: float | None = None,
 ) -> torch.Tensor:
   """Splash attention function.
-  
+
   Args:
     decoder_segment_ids: Segment ids are a pair of 1D jax.Arrays, one for Q (of
     size q_seq_len) and one for KV (of size kv_seq_len).  A segment id mask is
