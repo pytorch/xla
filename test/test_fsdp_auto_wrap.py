@@ -44,7 +44,7 @@ class TestNoBackwardModule(test_utils.XlaTestCase):
     hid1, hid2 = model(input)
     loss = hid1.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
 
 def _mp_fn(index):

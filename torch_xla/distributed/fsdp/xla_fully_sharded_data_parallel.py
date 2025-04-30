@@ -557,7 +557,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     if execute_sharding_on_init:
       # Execute the parameter sharding immediately and free up the memory
       gc.collect()
-      xm.mark_step()
+      torch_xla.sync()
 
   def _get_gradient_predivide_factor(self, world_size: int) -> float:
     factor: int = 1
@@ -1422,7 +1422,7 @@ class XlaFullyShardedDataParallel(nn.Module):
             f"mark_step called in FSDP _wait_for_post_backward (_debug_msg: {self._debug_msg})",
             flush=True,
         )
-      xm.mark_step()
+      torch_xla.sync()
 
   @torch.no_grad()
   def _rebuild_full_params(self,

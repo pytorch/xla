@@ -81,7 +81,7 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
         found_inf = torch.tensor(0.0).to(device)
       xm.optimizer_step(
           syncfree_optimizer, optimizer_args={"found_inf": found_inf})
-      xm.mark_step()
+      torch_xla.sync()
       # reference step
       ref_optimizer.zero_grad()
       ref_output = ref_model(data)
@@ -90,7 +90,7 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
       # mimick the effect of found_inf tensor
       if i % 2 != 0:
         xm.optimizer_step(ref_optimizer)
-      xm.mark_step()
+      torch_xla.sync()
       # check loss
       np.testing.assert_allclose(
           ref_loss.cpu().detach().numpy(),

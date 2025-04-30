@@ -26,7 +26,7 @@ def prime_optimizer(optimizer: torch.optim.Optimizer) -> torch.optim.Optimizer:
   """
 
   # Initial mark_step to ensure all param_groups are backed by device data.
-  xm.mark_step()
+  torch_xla.sync()
   xm.wait_device_ops()
 
   def zero_grad(x):
@@ -39,6 +39,6 @@ def prime_optimizer(optimizer: torch.optim.Optimizer) -> torch.optim.Optimizer:
 
   tree_map(zero_grad, optimizer.param_groups)
   optimizer.step()
-  xm.mark_step()
+  torch_xla.sync()
   xm.wait_device_ops()
   return optimizer

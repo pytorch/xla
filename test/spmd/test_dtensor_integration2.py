@@ -47,7 +47,7 @@ class DTensorIntegrationTest2(test_xla_sharding_base.XlaShardingTest):
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
     # Should compile with auto-sharding, we expect up to 3 times
     cnt = met.counter_value("CompileWithAutoSharding")
     self.assertTrue((cnt is not None) and (cnt <= 3))

@@ -144,7 +144,7 @@ class PallasTest(unittest.TestCase):
     o = flash_attention(q, k, v, partition_spec=(0, None, None, None))
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
@@ -172,7 +172,7 @@ class PallasTest(unittest.TestCase):
     o = self._attention(q, k, v)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       torch.testing.assert_close(
@@ -288,7 +288,7 @@ class PallasTest(unittest.TestCase):
             segment_ids, segment_ids))
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       torch.testing.assert_close(
@@ -406,7 +406,7 @@ class PallasTest(unittest.TestCase):
             q_segment_ids, kv_segment_ids))
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       torch.testing.assert_close(
@@ -469,7 +469,7 @@ class PallasTest(unittest.TestCase):
                                         kv_segment_ids, sm_scale, ab)
     loss = o_actual.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
@@ -489,7 +489,7 @@ class PallasTest(unittest.TestCase):
     o = self._attention(q, k, v, ab=ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad), (ab, ab_grad)]:
       torch.testing.assert_close(

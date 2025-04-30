@@ -74,7 +74,7 @@ class GradScaler(torch.cuda.amp.GradScaler):
         grad.mul_(scaling_factor)
       retval = optimizer.step(*args, **kwargs)
     else:
-      xm.mark_step()
+      torch_xla.sync()
       if not sum(
           v.item() for v in optimizer_state["found_inf_per_device"].values()):
         retval = optimizer.step(*args, **kwargs)

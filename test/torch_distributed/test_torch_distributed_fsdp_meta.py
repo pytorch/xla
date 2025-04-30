@@ -97,7 +97,7 @@ class TestFSDPWithMetaDevice():
     meta_opt = torch.optim.SGD(fsdp_meta.parameters(), lr=1e-3)
     fsdp_meta(inp).sum().backward()
     meta_opt.step()
-    xm.mark_step()
+    torch_xla.sync()
 
     regular = MyModel(device=xm.xla_device())
     fsdp_regular = XlaFullyShardedDataParallel(
@@ -105,7 +105,7 @@ class TestFSDPWithMetaDevice():
     regular_opt = torch.optim.SGD(fsdp_regular.parameters(), lr=1e-3)
     fsdp_regular(inp).sum().backward()
     regular_opt.step()
-    xm.mark_step()
+    torch_xla.sync()
 
     self._compare_fsdp(fsdp_meta, fsdp_regular)
 

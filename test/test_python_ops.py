@@ -64,7 +64,7 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
           idx = idx.reshape(2, 2)
         out = torch.put(dst, idx, src, accumulate)
 
-        xm.mark_step()
+        torch_xla.sync()
 
         # out-place
         reference = ref_put(dst, idx, src, accumulate)
@@ -142,7 +142,7 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
             idx = torch.repeat_interleave(idx, 2, dim=-1)
             idx = idx[..., ::2]
 
-          xm.mark_step()
+          torch_xla.sync()
 
           dest2 = dest.clone()
           dest.index_copy_(dim, idx, src)

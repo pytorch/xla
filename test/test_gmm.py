@@ -312,7 +312,7 @@ class MegabloxTest(unittest.TestCase):
     lhs_indices = torch.arange(
         top2.shape[0], device="xla").repeat_interleave(2)[lhs_order]
     group_sizes = _histogram(top_flat.to(torch.int32), 0, 3)
-    xm.mark_step()
+    torch_xla.sync()
 
     # Make sure it doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())

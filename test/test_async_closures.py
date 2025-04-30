@@ -19,7 +19,7 @@ class AsyncClosuresTest(unittest.TestCase):
       flag.set()
 
     xm.add_step_closure(closure)
-    xm.mark_step()
+    torch_xla.sync()
 
     # should not get to this part before closure is finished running
     assert flag.is_set()
@@ -33,7 +33,7 @@ class AsyncClosuresTest(unittest.TestCase):
       assert flag.is_set()
 
     xm.add_step_closure(closure, run_async=True)
-    xm.mark_step()
+    torch_xla.sync()
 
     # should get to this part and complete before closure is finished running
     assert not flag.is_set()
@@ -50,7 +50,7 @@ class AsyncClosuresTest(unittest.TestCase):
         raise RuntimeError("Simulating exception in closure")
 
       xm.add_step_closure(closure)
-      xm.mark_step()
+      torch_xla.sync()
 
       assert False  # Should not reach here
     except RuntimeError as e:
@@ -65,7 +65,7 @@ class AsyncClosuresTest(unittest.TestCase):
       raise RuntimeError("Simulating exception in closure1")
 
     xm.add_step_closure(closure1, run_async=True)
-    xm.mark_step()
+    torch_xla.sync()
 
     flag.wait(timeout=5)
 
@@ -75,7 +75,7 @@ class AsyncClosuresTest(unittest.TestCase):
         flag.clear()
 
       xm.add_step_closure(closure2, run_async=True)
-      xm.mark_step()
+      torch_xla.sync()
 
       assert False  # Should not reach here
     except RuntimeError as e:

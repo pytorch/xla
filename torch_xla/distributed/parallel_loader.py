@@ -43,7 +43,7 @@ class PerDeviceLoader(object):
     else:
       if self._mark_step_batch_count <= self._batches_yielded:
         self._batches_yielded = 0
-        xm.mark_step()
+        torch_xla.sync()
       else:
         self._batches_yielded += 1
 
@@ -51,7 +51,7 @@ class PerDeviceLoader(object):
     if item is None:
       if not self._loader._exception_queue.empty():
         raise self._loader._exception_queue.get()
-      xm.mark_step()
+      torch_xla.sync()
       raise StopIteration
     return item
 

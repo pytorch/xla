@@ -96,7 +96,7 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
       metric.add_batch(predictions=predictions, references=batch["labels"])
 
     eval_metric = metric.compute()
-    xm.mark_step()
+    torch_xla.sync()
     print(f'eval metrics for epoch {epoch}', eval_metric)
     test_utils.write_to_summary(
         writer, epoch, dict_to_write=eval_metric, write_xla_metrics=True)

@@ -540,10 +540,10 @@ class ZeroRedundancyOptimizer(Optimizer):
           else:
             param.grad = torch.zeros_like(param.data)
           index += 1
-      xm.mark_step()
+      torch_xla.sync()
       # add mark_step around allgather to avoid large number of compilation
       self.allgather_weights_and_update_full_parameter()
-      xm.mark_step()
+      torch_xla.sync()
 
   def get_shape_info(self):
     shape_info = {}

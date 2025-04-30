@@ -330,7 +330,7 @@ def train_imagenet():
           loss = loss_fn(output, y)
           loss.backward()
         optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
       tracker.add(FLAGS.batch_size)
       if lr_scheduler:
         lr_scheduler.step()

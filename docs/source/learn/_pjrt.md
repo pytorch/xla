@@ -96,7 +96,7 @@ def _mp_fn(index):
     loss.backward()
 
     optimizer.step()
-    xm.mark_step()
+    torch_xla.sync()
 
   # Print mean parameters so we can confirm they're the same across replicas
   print([p.mean() for p in model.parameters()])
@@ -381,7 +381,7 @@ def _all_gather(index: int):
   output = [torch.zeros_like(t) for _ in range(dist.get_world_size())]
   dist.all_gather(output, t)
 
-  xm.mark_step()
+  torch_xla.sync()
   print(output)
 
 if __name__ == '__main__':

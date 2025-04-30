@@ -34,7 +34,7 @@ def _test_spawn(fn, args):
 def _assert_correctness_and_metrics(t, xt, metrics):
   expected = t + t
   s = xt + xt
-  xm.mark_step()
+  torch_xla.sync()
   assert torch.allclose(s.cpu(), expected), \
     f'Incorrect result! expected {expected}, got {s.cpu()}'
   for counter, value in metrics.items():
