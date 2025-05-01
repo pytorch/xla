@@ -25,8 +25,8 @@ jobs:
       head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
   get-torch-commit:
-    runs-on: ubuntu-24.04
     needs: [check_code_changes]
+    runs-on: ubuntu-24.04
     outputs:
       torch_commit: ${{ steps.commit.outputs.torch_commit }}
     steps:
@@ -43,6 +43,7 @@ jobs:
   build-torch-xla:
     name: "Build PyTorch/XLA"
     needs: [check_code_changes, get-torch-commit]
+    runs-on: ubuntu-24.04
     steps:
       - name: Build PyTorch/XLA
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
