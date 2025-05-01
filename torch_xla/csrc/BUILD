@@ -126,6 +126,7 @@ ptxla_cc_library(
         ":shape_builder",
         ":shape_helper",
         ":version",
+        ":config",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:stablehlo_helper",
         "//torch_xla/csrc/runtime:xla_util",
@@ -176,6 +177,22 @@ ptxla_cc_library(
         "@xla//xla/client:xla_builder",
     ],
 )
+
+ptxla_cc_library(
+    name = "config",
+    srcs = ["config.cpp"],
+    hdrs = ["config.h"],
+    deps = [
+        "//torch_xla/csrc/runtime:tf_logging",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc/runtime:util",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:optional",
+        "@xla//xla/client:xla_builder",
+    ],
+)
+
 
 ptxla_cc_library(
     name = "dtype",
@@ -260,6 +277,7 @@ ptxla_cc_library(
         ":dtype",
         ":tensor",
         ":version",
+        ":config",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:pjrt_computation_client",
         "//torch_xla/csrc/runtime:metrics",
@@ -348,3 +366,4 @@ ptxla_cc_library(
         "@pybind11//:pybind11_embed",
     ],
 )
+
