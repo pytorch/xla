@@ -6,21 +6,21 @@
 
 namespace torch_xla {
 
-// Maximum number of allowed traces per function (i.e. session).
-static std::size_t max_allowed_traces_per_function = 1;
+// Maximum number of allowed graphs per function (i.e. session).
+static std::size_t max_different_graphs = 1;
 
 TrieNode::TrieNode(absl::Span<const TrieValue> common_sequence,
-                   bool is_trace_boundary)
+                   bool is_graph_boundary)
     : common_sequence_(common_sequence.begin(), common_sequence.end()),
-      is_trace_boundary_(is_trace_boundary) {}
+      is_graph_boundary_(is_graph_boundary) {}
 
 bool TrieNode::IsLeaf() const { return children_.empty(); }
 
-void TrieNode::NewTraceNotAllowedError(std::optional<TrieValue> value,
+void TrieNode::NewGraphNotAllowedError(std::optional<TrieValue> value,
                                        std::size_t matched) {
   std::ostringstream ostr;
-  ostr << "Maximum number of different traces allowed per function exceeded: "
-       << max_allowed_traces_per_function << std::endl;
+  ostr << "Maximum number of different graphs allowed per function exceeded: "
+       << max_different_graphs << std::endl;
 
   if (value.has_value()) {
     ostr << "Got: " << value->str << std::endl;
@@ -41,22 +41,22 @@ void TrieNode::NewTraceNotAllowedError(std::optional<TrieValue> value,
   XLA_ERROR() << ostr.str();
 }
 
-bool TrieNode::MarkTraceBoundary(std::size_t matched, bool allow_new_trace) {
+bool TrieNode::MarkGraphBoundary(std::size_t matched, bool allow_new_graph) {
   // No need to do anything here, iff:
   //
   //   1. nothing was matched, yet
   //
   //   2. we matched everything in this node, and this node is already marked as
-  //   a trace boundary.
+  //   a graph boundary.
   if (matched == 0 ||
-      (common_sequence_.size() == matched && is_trace_boundary_)) {
+      (common_sequence_.size() == matched && is_graph_boundary_)) {
     return false;
   }
 
-  // From this point, we will create a new trace.
-  if (!allow_new_trace) {
-    // Raise an error if we have reached the maximum number of traces.
-    NewTraceNotAllowedError(std::nullopt, matched);
+  // From this point, we will create a new graph.
+  if (!allow_new_graph) {
+    // Raise an error if we have reached the maximum number of graphs.
+    NewGraphNotAllowedError(std::nullopt, matched);
   }
 
   // If we haven't matched everything in this node, we will have to split this
@@ -67,20 +67,20 @@ bool TrieNode::MarkTraceBoundary(std::size_t matched, bool allow_new_trace) {
     MaybeSplitAt(matched);
   }
 
-  // Finally, mark this node as a trace boundary.
-  is_trace_boundary_ = true;
+  // Finally, mark this node as a graph boundary.
+  is_graph_boundary_ = true;
 
   return true;
 }
 
 TrieBuilder TrieNode::AddValue(TrieValue value, std::size_t matched,
-                               bool allow_new_trace) {
+                               bool allow_new_graph) {
   TF_VLOG(5) << "Adding value: " << value.str << " (" << value.hash << ")";
 
-  // If this node has no children and is not marked as a trace boundary, it
+  // If this node has no children and is not marked as a graph boundary, it
   // means that TrieBuilder created this node and is incrementally adding
   // TrieValue to it. Therefore, we just need to keep doing it.
-  if (IsLeaf() && !is_trace_boundary_) {
+  if (IsLeaf() && !is_graph_boundary_) {
     common_sequence_.push_back(value);
     return {this, matched + 1};
   }
@@ -101,10 +101,10 @@ TrieBuilder TrieNode::AddValue(TrieValue value, std::size_t matched,
     return {children_[value.hash].get(), 1};
   }
 
-  // Otherwise, we will have to create a new trace. So, first, check whether we
+  // Otherwise, we will have to create a new graph. So, first, check whether we
   // are allowed to do so.
-  if (!allow_new_trace) {
-    NewTraceNotAllowedError(value, matched);
+  if (!allow_new_graph) {
+    NewGraphNotAllowedError(value, matched);
   }
 
   // Maybe split the current node into: prefix (before matched) and suffix
@@ -121,11 +121,11 @@ TrieBuilder TrieNode::AddValue(TrieValue value, std::size_t matched,
   TF_VLOG(5) << "Created new node " << children_[value.hash].get()
              << " for value: " << value.str << " (" << value.hash << ")";
 
-  // Unmark this node as trace boundary iff we actually split this node (i.e.
-  // suffix actually had something). Otherwise, this should still be a trace
+  // Unmark this node as graph boundary iff we actually split this node (i.e.
+  // suffix actually had something). Otherwise, this should still be a graph
   // boundary.
   if (did_split) {
-    is_trace_boundary_ = false;
+    is_graph_boundary_ = false;
   }
 
   return {children_[value.hash].get(), 1};
@@ -143,7 +143,7 @@ bool TrieNode::MaybeSplitAt(std::size_t matched) {
   // A split only occurs if suffix is not empty.
   if (!suffix.empty()) {
     std::unique_ptr<TrieNode> suffix_node =
-        std::make_unique<TrieNode>(suffix, is_trace_boundary_);
+        std::make_unique<TrieNode>(suffix, is_graph_boundary_);
 
     // The suffix node's children should be what this node's children was before
     // the split. Therefore, we swap those.
@@ -177,38 +177,38 @@ void DynamicShapeDetector::StartSession(const std::string& name) {
   RootBuilder();
 }
 
-void DynamicShapeDetector::SetMaxAllowedTraces(std::size_t value) {
-  max_allowed_traces_per_function = value;
+void DynamicShapeDetector::SetMaxDifferentGraphs(std::size_t value) {
+  max_different_graphs = value;
 }
 
-std::size_t DynamicShapeDetector::GetMaxAllowedTraces() {
-  return max_allowed_traces_per_function;
+std::size_t DynamicShapeDetector::GetMaxDifferentGraphs() {
+  return max_different_graphs;
 }
 
 bool DynamicShapeDetector::IsSessionActive() {
   return current_session_ != nullptr;
 }
 
-bool DynamicShapeDetector::AllowNewTrace() {
+bool DynamicShapeDetector::AllowNewGraph() {
   XLA_CHECK(IsSessionActive());
-  return current_session_->traces_ < max_allowed_traces_per_function;
+  return current_session_->graphs_ < max_different_graphs;
 }
 
 void DynamicShapeDetector::EndSession() {
   XLA_CHECK(IsSessionActive());
 
   try {
-    // Mark the current builder_ node as trace boundary.
-    // If we did create a new trace, increment the session's trace number.
-    if (builder_.MarkTraceBoundary(AllowNewTrace())) {
-      current_session_->traces_++;
-      TF_VLOG(5) << "Created new trace.";
+    // Mark the current builder_ node as graph boundary.
+    // If we did create a new graph, increment the session's graph number.
+    if (builder_.MarkGraphBoundary(AllowNewGraph())) {
+      current_session_->graphs_++;
+      TF_VLOG(5) << "Created new graph.";
     }
 
     ResetSession();
     TF_VLOG(5) << "Ended session: " << current_session_->name_;
   } catch (const std::exception& e) {
-    // MarkTraceBoundary might raise an exception if AllowNewTrace() is false.
+    // MarkGraphBoundary might raise an exception if AllowNewGraph() is false.
     // Catch it here, so that we can correctly end the session.
     ResetSession();
     throw;
@@ -229,13 +229,13 @@ void DynamicShapeDetector::AddNodeInfo(torch::lazy::hash_t hash,
   XLA_CHECK(current_session_ != nullptr);
 
   try {
-    builder_.AddValue({hash, str}, AllowNewTrace());
+    builder_.AddValue({hash, str}, AllowNewGraph());
   } catch (const std::exception& e) {
-    // AddValue might raise an exception if AllowNewTrace() is false. Catch it
+    // AddValue might raise an exception if AllowNewGraph() is false. Catch it
     // here, so that we can correctly return the builder to the root of the
     // trie.
     //
-    // TODO(ysiraichi): we should actually rollback this trace.
+    // TODO(ysiraichi): we should actually rollback this graph.
     RootBuilder();
     throw;
   }
@@ -250,12 +250,12 @@ void DynamicShapeDetector::RemoveSessionIfExists(const std::string& name) {
 
 TrieBuilder SessionInfo::NewBuilder() { return {root_.get(), 0}; }
 
-void TrieBuilder::AddValue(TrieValue value, bool allow_new_trace) {
-  *this = node_->AddValue(value, matched_, allow_new_trace);
+void TrieBuilder::AddValue(TrieValue value, bool allow_new_graph) {
+  *this = node_->AddValue(value, matched_, allow_new_graph);
 }
 
-bool TrieBuilder::MarkTraceBoundary(bool allow_new_trace) {
-  return node_->MarkTraceBoundary(matched_, allow_new_trace);
+bool TrieBuilder::MarkGraphBoundary(bool allow_new_graph) {
+  return node_->MarkGraphBoundary(matched_, allow_new_graph);
 }
 
 }  // namespace torch_xla
