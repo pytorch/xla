@@ -4,8 +4,6 @@ on:
     branches:
       - master
       - r[0-9]+.[0-9]+
-    paths-ignore:
-      - '**.md' # Ignore any file ending with .md in any directory
   push:
     branches:
       - master
@@ -17,9 +15,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check_code_changes:
+    name: Check Code Changes
+    uses: ./.github/workflows/_check_code_changes.yml
+    with:
+      event_name: ${{ github.event_name }}
+      # For pull_request, use PR's base and head. For push, use event's before and sha.
+      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
   get-torch-commit:
     runs-on: ubuntu-24.04
+    needs: [check_code_changes]
+    # Only run if code changes detected
+    if: needs.check_code_changes.outputs.has_code_changes == 'true'
     outputs:
       torch_commit: ${{ steps.commit.outputs.torch_commit }}
     steps:
@@ -31,7 +40,9 @@ jobs:
   build-torch-xla:
     name: "Build PyTorch/XLA"
     uses: ./.github/workflows/_build_torch_xla.yml
-    needs: get-torch-commit
+    needs: [check_code_changes, get-torch-commit]
+    # Only run if code changes detected
+    if: needs.check_code_changes.outputs.has_code_changes == 'true'
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
@@ -42,7 +53,9 @@ jobs:
   build-torch-with-cuda:
     name: "Build PyTorch with CUDA"
     uses: ./.github/workflows/_build_torch_with_cuda.yml
-    needs: get-torch-commit
+    needs: [check_code_changes, get-torch-commit]
+    # Only run if code changes detected
+    if: needs.check_code_changes.outputs.has_code_changes == 'true'
     with:
       # TODO: bump CUDA version to either 12.4 or 12.6 (supported by PyTorch).
       # Ref: https://github.com/pytorch/xla/issues/8700
@@ -55,6 +68,9 @@ jobs:
   build-cuda-plugin:
     name: "Build XLA CUDA plugin"
     uses: ./.github/workflows/_build_plugin.yml
+    needs: [check_code_changes]
+    # Only run if code changes detected
+    if: needs.check_code_changes.outputs.has_code_changes == 'true'
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
     secrets:
@@ -63,7 +79,9 @@ jobs:
   test-python-cpu:
     name: "CPU tests"
     uses: ./.github/workflows/_test.yml
-    needs: [build-torch-xla, get-torch-commit]
+    needs: [build-torch-xla, check_code_changes, get-torch-commit]
+    # Only run if code changes detected
+    if: needs.check_code_changes.outputs.has_code_changes == 'true'
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
       timeout-minutes: 120
@@ -75,7 +93,9 @@ jobs:
   test-cuda:
     name: "GPU tests"
     uses: ./.github/workflows/_test.yml
-    needs: [build-torch-xla, build-cuda-plugin, get-torch-commit]
+    needs: [build-torch-xla, build-cuda-plugin, check_code_changes, get-torch-commit]
+    # Only run if code changes detected
+    if: needs.check_code_changes.outputs.has_code_changes == 'true'
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
       runner: linux.g4dn.12xlarge.nvidia.gpu
@@ -89,7 +109,9 @@ jobs:
   test-cuda-with-pytorch-cuda-enabled:
     name: "GPU tests requiring torch CUDA"
     uses: ./.github/workflows/_test_requiring_torch_cuda.yml
-    needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin, get-torch-commit]
+    needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin, check_code_changes, get-torch-commit]
+    # Only run if code changes detected
+    if: needs.check_code_changes.outputs.has_code_changes == 'true'
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
       runner: linux.8xlarge.nvidia.gpu
@@ -100,10 +122,13 @@ jobs:
   test-tpu:
     name: "TPU tests"
     uses: ./.github/workflows/_tpu_ci.yml
-    needs: build-torch-xla
+    needs: [build-torch-xla, check_code_changes]
+    # Only run if code changes detected
+    if: >
+      (github.event_name == 'push' || github.event_name == 'pull_request') &&
+      needs.check_code_changes.outputs.has_code_changes == 'true'
     with:
       timeout-minutes: 300
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
 
   push-docs:
     name: "Build docs"
