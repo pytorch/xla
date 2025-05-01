@@ -4,6 +4,8 @@ on:
     branches:
       - master
       - r[0-9]+.[0-9]+
+    paths-ignore:
+      - '**.md' # Ignore any file ending with .md in any directory
   push:
     branches:
       - master
