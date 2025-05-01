@@ -44,6 +44,8 @@ jobs:
     name: "Build PyTorch/XLA"
     needs: [check_code_changes, get-torch-commit]
     runs-on: ubuntu-24.04
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
       - name: Build PyTorch/XLA
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
@@ -52,8 +54,6 @@ jobs:
           dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
           torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
           timeout-minutes: 240
-        secrets:
-          gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
       - name: Report no code changes
         if: needs.check_code_changes.outputs.has_code_changes == 'false'
         run: |
@@ -81,14 +81,14 @@ jobs:
     name: "Build XLA CUDA plugin"
     needs: [check_code_changes]
     runs-on: ubuntu-24.04
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
       - name: Build XLA CUDA plugin
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: ./.github/workflows/_build_plugin.yml
         with:
           dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
-        secrets:
-          gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
       - name: Report no code changes
         if: needs.check_code_changes.outputs.has_code_changes == 'false'
         run: |
@@ -98,6 +98,8 @@ jobs:
     name: "CPU tests"
     needs: [build-torch-xla, check_code_changes, get-torch-commit]
     runs-on: ubuntu-24.04
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
       - name: Run CPU tests
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
@@ -107,8 +109,6 @@ jobs:
           timeout-minutes: 120
           collect-coverage: false
           torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
-        secrets:
-          gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
       - name: Report no code changes
         if: needs.check_code_changes.outputs.has_code_changes == 'false'
         run: |
@@ -118,6 +118,8 @@ jobs:
     name: "GPU tests"
     needs: [build-torch-xla, build-cuda-plugin, check_code_changes, get-torch-commit]
     runs-on: ubuntu-24.04
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
       - name: Run GPU tests
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
@@ -129,8 +131,6 @@ jobs:
           collect-coverage: false
           install-cuda-plugin: true
           torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
-        secrets:
-          gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
       - name: Report no code changes
         if: needs.check_code_changes.outputs.has_code_changes == 'false'
         run: |
@@ -178,14 +178,14 @@ jobs:
     name: "Build docs"
     needs: [build-torch-xla, check_code_changes]
     runs-on: ubuntu-24.04
+    secrets:
+      torchxla-bot-token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}
     steps:
       - name: Build and push docs
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: ./.github/workflows/_docs.yml
         with:
           dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
-        secrets:
-          torchxla-bot-token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}
       - name: Report no code changes
         if: needs.check_code_changes.outputs.has_code_changes == 'false'
         run: |
