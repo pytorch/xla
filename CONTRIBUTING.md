@@ -22,19 +22,23 @@ using either VS Code or a local container:
   instructions assume you are using a remote host and are connecting to it over
   SSH.
 
-* Clone PyTorch, TorchVision, and PyTorch/XLA into your workspace directory:
+* Clone PyTorch and TorchVision into your workspace directory:
 
 ```bash
   git clone --recursive --depth=1 https://github.com/pytorch/pytorch.git
 
   # Install TorchVision if you need to run tests that involve vision modules
   git clone --recursive --depth=1 https://github.com/pytorch/vision.git
+```
+
+* Fork PyTorch/XLA and clone into your workspace directory:
+```bash
 
   # Clone with HTTPS if you use a GitHub personal access token
-  git clone https://github.com/pytorch/xla.git pytorch/xla
+  git clone https://<Path/To/Your/Forked/Repo> pytorch/xla
 
   # Or clone with SSH if you prefer:
-  git clone git@github.com:pytorch/xla.git pytorch/xla
+  git clone git@github.com:<Path/To/Your/Forked/Repo> pytorch/xla
 ```
 
 * Create links to VS Code configuration files in your workspace directory:
