@@ -356,7 +356,7 @@ cc_library(
         "@stablehlo//:stablehlo_serialization",
         "@xla//xla/mlir_hlo:all_passes",
         "@xla//xla/hlo/translate/hlo_to_mhlo:hlo_to_mlir_hlo",
-        "@xla//xla/translate/mhlo_to_hlo:mlir_hlo_to_hlo",
+        "@xla//xla/hlo/translate/mhlo_to_hlo:mlir_hlo_to_hlo",
     ],
 )
 

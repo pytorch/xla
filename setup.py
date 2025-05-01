@@ -67,16 +67,17 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
 
-_date = '20250406'
+_date = '20250424'
 
-_libtpu_version = '0.0.13'
-_jax_version = '0.5.4'
-_jaxlib_version = '0.5.4'
+_libtpu_version = '0.0.14'
+_jax_version = '0.6.1'
+_jaxlib_version = '0.6.1'
 
 if USE_NIGHTLY:
+  _libtpu_version += f".dev{_date}"
   _jax_version += f'.dev{_date}'
   _jaxlib_version += f'.dev{_date}'
-  _libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_date}+nightly-py3-none-linux_x86_64'
+  _libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_date}+nightly-py3-none-manylinux_2_31_x86_64'
   _libtpu_storage_directory = 'libtpu-nightly-releases'
 else:
   # The postfix can be changed when the version is updated. Check
