@@ -462,6 +462,9 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
   tsl::profiler::TraceMe activity("IfrtComputationClient::Compile",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
+  xla::ifrt::DeviceListRef devices_list = xla::ifrt::BasicDeviceList::Create(
+      {client_->addressable_devices().begin(),
+       client_->addressable_devices().end()});
 
   for (auto& instance : instances) {
     xla::CompileOptions compile_options;
@@ -501,7 +504,8 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
     std::unique_ptr<xla::ifrt::LoadedExecutable> executable =
         ConsumeValue(client_->GetDefaultCompiler()->Compile(
             std::make_unique<xla::ifrt::HloProgram>(std::move(mlir_module)),
-            std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options)));
+            std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options,
+                                                           devices_list)));
     StableHloCompileCounter()->AddValue(1);
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());

@@ -31,6 +31,33 @@ build --spawn_strategy=standalone
 
 ###########################################################################
 
+build:clang --action_env=CC=/usr/bin/clang-17
+build:clang --action_env=CXX=/usr/bin/clang++-17
+
+# clang requires the sandbox mode. Without this, `bazel build` generates an
+# error like:
+#
+# ERROR: .../external/llvm-project/llvm/BUILD.bazel:2006:11: Compiling
+# llvm/lib/CodeGenTypes/LowLevelType.cpp failed: undeclared inclusion(s) in
+# rule '@llvm-project//llvm:CodeGenTypes':
+# this rule is missing dependency declarations for the following files
+# included by 'llvm/lib/CodeGenTypes/LowLevelType.cpp':
+#   'bazel-out/k8-opt/bin/external/llvm-project/llvm/config.cppmap'
+#   'bazel-out/k8-opt/bin/external/llvm-project/llvm/Demangle.cppmap'
+#
+# The sandbox mode requires all source files to be readable by others, as
+# inside the docker we build PyTorch/XLA as root, not the original user who
+# created the files. You can ensure this by either:
+# 1. `umask 022` before running the `git clone` commands, or
+# 2. after running the `git clone` commands, go to the workspace directory
+#    and run `chmod -R o+rX .`. The X (capital X) is important: it gives
+#    execute permission to directories, and to files only if they already have
+#    execute permission for the owner (or group or others). This is generally
+#    safer than o+rx.
+build:clang --spawn_strategy=sandboxed
+
+###########################################################################
+
 build:posix --copt=-Wno-sign-compare
 build:posix --cxxopt=-std=c++17
 build:posix --host_cxxopt=-std=c++17

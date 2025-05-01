@@ -8,24 +8,36 @@ good fit for PyTorch/XLA as well.
 
 ## Bazel dependencies
 
-Tensorflow is a [bazel external dependency](https://bazel.build/external/overview) for PyTorch/XLA,
+Openxla is a [bazel external dependency](https://bazel.build/external/overview) for PyTorch/XLA,
 which can be seen in the `WORKSPACE` file:
 
 `WORKSPACE`
 
 ``` python
 http_archive(
-    name = "org_tensorflow",
-    strip_prefix = "tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",
+    name = "xla",
+    patch_args = [
+        "-l",
+        "-p1",
+    ],
+    patch_tool = "patch",
+    patches = [
+        "//openxla_patches:gpu_nvml.diff",
+        "//openxla_patches:gpu_race_condition.diff",
+        "//openxla_patches:count_down.diff",
+    ],
+    strip_prefix = "xla-" + xla_hash,
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz",
+        "https://github.com/openxla/xla/archive/" + xla_hash + ".tar.gz",
     ],
 )
 ```
 
-TensorFlow pin can be updated by pointing this repository to a different
-revision. Patches may be added as needed. Bazel will resolve the
-dependency, prepare the code and patch it hermetically.
+You can specify the revision of OpenXLA you want to use in the `urls` field 
+in the WORKSPACE file. PyTorch/XLA always builds with a deterministic
+OpenXLA commit (`xla_hash`), aka "OpenXLA pin". Patches may be added as 
+needed. Bazel will resolve the dependency, prepare the code and patch it
+hermetically.
 
 For PyTorch, a different dependency mechanism is deployed because a
 local [PyTorch](https://github.com/pytorch/pytorch) checkout is used,
