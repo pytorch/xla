@@ -42,7 +42,6 @@ jobs:
 
   build-torch-xla:
     name: "Build PyTorch/XLA"
-    uses: ./.github/workflows/_build_torch_xla.yml
     needs: [check_code_changes, get-torch-commit]
     steps:
       - name: Build PyTorch/XLA
