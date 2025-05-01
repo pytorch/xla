@@ -55,7 +55,7 @@ tensors will be evaluated, and the results will be available to the
 host. The user-exposed barrier in Pytorch XLA is
 [torch_xla.sync()](https://github.com/pytorch/xla/blob/bdceee54eca1269ee954f6cdd1868c584d0e88a4/torch_xla/core/xla_model.py#L808),
 which breaks the IR graph and results in code execution on the XLA
-devices. One of the key properties of `xm.mark_step` is that unlike
+devices. One of the key properties of `torch_xla.sync()` is that unlike
 synchronous operations it does not block the further tracing while the
 device is executing the graph. However, it does block access to the
 values of the tensors that are being materialized.

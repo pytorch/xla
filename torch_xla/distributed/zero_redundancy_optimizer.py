@@ -541,7 +541,8 @@ class ZeroRedundancyOptimizer(Optimizer):
             param.grad = torch.zeros_like(param.data)
           index += 1
       torch_xla.sync()
-      # add mark_step around allgather to avoid large number of compilation
+      # add `torch_xla.sync()` around allgather to avoid large number of
+      # compilation
       self.allgather_weights_and_update_full_parameter()
       torch_xla.sync()
 

@@ -93,10 +93,10 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     # we will transfer 0.5 as a device_data to the 'SPMD:0' device, need to make sure
     # that virtual device can handle this case.
     xt2 = xt1 / 0.5
-    xm.mark_step(wait=True)
+    torch_xla.sync(wait=True)
     torch.allclose(xt2.cpu(), xt1.cpu() / 0.5)
 
-  def test_mark_step_on_virtual_device(self):
+  def test_sync_on_virtual_device(self):
     torch_xla.sync()
     sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
     # tensor will have device as `SPMD:0` in c++
@@ -104,8 +104,8 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
                                      xm.xla_device(),
                                      input_sharding=sharding_spec)[0]
     xt2 = xt1 / 0.5
-    xm.mark_step(wait=True)
-    # after mark_step, xt2 should be materalized
+    torch_xla.sync(wait=True)
+    # after `torch_xla.sync()`, xt2 should be materalized
     self.assertNotIn('aten::div',
                      torch_xla._XLAC._get_xla_tensor_debug_info(xt2))
 

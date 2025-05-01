@@ -61,7 +61,7 @@ class InplaceUpdateTest(unittest.TestCase):
       t2.add_(t2)
       torch_xla.sync()
 
-      # mark_step() causes t1 and t2 to be out of sync on the XLA side.
+      # `torch_xla.sync()` causes t1 and t2 to be out of sync on the XLA side.
 
       fobj = io.BytesIO()
       xm.save({'t1': t1}, fobj)

@@ -24,7 +24,7 @@ class PerDeviceLoader(object):
   def __init__(self, loader, device):
     self._loader = loader
     self._device = device
-    self._mark_step_batch_count = loader.batches_per_execution - 1
+    self._sync_batch_count = loader.batches_per_execution - 1
     self._batches_yielded = 0
 
   def __iter__(self):
@@ -41,7 +41,7 @@ class PerDeviceLoader(object):
       xp.set_tracer_marked_step(False)
       self._batches_yielded += 1
     else:
-      if self._mark_step_batch_count <= self._batches_yielded:
+      if self._sync_batch_count <= self._batches_yielded:
         self._batches_yielded = 0
         torch_xla.sync()
       else:
@@ -189,7 +189,7 @@ class ParallelLoader(object):
       batch -> List(torch.Tensor), List(Dict(str: torch.Tensor)): Input batch
         present in the cpu memory
       device: TPU device where the batch should be moved
-    
+
     Returns:
       result -> List(torch.Tensor), Dict(str: torch.Tensor): Returns a dict if the
         input batch is a dict. Otherwise, returns a list of torch.Tensor.

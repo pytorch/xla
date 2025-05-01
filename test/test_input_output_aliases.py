@@ -77,7 +77,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     torch_xla.sync()
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
 
-  def test_aliasing_across_mark_step(self):
+  def test_aliasing_across_sync(self):
     xla_device = xm.xla_device()
     met.clear_all()
     t1 = torch.randn(4, 5).to(xla_device)
@@ -202,7 +202,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     # being donated...
     xm.save(t1, os.devnull)
 
-    # otherwise this mark_step could crash, or compute the wrong value
+    # otherwise this `torch_xla.sync()` could crash, or compute the wrong value
     # for t2.
     torch_xla.sync()
 
@@ -243,7 +243,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     self.assertFalse(torch_xla._XLAC._get_buffer_donation(t1))
     t2 = t0 + t1
     t1 += 2
-    xm.mark_step(wait=True)
+    torch_xla.sync(wait=True)
 
     # We surface the C++ runtime error by checking that the backend data is
     # no longer present for the IR node.
@@ -320,7 +320,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
 
       self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
 
-  def test_user_config_donation_no_op_mark_step(self):
+  def test_user_config_donation_no_op_sync(self):
     with alias_with_buffer_donor_config_context(True):
       xla_device = xm.xla_device()
       t0 = torch.randn(4, 2, 2).to(xla_device)
@@ -330,7 +330,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
       torch_xla.sync()
       self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
 
-  def test_no_op_mark_step_keep_buffer_donation(self):
+  def test_no_op_sync_keep_buffer_donation(self):
     xla_device = xm.xla_device()
     input = torch.randn(5, 5).to(xla_device)
     self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))

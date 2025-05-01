@@ -7,6 +7,7 @@ FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
 
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import collections
 import unittest

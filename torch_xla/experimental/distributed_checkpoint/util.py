@@ -25,7 +25,8 @@ def prime_optimizer(optimizer: torch.optim.Optimizer) -> torch.optim.Optimizer:
                loading.
   """
 
-  # Initial mark_step to ensure all param_groups are backed by device data.
+  # Initial `torch_xla.sync()` to ensure all param_groups are backed by device
+  # data.
   torch_xla.sync()
   xm.wait_device_ops()
 

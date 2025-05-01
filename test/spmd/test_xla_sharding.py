@@ -536,11 +536,11 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         torch_xla._XLAC._get_xla_sharding_spec(xt),
         torch_xla._XLAC._get_xla_sharding_spec(xt2))
 
-  def test_mark_step_with_sharding(self):
+  def test_sync_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
-    torch_xla.sync()  # mark_step should preserve the sharding
+    torch_xla.sync()  # `torch_xla.sync()` should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
   def test_execute_replicated_metrics(self):
@@ -571,8 +571,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       loss.backward()
       optimizer.step()
       torch_xla.sync()
-      # Sharding is persisted across mark_step calls, and test if the sharded computation
-      # can repeat more than once without crashing.
+      # Sharding is persisted across `torch_xla.sync()` calls, and test if the
+      # sharded computation can repeat more than once without crashing.
       self.assertEqual(sharding_spec,
                        torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
@@ -646,7 +646,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_send_cpu_data_to_device_with_sharding(self):
     # Execute pending graph to avoid contaminating metrics
-    xm.mark_step(wait=True)
+    torch_xla.sync(wait=True)
     met.clear_all()
 
     tensor = torch.arange(16, dtype=torch.float32).reshape(1, 16)
@@ -966,7 +966,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     torch_xla.sync()
     self.assertTrue(torch.allclose(xla_y.cpu(), xla_x.cpu() * 5))
 
-  def test_shard_device_data_ir_after_mark_step(self):
+  def test_shard_device_data_ir_after_sync(self):
     device = xm.xla_device()
     xla_x = torch.randn(8, 128, device=device)
     x = xla_x.cpu()

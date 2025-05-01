@@ -29,7 +29,7 @@ class PtXLADebugTest(unittest.TestCase):
       assert False, "This test should be run with PT_XLA_DEBUG_FILE"
     open(cls.debug_file_name, 'w').close()
 
-  def test_eager_mark_step(self):
+  def test_eager_sync(self):
     with torch_xla.experimental.eager_mode_context(True):
       device = xm.xla_device()
       t1 = torch.randn(5, 9, device=device)
@@ -40,7 +40,7 @@ class PtXLADebugTest(unittest.TestCase):
       self.assertEqual(len(lines), 0)
       open(self.debug_file_name, 'w').close()
 
-  def test_user_mark_step(self):
+  def test_user_sync(self):
     device = xm.xla_device()
     t1 = torch.randn(2, 2, device=device)
     torch_xla.sync()
@@ -60,12 +60,12 @@ class PtXLADebugTest(unittest.TestCase):
 
     if self.debug_level > 1:
       self.assertEqual(len(executation_causes), 1)
-      self.assertIn('user mark_step', executation_causes[0])
+      self.assertIn('user `torch_xla.sync()`', executation_causes[0])
     else:
       self.assertEqual(len(executation_causes), 0)
 
     self.assertEqual(len(compilation_causes), 1)
-    self.assertIn('user mark_step', compilation_causes[0])
+    self.assertIn('user `torch_xla.sync()`', compilation_causes[0])
 
     if self.debug_level > 1:
       self.assertEqual(len(graph_infos), 2)
@@ -90,13 +90,14 @@ class PtXLADebugTest(unittest.TestCase):
 
     if self.debug_level > 1:
       self.assertEqual(len(causes), 1)
-      self.assertIn('mark_step when exiting a profiler StepTrace region',
-                    causes[0])
+      self.assertIn(
+          '`torch_xla.sync()` when exiting a profiler StepTrace region',
+          causes[0])
     else:
       self.assertEqual(len(causes), 0)
 
     self.assertEqual(len(compilation_causes), 1)
-    self.assertIn('mark_step when exiting a profiler StepTrace region',
+    self.assertIn('`torch_xla.sync()` when exiting a profiler StepTrace region',
                   compilation_causes[0])
 
     if self.debug_level > 1:
@@ -127,7 +128,7 @@ class PtXLADebugTest(unittest.TestCase):
 
     if self.debug_level > 1:
       self.assertEqual(len(executation_causes), 2)
-      self.assertIn('mark_step when dynamo processing input graphs',
+      self.assertIn('`torch_xla.sync()` when dynamo processing input graphs',
                     executation_causes[0])
       self.assertIn('dynamo is executing a compiled program',
                     executation_causes[1])
@@ -135,7 +136,7 @@ class PtXLADebugTest(unittest.TestCase):
       self.assertEqual(len(executation_causes), 0)
 
     self.assertEqual(len(compilation_causes), 2)
-    self.assertIn('mark_step when dynamo processing input graphs',
+    self.assertIn('`torch_xla.sync()` when dynamo processing input graphs',
                   compilation_causes[0])
     self.assertIn('dynamo is compiling a FX graph to HLO',
                   compilation_causes[1])
@@ -267,13 +268,14 @@ class PtXLADebugTest(unittest.TestCase):
     if self.debug_level > 1:
       self.assertEqual(len(executation_causes), batch_size)
       for cause in executation_causes:
-        self.assertIn('mark_step in parallel loader at step end', cause)
+        self.assertIn('`torch_xla.sync()` in parallel loader at step end',
+                      cause)
     else:
       self.assertEqual(len(executation_causes), 0)
 
     # We should only compile once.
     self.assertEqual(len(compilation_causes), 1)
-    self.assertIn('mark_step in parallel loader at step end',
+    self.assertIn('`torch_xla.sync()` in parallel loader at step end',
                   compilation_causes[0])
 
     if self.debug_level > 1:
@@ -336,8 +338,8 @@ class PtXLADebugTest(unittest.TestCase):
     # second frame will be empty from the post-compilation-analysis
     if self.debug_level > 1:
       self.assertEqual(len(frames[2].split('\n')), max_frame + 3)
-    # Check mark_step is the first frame
-    self.assertIn('mark_step', frames[0].split('\n')[1])
+    # Check `torch_xla.sync()` is the first frame
+    self.assertIn('`torch_xla.sync()`', frames[0].split('\n')[1])
 
     open(self.debug_file_name, 'w').close()
 

@@ -10,6 +10,7 @@ import unittest
 
 import args_parse
 import test_profile_mp_mnist
+import torch_xla
 import torch_xla.debug.profiler as xp
 import torch_xla.utils.utils as xu
 

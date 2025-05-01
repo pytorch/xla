@@ -324,10 +324,11 @@ void DebugUtil::analyze_graph_execution_python_frame(
     // can either analyze the C++ call stack or rely on caller to pass a boolean
     // variable.
     ss << debug_output_prefix << "  dynamo is executing a compiled program\n";
-  } else if (frames[0].function == "mark_step" ||
+  } else if (frames[0].function == "`torch_xla.sync()`" ||
              (frames[0].function == "sync" &&
               endsWith(frames[0].file, "torch_xla.py"))) {
-    bool called_by_sync = frames[0].function == "mark_step" && frames[1].function == "sync";
+    bool called_by_sync =
+        frames[0].function == "mark_step" && frames[1].function == "sync";
     int i = called_by_sync ? 2 : 1;
     if (frames[i].function == "next" &&
         endsWith(frames[i].file, "parallel_loader.py")) {
@@ -351,7 +352,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
          << "  torch_xla.compile clear the pending graph prior calling the "
             "target function\n";
     } else {
-      ss << debug_output_prefix << "  user mark_step\n";
+      ss << debug_output_prefix << "  user `torch_xla.sync()`\n";
     }
   } else if (frames[0].function == "extract_graph_helper" &&
              endsWith(frames[0].file, "dynamo_bridge.py")) {
@@ -361,7 +362,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
     // tensor or fallback or some weird indexing.
     ss << debug_output_prefix
        << "  most likely user code trying to access tensor value before "
-          "mark_step\n";
+          "`torch_xla.sync()`\n";
   }
 
   ss << debug_output_prefix << "Graph Info: \n";

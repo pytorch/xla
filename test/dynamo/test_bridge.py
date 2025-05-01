@@ -1,6 +1,7 @@
 import copy
 
 import torch
+import torch_xla
 
 import torch._dynamo.test_case
 import torch._dynamo.testing

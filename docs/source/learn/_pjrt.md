@@ -325,10 +325,10 @@ communication, which is much more stable and well-tested on large TPU
 pods. This imposes two new constraints compared to the XRT
 implementation:
 
--   Because the payload has to become part of the XLA graph,
-    `xm.mark_step` is called both before and after the data is
-    transferred. Calling `xm.rendezvous` in the middle of model code may
-    force an unwanted compilation.
+-   Because the payload has to become part of the XLA graph, `torch_xla.sync()`
+    is called both before and after the data is transferred. Calling
+    `xm.rendezvous` in the middle of model code may force an unwanted
+    compilation.
 -   Because XLA does not permit collective operations to run on a subset
     of workers, all workers must participate in the `rendezvous`.
 
