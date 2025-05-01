@@ -1734,7 +1734,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     y[::2].copy_(x[::2])
     self.assertEqual(y, [1, 0, 3, 0, 5, 0])
 
-  def test_view_and_multi_mark_step(self):
+  def test_view_and_multi_sync(self):
     xla_device = xm.xla_device()
     t1 = torch.zeros(100, device=xla_device)
     t1[10] = 113
@@ -1839,7 +1839,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xm.wait_device_ops()
     met.clear_all()
 
-    # case 1 mark_step
+    # case 1 `torch_xla.sync()`
     t1 = torch.randn(1, 4, device=xla_device)
     torch_xla.sync()
     xm.wait_device_ops()
@@ -1850,7 +1850,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertIn('xla::device_data',
                   torch_xla._XLAC._get_xla_tensors_text([t1]))
 
-    # case 2 no mark_step, directly print
+    # case 2 no `torch_xla.sync()`, directly print
     met.clear_all()
     t1 = torch.randn(1, 4, device=xla_device)
     for _ in range(3):
@@ -1859,7 +1859,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertIn('xla::device_data',
                   torch_xla._XLAC._get_xla_tensors_text([t1]))
 
-    # case 2 no mark_step, print with .cpu
+    # case 2 no `torch_xla.sync()`, print with .cpu
     met.clear_all()
     t1 = torch.randn(1, 4, device=xla_device)
     for _ in range(3):
@@ -2903,7 +2903,7 @@ class TestGeneric(test_utils.XlaTestCase):
   def test_unsafe_buffer_pointer(self):
     xla_device = xm.xla_device()
     xla_tensor_0 = torch.tensor(42).to(xla_device)
-    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
+    # `torch_xla.sync()` ensures xtensor->CurrentDataHandle() != nullptr
     torch_xla.sync()
     buf_ptr_0 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_0)
     self.assertGreaterEqual(buf_ptr_0, 0)
@@ -2965,7 +2965,7 @@ class TestDLPack(parameterized.TestCase):
   def test_dlpack_roundtrip_scalar(self, dtype):
     xla_device = xm.xla_device()
     xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)
-    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
+    # `torch_xla.sync()` ensures xtensor->CurrentDataHandle() != nullptr
     torch_xla.sync()
     self._test_dlpack_capsule_conversion_helper(xla_tensor_0)
 

@@ -6,6 +6,7 @@ import sys
 import tempfile
 
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.spmd as xs

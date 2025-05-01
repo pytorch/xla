@@ -72,7 +72,7 @@ class MetricsTest(unittest.TestCase):
       self.assertIn('EagerOpExecuteTime', met.metric_names())
       # one for add
       self.assertEqual(met.metric_data('EagerOpExecuteTime')[0], 2)
-      # mark_step should be a no-op
+      # `torch_xla.sync()` should be a no-op
       torch_xla.sync()
       self.assertNotIn('CompileTime', met.metric_names())
       self.assertNotIn('ExecuteTime', met.metric_names())

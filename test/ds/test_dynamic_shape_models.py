@@ -10,6 +10,7 @@ sys.argv = [sys.argv[0]] + leftovers
 import numpy as np
 import unittest
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 

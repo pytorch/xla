@@ -31,7 +31,7 @@ def _mp_fn(index):
       frames = extract_python_frames(lines)
     # only the local master process should dump the execution analysis
     assert (len(causes) == 1)
-    assert ('user sync' in causes[0])
+    assert ('user `torch_xla.sync()`' in causes[0])
     assert (len(frames) == 3)
     max_frame = os.getenv('PT_XLA_DEBUG_MAX_FRAME', 8)
     # Additonal lines are

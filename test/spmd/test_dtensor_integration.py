@@ -70,8 +70,8 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
       loss.backward()
       optimizer.step()
       torch_xla.sync()
-      # Sharding is persisted across mark_step calls, and test if the sharded computation
-      # can repeat more than once without crashing.
+      # Sharding is persisted across `torch_xla.sync()` calls, and test if the
+      # sharded computation can repeat more than once without crashing.
       self.assertEqual(sharding_spec,
                        torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 

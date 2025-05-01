@@ -19,7 +19,8 @@ from torch.testing._internal.common_dtype import (all_types_and_complex_and)
 # work. The randperm op generates a random tensor. Every iteration of the test
 # recompiles the randperm op thus generating a different random tensor which
 # makes the test non-deterministic. To force determinism, this test has to
-# call PyTorch/XLA mark_step() to materialize the tensor rather than recompile.
+# call PyTorch/XLA `torch_xla.sync()` to materialize the tensor rather than
+# recompile.
 class TestPythonOps(pytorch_test_base.XLATestBase):
 
   @dtypes(*all_types_and_complex_and(torch.half, torch.bfloat16))

@@ -77,6 +77,7 @@ multi-processing.
 The following snippet shows a network training on a single XLA device:
 
 ```python
+import torch_xla
 import torch_xla.core.xla_model as xm
 
 device = xm.xla_device()
@@ -99,7 +100,7 @@ for data, target in train_loader:
 This snippet highlights how easy it is to switch your model to run on XLA. The
 model definition, dataloader, optimizer and training loop can work on any device.
 The only XLA-specific code is a couple lines that acquire the XLA device and
-mark the step. Calling
+materializing the tensors. Calling
 `torch_xla.sync()` at the end of each training
 iteration causes XLA to execute its current graph and update the model's
 parameters. See [XLA Tensor Deep Dive](#xla-tensor-deep-dive) for more on
@@ -144,10 +145,10 @@ single device snippet. Let's go over then one by one.
 - `MpDeviceLoader`
   - Loads the training data onto each device.
   - `MpDeviceLoader` can wrap on a torch dataloader. It can preload the data to the device and overlap the dataloading with device execution to improve the performance.
-  - `MpDeviceLoader` also call `xm.mark_step` for you every `batches_per_execution`(default to 1) batch being yield.
+  - `MpDeviceLoader` also call `torch_xla.sync()` for you every `batches_per_execution`(default to 1) batch being yield.
 - `xm.optimizer_step(optimizer)`
   - Consolidates the gradients between devices and issues the XLA device step computation.
-  - It is pretty much a `all_reduce_gradients` + `optimizer.step()` + `mark_step` and returns the loss being reduced.
+  - It is pretty much a `all_reduce_gradients` + `optimizer.step()` + `torch_xla.sync()` and returns the loss being reduced.
 
 The model definition, optimizer definition and training loop remain the same.
 

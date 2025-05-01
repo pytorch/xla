@@ -1,5 +1,6 @@
 import os
 import torch
+import torch_xla
 import argparse
 import numpy as np
 import datetime

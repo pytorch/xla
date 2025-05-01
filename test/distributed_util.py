@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.parallel
 from torch.nn.parallel import DistributedDataParallel as DDP
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 import torch_xla.distributed.xla_backend

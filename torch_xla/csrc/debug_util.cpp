@@ -323,7 +323,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
     // can either analyze the C++ call stack or rely on caller to pass a boolean
     // variable.
     ss << debug_output_prefix << "  dynamo is executing a compiled program\n";
-  } else if (frames[0].function == "mark_step" ||
+  } else if (frames[0].function == "`torch_xla.sync()`" ||
              (frames[0].function == "sync" &&
               endsWith(frames[0].file, "torch_xla.py"))) {
     // TODO: the deprecation warning of mark_step adds extra call stack,
@@ -361,7 +361,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
     }
     // function not found in frame
     if (idx == frames.size()) {
-      ss << debug_output_prefix << "  user sync\n";
+      ss << debug_output_prefix << "  user `torch_xla.sync()`\n";
     }
   } else if (frames[0].function == "extract_graph_helper" &&
              endsWith(frames[0].file, "dynamo_bridge.py")) {
@@ -370,7 +370,8 @@ void DebugUtil::analyze_graph_execution_python_frame(
     // TODO(JackCaoG): be more specific about  exeuction caused by printing
     // tensor or fallback or some weird indexing.
     ss << debug_output_prefix
-       << "  most likely user code trying to access tensor value before sync\n";
+       << "  most likely user code trying to access tensor value before "
+          "`torch_xla.sync()`\n";
   }
 
   ss << debug_output_prefix << "Graph Info: \n";

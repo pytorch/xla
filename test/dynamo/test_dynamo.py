@@ -83,7 +83,7 @@ class DynamoLTCInteractionTest(parameterized.TestCase):
   def index_copy_inplace(self, cache, update_indices, xk):
     cache.index_copy_(0, update_indices, xk)
 
-  def test_mark_step_after_dynamo(self):
+  def test_sync_after_dynamo(self):
     cache_len = 512
     kv_heads = 8
     head_dim = 128
@@ -102,7 +102,8 @@ class DynamoLTCInteractionTest(parameterized.TestCase):
       dynamo_index_copy_inplace(cache, update_indices, xk)
       xm.wait_device_ops()
       current_execute_time = met.metric_data('ExecuteTime')[0]
-      # This mark_step should be a no-op and don't trigger additional execution.
+      # This `torch_xla.sync()` should be a no-op and don't trigger additional
+      # execution.
       torch_xla.sync()
       xm.wait_device_ops()
       self.assertEqual(current_execute_time, met.metric_data('ExecuteTime')[0])

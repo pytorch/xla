@@ -56,8 +56,8 @@ class PybindTest(unittest.TestCase):
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
     t1 = t1.to(xla_device)
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
-    # call mark_step to clear pending irs on t1. This should test the case where
-    # XLATensor has a `XLAData` instead of a `DeviceData` IR.
+    # call `torch_xla.sync()` to clear pending irs on t1. This should test the
+    # case where XLATensor has a `XLAData` instead of a `DeviceData` IR.
     torch_xla.sync()
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
     t2 = t1 * 2
@@ -100,7 +100,7 @@ class PybindTest(unittest.TestCase):
     self.assertNotIn("aten::add", torch_xla._XLAC._get_xla_tensors_text([t3]))
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
     torch_xla.sync()
-    # mark_step should not incur new execution
+    # `torch_xla.sync()` should not incur new execution
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
   def test_run_cached_graph(self):
