@@ -39,8 +39,8 @@ struct TrieValue {
 // 2. matched_ will be 0 only in the beginning for the root node.
 struct TrieBuilder {
   // Wrappers to the currently pointed to TrieNode methods.
-  void AddValue(TrieValue value, bool allow_new_trace);
-  bool MarkTraceBoundary(bool allow_new_trace);
+  void AddValue(TrieValue value, bool allow_new_graph);
+  bool MarkGraphBoundary(bool allow_new_graph);
 
   // Current TrieNode.
   TrieNode* node_;
@@ -56,8 +56,8 @@ struct TrieBuilder {
 //
 // The main interface to interact with TrieNode is TrieBuilder. We start from
 // the root, incrementally accepting new TrieValue by calling AddValue. Said
-// function will incrementally build the trie. Finally, MarkTraceBoundary will
-// set is_trace_boundary_ and maybe split the current node (if we haven't
+// function will incrementally build the trie. Finally, MarkGraphBoundary will
+// set is_graph_boundary_ and maybe split the current node (if we haven't
 // matched everything in this node's common_sequence_).
 //
 // Main assumption for every TrieNode
@@ -92,21 +92,21 @@ struct TrieBuilder {
 // (ii) a node containing the given TrieValue. The returned TrieBuilder will be
 // {node (ii), 1}.
 //
-// 5. Consider the TrieBuilder {root, 20}. If MarkTraceBoundary is called, and
-// root is a leaf (i.e. no children), then root.is_trace_boundary_ is set to
+// 5. Consider the TrieBuilder {root, 20}. If MarkGraphBoundary is called, and
+// root is a leaf (i.e. no children), then root.is_graph_boundary_ is set to
 // true.
 struct TrieNode {
   using ChildrenMap = std::map<torch::lazy::hash_t, std::unique_ptr<TrieNode>>;
 
   TrieNode(absl::Span<const TrieValue> common_sequence = {},
-           bool is_trace_boundary = false);
+           bool is_graph_boundary = false);
 
   // May add TrieValue to this TrieNode.
   //
-  // This function is used to iteratively construct the trace. It does 2 things.
+  // This function is used to iteratively construct the graph. It does 2 things.
   //
   // First, it checks whether the given value actually matches the values
-  // already inside this node, i.e. this trace was seen before. For example, the
+  // already inside this node, i.e. this graph was seen before. For example, the
   // given value may match the value inside common_sequence_ (after `matched`
   // elements) or one of children (if `matched` equals the size of
   // common_sequence_).
@@ -118,22 +118,22 @@ struct TrieNode {
   //   3. splitting this node, creating 2 new nodes containing: (i) rest of the
   //      unmatched common_sequence_; and (ii) the given value.
   TrieBuilder AddValue(TrieValue value, std::size_t matched,
-                       bool allow_new_trace);
+                       bool allow_new_graph);
 
-  // Marks this node as trace boundary.
+  // Marks this node as graph boundary.
   //
   // Given the number of `matched` elements in the common_sequence_, this
-  // function sets `is_trace_boundary_` and possibly moves the rest of the
+  // function sets `is_graph_boundary_` and possibly moves the rest of the
   // unmatched common_sequence_ to a new node.
   //
-  // Returns whether a new trace was created.
-  bool MarkTraceBoundary(std::size_t matched, bool allow_new_trace);
+  // Returns whether a new graph was created.
+  bool MarkGraphBoundary(std::size_t matched, bool allow_new_graph);
 
-  // Issue an error indicating a new trace is not allowed.
+  // Issue an error indicating a new graph is not allowed.
   //
   // This function will correctly inspect the TrieNode, building an informative
   // error message.
-  void NewTraceNotAllowedError(std::optional<TrieValue> value,
+  void NewGraphNotAllowedError(std::optional<TrieValue> value,
                                std::size_t matched);
 
   // Maybe split this node into 2, containing, respectively: (i)
@@ -156,9 +156,9 @@ struct TrieNode {
   // Sequence of values all children_ in this node share.
   std::vector<TrieValue> common_sequence_;
 
-  // Flag indicating whether the current node is a trace boundary. i.e.
-  // whether there is a trace that ends with common_sequence_.
-  bool is_trace_boundary_;
+  // Flag indicating whether the current node is a graph boundary. i.e.
+  // whether there is a graph that ends with common_sequence_.
+  bool is_graph_boundary_;
 
   // Children, i.e. forking points, of this node.
   ChildrenMap children_;
@@ -171,17 +171,17 @@ struct SessionInfo {
   // Name of this session.
   std::string name_;
 
-  // Root of the trie that stores trace information for this session.
+  // Root of the trie that stores graph information for this session.
   std::unique_ptr<TrieNode> root_;
 
-  // Number of recorded traces for this session.
-  std::size_t traces_;
+  // Number of recorded graphs for this session.
+  std::size_t graphs_;
 };
 
 // Surface class for detecting dynamic shapes.
 //
 // Manages the information related to each session as well as the active
-// session, i.e. the one that we are recording traces for.
+// session, i.e. the one that we are recording graphs for.
 class DynamicShapeDetector {
  public:
   static DynamicShapeDetector* Get();
@@ -192,17 +192,17 @@ class DynamicShapeDetector {
 
   // Stops recording the created IR nodes for the active session.
   //
-  // Before doing that, we commit the current trace, turning the current
-  // TrieNode being visited into a trace boundary.
+  // Before doing that, we commit the current graph, turning the current
+  // TrieNode being visited into a graph boundary.
   //
   // This function may raise an exception if we aren't allowed to create
-  // more traces.
+  // more graphs.
   void EndSession();
 
   // Records a newly created IR node (its metadata).
   //
   // This function may raise an exception if:
-  //   1. we aren't allowed to create more traces; and
+  //   1. we aren't allowed to create more graphs; and
   //   2. we have to create a new TrieNode because this IR node wasn't expected
   //      in the trie.
   void AddNodeInfo(torch::lazy::hash_t hash, const std::string& str);
@@ -213,13 +213,13 @@ class DynamicShapeDetector {
   // Maybe removes the session entry.
   void RemoveSessionIfExists(const std::string& name);
 
-  // API for setting the maximum number of traces allowed to be recorded.
-  static void SetMaxAllowedTraces(std::size_t value);
-  static std::size_t GetMaxAllowedTraces();
+  // API for setting the maximum number of graphs allowed to be recorded.
+  static void SetMaxDifferentGraphs(std::size_t value);
+  static std::size_t GetMaxDifferentGraphs();
 
  private:
-  // Whether the current session allows new traces, i.e. new graph compilations.
-  bool AllowNewTrace();
+  // Whether the current session allows new graphs, i.e. new graph compilations.
+  bool AllowNewGraph();
 
   // Move the TrieBuilder to the root node of this session.
   void RootBuilder();

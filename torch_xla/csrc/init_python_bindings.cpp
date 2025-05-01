@@ -2618,13 +2618,13 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::string& session) {
           DynamicShapeDetector::Get()->RemoveSessionIfExists(session);
         });
-  m.def("_dynamic_shape_detector_set_max_allowed_traces",
-        [](int64_t max_allowed_traces) {
-          DynamicShapeDetector::SetMaxAllowedTraces(max_allowed_traces);
+  m.def("_dynamic_shape_detector_set_max_different_graphs",
+        [](int64_t max_different_graphs) {
+          DynamicShapeDetector::SetMaxDifferentGraphs(max_different_graphs);
         });
-  m.def("_dynamic_shape_detector_get_max_allowed_traces",
-        [](int64_t max_allowed_traces) {
-          return DynamicShapeDetector::GetMaxAllowedTraces();
+  m.def("_dynamic_shape_detector_get_max_different_graphs",
+        []() {
+          return DynamicShapeDetector::GetMaxDifferentGraphs();
         });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {

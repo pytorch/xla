@@ -99,7 +99,7 @@ def compile(
     f: Optional[Callable] = None,
     full_graph: Optional[bool] = False,
     name: Optional[str] = None,
-    num_different_graphs_allowed: Optional[int] = None,
+    max_different_graphs: Optional[int] = None,
 ):
   """
   Optimizes given model/function using torch_xla's LazyTensor tracing mode.
@@ -117,7 +117,7 @@ def compile(
       name (Optional[name]): Name of the compiled program. The name of the function `f` will be used
         if not specified. This name will be used in the `PT_XLA_DEBUG` messages as well as HLO/IR dump
         file.
-      num_different_graphs_allowed (Optional[int]): number of different traced graphs of the given
+      max_different_graphs (Optional[int]): number of different traced graphs of the given
         model/function that we are allowed to have. An error will be raised in case this limit
         is exceeded.
 
@@ -182,16 +182,16 @@ def compile(
     # if full_graph sets to true execution can not happen before the sync below
     torch_xla._XLAC._set_allow_execution(not full_graph)
 
-    if num_different_graphs_allowed is not None:
-      torch_xla._XLAC._dynamic_shape_detector_set_max_num_different_graphs_allowed(
-          num_different_graphs_allowed)
+    if max_different_graphs is not None:
+      torch_xla._XLAC._dynamic_shape_detector_set_max_different_graphs(
+          max_different_graphs)
       torch_xla._XLAC._dynamic_shape_detector_start_session(current_id)
 
     try:
       yield
     finally:
       torch_xla._XLAC._set_allow_execution(saved_allow_execution)
-      if num_different_graphs_allowed is not None:
+      if max_different_graphs is not None:
         torch_xla._XLAC._dynamic_shape_detector_end_session()
       # Collect the traced graph after running the target function and
       # execute the graph.
