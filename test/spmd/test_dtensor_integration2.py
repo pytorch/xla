@@ -4,8 +4,8 @@ import sys
 import torch
 from torch import nn
 import torch.optim as optim
-from torch.distributed._tensor import (DeviceMesh, Shard, distribute_tensor,
-                                       distribute_module)
+from torch.distributed.tensor import (DeviceMesh, Shard, distribute_tensor,
+                                      distribute_module)
 import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.runtime as xr
