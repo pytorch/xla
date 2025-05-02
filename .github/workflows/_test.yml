@@ -102,24 +102,27 @@ jobs:
           wheels-artifact: torch-xla-wheels
           cuda-plugin-artifact: ${{ inputs.install-cuda-plugin && 'cuda-plugin' || null }}
       - name: Fetch CPP test binaries
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: >
+          needs.check_code_changes.outputs.has_code_changes == 'true' &&
+          ${{ matrix.run_cpp_tests }}
         uses: actions/download-artifact@v4
         with:
           name: cpp-test-bin
           path: /tmp/test/bin
-        if: ${{ matrix.run_cpp_tests }}
       # GitHub Actions doesn't preserve executable permissions
       # https://github.com/actions/download-artifact?tab=readme-ov-file#permission-loss
       - name: Set CPP test permissions
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: >
+          needs.check_code_changes.outputs.has_code_changes == 'true' &&
+          ${{ matrix.run_cpp_tests }}
         run: |
           chmod +x /tmp/test/bin/*
           ls -l /tmp/test/bin
-        if: ${{ matrix.run_cpp_tests }}
       - name: Check GPU
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: >
+          needs.check_code_changes.outputs.has_code_changes == 'true' &&
+          ${{ inputs.install-cuda-plugin }}
         run: nvidia-smi
-        if: ${{ inputs.install-cuda-plugin }}
       - name: Install test deps
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
         shell: bash
@@ -155,8 +158,9 @@ jobs:
         shell: bash
         run: pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
       - name: Upload coverage results
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
-        if: ${{ inputs.collect-coverage }}
+        if: >
+            needs.check_code_changes.outputs.has_code_changes == 'true' &&
+            ${{ inputs.collect-coverage }}
         shell: bash
         env:
           CIRCLE_WORKFLOW_ID: ${{ github.run_id }}

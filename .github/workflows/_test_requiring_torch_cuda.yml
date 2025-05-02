@@ -103,12 +103,13 @@ jobs:
         with:
           path: pytorch/xla
       - name: Extra CI deps
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: >
+          needs.check_code_changes.outputs.has_code_changes == 'true'
+          ${{ matrix.run_triton_tests }}
         shell: bash
         run: |
           set -x
           pip install -U --pre jax jaxlib "jax-cuda12-plugin[with_cuda]" jax-cuda12-pjrt -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
-        if: ${{ matrix.run_triton_tests }}
       - name: Install Triton
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
         shell: bash
@@ -116,19 +117,21 @@ jobs:
           cd pytorch
           make triton
       - name: Python Tests
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: >
+          needs.check_code_changes.outputs.has_code_changes == 'true' &&
+          ${{ matrix.run_python_tests }}
         shell: bash
         run: |
           set -xue
           PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
           PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
-        if: ${{ matrix.run_python_tests }}
       - name: Triton Tests
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: >
+          needs.check_code_changes.outputs.has_code_changes == 'true' &&
+          ${{ matrix.run_triton_tests }}
         shell: bash
         run: |
           PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.3/bin/ptxas python pytorch/xla/test/test_triton.py
-        if: ${{ matrix.run_triton_tests }}
       - name: Report no code changes
         if: needs.check_code_changes.outputs.has_code_changes == 'false'
         run: |

@@ -76,7 +76,9 @@ jobs:
         name: github-pages
         path: pytorch/xla/docs/build/
     - name: Deploy
-      if: needs.check_code_changes.outputs.has_code_changes == 'true'
+      if: >
+        needs.check_code_changes.outputs.has_code_changes == 'true' &&
+        github.event_name == 'push'
       shell: bash
       run: |
         cd gh-pages
@@ -85,7 +87,6 @@ jobs:
         git add . -v
         git diff --cached --exit-code || git commit -m "Update doc from commit ${{ github.sha }}"
         git push origin gh-pages
-      if: github.event_name == 'push'
     - name: Report no code changes
       if: needs.check_code_changes.outputs.has_code_changes == 'false'
       run: |
