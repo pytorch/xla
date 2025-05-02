@@ -16,6 +16,7 @@ on:
         required: true
 jobs:
   build-docs:
+    needs: [check_code_changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     container:
@@ -24,42 +25,50 @@ jobs:
       BRANCH_NAME: ${{ github.ref_name }}
     steps:
     - name: Fetch wheels
+      if: needs.check_code_changes.outputs.has_code_changes == 'true'
       uses: actions/download-artifact@v4
       with:
         name: torch-xla-wheels
         path: /tmp/wheels/
     - name: Install wheels
+      if: needs.check_code_changes.outputs.has_code_changes == 'true'
       shell: bash
       run: |
         pip install /tmp/wheels/*.whl
     - name: Checkout PyTorch/XLA Repo
+      if: needs.check_code_changes.outputs.has_code_changes == 'true'
       uses: actions/checkout@v4
       with:
         path: pytorch/xla
     - name: Build docs
+      if: needs.check_code_changes.outputs.has_code_changes == 'true'
       shell: bash
       run: |
         cd pytorch/xla/docs
         pip install -r requirements.txt
         sphinx-build -b html source build
     - name: Checkout GitHub Pages
+      if: needs.check_code_changes.outputs.has_code_changes == 'true'
       uses: actions/checkout@v4
       with:
         path: gh-pages
         ref: gh-pages
         token: ${{ github.event_name == 'push' && secrets.torchxla-bot-token || github.token }}
     - name: Merge changes
+      if: needs.check_code_changes.outputs.has_code_changes == 'true'
       shell: bash
       run: |
         subdir=${{ env.BRANCH_NAME == 'master' && 'master' || format('{0}/{1}', 'release', env.BRANCH_NAME) }}
         mkdir -p gh-pages/$subdir
         cp -fR pytorch/xla/docs/build/* gh-pages/$subdir
     - name: Upload preview as artifact
+      if: needs.check_code_changes.outputs.has_code_changes == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: github-pages
         path: pytorch/xla/docs/build/
     - name: Deploy
+      if: needs.check_code_changes.outputs.has_code_changes == 'true'
       shell: bash
       run: |
         cd gh-pages
@@ -69,3 +78,7 @@ jobs:
         git diff --cached --exit-code || git commit -m "Update doc from commit ${{ github.sha }}"
         git push origin gh-pages
       if: github.event_name == 'push'
+    - name: Report no code changes
+      if: needs.check_code_changes.outputs.has_code_changes == 'false'
+      run: |
+        echo "No code changes were detected that require running the full test suite."

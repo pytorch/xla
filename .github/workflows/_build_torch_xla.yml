@@ -26,6 +26,7 @@ on:
         description: Secret to access Bazel build cache
 jobs:
   build:
+    needs: [check_code_changes]
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     container:
@@ -39,27 +40,37 @@ jobs:
       # Need to check out local composite actions before using them
       # https://github.com/orgs/community/discussions/11771
       - name: Checkout actions
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
       - name: Build
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         shell: bash
         run: |
           cd pytorch/xla/infra/ansible
           ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: torch-xla-wheels
           path: /dist/*.whl
       - name: Upload CPP test binaries
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: cpp-test-bin
           path: /tmp/test/bin
+      - name: Report no code changes
+        if: needs.check_code_changes.outputs.has_code_changes == 'false'
+        run: |
+          echo "No code changes were detected that require running the full test suite."
+
