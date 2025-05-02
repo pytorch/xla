@@ -2125,8 +2125,7 @@ void InitXlaModuleBindings(py::module m) {
     XlaHelpers::set_mat_mul_precision(precision);
   });
   m.def("_xla_get_mat_mul_precision", []() {
-    xla::PrecisionConfig::Precision precision =
-        XlaHelpers::mat_mul_precision();
+    xla::PrecisionConfig::Precision precision = XlaHelpers::mat_mul_precision();
     return xla::PrecisionToString(precision);
   });
 
