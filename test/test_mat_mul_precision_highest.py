@@ -23,7 +23,7 @@ def _is_on_tpu():
 skipIfNotTpu = unittest.skipIf(not _is_on_tpu(), 'Only supported on TPU')
 
 
-class TestMatMulPrecisionDefault(unittest.TestCase):
+class TestMatMulPrecisionHighest(unittest.TestCase):
 
   def _make_input(self):
     eye = torch.eye(1024, device='cpu', dtype=torch.float64)
