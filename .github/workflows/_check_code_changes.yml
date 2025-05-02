@@ -64,7 +64,7 @@ jobs:
           cat changed_files.txt
 
           if grep -q -v -E '\.md$' changed_files.txt; then
-            echo "Non-markdown changes detected."
+            echo "Code changes detected."
             echo "has_code_changes=true" >> "$GITHUB_OUTPUT"
           else
             echo "Only markdown changes detected or no changes found in diff."
