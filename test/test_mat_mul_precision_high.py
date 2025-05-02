@@ -8,7 +8,6 @@ environment for each test.
 """
 
 import os
-import sys
 import unittest
 
 import torch
@@ -45,33 +44,31 @@ class TestMatMulPrecisionHigh(unittest.TestCase):
     # but require only one non-zero accumulation.
     x = self._make_input()
     y = self._make_input()
-    actual_float64 = torch.matmul(x, y)
+    reference_float64 = torch.matmul(x, y)
 
     # 14 bits is an estimate of precision in the
     # three pass technique.
-    worst_error_default = torch.tensor(
-        1 - ((2**14 - 1) / 2**14)**2, dtype=torch.float64)
+    worst_atol = torch.tensor(1 - ((2**14 - 1) / 2**14)**2, dtype=torch.float64)
 
     x = x.to(torch.float32).to('xla')
     y = y.to(torch.float32).to('xla')
 
     # Act
-    actual_default = torch.matmul(x, y).to('cpu').to(torch.float64)
+    actual = torch.matmul(x, y).to('cpu').to(torch.float64)
 
     # Disable rtol, we know exactly the atol for default, high, and highest.
     torch.testing.assert_close(
-        actual_default,
-        actual_float64,
+        actual,
+        reference_float64,
         rtol=0.0,
-        atol=worst_error_default,
+        atol=worst_atol,
     )
 
-    assert not torch.equal(actual_default, actual_float64), (
-        f"Default and high precision should not be equal, "
-        f"but they are: {torch.diag(actual_default)} == {torch.diag(actual_float64)}"
+    assert not torch.equal(actual, reference_float64), (
+        "Actual product and reference product should not be equal, "
+        f"but they are: {torch.diag(actual)} == {torch.diag(reference_float64)}"
     )
 
 
 if __name__ == '__main__':
-  test = unittest.main()
-  sys.exit(0 if test.result.wasSuccessful() else 1)
+  unittest.main(verbosity=0)
