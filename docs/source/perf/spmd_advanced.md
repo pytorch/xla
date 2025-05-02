@@ -87,7 +87,7 @@ import torch
 from torch.distributed.tensor import init_device_mesh, Shard, distribute_tensor
 
 # distribute_tensor now works with `xla` backend using PyTorch/XLA SPMD.
-mesh = init_device_mesh("xla", mesh_shape=(device_count,))
+mesh = init_device_mesh("xla", mesh_shape=(world_size,))
 big_tensor = torch.randn(100000, 88)
 my_dtensor = distribute_tensor(big_tensor, mesh, [Shard(0)])
 ```
