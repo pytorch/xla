@@ -850,6 +850,11 @@ class XlaComputation:
   @requires_jax
   def __call__(self, input_list):
     input_tensors = self.pick_tensor_args(input_list)
+    
+    # TODO: wtf is this hack needed
+    to32 = lambda x: x.to(torch.int32) if x.dtype == torch.int64 else x
+    input_tensors = [to32(i) for i in input_tensors]
+
     result = torch_xla._XLAC._xla_user_computation(f'xla::call_jax_{self.name}',
                                                    input_tensors,
                                                    self.computation)

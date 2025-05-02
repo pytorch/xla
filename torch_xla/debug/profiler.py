@@ -128,14 +128,21 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
     self.name = name
     super().__init__(name, **kwargs)
 
+    # TODO: clean this up
+    import jax
+    self.jax_scope = jax.named_scope(name)
+
+
   def __enter__(self):
     self.scope = torch_xla._XLAC.profiler.scope_pusher(self.name)
     super().__enter__()
+    self.jax_scope.__enter__()
 
   def __exit__(self, type, value, traceback):
     if getattr(self, 'scope', None):
       del self.scope
     super().__exit__(type, value, traceback)
+    self.jax_scope.__exit__(type, value, traceback)
 
 
 class StepTrace(Trace):

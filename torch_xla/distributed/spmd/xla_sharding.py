@@ -1412,7 +1412,8 @@ class MarkShardingFunction(torch.autograd.Function):
     return o, None, None
 
 
-@torch.library.custom_op("xla::aot_mark_sharding", mutates_args=())
+# TODO: torchax needs to intercept this op
+# @torch.library.custom_op("xla::aot_mark_sharding", mutates_args=())
 def _aot_mark_sharding(t: torch.Tensor, mesh: str,
                        partition_spec: str) -> torch.Tensor:
   if t is None:
@@ -1425,13 +1426,17 @@ def _aot_mark_sharding(t: torch.Tensor, mesh: str,
   the_mesh = xs.Mesh.from_str(mesh)
   assert the_mesh is not None
   partition_spec_eval = ast.literal_eval(partition_spec)
-  return xs.mark_sharding(t.clone(), the_mesh,
-                          partition_spec_eval).global_tensor
+
+  # TODO: torchax mark_sharding compatibility
+  x = xs.mark_sharding(t.clone(), the_mesh, partition_spec_eval)
+  if hasattr(x, 'global_tensor'):
+    x = x.global_tensor
+  return x
 
 
-@_aot_mark_sharding.register_fake
-def aot_mark_sharding_fake(t: torch.Tensor, mesh: str,
-                           partition_spec: str) -> torch.Tensor:
-  if t is None:
-    return None
-  return torch.empty_like(t)
+# @_aot_mark_sharding.register_fake
+# def aot_mark_sharding_fake(t: torch.Tensor, mesh: str,
+#                            partition_spec: str) -> torch.Tensor:
+#   if t is None:
+#     return None
+#   return torch.empty_like(t)
