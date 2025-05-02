@@ -20,17 +20,13 @@ on:
         type: number
         description: Timeout in minutes for the build job
         default: 120
+      has_code_changes:
+        required: false
+        type: boolean
+        description: Whether to run full workflow or not
+        default: true
 jobs:
-  check_code_changes:
-    name: Check Code Changes
-    uses: ./.github/workflows/_check_code_changes.yml
-    with:
-      event_name: ${{ github.event_name }}
-      # For pull_request, use PR's base and head. For push, use event's before and sha.
-      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
   build:
-    needs: [check_code_changes]
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     container:
@@ -42,31 +38,31 @@ jobs:
       MAX_JOBS: 24
     steps:
       - name: Checkout actions
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
           cuda: true
       - name: Build PyTorch with CUDA enabled
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         shell: bash
         run: |
           cd pytorch
           python setup.py bdist_wheel
       - name: Upload wheel
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         uses: actions/upload-artifact@v4
         with:
           name: torch-with-cuda
           path: pytorch/dist/*.whl
       - name: Report no code changes
-        if: needs.check_code_changes.outputs.has_code_changes == 'false'
+        if: ${{ !inputs.has_code_changes }}
         run: |
           echo "No code changes were detected that require running the full test suite."

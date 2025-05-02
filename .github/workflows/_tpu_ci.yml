@@ -7,35 +7,31 @@ on:
         type: number
         description: Timeout in minutes for the job run
         default: 120
+      has_code_changes:
+        required: false
+        type: boolean
+        description: Whether to run full workflow or not
+        default: true
 jobs:
-  check_code_changes:
-    name: Check Code Changes
-    uses: ./.github/workflows/_check_code_changes.yml
-    with:
-      event_name: ${{ github.event_name }}
-      # For pull_request, use PR's base and head. For push, use event's before and sha.
-      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
   tpu-test:
-    needs: [check_code_changes]
     runs-on: v4-runner-set
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - name: Checkout actions
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
           wheels-artifact: torch-xla-wheels
       - name: Install test dependencies
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         shell: bash
         run: |
           # TODO: Add these in setup.py
@@ -46,7 +42,7 @@ jobs:
           pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
           pip install --upgrade protobuf
       - name: Run Tests
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         env:
           PJRT_DEVICE: TPU
           TPU_LOG_DIR: tpu_logs
@@ -54,6 +50,6 @@ jobs:
           cd pytorch/xla
           test/tpu/run_tests.sh
       - name: Report no code changes
-        if: needs.check_code_changes.outputs.has_code_changes == 'false'
+        if: ${{ !inputs.has_code_changes }}
         run: |
           echo "No code changes were detected that require running the full test suite."

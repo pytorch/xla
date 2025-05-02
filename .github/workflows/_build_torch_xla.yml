@@ -20,21 +20,17 @@ on:
         type: number
         description: Timeout in minutes for the build job
         default: 120
+      has_code_changes:
+        required: false
+        type: boolean
+        description: Whether to run full workflow or not
+        default: true
     secrets:
       gcloud-service-key:
         required: true
         description: Secret to access Bazel build cache
 jobs:
-  check_code_changes:
-    name: Check Code Changes
-    uses: ./.github/workflows/_check_code_changes.yml
-    with:
-      event_name: ${{ github.event_name }}
-      # For pull_request, use PR's base and head. For push, use event's before and sha.
-      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
   build:
-    needs: [check_code_changes]
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     container:
@@ -48,37 +44,37 @@ jobs:
       # Need to check out local composite actions before using them
       # https://github.com/orgs/community/discussions/11771
       - name: Checkout actions
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
       - name: Build
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         shell: bash
         run: |
           cd pytorch/xla/infra/ansible
           ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         uses: actions/upload-artifact@v4
         with:
           name: torch-xla-wheels
           path: /dist/*.whl
       - name: Upload CPP test binaries
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
+        if: ${{ inputs.has_code_changes }}
         uses: actions/upload-artifact@v4
         with:
           name: cpp-test-bin
           path: /tmp/test/bin
       - name: Report no code changes
-        if: needs.check_code_changes.outputs.has_code_changes == 'false'
+        if: ${{ !inputs.has_code_changes }}
         run: |
           echo "No code changes were detected that require running the full test suite."
 

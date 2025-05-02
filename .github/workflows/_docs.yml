@@ -11,20 +11,16 @@ on:
         type: string
         description: Runner type for the test
         default: linux.4xlarge
+      has_code_changes:
+        required: false
+        type: boolean
+        description: Whether to run full workflow or not
+        default: true
     secrets:
       torchxla-bot-token:
         required: true
 jobs:
-  check_code_changes:
-    name: Check Code Changes
-    uses: ./.github/workflows/_check_code_changes.yml
-    with:
-      event_name: ${{ github.event_name }}
-      # For pull_request, use PR's base and head. For push, use event's before and sha.
-      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
   build-docs:
-    needs: [check_code_changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     container:
@@ -33,52 +29,50 @@ jobs:
       BRANCH_NAME: ${{ github.ref_name }}
     steps:
     - name: Fetch wheels
-      if: needs.check_code_changes.outputs.has_code_changes == 'true'
+      if: ${{ inputs.has_code_changes }}
       uses: actions/download-artifact@v4
       with:
         name: torch-xla-wheels
         path: /tmp/wheels/
     - name: Install wheels
-      if: needs.check_code_changes.outputs.has_code_changes == 'true'
+      if: ${{ inputs.has_code_changes }}
       shell: bash
       run: |
         pip install /tmp/wheels/*.whl
     - name: Checkout PyTorch/XLA Repo
-      if: needs.check_code_changes.outputs.has_code_changes == 'true'
+      if: ${{ inputs.has_code_changes }}
       uses: actions/checkout@v4
       with:
         path: pytorch/xla
     - name: Build docs
-      if: needs.check_code_changes.outputs.has_code_changes == 'true'
+      if: ${{ inputs.has_code_changes }}
       shell: bash
       run: |
         cd pytorch/xla/docs
         pip install -r requirements.txt
         sphinx-build -b html source build
     - name: Checkout GitHub Pages
-      if: needs.check_code_changes.outputs.has_code_changes == 'true'
+      if: ${{ inputs.has_code_changes }}
       uses: actions/checkout@v4
       with:
         path: gh-pages
         ref: gh-pages
         token: ${{ github.event_name == 'push' && secrets.torchxla-bot-token || github.token }}
     - name: Merge changes
-      if: needs.check_code_changes.outputs.has_code_changes == 'true'
+      if: ${{ inputs.has_code_changes }}
       shell: bash
       run: |
         subdir=${{ env.BRANCH_NAME == 'master' && 'master' || format('{0}/{1}', 'release', env.BRANCH_NAME) }}
         mkdir -p gh-pages/$subdir
         cp -fR pytorch/xla/docs/build/* gh-pages/$subdir
     - name: Upload preview as artifact
-      if: needs.check_code_changes.outputs.has_code_changes == 'true'
+      if: ${{ inputs.has_code_changes }}
       uses: actions/upload-artifact@v4
       with:
         name: github-pages
         path: pytorch/xla/docs/build/
     - name: Deploy
-      if: >
-        needs.check_code_changes.outputs.has_code_changes == 'true' &&
-        github.event_name == 'push'
+      if: ${{ inputs.has_code_changes }} && github.event_name == 'push'
       shell: bash
       run: |
         cd gh-pages
@@ -88,6 +82,6 @@ jobs:
         git diff --cached --exit-code || git commit -m "Update doc from commit ${{ github.sha }}"
         git push origin gh-pages
     - name: Report no code changes
-      if: needs.check_code_changes.outputs.has_code_changes == 'false'
+      if: ${{ !inputs.has_code_changes }}
       run: |
         echo "No code changes were detected that require running the full test suite."
