@@ -909,8 +909,8 @@ def ragged_paged_attention_kernel(
       )
       causal_mask = row_ids < col_ids
       if sliding_window is not None:
-        causal_mask = jnp.logical_or(causal_mask, row_ids - sliding_window
-                                     >= col_ids)
+        causal_mask = jnp.logical_or(causal_mask,
+                                     row_ids - sliding_window >= col_ids)
       if soft_cap is not None:
         qk = soft_cap * jnp.tanh(qk / soft_cap)
       qk += jnp.where(causal_mask, mask_value, 0.0)
