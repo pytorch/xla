@@ -29,7 +29,16 @@ on:
         description: torch-commit
 
 jobs:
+  check_code_changes:
+    name: Check Code Changes
+    uses: ./.github/workflows/_check_code_changes.yml
+    with:
+      event_name: ${{ github.event_name }}
+      # For pull_request, use PR's base and head. For push, use event's before and sha.
+      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
   test:
+    needs: [check_code_changes]
     container:
       image: ${{ inputs.dev-image }}
       options: "--gpus all --shm-size 16g"
@@ -48,12 +57,14 @@ jobs:
       BAZEL_REMOTE_CACHE: 1
     steps:
       - name: Checkout actions
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
@@ -62,8 +73,10 @@ jobs:
           cuda-plugin-artifact: cuda-plugin
           cuda-torch-artifact: torch-with-cuda
       - name: Check GPU
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         run: nvidia-smi
       - name: Install wheels
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         shell: bash
         run: |
           pip install /tmp/wheels/*.whl
@@ -78,27 +91,32 @@ jobs:
           python -c "import torch; assert torch.cuda.is_available()"
           echo "CUDA is available for PyTorch."
       - name: Checkout PyTorch Repo
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           repository: pytorch/pytorch
           path: pytorch
           ref: ${{ inputs.torch-commit }}
       - name: Checkout PyTorch/XLA Repo
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
       - name: Extra CI deps
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         shell: bash
         run: |
           set -x
           pip install -U --pre jax jaxlib "jax-cuda12-plugin[with_cuda]" jax-cuda12-pjrt -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
         if: ${{ matrix.run_triton_tests }}
       - name: Install Triton
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         shell: bash
         run: |
           cd pytorch
           make triton
       - name: Python Tests
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         shell: bash
         run: |
           set -xue
@@ -106,7 +124,12 @@ jobs:
           PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
         if: ${{ matrix.run_python_tests }}
       - name: Triton Tests
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         shell: bash
         run: |
           PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.3/bin/ptxas python pytorch/xla/test/test_triton.py
         if: ${{ matrix.run_triton_tests }}
+      - name: Report no code changes
+        if: needs.check_code_changes.outputs.has_code_changes == 'false'
+        run: |
+          echo "No code changes were detected that require running the full test suite."

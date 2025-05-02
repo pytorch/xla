@@ -53,21 +53,16 @@ jobs:
 
   build-torch-with-cuda:
     name: "Build PyTorch with CUDA"
-    needs: [check_code_changes, get-torch-commit]
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Build PyTorch with CUDA
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
-        uses: ./.github/workflows/_build_torch_with_cuda.yml
-        with:
-          dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
-          torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
-          runner: linux.24xlarge
-          timeout-minutes: 120
-      - name: Report no code changes
-        if: needs.check_code_changes.outputs.has_code_changes == 'false'
-        run: |
-          echo "No code changes were detected that require running the full test suite."
+    uses: ./.github/workflows/_build_torch_with_cuda.yml
+    needs: get-torch-commit
+    with:
+      # TODO: bump CUDA version to either 12.4 or 12.6 (supported by PyTorch).
+      # Ref: https://github.com/pytorch/xla/issues/8700
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
+      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
+      # note that to build a torch wheel with CUDA enabled, we do not need a GPU runner.
+      runner: linux.24xlarge
+      timeout-minutes: 120
 
   build-cuda-plugin:
     name: "Build XLA CUDA plugin"
@@ -105,41 +100,22 @@ jobs:
 
   test-cuda-with-pytorch-cuda-enabled:
     name: "GPU tests requiring torch CUDA"
-    needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin, check_code_changes, get-torch-commit]
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Run GPU tests requiring torch CUDA
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
-        uses: ./.github/workflows/_test_requiring_torch_cuda.yml
-        with:
-          dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
-          runner: linux.8xlarge.nvidia.gpu
-          timeout-minutes: 300
-          collect-coverage: false
-          torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
-      - name: Report no code changes
-        if: needs.check_code_changes.outputs.has_code_changes == 'false'
-        run: |
-          echo "No code changes were detected that require running the full test suite."
+    uses: ./.github/workflows/_test_requiring_torch_cuda.yml
+    needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin, get-torch-commit]
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
+      runner: linux.8xlarge.nvidia.gpu
+      timeout-minutes: 300
+      collect-coverage: false
+      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
 
   test-tpu:
     name: "TPU tests"
-    needs: [build-torch-xla, check_code_changes]
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Run TPU tests
-        if: >
-            (github.event_name == 'push' || github.event_name == 'pull_request') &&
-            needs.check_code_changes.outputs.has_code_changes == 'true'
-        uses: ./.github/workflows/_tpu_ci.yml
-        with:
-          timeout-minutes: 300
-      - name: Report no code changes
-        if: >
-          !((github.event_name == 'push' || github.event_name == 'pull_request') &&
-            needs.check_code_changes.outputs.has_code_changes == 'true')
-        run: |
-          echo "No code changes were detected that require running the full test suite."
+    uses: ./.github/workflows/_tpu_ci.yml
+    needs: build-torch-xla
+    with:
+      timeout-minutes: 300
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
 
   push-docs:
     name: "Build docs"

@@ -15,6 +15,14 @@ on:
       torchxla-bot-token:
         required: true
 jobs:
+  check_code_changes:
+    name: Check Code Changes
+    uses: ./.github/workflows/_check_code_changes.yml
+    with:
+      event_name: ${{ github.event_name }}
+      # For pull_request, use PR's base and head. For push, use event's before and sha.
+      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
   build-docs:
     needs: [check_code_changes]
     runs-on: ubuntu-24.04
