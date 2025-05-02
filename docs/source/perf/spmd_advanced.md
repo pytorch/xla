@@ -84,10 +84,10 @@ PyTorch has prototype-released [DTensor](https://github.com/pytorch/pytorch/blob
 We are integrating PyTorch/XLA SPMD into DTensor API [RFC](https://github.com/pytorch/pytorch/issues/92909). We have a proof-of-concept integration for `distribute_tensor`, which calls `mark_sharding` annotation API to shard a tensor and its computation using XLA:
 ```python
 import torch
-from torch.distributed import DeviceMesh, Shard, distribute_tensor
+from torch.distributed.tensor import init_device_mesh, Shard, distribute_tensor
 
 # distribute_tensor now works with `xla` backend using PyTorch/XLA SPMD.
-mesh = DeviceMesh("xla", list(range(world_size)))
+mesh = init_device_mesh("xla", mesh_shape=(device_count,))
 big_tensor = torch.randn(100000, 88)
 my_dtensor = distribute_tensor(big_tensor, mesh, [Shard(0)])
 ```
@@ -152,15 +152,15 @@ PyTorch/XLA auto-sharding can be enabled by one of the following:
 import torch_xla.runtime as xr
 xr.use_spmd(auto=True)
 ```
-- Calling `pytorch.distributed._tensor.distribute_module` with `auto-policy` and `xla`:
+- Calling `pytorch.distributed.tensor.distribute_module` with `auto-policy` and `xla`:
 
 ```python
 import torch_xla.runtime as xr
-from torch.distributed._tensor import DeviceMesh, distribute_module
+from torch.distributed.tensor import init_device_mesh, distribute_module
 from torch_xla.distributed.spmd import auto_policy
 
 device_count = xr.global_runtime_device_count()
-device_mesh = DeviceMesh("xla", list(range(device_count)))
+device_mesh = init_device_mesh("xla", mesh_shape=(device_count,))
 
 # Currently, model should be loaded to xla device via distribute_module.
 model = MyModule()  # nn.module
