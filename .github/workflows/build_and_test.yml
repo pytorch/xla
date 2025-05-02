@@ -15,30 +15,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check_code_changes:
-    name: Check Code Changes
-    uses: ./.github/workflows/_check_code_changes.yml
-    with:
-      event_name: ${{ github.event_name }}
-      # For pull_request, use PR's base and head. For push, use event's before and sha.
-      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
   get-torch-commit:
-    needs: [check_code_changes]
     runs-on: ubuntu-24.04
     outputs:
       torch_commit: ${{ steps.commit.outputs.torch_commit }}
     steps:
       - name: Get latest torch commit
         id: commit
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         run: |
           echo "torch_commit=$(git ls-remote https://github.com/pytorch/pytorch.git HEAD | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-      - name: Report no code changes
-        if: needs.check_code_changes.outputs.has_code_changes == 'false'
-        run: |
-          echo "No code changes were detected that require running the full test suite."
 
   build-torch-xla:
     name: "Build PyTorch/XLA"
