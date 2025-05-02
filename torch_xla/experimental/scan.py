@@ -229,7 +229,8 @@ def value_and_grad_partitioned(
     return torch.empty_like(
         v, dtype=v.dtype, device=v.device, requires_grad=requires_grad)
 
-  fake_carry_pytree = tree_map(make_fake_tensor, init)
+  fake_carry_pytree = tree_map(
+      lambda v: make_fake_tensor(v[0], requires_grad=v.requires_grad), init)
   fake_x_pytree = tree_map(
       lambda v: make_fake_tensor(v[0], requires_grad=v.requires_grad), xs)
 
@@ -262,7 +263,8 @@ def value_and_grad_partitioned(
     num_out = len(list(tree_iter(out)))
     # Capture the backward.
     out, unflatten_fwd_out = tree_flatten_none(out)
-    torch.autograd.backward(out, tree_map(lambda v: torch.ones_like(v), out))
+    if all(tree_map(lambda v: v.requires_grad, out)):
+        torch.autograd.backward(out, tree_map(lambda v: torch.ones_like(v), out))
 
   fwd_graph = get_fwd()
   bwd_graph = get_bwd()
