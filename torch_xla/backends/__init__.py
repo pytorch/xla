@@ -62,7 +62,7 @@ def set_mat_mul_precision(precision: _PrecisionType) -> None:
         raise ValueError(f"Invalid precision: {precision}. "
                          "Must be one of 'float32', 'bfloat16', or 'float16'.")
 
-    torch_xla._XLAC._set_mat_mul_precision(precision)
+    torch_xla._XLAC._xla_set_mat_mul_precision(precision)
 
 def get_mat_mul_precision() -> _PrecisionType:
     r"""Get the current mat mul precision for 32bit inputs.
@@ -71,7 +71,7 @@ def get_mat_mul_precision() -> _PrecisionType:
         str: The current precision setting for matrix multiplication,
             one of 'default', 'high', or 'highest'.
     """
-    precision = torch_xla._XLAC._get_mat_mul_precision()
+    precision = torch_xla._XLAC._xla_get_mat_mul_precision()
     assert precision in [_DEFAULT, _HIGH, _HIGHEST], (
         f"Invalid precision: {precision}. "
         "Must be one of 'float32', 'bfloat16', or 'float16'.")
