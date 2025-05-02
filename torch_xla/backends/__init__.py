@@ -1,9 +1,10 @@
 """torch_xla.backends is intended to be moved to torch.backends.xla"""
 
 # See https://github.com/pytorch/pytorch/blob/main/torch/backends/mps/__init__.py
-# for an example of how a backend is implemented in PyTorch.
+# for an example of how backends are implemented in PyTorch
+# in the __init__.py file.
 
-# Literal is availabe from Python 3.8,
+# Literal is available from Python 3.8,
 # matching the Python versions for PyTorch and PyTorchXLA.
 from typing import Final, Literal, TypeAlias
 
