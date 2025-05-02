@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git02c0ed9 )
+                  master (2.8.0+git02a1ba6 )
                 </div>
               
             
@@ -514,13 +514,13 @@
 </div>
 <div class="section" id="dtensor-integration">
 <h2>DTensor Integration<a class="headerlink" href="#dtensor-integration" title="Permalink to this heading">¶</a></h2>
-<p>PyTorch has prototype-released <a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/_tensor/README.md">DTensor</a> in 2.1.
+<p>PyTorch has prototype-released <a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/tensor/README.md">DTensor</a> since 2.1.
 We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>. We have a proof-of-concept integration for <code class="docutils literal notranslate"><span class="pre">distribute_tensor</span></code>, which calls <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> annotation API to shard a tensor and its computation using XLA:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">torch.distributed</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">Shard</span><span class="p">,</span> <span class="n">distribute_tensor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.distributed.tensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_device_mesh</span><span class="p">,</span> <span class="n">Shard</span><span class="p">,</span> <span class="n">distribute_tensor</span>
 
 <span class="c1"># distribute_tensor now works with `xla` backend using PyTorch/XLA SPMD.</span>
-<span class="n">mesh</span> <span class="o">=</span> <span class="n">DeviceMesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">world_size</span><span class="p">)))</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">init_device_mesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="p">(</span><span class="n">world_size</span><span class="p">,))</span>
 <span class="n">big_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100000</span><span class="p">,</span> <span class="mi">88</span><span class="p">)</span>
 <span class="n">my_dtensor</span> <span class="o">=</span> <span class="n">distribute_tensor</span><span class="p">(</span><span class="n">big_tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">[</span><span class="n">Shard</span><span class="p">(</span><span class="mi">0</span><span class="p">)])</span>
 </pre></div>
@@ -585,14 +585,14 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 </pre></div>
 </div>
 <ul class="simple">
-<li><p>Calling <code class="docutils literal notranslate"><span class="pre">pytorch.distributed._tensor.distribute_module</span></code> with <code class="docutils literal notranslate"><span class="pre">auto-policy</span></code> and <code class="docutils literal notranslate"><span class="pre">xla</span></code>:</p></li>
+<li><p>Calling <code class="docutils literal notranslate"><span class="pre">pytorch.distributed.tensor.distribute_module</span></code> with <code class="docutils literal notranslate"><span class="pre">auto-policy</span></code> and <code class="docutils literal notranslate"><span class="pre">xla</span></code>:</p></li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">torch.distributed._tensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">distribute_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.distributed.tensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_device_mesh</span><span class="p">,</span> <span class="n">distribute_module</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="kn">import</span> <span class="n">auto_policy</span>
 
 <span class="n">device_count</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
-<span class="n">device_mesh</span> <span class="o">=</span> <span class="n">DeviceMesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">device_count</span><span class="p">)))</span>
+<span class="n">device_mesh</span> <span class="o">=</span> <span class="n">init_device_mesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="p">(</span><span class="n">device_count</span><span class="p">,))</span>
 
 <span class="c1"># Currently, model should be loaded to xla device via distribute_module.</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">MyModule</span><span class="p">()</span>  <span class="c1"># nn.module</span>
