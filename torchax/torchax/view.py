@@ -377,8 +377,12 @@ class View(torch.Tensor):
   def jax_device(self):
     return self.jax().device
 
-  @property
-  def ndim(self):
-    return len(self.shape)
-
-  __repr__ = __str__
+    @property
+    def ndim(self):
+        return len(self.shape)
+  
+    @property
+    def data(self):
+        return self
+    
+    __repr__ = __str__
