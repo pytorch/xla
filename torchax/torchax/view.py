@@ -383,5 +383,9 @@ class View(torch.Tensor):
     @property
     def ndim(self):
         return len(self.shape)
-
+  
+    @property
+    def data(self):
+        return self
+    
     __repr__ = __str__
