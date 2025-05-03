@@ -17,6 +17,7 @@ from torchax.ops import op_base, mappings, jaten
 import torchax.tensor
 from torchax.view import View, NarrowInfo
 import torch.utils._pytree as pytree
+from torchax.ops.ragged_attention import ragged_paged_attention as ragged_paged_attention_kernel
 
 
 def register_function(torch_func, **kwargs):
@@ -508,7 +509,43 @@ def linalg_tensorsolve(A, b, dims=None):
 
 @register_function(torch.nn.functional.linear)
 def functional_linear(self, weights, bias=None):
-  res = jnp.einsum("...a,ba->...b", self, weights)
-  if bias is not None:
-    res += bias
-  return res
+    res = jnp.einsum("...a,ba->...b", self, weights)
+    if bias is not None:
+        res += bias
+    return res
+
+@register_function(torch.ops.xla.ragged_paged_attention)
+def _ragged_paged_attention(         
+                q: jax.Array, # [max_num_batched_tokens, num_q_heads, head_dim]
+                kv_pages: jax.Array, # [total_num_pages, page_size, num_combined_kv_heads, head_dim]
+                kv_lens: jax.Array,  # i32[max_num_seqs]
+                page_indices: jax.Array, # i32[max_num_seqs, pages_per_seq]
+                cu_q_lens: jax.Array, # i32[max_num_seqs + 1]
+                num_seqs: jax.Array, # i32[1]
+                use_kernel: bool = True,
+                sm_scale: float = 1.0,
+                sliding_window: int | None = None,
+                soft_cap: float | None = None,
+                mask_value: float | None = None,
+                num_kv_pages_per_block: int | None = None,
+                num_queries_per_block: int | None = None,
+                vmem_limit_bytes: int | None = None,
+):
+
+  return ragged_paged_attention_kernel(
+    q = q,  
+    kv_pages = kv_pages,  
+    kv_lens = kv_lens,  
+    page_indices = page_indices, 
+    cu_q_lens = cu_q_lens, 
+    num_seqs = num_seqs, 
+    sm_scale = sm_scale,
+    sliding_window = sliding_window,
+    soft_cap = soft_cap,
+    mask_value = mask_value,
+    num_kv_pages_per_block = num_kv_pages_per_block,
+    num_queries_per_block = num_queries_per_block,
+    vmem_limit_bytes = vmem_limit_bytes,
+)
+
+
