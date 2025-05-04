@@ -14,14 +14,23 @@ class TrainTest(unittest.TestCase):
     torch.manual_seed(0)
     torchax.enable_globally()
 
+  def test_narrow(self):
+      x = torch.zeros((10, 10), device="jax")
+      x = x.narrow(0, 0, 5).narrow(0, 0, 5)
+      y = torch.ones((5, 10), device="jax")
+      x.copy_(y)
+      self.assertEqual(type(x), View)
+      self.assertEqual(x.shape, (5, 10))
+      self.assertEqual(x.sum(), 50)
+
   def test_copy_(self):
-    x = torch.zeros((10, 10), device="jax")
-    y = torch.ones((5, 5), device="jax")
-    x[0:5, :][:, 0:5].copy_(y[:, :])
-    self.assertEqual(type(x), Tensor)
-    self.assertEqual(x.shape, (10, 10))
-    self.assertEqual(x[0:5, 0:5].sum(), 25)
-    self.assertEqual(x.sum(), 25)
+      x = torch.zeros((10, 10), device="jax")
+      y = torch.ones((5, 5), device="jax")
+      x[0:5, :][:, 0:5].copy_(y[:, :])
+      self.assertEqual(type(x), Tensor)
+      self.assertEqual(x.shape, (10, 10))
+      self.assertEqual(x[0:5, 0:5].sum(), 25)
+      self.assertEqual(x.sum(), 25)
 
   def test_transivity(self):
     x = torch.zeros((10, 10), device="jax")

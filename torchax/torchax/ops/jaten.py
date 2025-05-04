@@ -15,7 +15,7 @@ from torchax.ops import ops_registry
 from torchax.ops import op_base, mappings
 from torchax import interop
 from torchax.ops import jax_reimplement
-from torchax.view import View
+from torchax.view import View, NarrowInfo
 from torchax.tensor import Tensor
 # Keys are OpOverload, value is a callable that takes
 # Tensor
@@ -131,6 +131,8 @@ def _aten_copy(x, y, memory_format=None):
   if isinstance(x, View):
     x.update(y)
     return x
+  if isinstance(y, View):
+    y = y.torch()
 
   if x.ndim == 1 and y.ndim == 0:
     # case of torch.empty((1,)).copy_(tensor(N))
@@ -402,8 +404,8 @@ def _aten_triu(m, k):
   return jnp.triu(m, k)
 
 
-@op(torch.ops.aten.slice)
-@op(torch.ops.aten.slice_copy)
+@op(torch.ops.aten.slice, is_jax_function=False, is_view_op=True)
+@op(torch.ops.aten.slice_copy, is_jax_function=False, is_view_op=True)
 def _aten_slice(self, dim=0, start=None, end=None, step=1):
   if dim < 0:
     dim += self.ndim
@@ -416,7 +418,7 @@ def _aten_slice(self, dim=0, start=None, end=None, step=1):
       dims.append(sl)
     else:
       dims.append(slice(None, None, None))
-  return self[tuple(dims)]
+  return View(self, NarrowInfo(slices=tuple(dims)), env = self._env)
 
 
 @op(torch.ops.aten.detach)
