@@ -12,6 +12,17 @@ class TrainTest(unittest.TestCase):
     def setUp(self):
         torch.manual_seed(0)
         torchax.enable_globally()
+    
+    def test_flatten(self):
+        x = torch.zeros((10, 10), device="jax")
+        x1 = x.flatten(0, 1)
+        y = torch.ones(100, device="jax")
+        x1.copy_(y)
+        self.assertEqual(type(x), Tensor)
+        self.assertEqual(type(x1), View)
+        self.assertEqual(x.shape, (10, 10))
+        self.assertEqual(x.sum(), 100)
+    
 
     def test_narrow(self):
         x = torch.zeros((10, 10), device="jax")
@@ -21,7 +32,7 @@ class TrainTest(unittest.TestCase):
         self.assertEqual(type(x), View)
         self.assertEqual(x.shape, (5, 10))
         self.assertEqual(x.sum(), 50)
-
+        
     def test_copy_(self):
         x = torch.zeros((10, 10), device="jax")
         y = torch.ones((5, 5), device="jax")
@@ -388,4 +399,3 @@ class TrainTest(unittest.TestCase):
         # Check specific values were reduced
         self.assertTrue(torch.all(x[0, 0] == 5.0))
         self.assertEqual(x.sum(), 37.0)
-
