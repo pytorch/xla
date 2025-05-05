@@ -2623,9 +2623,7 @@ void InitXlaModuleBindings(py::module m) {
           DynamicShapeDetector::SetMaxDifferentGraphs(max_different_graphs);
         });
   m.def("_dynamic_shape_detector_get_max_different_graphs",
-        []() {
-          return DynamicShapeDetector::GetMaxDifferentGraphs();
-        });
+        []() { return DynamicShapeDetector::GetMaxDifferentGraphs(); });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);

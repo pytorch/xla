@@ -9,7 +9,8 @@ namespace torch_xla {
 // Maximum number of allowed graphs per function (i.e. session).
 static std::size_t max_different_graphs = 1;
 
-TrieNode::TrieNode(const TrieValue& value, bool is_graph_boundary) : TrieNode() {
+TrieNode::TrieNode(const TrieValue& value, bool is_graph_boundary)
+    : TrieNode() {
   common_sequence_.push_back(value);
   is_graph_boundary_ = is_graph_boundary;
 }
@@ -115,6 +116,7 @@ TrieBuilder TrieNode::AddValue(TrieValue value, std::size_t matched,
   // Maybe split the current node into: prefix (before matched) and suffix
   // (after matched).
   bool did_split = MaybeSplitAt(matched);
+  TF_VLOG(5) << "MaybeSplitAt(" << matched << "): " << did_split;
 
   // Create a new node that contains only the given value.
   std::unique_ptr<TrieNode> node = std::make_unique<TrieNode>(value);
@@ -132,6 +134,7 @@ TrieBuilder TrieNode::AddValue(TrieValue value, std::size_t matched,
     is_graph_boundary_ = false;
   }
 
+  TF_VLOG(5) << "Added value: " << value.str << " (" << value.hash << ")";
   return {children_[value.hash].get(), 1};
 }
 
@@ -143,6 +146,8 @@ bool TrieNode::MaybeSplitAt(std::size_t matched) {
   absl::Span<const TrieValue> prefix =
       common_sequence.subspan(0, /*len=*/matched);
   absl::Span<const TrieValue> suffix = common_sequence.subspan(matched);
+
+  bool did_split = false;
 
   // A split only occurs if suffix is not empty.
   if (!suffix.empty()) {
@@ -159,10 +164,13 @@ bool TrieNode::MaybeSplitAt(std::size_t matched) {
     TF_VLOG(5) << "Split node " << children_[suffix.front().hash].get()
                << " at position " << matched << ": " << suffix.front().str
                << " (" << suffix.front().hash << ")";
+
+    did_split = true;
   }
 
   // This node's common_sequence_ will be whatever the prefix was.
-  common_sequence_ = std::vector<TrieValue>{prefix.begin(), prefix.end()};
+  common_sequence_.erase(common_sequence_.begin() + matched, common_sequence_.end());
+  return did_split;
 }
 
 DynamicShapeDetector* DynamicShapeDetector::Get() {
@@ -209,8 +217,8 @@ void DynamicShapeDetector::EndSession() {
       TF_VLOG(5) << "Created new graph.";
     }
 
-    ResetSession();
     TF_VLOG(5) << "Ended session: " << current_session_->name_;
+    ResetSession();
   } catch (const std::exception& e) {
     // MarkGraphBoundary might raise an exception if AllowNewGraph() is false.
     // Catch it here, so that we can correctly end the session.
