@@ -210,8 +210,8 @@ void DynamicShapeDetector::EndSession() {
       TF_VLOG(5) << "Created new graph.";
     }
 
-    ResetSession();
     TF_VLOG(5) << "Ended session: " << current_session_->name_;
+    ResetSession();
   } catch (const std::exception& e) {
     // MarkGraphBoundary might raise an exception if AllowNewGraph() is false.
     // Catch it here, so that we can correctly end the session.
