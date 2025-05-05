@@ -324,7 +324,7 @@ def value_and_grad_partitioned(
     return tuple(activations)
 
   def backward(carry, x):
-    if out_with_grad == 0:
+    if len(out_with_grad) == 0:
       return None, None
     grad_new_carry, _ = tree_flatten(carry)
     (grad_y, activations) = x

@@ -75,12 +75,15 @@ class ScanTest(TestBase):
             if v is not None else 0, tree_leaves(t)), torch.tensor(0.0))
     dupe = lambda v: v.detach().clone().requires_grad_(v.requires_grad)
 
+    def _requires_grad(tensors):
+        return any(tree_flatten(tree_map(lambda v: v.requires_grad, tensors))[0])
+
     # Actual output
     init_scan = tree_map(dupe, init)
     xs_scan = tree_map(dupe, xs)
     final_carry, ys = scan(fn, init_scan, xs_scan, partition_fn=partition_fn)
     # Add up all leaves and `backward()` once.
-    if all(tree_flatten(tree_map(lambda v: v.requires_grad, final_carry))) or all(tree_flatten(tree_map(lambda v: v.requires_grad, ys))):
+    if _requires_grad(final_carry) or _requires_grad(ys):
       (squish(final_carry) + squish(ys)).backward()
     torch_xla.sync()
 
@@ -89,7 +92,7 @@ class ScanTest(TestBase):
     xs_loop = tree_map(dupe, xs)
     expected_final_carry, expected_ys = _loopy_scan(fn, init_loop, xs_loop)
     # Add up all leaves and `backward()` once.
-    if all(tree_flatten(tree_map(lambda v: v.requires_grad, expected_final_carry))) or all(tree_flatten(tree_map(lambda v: v.requires_grad, expected_ys))):
+    if _requires_grad(expected_final_carry) or _requires_grad(expected_ys):
       (squish(expected_final_carry) + squish(expected_ys)).backward()
     torch_xla.sync()
 
