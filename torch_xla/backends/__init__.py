@@ -2,7 +2,7 @@
 
 # See https://github.com/pytorch/pytorch/blob/main/torch/backends/mps/__init__.py
 # for an example of how backends are implemented in PyTorch
-# in the __init__.py file, despite general style guidelines against this. 
+# in the __init__.py file, despite general style guidelines against this.
 
 # Literal is available from Python 3.8,
 # matching the Python versions for PyTorch and PyTorch/XLA.
