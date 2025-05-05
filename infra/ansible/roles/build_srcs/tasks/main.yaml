@@ -126,7 +126,7 @@
         datedf="${f/.dev-/.dev${current_date}-}"
         # Remove the version number. For example:
         #   torch.dev-cp310-cp310-linux_x86_64.whl
-        unversionedf="${f/-(.*?)\.dev/.dev/1}"
+        unversionedf="$(echo $f | sed 's/-.*\.dev/.dev/1')"
 
         # Copy the file to the new filenames.
         cp "$f" "$datedf"
