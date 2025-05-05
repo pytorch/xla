@@ -91,10 +91,12 @@
 
 - name: Rename and append +YYYYMMDD suffix to nightly wheels
   ansible.builtin.shell: |
-    # For both torch and torch_xla, we would like to have one wheel without
-    # date, and another copy of the same wheel with a date in the file name.
+    # For both torch and torch_xla, we would like to have three copies of each
+    # wheel. One with the date and version number, one with the version number
+    # but no date, and one without date or version number.
     # This script normalizes wheel names to:
     #
+    # torch_xla.dev-cp310-cp310-linux_x86_64.whl
     # torch_xla-2.5.0.dev-cp310-cp310-linux_x86_64.whl
     # torch_xla-2.5.0.dev20240819-cp310-cp310-linux_x86_64.whl (extra copy)
     # 
@@ -110,10 +112,9 @@
     # group 5: anything from next - to the end: `cp310-cp310-linux_x86_64.whl`.
     rename -v "s/^(.*?)\-(.*?)(\+([^ -]+))?\-(.+)/\1-\2.dev-\5/" *.whl
     
-    # At this point, we have *.dev*.whl files. Now we want to produce the dated
-    # YYYYMMDD versions as a second copy without losing the .dev one.
+    # At this point, we have *.dev*.whl files. Now we want to produce the other
+    # versions as copies without losing the .dev one.
     current_date="$(date -u +%Y%m%d)"
-    wheels=( *.whl )
 
     for f in *.whl; do
       if [[ "$f" == *".dev-"* ]]; then
@@ -122,10 +123,14 @@
         #   torch-2.6.0.dev-cp310-cp310-linux_x86_64.whl
         # becomes
         #   torch-2.6.0.dev20241206-cp310-cp310-linux_x86_64.whl
-        newf="${f/.dev-/.dev${current_date}-}"
+        datedf="${f/.dev-/.dev${current_date}-}"
+        # Remove the version number. For example:
+        #   torch.dev-cp310-cp310-linux_x86_64.whl
+        unversionedf="$(echo $f | sed 's/-.*\.dev/.dev/1')"
 
-        # Copy the file to the new filename.
-        cp "$f" "$newf"
+        # Copy the file to the new filenames.
+        cp "$f" "$datedf"
+        cp "$f" "$unversionedf"
       fi
     done
   args:
