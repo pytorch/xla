@@ -1052,6 +1052,8 @@ def _run_step_closures() -> DeviceContext:
 
 
 def mark_step(wait: bool = False, reset_scope: bool = True):
+  # NOTE: `torch_xla.sync()` from `torch_xla.py` depends on the implementation
+  # of this function. Please keep the implementation of both functions in sync.
   if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False):
     print(
         'torch_xla.core.xla_model::mark_step\n',

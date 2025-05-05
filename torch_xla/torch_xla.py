@@ -66,6 +66,8 @@ def sync(wait: bool = False, reset_scope: bool = True):
     wait (bool): whether to block the current process until the execution finished.
     reset_scope (bool): whether to reset the torch::lazy::ScopeContext of the IR Nodes.
   """
+  # NOTE: the implementation below is an exact copy from `xm.mark_step()` from
+  # `torch_xla/core/xla_model.py` except the print statement content below.
   if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False):
     print('torch_xla.torch_xla::sync\n', end='', file=sys.stderr, flush=True)
   torch_xla._XLAC._xla_step_marker(
