@@ -296,6 +296,7 @@ def _maybe_reshape_input_output_funcs(current_shape, non_batch_dims=3):
 
   return reshape_input, reshape_output
 
+
 @requires_jax
 def _fa_custom_forward_single_device(
     q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, causal: bool,
@@ -482,6 +483,7 @@ def _pad_to_block_size(
       device=tensor.device)
   padded = torch.cat([tensor, padding], dim=dim)
   return padded, pad_size
+
 
 @requires_jax
 def _fa_custom_backward_single_device(
