@@ -262,12 +262,15 @@ def value_and_grad_partitioned(
     # intermediate activations.
     num_out = len(list(tree_iter(out)))
     # Capture the backward.
-    out, unflatten_fwd_out = tree_flatten_none(out)
-    if all(tree_map(lambda v: v.requires_grad, out)):
-        torch.autograd.backward(out, tree_map(lambda v: torch.ones_like(v), out))
+    flat_out, unflatten_fwd_out = tree_flatten_none(out)
+    out_with_grad = list(filter(lambda v: v.requires_grad, flat_out))
+    if len(out_with_grad) > 0:
+      torch.autograd.backward(
+          out_with_grad, tree_map(lambda v: torch.ones_like(v), out_with_grad))
 
   fwd_graph = get_fwd()
-  bwd_graph = get_bwd()
+  if len(out_with_grad) > 0:
+    bwd_graph = get_bwd()
 
   # Figure out which activations are aliases to the inputs. We don't need to
   # pass them through the scan logic unchanged. That would use more memory.
@@ -322,6 +325,8 @@ def value_and_grad_partitioned(
     return tuple(activations)
 
   def backward(carry, x):
+    if out_with_grad == 0:
+      return None, None
     grad_new_carry, _ = tree_flatten(carry)
     (grad_y, activations) = x
     grad_y, _ = tree_flatten_none(grad_y)

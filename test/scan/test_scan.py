@@ -80,7 +80,8 @@ class ScanTest(TestBase):
     xs_scan = tree_map(dupe, xs)
     final_carry, ys = scan(fn, init_scan, xs_scan, partition_fn=partition_fn)
     # Add up all leaves and `backward()` once.
-    (squish(final_carry) + squish(ys)).backward()
+    if final_carry.requires_grad or ys.requires_grad:
+      (squish(final_carry) + squish(ys)).backward()
     torch_xla.sync()
 
     # Expected output
@@ -88,7 +89,8 @@ class ScanTest(TestBase):
     xs_loop = tree_map(dupe, xs)
     expected_final_carry, expected_ys = _loopy_scan(fn, init_loop, xs_loop)
     # Add up all leaves and `backward()` once.
-    (squish(expected_final_carry) + squish(expected_ys)).backward()
+    if expected_final_carry.requires_grad or expected_ys.requires_grad:
+      (squish(expected_final_carry) + squish(expected_ys)).backward()
     torch_xla.sync()
 
     # Compare values
@@ -134,7 +136,10 @@ class ScanTest(TestBase):
       y = new_carry
       return new_carry, y
 
-    init = torch.tensor([0.0, 0.0], requires_grad=False, device=self.device, dtype=torch.long)
+    init = torch.tensor([0.0, 0.0],
+                        requires_grad=False,
+                        device=self.device,
+                        dtype=torch.long)
     xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
                       requires_grad=False,
                       dtype=torch.long,
