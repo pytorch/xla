@@ -4,6 +4,7 @@ import jax
 from enum import Enum
 from typing import Union, List, Tuple, Optional, Any, cast
 from abc import ABC, abstractmethod
+import torch.utils._pytree as pytree
 
 # Reference to original PyTorch native functions
 # https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/native_functions.yaml
@@ -113,6 +114,36 @@ class NarrowInfo(ViewInfo):
 
   def calculate_output_shape(self, source: jax.Array) -> List[int]:
     return source[self.slices].shape
+
+class ReshapeInfo(ViewInfo):
+    """
+    Represents a reshape operation on a tensor.
+    Handles operations like tensor.reshape(1, 2, 3) and tensor.reshape(-1, 1)
+    """
+
+    def __init__(self, shape: Tuple[int, ...]) -> None:
+        """
+        Args:
+            shape: The shape to reshape the tensor to.
+                E.g. jax_array.reshape(shape) will return the transformed tensor.
+        """
+        super().__init__(ViewInfoType.RESHAPE)
+        self.shape = shape
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ReshapeInfo):
+            return False
+        return self.shape == other.shape
+
+    def transform_tensor(self, jax_array: jax.Array) -> jax.Array:
+        return jax_array.reshape(self.shape)
+
+    def update_tensor(self, new_value: jax.Array, jax_array: jax.Array) -> jax.Array:
+        original_shape = jax_array.shape
+        return jax_array.at[...].set(new_value.reshape(original_shape))
+
+    def calculate_output_shape(self, source: jax.Array) -> List[int]:
+        return source.reshape(self.shape).shape
 
 
 class SelectInfo(ViewInfo):
@@ -313,13 +344,16 @@ class View(torch.Tensor):
       intermediate_values.append(
           view_info.transform_tensor(intermediate_values[-1]))
 
-    # TODO: Investigate efficiency of this algorithm
-    # Update the source array with the new value by
-    # applying inverse transformations in reverse order
-    for view_info, parent_array in zip(
-        reversed(view_infos), reversed(intermediate_values)):
-      # Apply the inverse transformation to propagate changes back
-      new_values = view_info.update_tensor(new_values, parent_array)
+        # TODO: Investigate efficiency of this algorithm
+        # Update the source array with the new value by
+        # applying inverse transformations in reverse order
+        for view_info, parent_array in zip(
+            reversed(view_infos), reversed(intermediate_values)
+        ):
+            assert isinstance(new_values, jax.Array)
+            assert isinstance(parent_array, jax.Array)
+            # Apply the inverse transformation to propagate changes back
+            new_values = view_info.update_tensor(new_values, parent_array)
 
     # Update the source tensor with the new values
     self.replace_source_jax(new_values)
@@ -362,12 +396,14 @@ class View(torch.Tensor):
       result = view_info.transform_tensor(result)
     return result
 
-  def __setitem__(self, indexes, val):
-    view_infos = self.get_transformation_chain() + [NarrowInfo(indexes)]
-    self.update(view_infos=view_infos, new_values=val)
-
-  def dim(self):
-    return self.ndim
+    def __setitem__(self, indexes, val):
+        # Handle tensor indexing 
+        indexes = pytree.tree_map(lambda x: x.jax() if isinstance(x, torch.Tensor) else x, indexes)
+        view_infos = self.get_transformation_chain() + [NarrowInfo(indexes)]
+        self.update(view_infos=view_infos, new_values=val)
+    
+    def dim(self):
+        return self.ndim
 
   @property
   def device(self):

@@ -15,7 +15,7 @@ from torchax.ops import ops_registry
 from torchax.ops import op_base, mappings
 from torchax import interop
 from torchax.ops import jax_reimplement
-from torchax.view import View, NarrowInfo
+from torchax.view import View, NarrowInfo, ReshapeInfo
 from torchax.tensor import Tensor
 # Keys are OpOverload, value is a callable that takes
 # Tensor
@@ -102,13 +102,14 @@ def op(*aten, **kwargs):
 
 
 @op(
-    torch.ops.aten.view_copy,
-    torch.ops.aten.view,
-    torch.ops.aten._unsafe_view,
-    torch.ops.aten.reshape,
+  torch.ops.aten.view_copy,
+  torch.ops.aten.view,
+  torch.ops.aten._unsafe_view,
+  torch.ops.aten.reshape,
+  is_jax_function=False,
 )
 def _aten_unsafe_view(x, shape):
-  return jnp.reshape(x, shape)
+  return View(x, ReshapeInfo(shape=shape), env=x._env)
 
 
 @op(torch.ops.aten.add.Tensor)
