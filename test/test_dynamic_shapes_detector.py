@@ -5,7 +5,6 @@ import torch_xla
 import test_utils
 import unittest
 
-
 # Processes a string, so that it can be used as the expected error regex.
 # Specifically, it does 3 things:
 #
@@ -23,8 +22,9 @@ import unittest
 # regex wildcards, such as "*".
 ESCAPE_RE = re.compile(r"([\[\](){}])")
 
+
 def escape(s):
-    return ESCAPE_RE.sub(r"\\\1", textwrap.dedent(s[1:]))
+  return ESCAPE_RE.sub(r"\\\1", textwrap.dedent(s[1:]))
 
 
 class TestDynamicShapeDetector(test_utils.XlaTestCase):
@@ -85,7 +85,8 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
       return x + x
 
     inp1 = torch.rand(10, device=torch_xla.device())
-    self._run_and_compare(foo, args=(inp1,), max_different_graphs=max_different_graphs)
+    self._run_and_compare(
+        foo, args=(inp1,), max_different_graphs=max_different_graphs)
 
     expected_error_msg = escape(r"""
         Maximum number of different graphs allowed per function exceeded: 1
@@ -95,7 +96,8 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
 
     with self.assertRaisesRegex(RuntimeError, expected_error_msg):
       inp2 = torch.rand(5, device=torch_xla.device())
-      self._run_and_compare(foo, args=(inp2,), max_different_graphs=max_different_graphs)
+      self._run_and_compare(
+          foo, args=(inp2,), max_different_graphs=max_different_graphs)
 
   def test_graph_limit_exceeded_common_sequence_mismatch(self):
     # Test: catch graph limit exceeded error when the common sequence (i.e. compressed
@@ -117,7 +119,8 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
         return x * 5
 
     inp = torch.rand(10, device=torch_xla.device())
-    self._run_and_compare(foo, args=(inp, 0), max_different_graphs=max_different_graphs)
+    self._run_and_compare(
+        foo, args=(inp, 0), max_different_graphs=max_different_graphs)
 
     expected_error_msg = escape(r"""
         Maximum number of different graphs allowed per function exceeded: 1
@@ -126,7 +129,8 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
     """)
 
     with self.assertRaisesRegex(RuntimeError, expected_error_msg):
-      self._run_and_compare(foo, args=(inp, 2), max_different_graphs=max_different_graphs)
+      self._run_and_compare(
+          foo, args=(inp, 2), max_different_graphs=max_different_graphs)
 
   def test_graph_limit_exceeded_children_mismatch(self):
     # Test: catch graph limit exceeded error when the expected child of the trie
@@ -154,8 +158,10 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
       return r / 3
 
     inp = torch.rand(10, device=torch_xla.device())
-    self._run_and_compare(foo, args=(inp, 0), max_different_graphs=max_different_graphs)
-    self._run_and_compare(foo, args=(inp, 1), max_different_graphs=max_different_graphs)
+    self._run_and_compare(
+        foo, args=(inp, 0), max_different_graphs=max_different_graphs)
+    self._run_and_compare(
+        foo, args=(inp, 1), max_different_graphs=max_different_graphs)
 
     expected_error_msg = escape(r"""
         Maximum number of different graphs allowed per function exceeded: 2
@@ -166,7 +172,8 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
     """)
 
     with self.assertRaisesRegex(RuntimeError, expected_error_msg):
-      self._run_and_compare(foo, args=(inp, 2), max_different_graphs=max_different_graphs)
+      self._run_and_compare(
+          foo, args=(inp, 2), max_different_graphs=max_different_graphs)
 
   def test_graph_limit_exceeded_common_sequence_early_stop(self):
     # Test: catch graph limit exceeded error when the graph ends unexpectedly in
@@ -188,7 +195,8 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
         return r
 
     inp = torch.rand(10, device=torch_xla.device())
-    self._run_and_compare(foo, args=(inp, True), max_different_graphs=max_different_graphs)
+    self._run_and_compare(
+        foo, args=(inp, True), max_different_graphs=max_different_graphs)
 
     expected_error_msg = escape(r"""
         Maximum number of different graphs allowed per function exceeded: 1
@@ -224,8 +232,10 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
       return r
 
     inp = torch.rand(10, device=torch_xla.device())
-    self._run_and_compare(foo, args=(inp, 0), max_different_graphs=max_different_graphs)
-    self._run_and_compare(foo, args=(inp, 1), max_different_graphs=max_different_graphs)
+    self._run_and_compare(
+        foo, args=(inp, 0), max_different_graphs=max_different_graphs)
+    self._run_and_compare(
+        foo, args=(inp, 1), max_different_graphs=max_different_graphs)
 
     expected_error_msg = escape(r"""
         Maximum number of different graphs allowed per function exceeded: 2
@@ -236,7 +246,8 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
     """)
 
     with self.assertRaisesRegex(RuntimeError, expected_error_msg):
-      self._run_and_compare(foo, args=(inp, 2), max_different_graphs=max_different_graphs)
+      self._run_and_compare(
+          foo, args=(inp, 2), max_different_graphs=max_different_graphs)
 
 
 if __name__ == "__main__":
