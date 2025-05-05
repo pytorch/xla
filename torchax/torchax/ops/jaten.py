@@ -57,6 +57,7 @@ mutation_ops_to_functional = {
     torch.ops.aten.scatter_add_: torch.ops.aten.scatter_add,
     torch.ops.aten.scatter_reduce_.two: torch.ops.aten.scatter_reduce,
     torch.ops.aten.scatter_: torch.ops.aten.scatter,
+  torch.ops.aten.index_put_: torch.ops.aten.index_put,
 }
 
 # Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
@@ -782,7 +783,6 @@ def _aten_empty_strided(sizes, stride, dtype=None, **kwargs):
   return jnp.empty(sizes, dtype=dtype)
 
 
-@op(torch.ops.aten.index_put_)
 @op(torch.ops.aten.index_put)
 def _aten_index_put(self, indexes, values, accumulate=False):
   indexes = [slice(None, None, None) if i is None else i for i in indexes]
