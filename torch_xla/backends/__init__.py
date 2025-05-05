@@ -2,10 +2,10 @@
 
 # See https://github.com/pytorch/pytorch/blob/main/torch/backends/mps/__init__.py
 # for an example of how backends are implemented in PyTorch
-# in the __init__.py file.
+# in the __init__.py file, despite general style guidelines against this. 
 
 # Literal is available from Python 3.8,
-# matching the Python versions for PyTorch and PyTorchXLA.
+# matching the Python versions for PyTorch and PyTorch/XLA.
 from typing import Final, Literal, TypeAlias
 
 import torch_xla
@@ -63,7 +63,7 @@ def set_mat_mul_precision(precision: _PrecisionType) -> None:
   """
   if precision not in [_DEFAULT, _HIGH, _HIGHEST]:
     raise ValueError(f"Invalid precision: {precision}. "
-                     "Must be one of 'float32', 'bfloat16', or 'float16'.")
+                     f"Must be one of {_DEFAULT}, {_HIGH}, {_HIGHEST}.")
 
   torch_xla._XLAC._xla_set_mat_mul_precision(precision)
 
@@ -78,5 +78,5 @@ def get_mat_mul_precision() -> _PrecisionType:
   precision = torch_xla._XLAC._xla_get_mat_mul_precision()
   assert precision in [_DEFAULT, _HIGH, _HIGHEST
                       ], (f"Invalid precision: {precision}. "
-                          "Must be one of 'float32', 'bfloat16', or 'float16'.")
+                          f"Must be one of {_DEFAULT}, {_HIGH}, {_HIGHEST}.")
   return precision
