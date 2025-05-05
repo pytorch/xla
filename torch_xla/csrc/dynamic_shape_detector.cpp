@@ -9,6 +9,11 @@ namespace torch_xla {
 // Maximum number of allowed graphs per function (i.e. session).
 static std::size_t max_different_graphs = 1;
 
+TrieNode::TrieNode(const TrieValue& value, bool is_graph_boundary) : TrieNode() {
+  common_sequence_.push_back(value);
+  is_graph_boundary_ = is_graph_boundary;
+}
+
 TrieNode::TrieNode(absl::Span<const TrieValue> common_sequence,
                    bool is_graph_boundary)
     : common_sequence_(common_sequence.begin(), common_sequence.end()),
@@ -112,8 +117,7 @@ TrieBuilder TrieNode::AddValue(TrieValue value, std::size_t matched,
   bool did_split = MaybeSplitAt(matched);
 
   // Create a new node that contains only the given value.
-  std::unique_ptr<TrieNode> node =
-      std::make_unique<TrieNode>(absl::Span<const TrieValue>{value});
+  std::unique_ptr<TrieNode> node = std::make_unique<TrieNode>(value);
 
   // Associate the given value with the created node in the children's map.
   children_[value.hash] = std::move(node);
