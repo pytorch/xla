@@ -9,7 +9,8 @@ namespace torch_xla {
 // Maximum number of allowed graphs per function (i.e. session).
 static std::size_t max_different_graphs = 1;
 
-TrieNode::TrieNode(const TrieValue& value, bool is_graph_boundary) : TrieNode() {
+TrieNode::TrieNode(const TrieValue& value, bool is_graph_boundary)
+    : TrieNode() {
   common_sequence_.push_back(value);
   is_graph_boundary_ = is_graph_boundary;
 }
