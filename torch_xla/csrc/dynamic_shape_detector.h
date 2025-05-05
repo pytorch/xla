@@ -98,6 +98,10 @@ struct TrieBuilder {
 struct TrieNode {
   using ChildrenMap = std::map<torch::lazy::hash_t, std::unique_ptr<TrieNode>>;
 
+  // Create a TrieNode with one value as its common_sequence_.
+  TrieNode(const TrieValue& value, bool is_graph_boundary = false);
+
+  // Create a TrieNode with a specific common_sequence_.
   TrieNode(absl::Span<const TrieValue> common_sequence = {},
            bool is_graph_boundary = false);
 
