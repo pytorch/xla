@@ -14,7 +14,7 @@ apt:
       - vim
       - wget
       - clang-format
-      - clang-17
+      - clang-{{ clang_version }}
       - gcc-10
       - g++-10
       - lcov
