@@ -228,7 +228,7 @@ function run_xla_op_tests2 {
   run_test "$CDIR/test_jax_interop.py"
   run_test "$CDIR/test_assume_pure.py"
   run_test "$CDIR/test_assume_pure_spmd.py"
-  run_test "$CDIR/test_dynamic_shapes_detector.py"
+  TF_CPP_MIN_LOG_LEVEL=0 TF_CPP_VMODULE=dynamic_shape_detector=5 run_test "$CDIR/test_dynamic_shapes_detector.py" -v
 }
 
 # All the new xla op tests should go to run_xla_op_tests3
