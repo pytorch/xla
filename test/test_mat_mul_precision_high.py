@@ -48,7 +48,8 @@ class TestMatMulPrecisionHigh(unittest.TestCase):
 
     # 14 bits is an estimate of precision in the
     # three pass technique.
-    worst_atol = torch.tensor(-1 + ((2**14 + 1) / 2**14)**2, dtype=torch.float64)
+    worst_atol = torch.tensor(
+        -1 + ((2**14 + 1) / 2**14)**2, dtype=torch.float64)
 
     x = x.to(torch.float32).to('xla')
     y = y.to(torch.float32).to('xla')
