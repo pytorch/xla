@@ -701,6 +701,18 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
       TensorToBufferSType<c10::complex<double>>(tensor, dest_shape, dest_buffer,
                                                 dest_buffer_size, device);
       break;
+    case at::ScalarType::UInt16:
+      TensorToBufferSType<uint16_t>(tensor, dest_shape, dest_buffer,
+                                    dest_buffer_size, device);
+      break;
+    case at::ScalarType::UInt32:
+      TensorToBufferSType<uint32_t>(tensor, dest_shape, dest_buffer,
+                                    dest_buffer_size, device);
+      break;
+    case at::ScalarType::UInt64:
+      TensorToBufferSType<uint64_t>(tensor, dest_shape, dest_buffer,
+                                    dest_buffer_size, device);
+      break;
     default:
       XLA_ERROR() << "Tensor type not supported: " << tensor.type();
   }
