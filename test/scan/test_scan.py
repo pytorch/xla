@@ -76,7 +76,7 @@ class ScanTest(TestBase):
     dupe = lambda v: v.detach().clone().requires_grad_(v.requires_grad)
 
     def _requires_grad(tensors):
-        return any(tree_flatten(tree_map(lambda v: v.requires_grad, tensors))[0])
+      return any(tree_flatten(tree_map(lambda v: v.requires_grad, tensors))[0])
 
     # Actual output
     init_scan = tree_map(dupe, init)
