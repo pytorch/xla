@@ -7,7 +7,6 @@ on:
     paths-ignore:
       - 'experimental/**'
       - 'torchax/**'
-  pull_request:
   workflow_dispatch:
 jobs:
   build:
@@ -29,7 +28,7 @@ jobs:
       - name: Build Docker image
         shell: bash
         run: |
-          docker build -t "${ECR_DOCKER_IMAGE_BASE}:v1.3-lite-test-new-sccache" .github/upstream
+          docker build -t "${ECR_DOCKER_IMAGE_BASE}:v1.3-lite" .github/upstream
       - name: Stage image to ECR
         shell: bash
         run: |
@@ -39,4 +38,4 @@ jobs:
             # if image layers are not present in the repo.
             # Note: disable the following line while testing a new image, so we do not
             # push to the upstream.
-            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.3-lite-test-new-sccache"
+            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.3-lite"
