@@ -53,7 +53,10 @@ def set_mat_mul_precision(precision: _PrecisionType) -> None:
     * `highest` is the most precise, and the slowest. It takes six
     passes and generates approximately 22 bits of precision.
 
-    Args:
+    See the [precision tutorial](../../tutorials/precision_tutorial.html)
+    for more information about the precision levels.
+
+        Args:
         precision (str): The precision to set for matrix multiplication.
           Must be one of 'default', 'high', or 'highest'.
     """
@@ -66,6 +69,9 @@ def set_mat_mul_precision(precision: _PrecisionType) -> None:
 
 def get_mat_mul_precision() -> _PrecisionType:
   """Get the current mat mul precision for 32bit inputs.
+
+    See the [precision tutorial](../../tutorials/precision_tutorial.html)
+    for more information about the precision levels.
 
     Returns:
         str: The current precision setting for matrix multiplication,
