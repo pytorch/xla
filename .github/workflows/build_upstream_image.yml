@@ -1,12 +1,6 @@
 name: Build upstream image
 on:
   push:
-    branches:
-      - master
-      - r[0-9]+.[0-9]+
-    paths-ignore:
-      - 'experimental/**'
-      - 'torchax/**'
   workflow_dispatch:
 jobs:
   build:
@@ -28,7 +22,7 @@ jobs:
       - name: Build Docker image
         shell: bash
         run: |
-          docker build -t "${ECR_DOCKER_IMAGE_BASE}:v1.3-lite" .github/upstream
+          docker build -t "${ECR_DOCKER_IMAGE_BASE}:v1.3-lite-test-new-sccache" .github/upstream
       - name: Stage image to ECR
         shell: bash
         run: |
@@ -38,4 +32,4 @@ jobs:
             # if image layers are not present in the repo.
             # Note: disable the following line while testing a new image, so we do not
             # push to the upstream.
-            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.3-lite"
+            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.3-lite-test-new-sccache"
