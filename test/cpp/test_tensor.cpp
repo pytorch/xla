@@ -63,6 +63,28 @@ TEST_F(TensorTest, TestConversions) {
     EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::Long));
   }
   {
+    at::Tensor a = at::randint(std::numeric_limits<uint16_t>::min(),
+                               std::numeric_limits<uint16_t>::max(), {2, 2},
+                               at::TensorOptions(at::kUInt16));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt16));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt32));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt64));
+  }
+  {
+    at::Tensor a = at::randint(std::numeric_limits<uint32_t>::min(),
+                               std::numeric_limits<uint32_t>::max(), {2, 2},
+                               at::TensorOptions(at::kUInt32));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt32));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt64));
+  }
+  {
+    // The range of uint64_t is too large for randint to generate.
+    at::Tensor a = at::randint(std::numeric_limits<uint32_t>::min(),
+                               std::numeric_limits<uint32_t>::max(), {2, 2},
+                               at::TensorOptions(at::kUInt64));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt64));
+  }
+  {
     at::Tensor a = at::randint(0, 1, {2, 2}, at::TensorOptions(at::kByte));
     EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::Byte,
                                              xla::PrimitiveType::PRED));

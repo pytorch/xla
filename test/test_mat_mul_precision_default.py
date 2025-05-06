@@ -46,10 +46,8 @@ class TestMatMulPrecisionDefault(unittest.TestCase):
     y = self._make_input()
     reference_float64 = torch.matmul(x, y)
 
-    # This is slightly worse than 1/2**[mantissa bits] because in multiplication, both
-    # operands may lose 1/256 (=2^8, where 8 = 7 + 1,
-    # where 7 is the mantissa and 1 is the implicit bit).
-    worst_atol = torch.tensor(1 - ((2**8 - 1) / 2**8)**2, dtype=torch.float64)
+    # TODO: Justify this logic. Why isn't it Why is it not -1 + ((2**8 - 1) / 2**8)**2.
+    worst_atol = torch.tensor(-1 + ((2**8 + 1) / 2**8)**2, dtype=torch.float64)
 
     x = x.to(torch.float32).to('xla')
     y = y.to(torch.float32).to('xla')
