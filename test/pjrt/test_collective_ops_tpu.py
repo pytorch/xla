@@ -1,11 +1,9 @@
 import numpy as np
-from typing import List
 import torch
 import torch.nn as nn
 import torch.distributed as dist
 import torch.utils._pytree as pytree
 from absl.testing import absltest, parameterized
-from unittest import mock
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
@@ -247,7 +245,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     return output.cpu()
 
   @staticmethod
-  def _all_to_all_single(use_dynamo: bool):
+  def _all_to_all_single(use_dynamo: bool, split_size: int = 1):
     met.clear_all()
     dist.init_process_group("xla", init_method='xla://')
     device = xm.xla_device()
@@ -259,7 +257,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     # check https://github.com/pytorch/pytorch/blob/758d78790164bfb041555daed380de96e06f78a3/torch/distributed/distributed_c10d.py#L3880
     # for input and output tensor example
     tensor_in = torch.tensor(
-        [xr.local_ordinal()] * tpu.num_expected_global_devices(),
+        [xr.local_ordinal()] * (tpu.num_expected_global_devices() * split_size),
         dtype=torch.float,
         device=device)
     tensor_out = torch.zeros_like(tensor_in)
@@ -315,14 +313,18 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
   def test_all_to_all_single(self, use_dynamo):
+    split_size = 2
     results = pjrt.run_multiprocess(
-        self._all_to_all_single, use_dynamo=use_dynamo)
+        self._all_to_all_single, use_dynamo=use_dynamo, split_size=split_size)
     expected = torch.arange(
-        tpu.num_expected_global_devices(), dtype=torch.float)
+        tpu.num_expected_global_devices(), dtype=torch.float).repeat(split_size)
     # Note: AllToAll xla op does not honor the order of the all_to_all, which means
     # the rank may not follow the order.
     for _, val in results.items():
-      self.assertTrue(torch.allclose(val.sort().values, expected.sort().values))
+      self.assertTrue(
+          torch.allclose(val.sort().values,
+                         expected.sort().values),
+          f"Got {val}, expected {expected}")
 
 
 if __name__ == '__main__':
