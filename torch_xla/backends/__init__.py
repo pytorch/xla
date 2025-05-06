@@ -30,7 +30,6 @@ _PrecisionType: TypeAlias = Literal[
 
 
 # Some of this description adapted from Jax documentation.
-# TODO: Once the numerics tutorial is released, link from this docstring.
 def set_mat_mul_precision(precision: _PrecisionType) -> None:
   """Control the default matmul and conv precision for 32bit inputs.
 
