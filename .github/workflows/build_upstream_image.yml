@@ -1,6 +1,13 @@
 name: Build upstream image
 on:
   push:
+    branches:
+      - master
+      - r[0-9]+.[0-9]+
+    paths-ignore:
+      - 'experimental/**'
+      - 'torchax/**'
+  pull_request:
   workflow_dispatch:
 jobs:
   build:
