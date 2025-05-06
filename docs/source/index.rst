@@ -45,6 +45,7 @@ Tutorials
    :caption: Distributed Training on TPU
 
    accelerators/tpu
+   tutorials/precision_tutorial
    perf/spmd_basic      
    perf/spmd_advanced
    perf/spmd_distributed_checkpoint
