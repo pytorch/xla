@@ -229,7 +229,8 @@ def value_and_grad_partitioned(
     return torch.empty_like(
         v, dtype=v.dtype, device=v.device, requires_grad=requires_grad)
 
-  fake_carry_pytree = tree_map(lambda v: make_fake_tensor(v, requires_grad=v.requires_grad), init)
+  fake_carry_pytree = tree_map(
+      lambda v: make_fake_tensor(v, requires_grad=v.is_floating_point()), init)
   fake_x_pytree = tree_map(
       lambda v: make_fake_tensor(v[0], requires_grad=v.requires_grad), xs)
 
