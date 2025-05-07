@@ -206,10 +206,10 @@ TorchVision, and PyTorch/XLA.
 
 Please refer to this [guide](https://github.com/pytorch/xla/blob/master/plugins/cuda/README.md).
 
-## Before Submitting A Pull Request:
+## Before Creating a Pull Request
 
 In `pytorch/xla` repo we enforce coding style for both C++ and Python files. Please try to format
-your code before submitting a pull request.
+your code before creating a pull request.
 
 ### C++ Style Guide
 
@@ -272,3 +272,65 @@ Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is 
 
 * If local changes aren't visible, uninstall existing pytorch/xla with `pip uninstall torch_xla` and `pip uninstall torch`, then rebuild PyTorch and PyTorch/XLA with `python setup.py develop` or `python setup.py install`.
 * PJRT errors when running on TPU such as `The PJRT plugin has PJRT API version 0.34. The framework PJRT API version is 0.40`. You need to update your `libtpu.so` and ensure it's in your `LD_LIBRARY_PATH` environmental directory. You can download a new `libtpu.so` at [Google Cloud](https://storage.googleapis.com/libtpu-wheels/index.html), which are sorted by date. Download the newest one and install it at `pip install libtpu...whl`.
+
+## Creating a Pull Request
+
+On your Linux machine (not inside the dev container), create a local branch,
+commit your local changes to it, and push the change to GitHub:
+
+```bash
+# Assuming that WORKSPACE_DIR is your workspace directory.
+cd $WORKSPACE_DIR/pytorch/xla
+git checkout -b my-branch
+# ... make changes
+git add foo/bar.cpp
+git commit -m "Implement feature X."
+# Push the committed local changes to GitHub.
+# You only need to run the next line once.
+git config --global push.autoSetupRemote true
+git push
+```
+
+The last command will print a link for creating a PR. Open the link to create
+the PR.
+
+## Updating Forked Repos
+
+From time to time, you'll need to bring your forked repos up to date with
+the original (aka upstream) repos. You can do this one repo at a time
+by running the following commands on your Linux machine (not inside the
+dev container).
+
+First, for the `pytorch` repo:
+
+```bash
+cd $WORKSPACE_DIR/pytorch
+# Fetch the latest changes from upstream.
+git fetch upstream
+git checkout main 
+# Merge the changes from upstream/main into your local branch.
+git merge upstream/main
+# Push the updated branch to your fork on GitHub.
+git push origin main
+```
+
+Next, for the `vision` repo:
+
+```bash
+cd $WORKSPACE_DIR/vision
+git fetch upstream
+git checkout main 
+git merge upstream/main
+git push origin main
+```
+
+Finally, for the `pytorch/xla` repo (note that the primary branch is called
+`master` instead of `main` in this repo):
+
+```bash
+cd $WORKSPACE_DIR/pytorch/xla
+git fetch upstream
+git checkout master
+git merge upstream/master
+git push origin master
+```
