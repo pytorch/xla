@@ -32,7 +32,6 @@ _TORCH_XLA_DIR=$(
   cd ~
   dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')"
 )
-COVERAGE_FILE="$_TEST_DIR/../.coverage"
 
 function run_coverage {
   if ! test_is_selected "$1"; then
