@@ -857,7 +857,101 @@ class XlaComputation:
     import jax.tree_util
     return jax.tree_util.tree_unflatten(self.out_spec, result)
 
+    
+# interface
+class XlaComputationFactory:
 
+  def specialize(self, flat_input_shapes) -> XlaComputation
+    pass
+
+  
+class XlaBuilderComputationFactory:
+  
+  def __init__(self, xla_op_func):
+    self.xla_op_func = xla_op_func
+
+  # Input shapes for tensors
+  def specialize(self, input_shapes_flat):
+    computation = create_computation('xla_op_func', self.xla_op_func, input_shapes_flat)
+    return XlaComputation(
+      'xla_op_func', computation, pick_tensor_args, out_spec)
+    )
+
+  def __hash__(self):
+    return hash(id(self.xla_op_func))
+
+    
+class JaxComputationFactory:
+
+  def __init__(self, jax_func):
+    self.jax_func = jax_func
+
+  def specialize(self, args, kwargs):
+    computation = jax_func_to_xla_computation(self.jax_func, args, kwargs)
+    return computation
+
+    
+class FlattenedInputFunc:
+  """Wraps a Python function to provide an interface for calling it with
+  flattened PyTorch tensor arguments and handling flattened outputs.
+
+  This class splits the call to the original function into 3 methods:
+  1. preprocess
+  2. flat_call
+  3. propost_process
+  
+  The invariant to hold is:
+  ```
+    flattened = FlattenedInputFunc(orig_function, sample_args, sample_kwargs)
+    orig_function(*sample_args, **sample_kwargs) == flattend.post_process(
+        flattend.flat_call(
+          flattened.preprocess(
+              sample_args, sample_kwargs)))
+  ```
+
+  This class is useful for integrating functions with complex, nested argument
+  structures (pytrees) into systems that expect inputs and outputs as flat
+  lists of tensors, such as certain JAX transformations or model serving
+  frameworks.
+
+  The structure of the inputs is determined from `sample_args` and
+  `sample_kwargs` provided during initialization. Non-tensor arguments
+  from these samples are stored and automatically re-inserted when the
+  function is called with new tensor inputs.
+  """
+  
+  def __init__(self, orig_func, sample_args, sample_kwargs, handle_output_postprocessing=False):
+    jax_import_guard()
+    with jax_env_context():
+      import jax
+      self.tx = maybe_get_torchax()
+      flattened_inputs, spec = jax.tree.flatten((sample_args, sample_kwargs))
+      tensors, non_tensors = self.tx.util.partition(
+          flattened_inputs, lambda a: isinstance(a, torch.Tensor))
+      self.non_tensors = non_tensors
+      self.orig_func = orig_func
+      self.in_spec = spec
+      self.out_spec = None
+
+  def preprocess(self, args, kwargs):
+    flattened_inputs, spec = jax.tree.flatten((args, kwargs))
+    tensors, non_tensors = self.tx.util.partition(
+        flattened_inputs, lambda a: isinstance(a, torch.Tensor))
+    return tensors
+
+  def flat_call(self, flat_input):
+    flattened = self.tx.util.merge(flat_input, self.non_tensors)
+    args, kwargs = jax.tree.unflatten(flattend, self.in_spec)
+    res = self.orig_func(*args, **kwargs)
+    flattened_out, spec = jax.tree.flatten(res)
+    self.out_spec = spec
+    return res
+
+  def postprocess(self, res_flattened):
+    assert self.out_spec is not None, 'post process only makes sense after flat_call is called'
+    return jax.tree.unflatten(res_flattened, self.out_spec)
+
+    
 def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
   if name is None:
     name = 'jax_func_' + jax_func.__name__
@@ -941,7 +1035,8 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
 
     computation, out_spec = _jax_to_xla_computation_cache_get_or_insert(
         jax_func, sample_inputs, spec, get_xla_computation)
-    return XlaComputation(name, computation, pick_tensor_args, out_spec)
+    pick_tensor_args = lambda a: a
+    return XlaComputation(name, computation, pick_tensor_args, out_spec=None)
 
 
 def _jax_to_xla_computation_cache_get_or_insert(jax_func,
