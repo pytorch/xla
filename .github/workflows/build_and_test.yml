@@ -65,7 +65,7 @@ jobs:
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
       timeout-minutes: 120
-      collect-coverage: false
+      collect-coverage: true
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
@@ -78,7 +78,7 @@ jobs:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
       runner: linux.g4dn.12xlarge.nvidia.gpu
       timeout-minutes: 300
-      collect-coverage: false
+      collect-coverage: true
       install-cuda-plugin: true
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
     secrets:
@@ -92,7 +92,7 @@ jobs:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
       runner: linux.8xlarge.nvidia.gpu
       timeout-minutes: 300
-      collect-coverage: false
+      collect-coverage: true
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
 
   test-tpu:
@@ -100,7 +100,8 @@ jobs:
     uses: ./.github/workflows/_tpu_ci.yml
     needs: build-torch-xla
     with:
-      timeout-minutes: 300
+      timeout-minutes: 300 
+      collect-coverage: true
     if: github.event_name == 'push' || github.event_name == 'pull_request'
 
   push-docs:

@@ -36,16 +36,20 @@ jobs:
     strategy:
       matrix:
         include:
-          - run_python_tests: 'python_tests'
+          - name: 'python_tests'
+            run_python_tests: 'python_tests'
             runner: ${{ inputs.runner }}
-          - run_triton_tests: 'triton_tests'
+          - name: 'triton_tests'
+            run_triton_tests: 'triton_tests'
             runner: 'linux.g5.4xlarge.nvidia.gpu'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
+      COVERAGE_DIR: '/tmp/lcov'
       BAZEL_JOBS: ''  # Let bazel decide the parallelism based on the number of CPUs.
       BAZEL_REMOTE_CACHE: 1
+      PJRT_DEVICE: 'CUDA'
     steps:
       - name: Checkout actions
         uses: actions/checkout@v4
@@ -93,6 +97,12 @@ jobs:
           set -x
           pip install -U --pre jax jaxlib "jax-cuda12-plugin[with_cuda]" jax-cuda12-pjrt -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
         if: ${{ matrix.run_triton_tests }}
+      - name: Extra Coverage deps
+        shell: bash
+        run: |
+          set -x
+          pip install -U coverage coverage-lcov
+        if: ${{ inputs.collect-coverage }}
       - name: Install Triton
         shell: bash
         run: |
@@ -100,13 +110,55 @@ jobs:
           make triton
       - name: Python Tests
         shell: bash
+        env:
+          COVERAGE_FILE: "${{ env.COVERAGE_DIR }}/py-coverage"
+          GCOV_PREFIX: "${{ env.COVERAGE_DIR }}/cpp-coverage"
         run: |
           set -xue
-          PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
-          PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
+
+          TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
+
+          function run_coverage {
+            if [ "$USE_COVERAGE" != "0" ]; then
+              coverage run --source="$TORCH_XLA_DIR" -p "$@"
+            else
+              python3 "$@"
+            fi
+          }
+
+          run_coverage pytorch/xla/test/test_operations.py -v
+          run_coverage pytorch/xla/test/dynamo/test_dynamo.py -v
+
+          coverage combine
+          coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
         if: ${{ matrix.run_python_tests }}
       - name: Triton Tests
         shell: bash
+        env:
+          COVERAGE_FILE: "${{ env.COVERAGE_DIR }}/py-coverage"
+          GCOV_PREFIX: "${{ env.COVERAGE_DIR }}/cpp-coverage"
+          TRITON_PTXAS_PATH: "/usr/local/cuda-12.3/bin/ptxas"
         run: |
-          PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.3/bin/ptxas python pytorch/xla/test/test_triton.py
+          set -x
+
+          TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
+
+          function run_coverage {
+            if [ "$USE_COVERAGE" != "0" ]; then
+              coverage run --source="$TORCH_XLA_DIR" -p "$@"
+            else
+              python3 "$@"
+            fi
+          }
+
+          run_coverage pytorch/xla/test/test_triton.py
+
+          coverage combine
+          coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
         if: ${{ matrix.run_triton_tests }}
+      - name: Upload coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: "lcov-${{ matrix.name }}"
+          path: "${{ env.COVERAGE_DIR }}"
+        if: ${{ inputs.collect-coverage }}
