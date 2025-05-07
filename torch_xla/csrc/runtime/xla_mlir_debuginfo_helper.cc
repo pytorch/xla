@@ -9,8 +9,6 @@
 namespace torch_xla {
 namespace runtime {
 
-namespace {
-
 // Defined in torch_xla/experimental/xla_mlir_debuginfo.py
 static constexpr char XLA_MLIR_DEBUGINFO_BEGIN[] = "<XLA_MLIR_DEBUGINFO_BEGIN>";
 static constexpr char XLA_MLIR_DEBUGINFO_END[] = "<XLA_MLIR_DEBUGINFO_END>";
@@ -80,8 +78,6 @@ class PrepareXlaMlirDebuginfoPass : public mlir::OperationPass<mlir::ModuleOp> {
     return std::make_unique<PrepareXlaMlirDebuginfoPass>(*this);
   }
 };
-
-}  // namespace
 
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 CreatePrepareXlaMlirDebuginfoPass() {
