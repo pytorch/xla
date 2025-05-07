@@ -2441,8 +2441,8 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm_backward(
       save_mean->GetIrValue(), save_invstd->GetIrValue(), training, eps);
   XLATensorPtr grad_input = input->CreateFrom(torch::lazy::Value(node, 0),
                                               /*delay_eager_execution=*/true);
-  XLATensorPtr grad_weight = input->CreateFrom(
-      torch::lazy::Value(node, 1), /*delay_eager_execution=*/true);
+  XLATensorPtr grad_weight = input->CreateFrom(torch::lazy::Value(node, 1),
+                                               /*delay_eager_execution=*/true);
   XLATensorPtr grad_bias = input->CreateFrom(torch::lazy::Value(node, 2),
                                              /*delay_eager_execution=*/true);
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();

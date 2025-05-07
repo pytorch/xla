@@ -297,9 +297,8 @@ void DebugUtil::analyze_graph_execution_python_frame(
 
   std::string_view debug_output_prefix =
       unexpected_execution ? unexpected_execution_prefix
-      : (source == GraphAnalysisSource::Compilation)
-          ? compilation_output_prefix
-          : execution_output_prefix;
+      : (source == GraphAnalysisSource::Compilation) ? compilation_output_prefix
+                                                     : execution_output_prefix;
   // TODO: Make this configurable.
   std::vector<torch::lazy::SourceLocation> frames =
       torch::lazy::GetPythonFrames();
