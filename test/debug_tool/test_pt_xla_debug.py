@@ -177,10 +177,18 @@ class PtXLADebugTest(unittest.TestCase):
 
     if self.debug_level > 1:
       self.assertEqual(len(executation_causes), 2)
+      self.assertIn(
+          'torch_xla.compile clear the pending graph prior calling the target function',
+          executation_causes[0])
+      self.assertIn('torch_xla.compile\n', executation_causes[1])
     else:
       self.assertEqual(len(execution_causes), 0)
 
     self.assertEqual(len(compilation_causes), 2)
+    self.assertIn(
+        'torch_xla.compile clear the pending graph prior calling the target function',
+        compilation_causes[0])
+    self.assertIn('torch_xla.compile\n', compilation_causes[1])
 
     if self.debug_level > 1:
       # one graph info from compilation, one from execution, hash should match
