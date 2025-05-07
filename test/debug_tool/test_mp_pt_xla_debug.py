@@ -29,7 +29,7 @@ def _mp_fn(index):
       lines = f.readlines()
       causes = extract_execution_cause(lines)
       frames = extract_python_frames(lines)
-    # only the local master process should dump the executation analysis
+    # only the local master process should dump the execution analysis
     assert (len(causes) == 1)
     assert ('user mark_step' in causes[0])
     assert (len(frames) == 3)
