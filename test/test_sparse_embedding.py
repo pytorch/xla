@@ -6,6 +6,7 @@ from itertools import product
 
 import torch
 import torch_xla
+import torch_xla.core.xla_model as xm
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim.sparse_adam import SparseAdam
@@ -36,17 +37,18 @@ class TestEmbedding(TestCase):
     self.assertTrue(embedding.weight.grad.is_sparse)
     self.assertEqual(embedding.weight.grad.shape, embedding.weight.shape)
 
-  def test_embbedding_functional(self):
+  def test_embedding_functional(self):
     torch_input = torch.tensor([[0, 2, 4, 5], [4, 3, 0, 9]], dtype=torch.long)
     torch_weights = torch.randn(10, 20, requires_grad=True)
     xla_input = torch_input.to(xla_device)
     xla_weights = torch_weights.detach().to(xla_device).requires_grad_(True)
     torch_out = F.embedding(torch_input, torch_weights, sparse=True)
     xla_out = xla_embedding(xla_input, xla_weights, sparse=True)
-    self.assertEqual(xla_out.to_dense().to('cpu'), torch_out.to_dense())
+    self.assertEqual(xla_out, torch_out)
+    torch_out.max().backward()
     xla_out.max().backward()
     self.assertTrue(xla_weights.grad.is_sparse)
-    self.assertEqual(xla_weights.grad.to_dense().to('cpu'), torch_weights.grad)
+    self.assertEqual(xla_weights.grad, torch_weights.grad)
 
   def test_embedding_optimizer(self):
     context_size = 2
@@ -63,31 +65,22 @@ class TestEmbedding(TestCase):
     word_to_ix = {word: i for i, word in enumerate(vocab)}
     vocab_size = len(vocab)
 
-    model = nn.Sequential(
-        Embedding(vocab_size, context_size),
-        nn.Linear(context_size * embedding_dim, 128),
-        nn.ReLU(),
-        nn.Linear(128, vocab_size),
-        nn.LogSoftmax(),
-    ).to(xla_device)
+    model = Embedding(vocab_size, context_size, sparse=True).to(xla_device)
 
-    loss_function = nn.NLLLoss()
     optimizer = SparseAdam(model.parameters(), lr=0.001)
     for _ in range(10):
       total_loss = 0
-      for context, target in ngrams:
+      for context, _ in ngrams:
         context_idxs = torch.tensor([word_to_ix[w] for w in context],
-                                    dtype=torch.long)
+                                    dtype=torch.long).to(xla_device)
         model.zero_grad()
         log_probs = model(context_idxs)
-        loss = loss_function(
-            log_probs, torch.tensor([word_to_ix[target]], dtype=torch.long))
+        loss = log_probs.sum()
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-    # getting here without errors is essentially a pass, but we should assert that the optimizer has some state
-    breakpoint()
-    #optimizer.param_groups
+        xm.mark_step()
+    # TODO: inspect optimizer context assert update has happend.
 
 
 # repeat for Bag

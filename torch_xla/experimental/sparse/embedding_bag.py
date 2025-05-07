@@ -18,105 +18,6 @@ class _EmbeddingBagMode(IntEnum):
   MAX = 2
 
 
-# def _promote_index_offset_dtype(indices: Tensor, offsets: Tensor):
-#   common_dtype = torch.promote_types(indices.dtype, offsets.dtype)
-#   indices = indices.to(common_dtype)
-#   offsets = offsets.to(common_dtype)
-#   return indices, offsets
-
-# def _check_type(func_name, arg_name, arg, dtypes):
-#   torch._check(
-#       arg.dtype in dtypes,
-#       f"{func_name}: {arg_name} must have dtype from {dtypes}, but found {arg.dtype}"
-#   )
-
-# def _check_embedding_bag_args(weight: Tensor, indices: Tensor, offsets: Tensor,
-#                               mode: _EmbeddingBagMode,
-#                               per_sample_weights: Optional[Tensor],
-#                               include_last_offset: bool):
-#   _check_type("embedding_bag", "indices", indices, (torch.int32, torch.int64))
-#   _check_type("embedding_bag", "offsets", offsets, (torch.int32, torch.int64))
-#   _check_type("embedding_bag", "weight", weight,
-#               (torch.float16, torch.float32, torch.bfloat16, torch.float64))
-#   if offsets.size(0) > 0:
-#     torch.check(offsets[0] == 0, f"offsets[0] must be 0. Got {offsets[0]}")
-#     torch.check(
-#         offsets[-1] < indices.size(0),
-#         f"offsets[-1] can't be greater than input length {indices.size(0)}, but got {offsets[-1]}"
-#     )
-
-#   if per_sample_weights is not None:
-#     torch._check(
-#         mode == _EmbeddingBagMode.SUM,
-#         "embeding_bag: per_sample_weights only supported with mode='sum'")
-#     _check_type("embeding_bag", "per_sample_weights", per_sample_weights,
-#                 (weight.dtype,))
-#     torch._check(per_sample_weights.dim() == 1)
-#     torch._check(per_sample_weights.numel() == indices.numel())
-
-#   if include_last_offset:
-#     torch._check(
-#         offsets.size(0) >= 1,
-#         "include_last_offset: number of offsets should be at least 1")
-
-# def _is_fast_path(weight: Tensor, per_sample_weights: Optional[Tensor],
-#                   output: Tensor, padding_idx: int) -> bool:
-#   is_fast = weight.dtype in (torch.float32, torch.float16, torch.bfloat16)
-#   is_fast &= weight.stride(1) == 1
-#   is_fast &= output.stride(1) == 1
-#   is_fast &= padding_idx < 0
-#   if is_fast and per_sample_weights is not None:
-#     is_fast &= per_sample_weights.stride(1) == 1
-#   return is_fast
-
-# def _make_offset2bag(output: Tensor, weight: Tensor, indices: Tensor,
-#                      offsets: Tensor, mode: _EmbeddingBagMode,
-#                      per_sample_weights: Optional[Tensor],
-#                      padding_idx: int) -> Tensor:
-#   fast_path_sum = _is_fast_path(weight, per_sample_weights, output, padding_idx)
-#   if (mode == _EmbeddingBagMode.MEAN or mode == _EmbeddingBagMode.MAX or
-#       not fast_path_sum):
-#     offsets_size = offsets.size(0)
-#     offset2bag = torch.zeros(indices.size(0), **_tensor_factory_kwargs(offsets))
-#     include_last_offset = output.size(0) == offsets_size - 1
-#     if include_last_offset:
-#       _offsets = offsets.narrow(0, 0, offsets_size - 1)
-#     else:
-#       _offsets = offsets
-#     output.zero_()
-
-#     offset2bag.index_add_(0, _offsets, torch.ones_like(_offsets))
-#     offset2bag[0] -= 1
-#     offset2bag = offset2bag.cumsum(0, offset2bag.dtype)
-#     return offset2bag
-#   else:
-#     # we don't use this on the fast path so never initalize it
-#     return torch.empty(0, **_tensor_factory_kwargs(offsets))
-
-# def _make_bag_size(offsets: Tensor, indices: Tensor, mode: _EmbeddingBagMode,
-#                    include_last_offset: bool) -> Tensor:
-#   last_offset_factor = 1 if include_last_offset else 0
-#   num_bags = offsets.size(0) - last_offset_factor
-#   bag_size = torch.empty(num_bags, **_tensor_factory_kwargs(offsets))
-#   if num_bags != 1:
-#     bag_size[0:bag_size.size(0) -
-#              1] = offsets[1:num_bags] - offsets[0:num_bags - 1]
-#   if num_bags > 0:
-#     bag_size[-1] = indices.size(0) - offsets[num_bags - 1]
-#   return bag_size
-
-# def _make_max_indices(weight: Tensor, indices: Tensor, offsets: Tensor,
-#                       bag_size: Tensor, mode: _EmbeddingBagMode,
-#                       include_last_offset: bool) -> Tensor:
-#   num_bags = offsets.size(0)
-#   if mode == _EmbeddingBagMode.MAX:
-#     if include_last_offset:
-#       torch._check(num_bags >= 1,
-#                    "include_last_offset: num_bags should be at least 1")
-#   _tensor_factory_kwargs(bag_size)
-#   pass
-
-
 def _tensor_factory_kwargs(t):
   return {
       k: getattr(t, k)
@@ -153,7 +54,7 @@ def _sparse_embedding_backward(grad: Tensor, indices: Tensor, num_weights: int,
     sparse_index = indices.reshape(1, -1)
     sparse_values = grad.reshape((-1, num_features))
 
-  grad_weight = SparseCOOTensor(sparse_index, sparse_values, weight_size)
+  grad_weight = SparseCOOTensor.create(sparse_index, sparse_values, weight_size)
 
   return grad_weight
 
