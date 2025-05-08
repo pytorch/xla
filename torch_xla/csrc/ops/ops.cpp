@@ -195,23 +195,6 @@ torch::lazy::NodePtr SoftmaxBackwardOp(const torch::lazy::Value& grad_output,
           dim, GetXlaShape(grad_output).dimensions_size()));
 }
 
-torch::lazy::NodePtr Clamp(const torch::lazy::Value& input,
-                           const torch::lazy::Value& min,
-                           const torch::lazy::Value& max) {
-  auto lower_fn = [](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_min = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_max = loctx->GetOutputOp(node.operand(2));
-    xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
-    xla_min = ConvertTo(xla_min, XlaHelpers::TypeOfXlaOp(xla_min), input_type);
-    xla_max = ConvertTo(xla_max, XlaHelpers::TypeOfXlaOp(xla_max), input_type);
-    return node.ReturnOp(xla::Clamp(xla_min, xla_input, xla_max), loctx);
-  };
-  return GenericOp(torch::lazy::OpKind(at::aten::clamp), {input, min, max},
-                   GetXlaShape(input), std::move(lower_fn));
-}
-
 torch::lazy::NodePtr Celu(const torch::lazy::Value& input,
                           const at::Scalar& alpha) {
   auto lower_fn = [=](const XlaNode& node,
