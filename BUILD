@@ -19,7 +19,7 @@ compile_pip_requirements(
 )
 
 cc_binary(
-    name = "_XLAC.so",  # ZQ
+    name = "_XLAC.so",
     copts = [
         "-DTORCH_API_INCLUDE_EXTENSION_H",
         "-DTORCH_EXTENSION_NAME=_XLAC",

@@ -640,7 +640,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           client_->CompileAndLoad(instance.computation, compile_options);
     }
     if (!maybe_executable.ok()) {
-      // This will be automatically translated to a Python ValueError.
+      // This will automatically raise a Python ValueError exception.
       // See https://pybind11.readthedocs.io/en/stable/advanced/exceptions.html.
       throw std::invalid_argument(
           std::string(maybe_executable.status().message()));
