@@ -59,20 +59,14 @@ def device_count() -> int:
   return len(real_devices())
 
 
-def sync(wait: bool = False):
+def sync(wait: bool = False, reset_scope: bool = True):
   """Launches all pending graph operations.
 
   Args:
     wait (bool): whether to block the current process until the execution finished.
-
+    reset_scope (bool): whether to reset the tracing scope of lazy tensor.
   """
-  torch_xla._XLAC._xla_step_marker(
-      torch_xla._XLAC._xla_get_default_device(),
-      [],
-      wait=wait,
-  )
-  devctx = xm._run_step_closures()
-  torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
+  xm.mark_step(wait, reset_scope)
 
 
 def step():

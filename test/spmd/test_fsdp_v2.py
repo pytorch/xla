@@ -59,7 +59,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
         hlo)
 
     # Make sure the model can execute without error.
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
 
   def test_fsdp_v2_output_correctness(self):
@@ -166,7 +166,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(output))
 
     # Make sure the model can execute without error.
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")

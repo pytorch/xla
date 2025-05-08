@@ -248,8 +248,8 @@ class ExperimentRunner:
     if benchmark_experiment.xla:
       tracing_time = time.perf_counter() - t_trace_start
 
-    # Mark step.
-    self._mark_step(benchmark_experiment, output)
+    # Materialize by syncing.
+    self._sync(benchmark_experiment, output)
     total_time = time.perf_counter() - total_time_start
     return output, total_time, tracing_time
 
@@ -339,9 +339,9 @@ class ExperimentRunner:
     # Reset state and sync.
     reset_rng_state(benchmark_experiment)
     if benchmark_experiment.torch_xla2:
-      self._mark_step(benchmark_experiment, inputs_list)
+      self._sync(benchmark_experiment, inputs_list)
     else:
-      self._mark_step(benchmark_experiment)
+      self._sync(benchmark_experiment)
     self._synchronize(benchmark_experiment)
     met.clear_all()
     dynamo_utils.counters.clear()
@@ -364,8 +364,8 @@ class ExperimentRunner:
         if timing is not None:
           total_timing += timing
 
-        # Mark step.
-        self._mark_step(benchmark_experiment, output)
+        # Materialize by syncing.
+        self._sync(benchmark_experiment, output)
         if pytorch_profile is not None:
           pytorch_profile.step()
 
@@ -473,20 +473,20 @@ class ExperimentRunner:
       inputs_list.append(inputs)
     return inputs_list
 
-  def _mark_step(self,
-                 benchmark_experiment: BenchmarkExperiment,
-                 tensors_to_check=None):
+  def _sync(self,
+            benchmark_experiment: BenchmarkExperiment,
+            tensors_to_check=None):
     if benchmark_experiment.xla:
       if benchmark_experiment.torch_xla2:
         assert tensors_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
         import jax
         jax.block_until_ready(tensors_to_check)
       else:
-        xm.mark_step()
+        torch_xla.sync()
 
   def _synchronize(self, benchmark_experiment: BenchmarkExperiment):
     if benchmark_experiment.torch_xla2:
-      # torch_xla2 synchronization happens in _mark_step
+      # torch_xla2 synchronization happens in _sync
       return
     if benchmark_experiment.xla:
       xm.wait_device_ops()

@@ -332,7 +332,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Somehow the eager cpu result is different from the xla result.
     expected = t1 @ t2
     # To re-materialize t1 and t2.
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     expected = expected.cpu()
 
@@ -362,7 +362,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     t3 = t1 @ t2
 
     # To propagate replicated sharding
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
 
     self.assertIn("replicated", torch_xla._XLAC._get_xla_sharding_spec(t3))
@@ -373,7 +373,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     t2 = torch.randn(4, 3, 4).to(device)
     expected = t1 + t2
     # To re-materialize t1 and t2.
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     expected = expected.cpu()
 
@@ -477,7 +477,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     # Somehow the eager cpu result is different from the xla result.
     expected = xx @ xw + xb
-    xm.mark_step()  # To re-materialize xx, xw, and xb.
+    torch_xla.sync()  # To re-materialize xx, xw, and xb.
     xm.wait_device_ops()
     expected = expected.cpu()
 
@@ -536,11 +536,11 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         torch_xla._XLAC._get_xla_sharding_spec(xt),
         torch_xla._XLAC._get_xla_sharding_spec(xt2))
 
-  def test_mark_step_with_sharding(self):
+  def test_sync_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
-    xm.mark_step()  # mark_step should preserve the sharding
+    torch_xla.sync()  # `torch_xla.sync()` should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
   def test_execute_replicated_metrics(self):
@@ -548,7 +548,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     xt = torch.ones(2, 2).to(xm.xla_device())
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
     xt += 2
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     self.assertEqual(met.metric_data('ExecuteReplicatedTime')[0], 1)
 
@@ -570,9 +570,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
-      xm.mark_step()
-      # Sharding is persisted across mark_step calls, and test if the sharded computation
-      # can repeat more than once without crashing.
+      torch_xla.sync()
+      # Sharding is persisted across `torch_xla.sync()` calls, and test if the
+      # sharded computation can repeat more than once without crashing.
       self.assertEqual(sharding_spec,
                        torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
@@ -598,7 +598,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
 
     # Verify that the fc1 & output are sharded and valid
     model.fc1.weight.to('cpu')
@@ -618,9 +618,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   # avoid calling xr.addressable_device_count here otherwise it will init the test
   # in non-spmd mode.
-  @unittest.skipIf(
-      xr.device_type() == 'CPU',
-      "sharding will be the same for both tensors on single device")
+  @unittest.skipIf(xr.device_type() == 'CPU',
+                   "sharding will be the same for both tensors on single device"
+                  )
   def test_shard_hashing(self):
     xt1 = torch.ones(2, 2).to(xm.xla_device())
     xt2 = torch.ones(2, 2).to(xm.xla_device())
@@ -646,7 +646,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_send_cpu_data_to_device_with_sharding(self):
     # Execute pending graph to avoid contaminating metrics
-    xm.mark_step(wait=True)
+    torch_xla.sync(wait=True)
     met.clear_all()
 
     tensor = torch.arange(16, dtype=torch.float32).reshape(1, 16)
@@ -916,7 +916,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
                             partition_spec)
     xst1 += 1
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.metric_data("InputOutputAliasCount")[0], 1)
 
   def test_mark_sharding_ir_with_multiple_output(self):
@@ -963,15 +963,15 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
     xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(torch.allclose(xla_y.cpu(), xla_x.cpu() * 5))
 
-  def test_shard_device_data_ir_after_mark_step(self):
+  def test_shard_device_data_ir_after_sync(self):
     device = xm.xla_device()
     xla_x = torch.randn(8, 128, device=device)
     x = xla_x.cpu()
     # xla_x now becomes a device data IR without XLAData
-    xm.mark_step()
+    torch_xla.sync()
 
     xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
@@ -1383,9 +1383,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(mesh_without_name.mesh_shape,
                      (xr.global_runtime_device_count(),))
 
-  @unittest.skipUnless(
-      xr.global_runtime_device_count() > 1,
-      "Multiple devices required for dataloader sharding test")
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_sharding(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
@@ -1406,9 +1405,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
     )
 
-  @unittest.skipUnless(
-      xr.global_runtime_device_count() > 1,
-      "Multiple devices required for dataloader sharding test")
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_non_batch_size(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
@@ -1429,9 +1427,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
     )
 
-  @unittest.skipUnless(
-      xr.global_runtime_device_count() > 1,
-      "Multiple devices required for dataloader sharding test")
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_non_batch_size_and_mini_batch(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
@@ -1663,9 +1660,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(logical_mesh.shape, mesh_shape)
     np.testing.assert_array_equal(np.sort(logical_mesh.flatten()), device_ids)
 
-  @unittest.skipIf(
-      xr.device_type() == 'CPU',
-      "sharding will be the same for both tensors on single device")
+  @unittest.skipIf(xr.device_type() == 'CPU',
+                   "sharding will be the same for both tensors on single device"
+                  )
   def test_shard_as(self):
     mesh = self._get_mesh((self.n_devices,))
     partition_spec = (0,)

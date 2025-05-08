@@ -72,8 +72,8 @@ class MetricsTest(unittest.TestCase):
       self.assertIn('EagerOpExecuteTime', met.metric_names())
       # one for add
       self.assertEqual(met.metric_data('EagerOpExecuteTime')[0], 2)
-      # mark_step should be a no-op
-      xm.mark_step()
+      # `torch_xla.sync()` should be a no-op
+      torch_xla.sync()
       self.assertNotIn('CompileTime', met.metric_names())
       self.assertNotIn('ExecuteTime', met.metric_names())
 
@@ -81,7 +81,7 @@ class MetricsTest(unittest.TestCase):
     xla_device = xm.xla_device()
     t1 = torch.tensor(1456, device=xla_device)
     t2 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     t2_cpu = t2.cpu()
     short_report = met.short_metrics_report()
     self.assertNotIn("TensorToData", short_report)
@@ -92,9 +92,9 @@ class MetricsTest(unittest.TestCase):
     self.assertIn("MarkStep", short_report)
     # repeat the same computation and expect to see the CachedCompile counter
     t3 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     t4 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     short_report = met.short_metrics_report()
     self.assertIn("CachedCompile", short_report)
     assert check_metrics_file()
@@ -104,7 +104,7 @@ class MetricsTest(unittest.TestCase):
     t1 = torch.tensor(100, device=xla_device)
     t2 = t1 * 2
     t1 += 2
-    xm.mark_step()
+    torch_xla.sync()
     t2_cpu = t2.cpu()
     short_report = met.short_metrics_report(
         counter_names=['CreateCompileHandles'])
@@ -138,7 +138,7 @@ class MetricsTest(unittest.TestCase):
     xla_device = xm.xla_device()
     t1 = torch.tensor(2077, device=xla_device)
     t2 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     t2_cpu = t2.cpu()
     report = met.metrics_report()
 
@@ -198,9 +198,9 @@ class MetricsTest(unittest.TestCase):
 
     # repeat the same computation and expect to see the CachedCompile counter
     t3 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     t4 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     report = met.metrics_report()
     self.assertIn("CachedCompile", report)
 
@@ -214,7 +214,7 @@ class MetricsTest(unittest.TestCase):
         10000, 10000, device=xm.xla_device()) * torch.randn(
             10000, 10000, device=xm.xla_device())
     value_mean = value.mean()
-    xm.mark_step()
+    torch_xla.sync()
     cpu_value = value_mean.cpu()
     wall_time_ns = time.perf_counter_ns() - begin
     self.assertIn("ExecuteTime", met.metric_names())

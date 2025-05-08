@@ -43,11 +43,11 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     x = x.to(device)
     y = model(x).sum()
     y.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     opt1 = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     opt1.step()
-    xm.mark_step()
+    torch_xla.sync()
 
     opt2 = ZeroRedundancyOptimizer(
         model.parameters(),
@@ -56,7 +56,7 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
         momentum=0.9,
         grad_clipping=False)
     opt2.step()
-    xm.mark_step()
+    torch_xla.sync()
 
     s1 = opt1.state_dict()
     s2 = opt2.state_dict()
@@ -74,11 +74,11 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     # step still runnable
     opt1.step()
     opt2.step()
-    xm.mark_step()
+    torch_xla.sync()
 
     opt1.load_state_dict(s1_clone)
     opt2.load_state_dict(s2_clone)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(
         _get_partial_states(opt1.state_dict()['state']),
         opt2.state_dict()['base_state'])
@@ -86,7 +86,7 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     # step still runnable
     opt1.step()
     opt2.step()
-    xm.mark_step()
+    torch_xla.sync()
 
 
 def _mp_fn(index):

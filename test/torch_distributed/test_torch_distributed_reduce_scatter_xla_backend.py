@@ -23,7 +23,7 @@ def _mp_fn(index):
     xoutput = output.to(device)
     dist.reduce_scatter(xoutput, xinputs)
     expected = torch.ones_like(inputs[0]) * world_size
-    xm.mark_step()
+    torch_xla.sync()
     assert torch.all(xoutput.cpu() == expected), f'{xoutput} != {expected}'
   else:
     print(

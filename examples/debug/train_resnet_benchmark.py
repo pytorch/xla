@@ -31,7 +31,7 @@ class TrainResNetBenchmark(TrainResNetBase):
       # for releases < 2.3 uses `xm.mark_step()`.
       # Couple things to note
       # 1. sync itself is not blocking, it will schedule a device execution and return.
-      # 2. In TrainResNetBase we uses MpDeviceLoader which calls `mark_step` for every batch.
+      # 2. In TrainResNetBase we uses MpDeviceLoader which calls `torch_xla.sync()` for every batch.
       #    We don't have to manually call `sync` here if we don't want to wait for execution to finish.
       torch_xla.sync()
       # Do not call this function every step unless you are benchmarking. It will block the main process

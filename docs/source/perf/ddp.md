@@ -118,7 +118,7 @@ def demo_basic(rank):
     loss_fn(outputs, labels).backward()
     optimizer.step()
     # xla specific API to execute the graph
-    xm.mark_step()
+    torch_xla.sync()
 
     cleanup()
 

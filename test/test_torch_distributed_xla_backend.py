@@ -54,7 +54,7 @@ class XlaBackendTest(parameterized.TestCase):
 
   def tearDown(self) -> None:
     # Purge all computations attached the device.
-    xm.mark_step()
+    torch_xla.sync()
 
   def test_xla_backend_exists(self):
     # torch_xla.distributed._register_xla_backend() should have been
@@ -164,7 +164,7 @@ class XlaBackendTest(parameterized.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_list)
     hlo_matches(hlo, reduce_scatter_pattern)
     # purge all computations attached the device.
-    xm.mark_step()
+    torch_xla.sync()
 
   @patch_world(0, 6)
   def test_send(self):

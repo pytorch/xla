@@ -1241,7 +1241,7 @@ def optimizer_step(optimizer: optim.Optimizer,
   reduce_gradients(optimizer, groups=groups, pin_layout=pin_layout)
   loss = optimizer.step(**optimizer_args)
   if barrier:
-    mark_step()
+    sync()
   return loss
 
 
@@ -1349,7 +1349,7 @@ def xla_rendezvous(payload: bytes = b'',
   `tag` is ignored except for logging.
 
   Uses XLA collective communication to communicate between replicas, so this
-  will sync the graph (`xm.mark_step`).
+  will sync the graph (`pytorch_xla.sync()`).
 
   Args:
     tag: Name of this rendezvous operation.
@@ -1365,7 +1365,7 @@ def xla_rendezvous(payload: bytes = b'',
     raise TypeError('`payload` must be bytes, not {}'.format(type(payload)))
 
   # Finish all execution of previous graphs to avoid recompilation
-  mark_step()
+  sync()
 
   device = xla_device()
 
@@ -1378,7 +1378,7 @@ def xla_rendezvous(payload: bytes = b'',
   sizes = all_gather(size)
 
   max_size = torch.max(sizes)
-  mark_step()
+  sync()
 
   # If all payloads are empty, return immediately to avoid more CPU transfers
   if max_size.item() < 1:
@@ -1392,7 +1392,7 @@ def xla_rendezvous(payload: bytes = b'',
   data_list = torch.split(raw_data, max_size)
 
   payloads = [d[:sz] for d, sz in zip(data_list, sizes.cpu())]
-  mark_step()
+  sync()
 
   return [bytes(p.cpu().tolist()) for p in payloads]
 
@@ -1581,4 +1581,4 @@ def broadcast_master_param(model: torch.nn.Module) -> None:
   parameters_and_buffers = list(
       itertools.chain(model.parameters(), model.buffers()))
   collective_broadcast(parameters_and_buffers)
-  mark_step()
+  sync()

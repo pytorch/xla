@@ -82,8 +82,8 @@ class GraphInputMatcher:
           str_device = str(traced_xla_value.device)
           inp = torch_xla._XLAC._get_base_seed_as_tensor(str_device)
           # update random seed here to avoid random operations always return
-          # the same result. The seed update logic is the same as `mark_step` in
-          # https://github.com/pytorch/pytorch/blob/6af6b8f728426fb7551630e28148c0017fa501bc/torch/csrc/lazy/core/lazy_graph_executor.cpp#L144C18-L144C51
+          # the same result. The seed update logic is the same as
+          # `torch_xla.sync()` in https://github.com/pytorch/pytorch/blob/6af6b8f728426fb7551630e28148c0017fa501bc/torch/csrc/lazy/core/lazy_graph_executor.cpp#L144C18-L144C51
           # Note: don't do `inp.item()` here since it will trigger a transferFromDevice
           xm.set_rng_state(
               (1012031 + torch_xla._XLAC._xla_get_rng_seed() * 7012063) %
@@ -153,8 +153,8 @@ def _maybe_move_tensors_to_device(tensors: tuple,
       # If the input cuda tensor requires gradient, we need to call detach. Otherwise, we'd get the error "RuntimeError: Can't export tensors that require gradient, use tensor.detach()"
       moved_tensor = torch_xla_dlpack.from_dlpack(tensor.detach())
     elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
-      # mark_step is need to make sure the pjrt buffer is valid.
-      xm.mark_step()
+      # `torch_xla.sync()` is need to make sure the pjrt buffer is valid.
+      torch_xla.sync()
       moved_tensor = torch_xla_dlpack.from_xla_cuda_to_cuda(tensor)
     else:
       # Have to move to CPU before moving it to target device.
@@ -321,7 +321,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
                                                                  ...],
                                                            Tuple[Any, ...]]):
   # Don't reset the scope as we might be under some profiler trace scope.
-  xm.mark_step(reset_scope=False)
+  torch_xla.sync(reset_scope=False)
   # FX Graph inputs passed from Dynamo. xla_args are XLA Tensors.
   xla_args = xla_model.xla_args
   # check [Note: Dynamo real-time input-shape cache look-up]
@@ -416,7 +416,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
                                                 xla_args_need_update_bool,
                                                 constant_outputs_and_indexes)
 
-  # There is a `mark_step` in the beginning of this function call, we need to wait
+  # There is a `torch_xla.sync()` in the beginning of this function call, we need to wait
   # for that to finish before retriving the device data nodes.
   xm.wait_device_ops()
   # Collect all device data nodes that is needed to compute the args_and_out_tensor_only
@@ -469,8 +469,8 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
       xla_args_tensor_only[i].copy_(cloned_xla_args[i])
 
   # Remove all of the pending IR from all live tensors. The assumptions are
-  # 1. With the  `xm.mark_step` in the beginning of this call, every XLATensor
-  # should be materialized
+  # 1. With the `torch_xla.sync()` in the beginning of this call, every
+  # XLATensor should be materialized.
   # 2. All of the pending IRs are result of our warm up cache tracing and they
   # should be removed to avoid extra computation executed and in place updates op
   # mistakenlly update the input tensors.
@@ -546,8 +546,8 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       args = _maybe_move_tensors_to_device(args, xm.xla_device())
 
     if not config.skip_input_data_check:
-      # mark_step needs to be blocking since we want to access args's XLADatas
-      # and they can't be placeholder.
+      # `torch_xla.sync()` needs to be blocking since we want to access args's
+      # XLADatas and they can't be placeholder.
       input_tensors_to_sync = [
           xla_args_tensor_only[i] for i, x in enumerate(
               torch_xla._XLAC._check_tensor_need_materialization(
@@ -794,7 +794,7 @@ def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
 
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids.
   # Don't reset the scope as we might be under some profiler trace scope.
-  xm.mark_step(reset_scope=False)
+  torch_xla.sync(reset_scope=False)
 
   # Find tensor constructor nodes that create CPU tensors, and make
   # them create XLA tensors, where possible, instead. i.e. replace the

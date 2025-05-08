@@ -42,7 +42,7 @@ class TestPjRtProfiler(absltest.TestCase):
     with _profile(tempdir):
       xones = ones.to(device)
       xtwos = xones + xones
-      xm.mark_step()
+      torch_xla.sync()
 
     profiles = glob.glob(os.path.join(tempdir, "plugins/profile/*/*.xplane.pb"))
     self.assertLen(profiles, 1, "one .xplane.pb file expected")

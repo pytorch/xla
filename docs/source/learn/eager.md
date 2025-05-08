@@ -20,7 +20,7 @@ input = torch.randn(64, 3, 224, 224).to(device)
 # model tracing
 res = model(input)
 
-# model execution, same as `xm.mark_step`
+# model execution
 torch_xla.sync()
 ```
 
@@ -68,7 +68,7 @@ Note that
     by `torch_xla.compile`.
 
 The implementation of the `torch_xla.compile` is actually pretty
-straight forward, it disable the eager mode when entering the target
+straight forward, it disables the eager mode when entering the target
 function and start tracing. It will call the `torch_xla.sync()` when
 target function returns and reenable the eager mode. You can expect the
 same perfomrance by using the `eager` + `compile` API compared to the
@@ -121,7 +121,7 @@ the number I observed.
   : Eager mode benchmarks
 
 Eager mode can achieve ~45% performance of the fully compiled model for
-the decoder only model. For more information, see 
+the decoder only model. For more information, see
 [train_decoder_only_base.py](https://github.com/pytorch/xla/blob/master/examples/train_decoder_only_base.py)
 and [eager example](https://github.com/pytorch/xla/tree/master/examples/eager).
 Note that perfomrane of the eager mode is very model dependent. When I

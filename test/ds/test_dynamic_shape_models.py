@@ -10,6 +10,7 @@ sys.argv = [sys.argv[0]] + leftovers
 import numpy as np
 import unittest
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 
@@ -66,7 +67,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       with torch.no_grad():
         y_pred = model(x_test)
         before_train = criterion(y_pred.squeeze(), y_test)
-        xm.mark_step()
+        torch_xla.sync()
         losses.append(before_train.item())
 
     np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
@@ -89,7 +90,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       with torch.no_grad():
         y_pred = model(x_test)
         criterion(y_pred.squeeze(), y_test)
-        xm.mark_step()
+        torch_xla.sync()
         if not num_compilation_recorded:
           num_compilation = met.metric_data('CompileTime')[0]
           num_compilation_recorded = True
@@ -124,7 +125,7 @@ class TestDynamicShapeModels(unittest.TestCase):
                                                      num_features, xla_dev)
       y_pred = model(x_test)
       criterion(y_pred.squeeze(), y_test).item()
-      xm.mark_step()
+      torch_xla.sync()
     print('Test passed.')
 
   def create_dynamic_test_data(self,
