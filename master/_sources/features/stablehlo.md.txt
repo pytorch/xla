@@ -6,7 +6,7 @@ This document describes how to use torch export + torch xla to export to
 There are 2 ways to accomplish this:
 
 1. First do torch.export to create a ExportedProgram, which contains the program
-   in torch.fx graph. Then use `exported_program_to_stablehlo` to convert it into an object that contains 
+   in torch.fx graph. Then use `exported_program_to_stablehlo` to convert it into an object that contains
    stablehlo MLIR code.
 2. First convert pytorch model to a jax function, then use jax utilities to convert it
    to stablehlo
@@ -31,8 +31,8 @@ print(stablehlo.mlir_module())
 # Can store weights and/or stablehlo object however you like
 ```
 
-The stablehlo object is of type `jax.export.Exported`. 
-Feel free to explore: https://openxla.org/stablehlo/tutorials/jax-export 
+The stablehlo object is of type `jax.export.Exported`.
+Feel free to explore: https://openxla.org/stablehlo/tutorials/jax-export
 for more details on how to use the MLIR code generated from it.
 
 ## Using `extract_jax`
@@ -170,7 +170,7 @@ if __name__ == '__main__':
 ```
 
 As we see, to emit a stablehlo function into composite, first we make a python function
-representing the region of code that we want to call, then, we register it 
+representing the region of code that we want to call, then, we register it
 so that pytorch and jlibrary understands it's a custom region. Then, th
 emitted Stablehlo will have `mylib.scaled_dot_product_attention` and `mylib.softmax`
 outlined stablehlo functions.

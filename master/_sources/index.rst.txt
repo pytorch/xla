@@ -7,7 +7,7 @@ PyTorch/XLA documentation
 
 +------------------------------------------------+------------------------------------------------+------------------------------------------------+
 | **Familiar APIs**                              | **High Performance**                           | **Cost Efficient**                             |
-|                                                |                                                |                                                |          
+|                                                |                                                |                                                |
 | Create and train PyTorch models on TPUs,       | Scale training jobs across thousands of        | TPU hardware and the XLA compiler are optimized|
 | with only minimal changes required.            | TPU cores while maintaining high MFU.          | for cost-efficient training and inference.     |
 +------------------------------------------------+------------------------------------------------+------------------------------------------------+
@@ -45,7 +45,7 @@ Tutorials
    :caption: Distributed Training on TPU
 
    accelerators/tpu
-   perf/spmd_basic      
+   perf/spmd_basic
    perf/spmd_advanced
    perf/spmd_distributed_checkpoint
    features/torch_distributed
