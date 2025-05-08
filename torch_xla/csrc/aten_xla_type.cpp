@@ -1312,28 +1312,6 @@ at::Tensor& XLANativeFunctions::celu_(at::Tensor& self,
   return self;
 }
 
-at::Tensor XLANativeFunctions::clamp(const at::Tensor& self,
-                                     const std::optional<at::Scalar>& min,
-                                     const std::optional<at::Scalar>& max) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::clamp(bridge::GetXlaTensor(self), min, max));
-}
-
-at::Tensor XLANativeFunctions::clamp_max(const at::Tensor& self,
-                                         const at::Scalar& max) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::clamp(bridge::GetXlaTensor(self), std::nullopt, max));
-}
-
-at::Tensor XLANativeFunctions::clamp_min(const at::Tensor& self,
-                                         const at::Scalar& min) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::clamp(bridge::GetXlaTensor(self), min, std::nullopt));
-}
-
 at::Tensor XLANativeFunctions::clone(
     const at::Tensor& self,
     std::optional<at::MemoryFormat> /* memory_format */) {
