@@ -48,7 +48,7 @@ output = torch.empty_like(x)
 block_size = 8
 grid = (triton.cdiv(size, block_size),)
 
-# triton_call takes the same arguments as the triton.jit function, in addition 
+# triton_call takes the same arguments as the triton.jit function, in addition
 to the kernel itself and the grid that is used to execute the kernel.
 All the tl.constexpr terms are passed as kwargs at the end.
 payload = xla_triton.triton_call(

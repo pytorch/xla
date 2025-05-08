@@ -12,8 +12,8 @@ remat = torch_view(jax.remat)
 mark_sharding = torch_view(jax.lax.with_sharding_constraint)
 
 
-def make_train_step(model_fn, 
-                    loss_fn, optax_optimizer, 
+def make_train_step(model_fn,
+                    loss_fn, optax_optimizer,
                     remat_policy=None):
   """Make a function that do one train step given model and loss.
 
@@ -55,9 +55,9 @@ def make_train_step(model_fn,
   # TODO: apply jax.jit so the user don't have to.
   return step
 
-  
-  
-  
+
+
+
 class Container:
   pass
 
@@ -77,7 +77,7 @@ class ScannedModule(torch.nn.Module):
     self.params = torch.nn.ParameterDict({
       self._param_name_new(k): v for k, v in weights.items()
     })
-  
+
   def _stack_layer_weights(self, module_list):
     # Create weights such that, for every [n, m] weights
     # becomes [k, n, m] where k is number of layer
@@ -106,7 +106,7 @@ class ScannedModule(torch.nn.Module):
           h, *rest = args
           newh = torch.func.functional_call(self.c.one_mod, weight, args)
           # next layer's input; and residual to be added to list
-          return (newh, *rest), None 
+          return (newh, *rest), None
 
       _eval_one_layer = interop.gradient_checkpoint(
           eval_one_layer,

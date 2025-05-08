@@ -210,7 +210,7 @@ def non_max_suppression_padded(scores, boxes, max_output_size, iou_threshold):
   idx = jnp.minimum(idx, num_boxes - 1)
   idx = jnp.reshape(
       idx + jnp.reshape(jnp.arange(batch_size) * num_boxes, [-1, 1]), [-1])
-  
+
   return idx
   boxes = jnp.reshape(
       (jnp.reshape(boxes, [-1, 4]))[idx],

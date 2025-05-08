@@ -42,7 +42,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.random_: torch.ops.aten.uniform,
   torch.ops.aten.uniform_: torch.ops.aten.uniform,
   torch.ops.aten.relu_: torch.ops.aten.relu,
-  # squeeze_ is expected to change tensor's shape. So replace with new value 
+  # squeeze_ is expected to change tensor's shape. So replace with new value
   torch.ops.aten.squeeze_: (torch.ops.aten.squeeze, True),
   torch.ops.aten.sqrt_: torch.ops.aten.sqrt,
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
@@ -124,7 +124,7 @@ def _aten_add(x, y, *, alpha=1):
 
 @op(torch.ops.aten.copy_, is_jax_function=False, is_view_op=True)
 def _aten_copy(x, y, memory_format=None):
-  
+
   if isinstance(x, View):
     x.update(y)
     return x
@@ -269,7 +269,7 @@ def _aten_linalg_cholesky_ex(input, upper=False, check_errors=False):
 @op(torch.ops.aten.cholesky_solve)
 def _aten_cholesky_solve(input, input2, upper=False):
   # Ensure input2 is lower triangular for cho_solve
-  L = input2 if not upper else input2.T 
+  L = input2 if not upper else input2.T
   # Use cho_solve to solve the linear system
   solution = jax.scipy.linalg.cho_solve((L, True), input)
   return solution
@@ -316,7 +316,7 @@ def _torch_binary_scalar_type(scalar, tensor):
 
 
 @op(torch.ops.aten.searchsorted.Tensor)
-def _aten_searchsorted(sorted_sequence, values): 
+def _aten_searchsorted(sorted_sequence, values):
   new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
   res = jnp.searchsorted(sorted_sequence, values)
   if sorted_sequence.dtype == np.dtype(np.int32) or sorted_sequence.dtype == np.dtype(np.int32):
@@ -856,7 +856,7 @@ def _aten_cummax(x, dim):
 
 
   def cummax_reduce_func(carry, elem):
-    v1, v2 = carry['val'], elem['val'] 
+    v1, v2 = carry['val'], elem['val']
     i1, i2 = carry['idx'], elem['idx']
 
     v = jnp.maximum(v1, v2)
@@ -869,14 +869,14 @@ def _aten_cummax(x, dim):
 def _aten_cummin(x, dim):
   if not x.shape:
     return x, jnp.zeros_like(x, dtype=jnp.int64)
- 
+
   axis = dim
 
   indice_along_axis = _indices_along_axis(x, axis)
   indices = _broadcast_indices(indice_along_axis, x.shape)
 
   def cummin_reduce_func(carry, elem):
-    v1, v2 = carry['val'], elem['val'] 
+    v1, v2 = carry['val'], elem['val']
     i1, i2 = carry['idx'], elem['idx']
 
     v = jnp.minimum(v1, v2)
@@ -947,7 +947,7 @@ def _aten_native_layer_norm(
     norm_x += bias
   return norm_x, mean, rstd
 
-  
+
 @op(torch.ops.aten.matmul)
 def _aten_matmul(x, y):
   return x @ y
@@ -992,9 +992,9 @@ def _aten_gelu(self, *, approximate="none"):
 @op(torch.ops.aten.squeeze_copy)
 def _aten_squeeze_dim(self, dim=None):
   if self.ndim == 0:
-    return self 
+    return self
   if dim is not None:
-    if isinstance(dim, int): 
+    if isinstance(dim, int):
       if self.shape[dim] != 1:
         return self
       if dim < 0:
@@ -1025,8 +1025,8 @@ def _aten_conv2d(
   groups,
 ):
   return _aten_convolution(
-    input, weight, bias, stride, padding, 
-    dilation, transposed=False, 
+    input, weight, bias, stride, padding,
+    dilation, transposed=False,
     output_padding=1, groups=groups)
 
 @op(torch.ops.aten.convolution)
@@ -1316,8 +1316,8 @@ def _aten_max_pool2d_with_indices(
     init_val = -(1 << 31)
   init_val = jnp.array(init_val).astype(inputs.dtype)
 
-  # Separate maxpool result and indices into two reduce_window ops. Since 
-  # the indices tensor is usually unused in inference, separating the two 
+  # Separate maxpool result and indices into two reduce_window ops. Since
+  # the indices tensor is usually unused in inference, separating the two
   # can help DCE computations for argmax.
   y = jax.lax.reduce_window(
       inputs, init_val, jax.lax.max, dims, strides, padding, window_dilation=dilation
@@ -1334,7 +1334,7 @@ def _aten_max_pool2d_with_indices(
   if is_single_input:
     indices = jnp.squeeze(indices, axis=0)
     y = jnp.squeeze(y, axis=0)
-    
+
   return y, indices
 
 try:
@@ -1491,7 +1491,7 @@ def _aten_linalg_vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
       f"Unsupported ord value: {ord}. Supported values are 2, inf, -inf, and"
       " 'fro'."
     )
-    
+
   # Special cases (for efficiency and clarity)
   if ord == 0:
     if self.shape == ():
@@ -1927,7 +1927,7 @@ def pool(inputs, init, reduce_fn, window_shape, strides, padding):
     y = jnp.squeeze(y, axis=0)
   return y
 
-  
+
 @op(torch.ops.aten._adaptive_avg_pool2d)
 @op(torch.ops.aten._adaptive_avg_pool3d)
 def adaptive_avg_pool2or3d(input: jnp.ndarray, output_size: Tuple[int, int]) -> jnp.ndarray:
@@ -2015,7 +2015,7 @@ def adaptive_avg_pool2or3d(input: jnp.ndarray, output_size: Tuple[int, int]) -> 
     else:
       assert out_dim == 3
       vals = input[..., _unsqueeze_to_dim(idx[0], 6),
-                        _unsqueeze_to_dim(idx[1], 4), 
+                        _unsqueeze_to_dim(idx[1], 4),
                         idx[2]]
       reduce_axis = (-5, -3, -1)
 
@@ -2048,7 +2048,7 @@ def adaptive_avg_pool2or3d(input: jnp.ndarray, output_size: Tuple[int, int]) -> 
     # NOTE: math.prod because we want to expand it to length[0] * length[1] * ...
     # this is multiplication with broadcasting, not regular pointwise product
     return ret / math.prod(length)
-  
+
 
 @op(torch.ops.aten.avg_pool1d)
 @op(torch.ops.aten.avg_pool2d)
@@ -2129,7 +2129,7 @@ def _generate_indices(dims, skip_dim_indices = []):
     for i in range(dims[curr_dim_idx]):
       sofar[curr_dim_idx] = i
       _helper(curr_dim_idx + 1, sofar[:])
-    
+
   _helper(0, [0 for _ in dims])
   return res
 
@@ -2325,7 +2325,7 @@ def _aten_broadcast_tensors(*tensors):
     Args:
       shapes: A list of tuples representing the shapes of the input tensors.
 
-    Returns: 
+    Returns:
       A tuple representing the broadcasted output shape.
     """
 
@@ -2490,7 +2490,7 @@ def _aten_diagonal_scatter(input, src, offset=0, dim1=0, dim2=1):
   if input.ndim == 2:
     return input.at[tuple(indexes)].set(src)
   else:
-    # src has the same shape as the output of 
+    # src has the same shape as the output of
     # jnp.diagonal(input, offset, dim1, dim2).
     # Last dimension always contains the diagonal elements,
     # while the preceding dimensions represent the "slices"
@@ -3027,11 +3027,11 @@ def _aten_put(self, index, source, accumulate=False):
 # randperm.generator(SymInt n, *, Generator? generator, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None)
 @op(torch.ops.aten.randperm, needs_env=True)
 def _aten_randperm(
-  n, *, 
-  generator=None, 
-  dtype=None, 
-  layout=None, 
-  device=None, 
+  n, *,
+  generator=None,
+  dtype=None,
+  layout=None,
+  device=None,
   pin_memory=None,
   env=None):
     """
@@ -3841,7 +3841,7 @@ def _aten_special_modified_bessel_i1(self):
 
         (p, _, a), _ = jax.lax.scan(
             f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A)
-        
+
         return jax.lax.cond(
           x < 0, lambda: -(0.5 * (a - p) * jnp.abs(x) * jnp.exp(jnp.abs(x))), lambda: 0.5 * (a - p) * jnp.abs(x) * jnp.exp(jnp.abs(x))
         )
@@ -3885,7 +3885,7 @@ def _aten_special_modified_bessel_i1(self):
 
         (p, _, b), _ = jax.lax.scan(
             f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B)
-        
+
         return jax.lax.cond(
           x < 0, lambda: -(jnp.exp(jnp.abs(x)) * (0.5 * (b - p)) / jnp.sqrt(jnp.abs(x))), lambda: jnp.exp(jnp.abs(x)) * (0.5 * (b - p)) / jnp.sqrt(jnp.abs(x))
         )
@@ -3929,7 +3929,7 @@ def _aten_special_modified_bessel_k0(self):
 
         (p, _, a), _ = jax.lax.scan(
             f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A)
-        
+
         return 0.5 * (a - p) - jnp.log(0.5 * x) * _aten_special_modified_bessel_i0(x)
 
     def default(x):
@@ -3971,7 +3971,7 @@ def _aten_special_modified_bessel_k0(self):
 
         (p, _, b), _ = jax.lax.scan(
             f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B)
-        
+
         return jnp.exp(-x) * (0.5 * (b - p)) / jnp.sqrt(x)
 
     return jnp.piecewise(
@@ -4015,7 +4015,7 @@ def _aten_special_modified_bessel_k1(self):
 
         (p, _, a), _ = jax.lax.scan(
             f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A)
-        
+
         return jnp.log(0.5 * x) * _aten_special_modified_bessel_i1(x) + 0.5 * (a - p) / x
 
     def default(x):
@@ -4058,7 +4058,7 @@ def _aten_special_modified_bessel_k1(self):
 
         (p, _, b), _ = jax.lax.scan(
             f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B)
-        
+
         return jnp.exp(-x) * (0.5 * (b - p)) / jnp.sqrt(x)
 
     return jnp.piecewise(
@@ -4924,16 +4924,16 @@ def _aten_triangular_solve(b, a, upper=True, transpose=False, unittriangular=Fal
 def _aten__fft_c2c(self, dim, normalization, forward):
   if forward:
     norm = [
-      'backward', 
-      'ortho', 
+      'backward',
+      'ortho',
       'forward',
     ][normalization]
     return jnp.fft.fftn(self, axes=dim, norm=norm)
   else:
     norm = [
       'forward',
-      'ortho', 
-      'backward', 
+      'ortho',
+      'backward',
     ][normalization]
     return jnp.fft.ifftn(self, axes=dim, norm=norm)
 
@@ -4941,8 +4941,8 @@ def _aten__fft_c2c(self, dim, normalization, forward):
 @op(torch.ops.aten._fft_r2c)
 def _aten__fft_r2c(self, dim, normalization, onesided):
   norm = [
-    'backward', 
-    'ortho', 
+    'backward',
+    'ortho',
     'forward',
   ][normalization]
   if onesided:
@@ -4954,8 +4954,8 @@ def _aten__fft_r2c(self, dim, normalization, onesided):
 def _aten__fft_c2r(self, dim, normalization, last_dim_size):
   norm = [
     'forward',
-    'ortho', 
-    'backward', 
+    'ortho',
+    'backward',
   ][normalization]
   if len(dim) == 1:
     s = [last_dim_size]
@@ -5159,7 +5159,7 @@ def _aten_lu_unpack(LU_data, LU_pivots, unpack_data=True, unpack_pivots=True):
     start_indices = jnp.zeros(len(LU_data.shape), dtype=int)
     limit_indices = list(LU_data.shape)
     limit_indices[-1] = dim
-    L = jax.lax.slice(L, start_indices, limit_indices) 
+    L = jax.lax.slice(L, start_indices, limit_indices)
 
     # Extract upper triangle
     U = jnp.triu(LU_data)

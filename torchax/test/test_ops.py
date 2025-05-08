@@ -178,9 +178,9 @@ class TestOpInfo(TestCase):
   def setUp(self):
     self.env = torchax.default_env()
     torchax.enable_accuracy_mode()
-    #self.env.config.debug_accuracy_for_each_op = True 
-    self.env.config.debug_print_each_op = True 
-    self.env.config.debug_print_each_op_operands = True 
+    #self.env.config.debug_accuracy_for_each_op = True
+    self.env.config.debug_print_each_op = True
+    self.env.config.debug_print_each_op_operands = True
     torch.manual_seed(0)
     self.old_var = self.env.config.use_torch_native_for_cpu_tensor
     self.env.config.use_torch_native_for_cpu_tensor = False
@@ -218,10 +218,10 @@ class TestOpInfo(TestCase):
             sample_input.input, 1)
       if op.name == "nn.functional.scaled_dot_product_attention":
         check_output = sample_input.kwargs.get('dropout_p') == 0.0
-      
+
       ignore_index = op.name in should_ignore_indexes
 
-      run_export_and_compare(self, op, sample_input, check_output, 
+      run_export_and_compare(self, op, sample_input, check_output,
                              ignore_indices=ignore_index)
 
 

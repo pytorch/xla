@@ -76,7 +76,7 @@ jax_x = jnp.ones((10, 1000))
 print(jax_m(jax_x))
 
 ## Let f: Tensor -> Tensor
-## There is a function g: jax.Array -> jax.Array; 
+## There is a function g: jax.Array -> jax.Array;
 ##   g = x |-> j2t (f (t2j(x))). OR,
 ##   g = j2t . f . t2j (. denotes function composition)
 # The correspondence f -> g is an isomorphism too.
@@ -120,6 +120,6 @@ print(jitted_jax_m_functional.lower(jax_weights, jax_x).as_text())
 #   print(torchax.interop.jax_jit(m_functional)(m2.state_dict(), x))
 
 
-# # Experiment if time: 
+# # Experiment if time:
 # # 1. torch buffer persistence = False
-# # 2. torch attr 
+# # 2. torch attr

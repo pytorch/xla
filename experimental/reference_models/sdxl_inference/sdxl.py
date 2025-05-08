@@ -52,7 +52,7 @@ with env:
   pipe.text_encoder = torch_xla2.compile(pipe.text_encoder)
 
   BS = 4
-  prompt = [prompt] * BS 
+  prompt = [prompt] * BS
   pipe.vae = torch_xla2.compile(
     pipe.vae, torch_xla2.CompileOptions(
       jax_jit_kwargs={'static_argnames': ('return_dict',)},

@@ -13,7 +13,7 @@ import torch.nn.functional
 import torchax.interop
 
 from . import utils
-from . import model as editted_model 
+from . import model as editted_model
 import os
 
 def _setup_default_env():
@@ -41,7 +41,7 @@ class GPTLightningModule(lightning.LightningModule):
         self.gpt = utils.FSDPv2(gpt)
 
     def training_step(self, batch, batch_idx):
-        x, y = batch 
+        x, y = batch
         logits = self.gpt.forward(x)
         num_tokens = logits.shape[-1]
         logits = logits[..., :-1, :].reshape(-1, num_tokens)
@@ -129,9 +129,9 @@ class GPTFori:
                 out_specs=(P(*utils.global_axis), P()),
                 check_rep=False
             )
-        
+
         one_layer = jax.checkpoint(
-            one_layer, 
+            one_layer,
             policy=jax.checkpoint_policies.dots_with_no_batch_dims_saveable)
 
 
@@ -157,7 +157,7 @@ class GPTFori:
             state_dict = block.state_dict()
             for k, v in state_dict.items():
                 temp[k].append(v)
-        
+
         temp = {k: torch.stack(v) for k, v in temp.items()}
         return temp
 
@@ -187,7 +187,7 @@ class GPTFori:
         #import pdb; pdb.set_trace()
         x = torchax.interop.call_jax(
             self.compiled_block,
-            weights['block'], 
+            weights['block'],
             args,
         )
         editted_model.reapply_sharding(x)
@@ -224,7 +224,7 @@ def main_one(
     n_layers=32,
     batch_size=8,
     checkpoint_dir=default_checkpoint_dir,
-    mode='regular', 
+    mode='regular',
     use_editted_model = False,
 ):
     logging.getLogger("jax").setLevel(logging.DEBUG)
@@ -255,7 +255,7 @@ def main_one(
     tokenizer = Tokenizer(checkpoint_dir)
     data = Alpaca(num_workers=1)
     data.connect(
-        tokenizer=tokenizer, 
+        tokenizer=tokenizer,
         batch_size=batch_size,
         max_seq_length=utils.SEQLEN)
     data.prepare_data()
@@ -267,13 +267,13 @@ def main_one(
         trainer = utils.JaxTrainer(use_fori)
         if use_fori:
             return trainer.fit_model_fori(
-                gpt, 
-                train_loader 
+                gpt,
+                train_loader
             )
         else:
             return trainer.fit(
-                light_mod, 
-                train_loader 
+                light_mod,
+                train_loader
             )
 
 def main(
@@ -282,7 +282,7 @@ def main(
     n_layers=32,
     batch_size=8,
     checkpoint_dir=default_checkpoint_dir,
-    mode='regular', 
+    mode='regular',
     use_editted_model = False,
 ):
     if mode == 'all':
@@ -290,7 +290,7 @@ def main(
         res = []
         for m, editted in (
                 (SCAN_LAYER, False),
-                (SCAN_LAYER_MANUAL, False), 
+                (SCAN_LAYER_MANUAL, False),
                 (REGULAR, False),
                 (REGULAR, True),
                 (OUTLINED_LAYER, True)):
@@ -311,7 +311,7 @@ def main(
                 res.append((m, editted, 'OOM', ''))
         for m, e, r, c in res:
             print(f'{m}-edit={e}: \t {r} \t {c} ')
-            
+
     else:
         main_one(
             use_flash_attention,

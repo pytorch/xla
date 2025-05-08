@@ -11,7 +11,7 @@ class TrainTest(unittest.TestCase):
   def setUp(self):
     torch.manual_seed(0)
     torchax.enable_accuracy_mode()
-  
+
   def test_scan_module(self):
     x = torch.arange(300).reshape(3, 100).to(torch.float32)
     layers = [

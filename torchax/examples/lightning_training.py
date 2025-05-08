@@ -27,7 +27,7 @@ dataset = tv.datasets.MNIST(".", download=True, transform=tv.transforms.ToTensor
 trainer = L.Trainer()
 # trainer.fit(LitAutoEncoder(encoder, decoder), data.DataLoader(dataset, batch_size=64))
 
-# ==== above is the lightning example from 
+# ==== above is the lightning example from
 # https://lightning.ai/pytorch-lightning
 
 import torchax

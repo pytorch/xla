@@ -292,7 +292,7 @@ class View(torch.Tensor):
     ) -> None:
         """
         Update this view with new values, propagating changes back to source.
-        If view_infos is None, it will use the transformation chain 
+        If view_infos is None, it will use the transformation chain
         from the source tensor.
         """
         if view_infos is None:
@@ -368,7 +368,7 @@ class View(torch.Tensor):
     def __setitem__(self, indexes, val):
         view_infos = self.get_transformation_chain() + [NarrowInfo(indexes)]
         self.update(view_infos=view_infos, new_values=val)
-    
+
     def dim(self):
         return self.ndim
 

@@ -31,7 +31,7 @@ class TestMoe(unittest.TestCase):
 
         for k, v in model.state_dict().items():
             new_state_dict[k] = torch.randn_like(v)
-        
+
         model.load_state_dict(new_state_dict, assign=True)
         return model
 
@@ -54,7 +54,7 @@ class TestMoe(unittest.TestCase):
         res2 = torchax.tensor.j2t(res_xla._elem)
         print('max diff', torch.max((res - res2).abs()))
 
-        self.assertTrue( 
+        self.assertTrue(
             torch.allclose(res2, res, atol=1e-2))
 
         # test can jit

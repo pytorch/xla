@@ -27,7 +27,7 @@ class TrainDecoderOnlyFlashAttentionFSDPv2(TrainDecoderOnlyFSDPv2):
 
         self.config.use_flash_attention = True
         for layer in self.model.layers:
-            layer.self_attn.flash_attention_impl = apply_xla_flash_attention_with_spmd        
+            layer.self_attn.flash_attention_impl = apply_xla_flash_attention_with_spmd
 
 if __name__ == '__main__':
   # Enable the SPMD

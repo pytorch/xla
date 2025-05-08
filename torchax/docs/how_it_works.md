@@ -32,7 +32,7 @@ class Tensor(torch.Tensor):
 
   @classmethod
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
-    # here assumes ALL tensors in args / kwargs are 
+    # here assumes ALL tensors in args / kwargs are
     # instances of Tensor
     args, kwargs = unwrap((args, kwargs))
     jax_func = some_registry[func]
@@ -53,7 +53,7 @@ def unwrap(tree):
 In other words, assuming that we have a function
 that takes `jax.Array` as input and returns `jax.Array`
 but otherwise implement the same semantics
-as a `ATen` op; then, using this tensor we would 
+as a `ATen` op; then, using this tensor we would
 be able to route the call to this jax function.
 
 [_ops.py](../torchax/_ops.py) files defines some of those ops.
@@ -97,7 +97,7 @@ class JaxInterpreter(torch.fx.Interpreter):
     return op.func(*args, **kwargs)
 ```
 
-There is no wrapping and unwrapping needed because `args` and `kwargs` are 
+There is no wrapping and unwrapping needed because `args` and `kwargs` are
 already `jax.Array`'s.
 
 Using this interpreter we can build a dynamo backend:
@@ -117,15 +117,15 @@ def backend(fxgraph):
    return f
 ```
 
-The inner function `tojit` is a function that takes and returns 
+The inner function `tojit` is a function that takes and returns
 `jax.Array`'s. So it's suitable to be jitted with `jax.jit`.
 
-`f` is returned callable that takes `Tensor`; so can interop with 
+`f` is returned callable that takes `Tensor`; so can interop with
 other torch codes.
 
 ## nn.Modules and state management
 
-See [README.md](../README.md) for using `torch.func.functional_call` to 
+See [README.md](../README.md) for using `torch.func.functional_call` to
 make `nn.Module`s interact well with `jax.jit`.
 
 See [Examples](../examples/README.md) for training using torch's optimizers or jax's
