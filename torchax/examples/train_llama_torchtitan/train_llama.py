@@ -41,7 +41,7 @@ def sharded_device_put(tensor: jax.Array, sharding) -> jax.Array:
     # meaning we are in multi-host setup. Each host will run the same process
     # and each process only need to handle the devices accessible to this host.
     shape = tensor.shape
-    x_split = [jax.device_put(tensor[i], device) 
+    x_split = [jax.device_put(tensor[i], device)
                for device, i in sharding.addressable_devices_indices_map(shape).items()]
     return jax.make_array_from_single_device_arrays(shape, sharding, x_split)
 
@@ -115,7 +115,7 @@ class Trainer:
         # split the params to the n devices
 
         # model_fn is responsible to shard if needed
-        # to do FSDP one shards the first input args and output 
+        # to do FSDP one shards the first input args and output
         # on the batch dimension
         def model_fn(weights, buffers, args):
             return jittable_mod.functional_call('forward', weights, buffers, args)
@@ -123,7 +123,7 @@ class Trainer:
 
         jax_optimizer = optax.sgd(0.01)
         opt_state = torch_view(jax_optimizer.init(jax_view(jittable_mod.params)))
-        
+
         #opt_state = torchax.interop.call_jax(jax_optimizer.init, jittable_mod.params)
 
         train_step = torchax.train.make_train_step(
@@ -147,7 +147,7 @@ class Trainer:
 
             if i == 0:
                 train_step = helper.compile_step_func(
-                    train_step, 
+                    train_step,
                     jittable_mod.params, jittable_mod.buffers, opt_state, inputs, labels,
                     self.mesh
                 )
@@ -156,7 +156,7 @@ class Trainer:
             step_start = time.perf_counter()
             loss, jittable_mod.params, opt_state = train_step(
                 jittable_mod.params, jittable_mod.buffers, opt_state, inputs, labels)
-            # wait for iteration to finish to measure time 
+            # wait for iteration to finish to measure time
             torchax.interop.call_jax(jax.block_until_ready, (loss, jittable_mod.params))
             step_end = time.perf_counter()
             print(i, 'loss', loss, 'step latency: ', step_end - step_start)
@@ -256,14 +256,14 @@ def main(
     torch.set_default_dtype(torch.bfloat16)
     with torch.device('meta'):
         gpt = titan.Transformer(args)
-        
+
     with torch.device('cpu'):
         # need actual value for freqs_cis
         freqs_cis = gpt._precompute_freqs_cis()
 
     if use_scan:
         checkpoint_policy=jax.checkpoint_policies.offload_dot_with_no_batch_dims('device', 'pinned_host')
-        gpt = TransfomerWithScan(gpt, checkpoint_policy) 
+        gpt = TransfomerWithScan(gpt, checkpoint_policy)
 
     state_dict = dict(gpt.state_dict())
     state_dict.pop('freqs_cis') # dont shard freqs_cis
@@ -272,14 +272,14 @@ def main(
 
     state_dict['freqs_cis'] = freqs_cis.to('jax').apply_jax(jax.device_put, replicated)
     gpt.load_state_dict(state_dict, assign=True)
-    
+
     train_loader = fake_dataloader(10, seqlen, batch_size)
 
-    
+
     # NOTE: overriding attention to capture mesh and sharding info
     partition = P('fsdp', 'tp', None, None)
     attention = functools.partial(
-      splash_attn.tpu_splash_attention, 
+      splash_attn.tpu_splash_attention,
       mesh, partition, True)
     attention = jax.jit(attention)
 
@@ -303,14 +303,14 @@ def main(
     with mesh:
         trainer = Trainer(mesh)
         return trainer.fit(
-            gpt, 
+            gpt,
             loss_fn,
-            train_loader 
+            train_loader
         )
 
-        
+
 class TransfomerWithScan(torch.nn.Module):
-    
+
     def __init__(self, old_transformer, checkpoint_policy):
         super().__init__()
         self.tok_embeddings = old_transformer.tok_embeddings

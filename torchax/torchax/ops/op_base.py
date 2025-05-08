@@ -22,13 +22,13 @@ class InplaceOp:
         to_mutate = args[0]
         if isinstance(to_mutate, View):
             view_value = to_mutate.torch()
-            # Convert the target View to a Tensor, and 
+            # Convert the target View to a Tensor, and
             # leave the rest args as is. If other args are
             # also View, they will be converted to tensors
             # in the self.functional dispatch.
             new_value = self.functional(view_value, *args[1:], **kwargs)
             to_mutate.update(new_value)
-            return to_mutate 
+            return to_mutate
         else:
           if self.replace:
             to_mutate._elem = self.functional(*args, **kwargs)._elem

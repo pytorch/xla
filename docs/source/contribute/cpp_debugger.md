@@ -1,12 +1,12 @@
 # C++ Debugging
 
 This guide shows you how build your PyTorch C++ code with debugging symbols, and
-how to debug PyTorch using GDB or LLDB with VSCode. 
+how to debug PyTorch using GDB or LLDB with VSCode.
 
 ## Why would you need this?
 
 This guide is for contributors to PyTorch or PyTorch/XLA who use C++ to build
-features like [custom C++ operations](https://pytorch.org/tutorials/advanced/cpp_custom_ops.html). 
+features like [custom C++ operations](https://pytorch.org/tutorials/advanced/cpp_custom_ops.html).
 
 ## Install GDB: The GNU Project Debugger
 
@@ -47,20 +47,20 @@ We suggest the following steps:
 1. Identify the source file you want to debug.
 1. Build that file with debug symbols using a command similar to `USE_CUSTOM_DEBINFO="aten/src/ATen/native/Linear.cpp" python setup.py develop`.
 1. Set a breakpoint and start a debugger session. As you debug you will discover
-   additional files you want to debug. 
+   additional files you want to debug.
 1. Add those files to the `USE_CUSTOM_DEBINFO` environment variable.
 1. Rebuild with a command similar to `USE_CUSTOM_DEBINFO="aten/src/ATen/native/Linear.cpp;newfile.cpp" python setup.py develop`.
-1. Start your debugger session again. 
+1. Start your debugger session again.
 
 At this point, your PyTorch is built with debugging symbols and ready to debug
 with GDB. However, we recommend debugging with VSCode. For more information, see
-[Debug with VSCode](debug-with-vscode). 
+[Debug with VSCode](debug-with-vscode).
 
 ### Verify your file is built
 
-For PyTorch, we recommend you do a full clean and rebuild each time. 
+For PyTorch, we recommend you do a full clean and rebuild each time.
 Unfortunately, touching a file to update its timestamp does not reliably cause
-that file to be rebuilt. 
+that file to be rebuilt.
 
 In the output of the `python setup.py develop` command, look for a line that
 starts with `Source files with custom debug infos` to make sure your file was
@@ -76,7 +76,7 @@ built with debug symbols. For example:
 ```
 
 Before you start a new debug session, make sure you have shut down any previous
-debug sessions.  
+debug sessions.
 
 ## VSCode Configuration
 
@@ -128,7 +128,7 @@ to match your specific installation.
 You can also debug with LLDB. In our experience, LLDB is faster. But both have
 their quirks, and you may benefit from switching between the two.
 
-Install LLDB for VSCode by searching for `vadimcn.vscode-lldb` in the VSCode 
+Install LLDB for VSCode by searching for `vadimcn.vscode-lldb` in the VSCode
 *Extensions*.
 
 Then add the following snippet to your launch.json file:
@@ -139,7 +139,7 @@ Then add the following snippet to your launch.json file:
         "type": "lldb",
         "request": "launch",
         "program": "/home/your-user-id/miniconda3/envs/torch310/bin/python",
-        
+
     }
 ```
 
@@ -162,7 +162,7 @@ environment.
     green play button.
 
 1. Click the green play button to start the debugging session. The debugger
-    processes the rules set in the `launch.json` file. 
+    processes the rules set in the `launch.json` file.
 
     After starting the debug session, the red dot will change to an empty white
     circle indicated `torch` symbols have not been loaded.
@@ -170,11 +170,11 @@ environment.
     ![Debugger Session](../_static/img/debugger3_session.png)
 
 1. In the python interpreter, `import torch`. This loads the `torch` library you
-    built. The breakpoints are displayed as red dots again. 
+    built. The breakpoints are displayed as red dots again.
 
     ![Active torch](../_static/img/debugger4_active.png)
 
-1. Run a command that will trigger the breakpoint, for example, `torch.einsum()`. 
+1. Run a command that will trigger the breakpoint, for example, `torch.einsum()`.
     A yellow arrow indicates the current file location. Variable and call stack
     information is displayed on the left.
 
@@ -185,7 +185,7 @@ environment.
 Over time, you'll collect additional flags for your build command, such as not
 building certain libraries to speed up builds, or adding diagnostics. The following
 settings turns off building CUDA and turns on handling an environment variable
-to print dispatcher traces. 
+to print dispatcher traces.
 
 ``` sh
 USE_CUSTOM_DEBINFO="aten/src/ATen/native/Linear.cpp" USE_CUDA=0 LD_LIBRARY_PATH=/home/USERNAME/miniconda3/envs/torch310/lib CFLAGS="-DHAS_TORCH_SHOW_DISPATCH_TRACE" python setup.py develop
@@ -194,4 +194,4 @@ USE_CUSTOM_DEBINFO="aten/src/ATen/native/Linear.cpp" USE_CUDA=0 LD_LIBRARY_PATH=
 ## Future Work
 
 This guide has demonstrated how to build debugging symbols for PyTorch C++ files.
-Future work will demonstrate adding debugging symbols to PyTorch/XLA C++ files. 
+Future work will demonstrate adding debugging symbols to PyTorch/XLA C++ files.

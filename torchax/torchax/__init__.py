@@ -60,7 +60,7 @@ def enable_globally():
   return env
 
 def disable_globally():
-  global env 
+  global env
   default_env().disable_torch_modes()
 
 @contextlib.contextmanager
@@ -76,7 +76,7 @@ def disable_temporarily():
 torch.utils.rename_privateuse1_backend('jax')
 unsupported_dtype = [torch.quint8]
 torch.utils.generate_methods_for_privateuse1_backend(
-  for_tensor=True, for_module=True, for_storage=True, 
+  for_tensor=True, for_module=True, for_storage=True,
   unsupported_dtype=unsupported_dtype)
 
 import jax
@@ -100,7 +100,7 @@ def enable_performance_mode():
 @dataclasses.dataclass
 class CompileOptions:
   # only valid if compiling nn.Module
-  methods_to_compile: List[str] = dataclasses.field(default_factory=lambda: ['forward'])  
+  methods_to_compile: List[str] = dataclasses.field(default_factory=lambda: ['forward'])
   jax_jit_kwargs: Dict[str, Any] = dataclasses.field(default_factory=dict)
   mode: str = 'jax' # or dynamo or export
 

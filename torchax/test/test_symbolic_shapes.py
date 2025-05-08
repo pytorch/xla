@@ -29,7 +29,7 @@ class SymbolicShapeTest(test_base.TestCase):
     torch.manual_seed(0)
 
   def test_constraints_min_max(self):
-    """Test a model with basic min/max dimension restrictions 
+    """Test a model with basic min/max dimension restrictions
     """
 
     # Arg shapes are a=s0{<=10}, b=s0*2
@@ -69,7 +69,7 @@ class SymbolicShapeTest(test_base.TestCase):
     self.assertRegex(module_str, r"shape_assertion.*s[0-9]+ <= 10")
     self.assertRegex(module_str, r"stablehlo.constant.*2")
     self.assertRegex(module_str, r"shape_assertion.*2\*s[0-9]+")
-  
+
   def test_constraint_indirection(self):
     """Test a model where none of the shapes are directly symbolic variables
     but all are expressions of symints that don't appear directly in the model.

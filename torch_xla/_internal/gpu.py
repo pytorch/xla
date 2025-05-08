@@ -4,7 +4,7 @@ import torch_xla.core.xla_env_vars as xenv
 
 def num_local_processes() -> int:
   """Returns number of processes to create on this host.
-    
+
   Raises:
     AssertionError: if GPU_NUM_DEVICES environment variable
                     is not configured

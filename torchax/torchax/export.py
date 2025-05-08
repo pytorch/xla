@@ -148,7 +148,7 @@ def extract_avals(exported):
   def _build_symbolic_shapes(range_constraints):
     """Convert torch SymInt to JAX symbolic_shape and stores in a map using the
     string name of the torch symbolic int.
- 
+
     TODO: There is probably a better way of storing a key for a symbolic int.
     This value needs to be looked up again in `_to_aval` to figure out which
     JAX symbolic to map to for a given torch tensor.
@@ -182,7 +182,7 @@ def extract_avals(exported):
       There are two possible sympy `sym` inputs:
         1. Symbol - (s0) These can have custom constraints.
         2. Expr - (s0*2) These apply the expr to s0's constraints, cannot override.
-      
+
         Currently support is limited to operations with a symbol and and int,
         in `torch/export/dynamic_shapes.py`:
         "Only increasing linear operations with integer coefficients are supported."

@@ -43,7 +43,7 @@ class InteropTest(unittest.TestCase):
             set(buffers.keys()), {'c', 'c2', 'd', 'm1.x'}
         )
 
-        interop.set_all_buffers(m, {'a.weight': torch.tensor([0.0])}, 
+        interop.set_all_buffers(m, {'a.weight': torch.tensor([0.0])},
                                    {'m1.x': torch.tensor([0.0])})
         self.assertEqual(m.a.weight.item(), 0)
         self.assertEqual(m.m1.x.item(), 0)
@@ -56,10 +56,10 @@ class InteropTest(unittest.TestCase):
 
             j2t_fn = interop.j2t_autograd(fn)
             x = torch.ones(2, 2, requires_grad=True, device='jax')
-            
+
             # Act
             actual = j2t_fn(x)
-            
+
             # Assert
             expected = torch.ones(2, 2) + 1
             torch.testing.assert_close(actual, expected, check_device=False)
@@ -72,11 +72,11 @@ class InteropTest(unittest.TestCase):
 
             j2t_fn = interop.j2t_autograd(fn)
             x = torch.ones(2, 2, device='jax').requires_grad_()
-            
+
             # Act
             actual = j2t_fn(x)
             actual.sum().backward()
-            
+
             # Assert
             expected = torch.ones(2, 2) * 2
             torch.testing.assert_close(x.grad, expected, check_device=False)
@@ -90,7 +90,7 @@ class InteropTest(unittest.TestCase):
                 super().__init__()
                 self.a = torch.nn.Linear(10, 10)
                 self.b = self.a
-            
+
             def forward(self, x):
                 return self.a(self.b(x))
 
@@ -100,15 +100,15 @@ class InteropTest(unittest.TestCase):
 
         # a's weights and bias and b's weights and bias
         self.assertEqual(len(m.state_dict()), 4)
-        
+
         # b's weights and bias are deduped
         self.assertEqual(len(m_jitted.params), 2)
         x = torch.randn(10, 10).to('jax')
         expected = m(x)
 
-        # act 
+        # act
         actual = m_jitted(x)
-        
+
         # assert
         torch.testing.assert_allclose(actual, expected)
 
@@ -127,7 +127,7 @@ class InteropTest(unittest.TestCase):
         torch.testing.assert_allclose(actual, expected)
 
 
-        
+
 
 
 

@@ -76,7 +76,7 @@ addx_jitted = jax.jit(addx).lower(jax.ShapeDtypeStruct((1000, 1000), jnp.float32
 #print(addx_jitted.as_text())
 #print(addx_jitted.compile()(X))
 
-# ASIDE: pdb; print; 
+# ASIDE: pdb; print;
 # https://jax.readthedocs.io/en/latest/debugging/print_breakpoint.html
 
 # Example 6: What happens with class attr

@@ -21,7 +21,7 @@ def _c10d_all_gather(input, group_size: int, group_name: str):
 
 @op(torch.ops._c10d_functional.all_reduce)
 def _c10d_all_reduce(self, reduceOp: str, group_name: str):
-  
+
   if reduceOp == "sum":
     res = jax.lax.psum(self, axis_name="torch_dist")
   elif reduceOp == "avg":

@@ -33,9 +33,9 @@ http_archive(
 )
 ```
 
-You can specify the revision of OpenXLA you want to use in the `urls` field 
+You can specify the revision of OpenXLA you want to use in the `urls` field
 in the WORKSPACE file. PyTorch/XLA always builds with a deterministic
-OpenXLA commit (`xla_hash`), aka "OpenXLA pin". Patches may be added as 
+OpenXLA commit (`xla_hash`), aka "OpenXLA pin". Patches may be added as
 needed. Bazel will resolve the dependency, prepare the code and patch it
 hermetically.
 
@@ -246,7 +246,7 @@ for VSCode.
 
 Bazel can power a language server like [clangd](https://clangd.llvm.org/) that brings code references,
 autocompletion and semantic understanding of the underlying code to your
-editor of choice. For VSCode, one can use [Bazel Stack](https://github.com/stackb/bazel-stack-vscode-cc) 
+editor of choice. For VSCode, one can use [Bazel Stack](https://github.com/stackb/bazel-stack-vscode-cc)
 that can be combined with [Visual Studio clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)
 functionality to bring powerful features to assist code editing.
 

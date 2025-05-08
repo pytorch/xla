@@ -113,7 +113,7 @@ class JittableModule(torch.nn.Module):
 
     def make_jitted(self, key):
         jitted = jax_jit(
-            functools.partial(self.functional_call, key), 
+            functools.partial(self.functional_call, key),
             kwargs_for_jax_jit=self._extra_jit_args)
         def call(*args, **kwargs):
             return jitted(self.params, self.buffers, *args, **kwargs)
@@ -186,8 +186,8 @@ def _jax_view(t: TorchValue) -> JaxValue:
 jax_view = functools.partial(pytree.tree_map, _jax_view)
 
 
-def call_jax(jax_func: JaxCallable, 
-             *args: TorchValue, 
+def call_jax(jax_func: JaxCallable,
+             *args: TorchValue,
              **kwargs: TorchValue) -> TorchValue:
     args, kwargs = jax_view((args, kwargs))
     res: JaxValue = jax_func(*args, **kwargs)
@@ -247,7 +247,7 @@ def j2t_autograd(fn, call_jax=call_jax):
                 # We need to put a None for inputs that did not require gradients.
                 final_grads = [None]
                 for needs_grad, grad in safe_zip(
-                    ctx.needs_input_grad[1:], input_grads_structured 
+                    ctx.needs_input_grad[1:], input_grads_structured
                 ):
                     final_grads.append(grad if needs_grad else None)
 
@@ -258,13 +258,13 @@ def j2t_autograd(fn, call_jax=call_jax):
         bound.apply_defaults()
         flat_args_kwargs, tree_def = tree_flatten((bound.args, bound.kwargs))
         y = JaxFun.apply(tree_def, *flat_args_kwargs)
-        return y 
+        return y
 
     return inner
 
 
 # NOTE(qihqi): This function cannot be inlined from the callsite
-#  Becuase if it does, then it won't hit the compilation cache for 
+#  Becuase if it does, then it won't hit the compilation cache for
 #  call_jax. Call jax uses functions' id as key.
 def _jax_forward(fn, other, tree_def, tensors):
   """JAX function to compute output and vjp function.
