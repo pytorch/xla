@@ -46,7 +46,6 @@ export XLA_DUMP_FATAL_STACK=1
 export CPU_NUM_DEVICES=4
 
 TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
-COVERAGE_FILE="$CDIR/../.coverage"
 
 function run_coverage {
   if [ "${USE_COVERAGE:-0}" != "0" ]; then
