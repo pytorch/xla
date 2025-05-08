@@ -139,9 +139,11 @@ function run {
 }
 
 if [ "$USE_COVERAGE" != "0" ]; then
+  PYTHONBIN="$(python -m site --user-base)/bin"
+  ls -l "$PYTHONBIN"
   run
-  coverage combine
-  coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
+  $PYTHONBIN/coverage combine
+  $PYTHONBIN/coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
 else
   run
 fi
