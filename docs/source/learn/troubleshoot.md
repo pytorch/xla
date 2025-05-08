@@ -147,7 +147,7 @@ region](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3b
 access(often due to logging) the value of a tensor before the
 `mark_step`.
 
-The executation caused by 1-4 are expected, and we want to avoid 5 by
+The execution caused by 1-4 are expected, and we want to avoid 5 by
 either reduce the frequency of accessing tensor values or manually add a
 `mark_step` before accessing.
 
