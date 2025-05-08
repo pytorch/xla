@@ -67,6 +67,7 @@ jobs:
       timeout-minutes: 120
       collect-coverage: true
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
+      device-type: "cpu"
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
@@ -81,6 +82,7 @@ jobs:
       collect-coverage: true
       install-cuda-plugin: true
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
+      device-type: "cuda"
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
