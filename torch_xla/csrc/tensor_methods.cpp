@@ -1226,14 +1226,6 @@ void celu_(XLATensorPtr& input, const at::Scalar& alpha) {
   input->SetInPlaceIrValue(Celu(input->GetIrValue(), alpha));
 }
 
-XLATensorPtr clamp(const XLATensorPtr& input,
-                   const std::optional<at::Scalar>& min,
-                   const std::optional<at::Scalar>& max) {
-  MinMaxValues min_max = GetMinMaxValues(input, min, max);
-  return input->CreateFrom(
-      Clamp(input->GetIrValue(), min_max.min, min_max.max));
-}
-
 XLATensorPtr clone(const XLATensorPtr& input) {
   XLATensorPtr cloned = input->CreateFrom(input->GetIrValue());
   if (input->sharding_spec() != nullptr) {
