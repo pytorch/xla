@@ -173,11 +173,10 @@ std::vector<xla::XlaOp> BuildAllReduce(
       }
       result[op_idx] = gte;
     }
-    chained_token =
-        xla::GetTupleElement(reduce, type_ctx.second.indices.size());
   }
-  result.push_back(
-      MaybeConvertTo(chained_token, XlaHelpers::TypeOfXlaOp(token)));
+  chained_token = xla::GetTupleElement(
+      reduce, redux.contexts.rbegin().second.indices.size());
+  result.push_back(chained_token);
   return result;
 }
 
