@@ -7,12 +7,10 @@ function run_torch_xla_python_tests() {
 
   pushd $XLA_DIR
   echo "Running Python Tests"
+  ./test/run_tests.sh
   if [ "$USE_COVERAGE" != "0" ]; then
-    ./test/run_tests.sh
     coverage combine
     coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
-  else
-    ./test/run_tests.sh
   fi
   popd
 }
@@ -74,6 +72,10 @@ function run_torch_xla_benchmark_tests() {
   echo "Running Torchbench Tests"
   test/benchmarks/run_torchbench_tests.sh "${TORCHBENCH_MODELS[@]}"
   popd
+  if [ "$USE_COVERAGE" != "0" ]; then
+    coverage combine
+    coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
+  fi
 }
 
 PYTORCH_DIR=$1
