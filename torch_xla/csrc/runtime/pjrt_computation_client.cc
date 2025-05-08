@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <future>
+#include <stdexcept>
 #include <unordered_set>
 #include <vector>
 
@@ -625,21 +626,26 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           device_assignment);
     }
 
-    std::unique_ptr<xla::PjRtLoadedExecutable> executable;
+    absl::StatusOr<std::unique_ptr<xla::PjRtLoadedExecutable>> maybe_executable;
     if (runtime::sys_util::GetEnvBool("XLA_STABLEHLO_COMPILE", false)) {
       // Convert HLO to StableHLO for PjRt client compilation.
       mlir::MLIRContext context;
       mlir::ModuleOp mlir_module =
           mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
       ConvertHloToStableHlo(instance.computation.mutable_proto(), &mlir_module);
-      executable =
-          client_->CompileAndLoad(mlir_module, compile_options).value();
+      maybe_executable = client_->CompileAndLoad(mlir_module, compile_options);
       StableHloCompileCounter()->AddValue(1);
     } else {
-      executable =
-          client_->CompileAndLoad(instance.computation, compile_options)
-              .value();
+      maybe_executable =
+          client_->CompileAndLoad(instance.computation, compile_options);
     }
+    if (!maybe_executable.ok()) {
+      // This will be automatically translated to a Python ValueError.
+      // See https://pybind11.readthedocs.io/en/stable/advanced/exceptions.html.
+      throw std::invalid_argument(
+          std::string(maybe_executable.status().message()));
+    }
+    auto executable = std::move(maybe_executable).value();
 
     auto memory_stats_status_or = executable->GetCompiledMemoryStats();
     if (memory_stats_status_or.ok()) {
