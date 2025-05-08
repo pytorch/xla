@@ -36,10 +36,10 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: 'python_tests'
+          - name: 'torch_with_cuda_python_tests'
             run_python_tests: 'python_tests'
             runner: ${{ inputs.runner }}
-          - name: 'triton_tests'
+          - name: 'torch_with_cuda_triton_tests'
             run_triton_tests: 'triton_tests'
             runner: 'linux.g5.4xlarge.nvidia.gpu'
     runs-on: ${{ matrix.runner }}
