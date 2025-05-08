@@ -33,6 +33,7 @@ full_codegen:
   - bitwise_right_shift.Tensor
   - ceil
   - cholesky
+  - clamp
   - clamp.Tensor
   - clamp_max.Tensor
   - clamp_min.Tensor
@@ -183,7 +184,6 @@ supported:
   - cat
   - celu
   - celu_
-  - clamp
   - clamp_max
   - clamp_min
   - clone
