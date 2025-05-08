@@ -29,9 +29,13 @@ on:
         default: false
         description: Whether to install CUDA plugin package
       torch-commit:
-          required: true
-          type: string
-          description: torch-commit
+        required: true
+        type: string
+        description: torch-commit
+      device-type:
+        required: true
+        type: string
+        description: Device type for naming the coverage results.
 
     secrets:
       gcloud-service-key:
@@ -155,7 +159,7 @@ jobs:
       - name: Upload coverage results
         uses: actions/upload-artifact@v4
         with:
-          name: "lcov-${{ matrix.name }}"
+          name: "lcov-${{ inputs.device-type }}-${{ matrix.name }}"
           path: "${{ env.COVERAGE_DIR }}"
         if: ${{ inputs.collect-coverage }}
 
