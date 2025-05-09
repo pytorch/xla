@@ -326,24 +326,29 @@ void DebugUtil::analyze_graph_execution_python_frame(
   } else if (frames[0].function == "mark_step" ||
              (frames[0].function == "sync" &&
               endsWith(frames[0].file, "torch_xla.py"))) {
-    if (frames[1].function == "next" &&
-        endsWith(frames[1].file, "parallel_loader.py")) {
+    bool called_by_sync =
+        frames[0].function == "mark_step" && frames[1].function == "sync";
+    // sync internally calls mark_step leading to one extra call stack, so shift
+    // the frame index by 1.
+    int i = called_by_sync ? 2 : 1;
+    if (frames[i].function == "next" &&
+        endsWith(frames[i].file, "parallel_loader.py")) {
       ss << debug_output_prefix
          << "  mark_step in parallel loader at step end\n";
-    } else if (frames[1].function == "__exit__" &&
-               endsWith(frames[1].file, "profiler.py")) {
+    } else if (frames[i].function == "__exit__" &&
+               endsWith(frames[i].file, "profiler.py")) {
       ss << debug_output_prefix
          << "  mark_step when exiting a profiler StepTrace region\n";
-    } else if ((frames[1].function == "extract_compiled_graph_helper" ||
-                frames[1].function == "extract_internal") &&
-               endsWith(frames[1].file, "dynamo_bridge.py")) {
+    } else if ((frames[i].function == "extract_compiled_graph_helper" ||
+                frames[i].function == "extract_internal") &&
+               endsWith(frames[i].file, "dynamo_bridge.py")) {
       ss << debug_output_prefix
          << "  mark_step when dynamo processing input graphs\n";
-    } else if (frames[1].function == "_compile" &&
-               endsWith(frames[1].file, "torch_xla.py")) {
+    } else if (frames[i].function == "_compile" &&
+               endsWith(frames[i].file, "torch_xla.py")) {
       ss << debug_output_prefix << "  torch_xla.compile\n";
-    } else if (frames[1].function == "_clear_pending_ops_before_compile" &&
-               endsWith(frames[1].file, "torch_xla.py")) {
+    } else if (frames[i].function == "_clear_pending_ops_before_compile" &&
+               endsWith(frames[i].file, "torch_xla.py")) {
       ss << debug_output_prefix
          << "  torch_xla.compile clear the pending graph prior calling the "
             "target function\n";
