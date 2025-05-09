@@ -424,5 +424,5 @@ def temporary_env(**kwargs):
 
 
 # Taken from test_operations.py
-def _is_on_tpu():
+def is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'

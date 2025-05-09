@@ -23,7 +23,7 @@ class TestMatMulPrecision(unittest.TestCase):
   # TODO: Figure out why either PT/XLA or unittest
   # is unable to successfully run this test in a parameterized way.
   # https://github.com/pytorch/xla/issues/9129
-  @unittest.skipIf(not test_utils._is_on_tpu(), 'Skipping, not on TPU.')
+  @unittest.skipIf(not test_utils.is_on_tpu(), 'Skipping, not on TPU.')
   @unittest.expectedFailure
   def test_all(self):
     # The number of bit of precise mantissa expected in the result.
@@ -38,15 +38,15 @@ class TestMatMulPrecision(unittest.TestCase):
       with self.subTest(precision=precision, bits=bits):
         self._test_parameterized(precision, bits)
 
-  @unittest.skipIf(not test_utils._is_on_tpu(), 'Skipping, not on TPU.')
+  @unittest.skipIf(not test_utils.is_on_tpu(), 'Skipping, not on TPU.')
   def test_highest(self):
     self._test_parameterized('highest', 22)
 
-  @unittest.skipIf(not test_utils._is_on_tpu(), 'Skipping, not on TPU.')
+  @unittest.skipIf(not test_utils.is_on_tpu(), 'Skipping, not on TPU.')
   def test_high(self):
     self._test_parameterized('high', 14)
 
-  @unittest.skipIf(not test_utils._is_on_tpu(), 'Skipping, not on TPU.')
+  @unittest.skipIf(not test_utils.is_on_tpu(), 'Skipping, not on TPU.')
   def test_default(self):
     self._test_parameterized('default', 8)
 
