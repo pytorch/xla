@@ -513,43 +513,50 @@ def functional_linear(self, weights, bias=None):
         res += bias
     return res
 
-@register_function(torch.ops.xla.dynamo_set_buffer_donor_)
-def _dynamo_set_buffer_donor(self, donor):
+try: 
+    # TODO: Currently the following ops are wrapped in the try 
+    # catch block because torch.ops.xla is not in the torch ops 
+    # registry. Either we import torch_xla in the upper level, 
+    # or modify the the register_function to support this. 
+    @register_function(torch.ops.xla.dynamo_set_buffer_donor_)
+    def _dynamo_set_buffer_donor(self, donor):
+        pass
+
+    @register_function(torch.ops.xla.ragged_paged_attention)
+    def _ragged_paged_attention(         
+                    q: jax.Array, # [max_num_batched_tokens, num_q_heads, head_dim]
+                    kv_pages: jax.Array, # [total_num_pages, page_size, num_combined_kv_heads, head_dim]
+                    kv_lens: jax.Array,  # i32[max_num_seqs]
+                    page_indices: jax.Array, # i32[max_num_seqs, pages_per_seq]
+                    cu_q_lens: jax.Array, # i32[max_num_seqs + 1]
+                    num_seqs: jax.Array, # i32[1]
+                    use_kernel: bool = True,
+                    sm_scale: float = 1.0,
+                    sliding_window: int | None = None,
+                    soft_cap: float | None = None,
+                    mask_value: float | None = None,
+                    num_kv_pages_per_block: int | None = None,
+                    num_queries_per_block: int | None = None,
+                    vmem_limit_bytes: int | None = None,
+    ):
+
+        from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_paged_attention_kernel
+        return ragged_paged_attention_kernel(
+            q = q,  
+            kv_pages = kv_pages,  
+            kv_lens = kv_lens,  
+            page_indices = page_indices, 
+            cu_q_lens = cu_q_lens, 
+            num_seqs = num_seqs, 
+            sm_scale = sm_scale,
+            sliding_window = sliding_window,
+            soft_cap = soft_cap,
+            mask_value = mask_value,
+            num_kv_pages_per_block = num_kv_pages_per_block,
+            num_queries_per_block = num_queries_per_block,
+            vmem_limit_bytes = vmem_limit_bytes,
+        )
+except Exception as e:
     pass
-
-@register_function(torch.ops.xla.ragged_paged_attention)
-def _ragged_paged_attention(         
-                q: jax.Array, # [max_num_batched_tokens, num_q_heads, head_dim]
-                kv_pages: jax.Array, # [total_num_pages, page_size, num_combined_kv_heads, head_dim]
-                kv_lens: jax.Array,  # i32[max_num_seqs]
-                page_indices: jax.Array, # i32[max_num_seqs, pages_per_seq]
-                cu_q_lens: jax.Array, # i32[max_num_seqs + 1]
-                num_seqs: jax.Array, # i32[1]
-                use_kernel: bool = True,
-                sm_scale: float = 1.0,
-                sliding_window: int | None = None,
-                soft_cap: float | None = None,
-                mask_value: float | None = None,
-                num_kv_pages_per_block: int | None = None,
-                num_queries_per_block: int | None = None,
-                vmem_limit_bytes: int | None = None,
-):
-
-  from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_paged_attention_kernel
-  return ragged_paged_attention_kernel(
-    q = q,  
-    kv_pages = kv_pages,  
-    kv_lens = kv_lens,  
-    page_indices = page_indices, 
-    cu_q_lens = cu_q_lens, 
-    num_seqs = num_seqs, 
-    sm_scale = sm_scale,
-    sliding_window = sliding_window,
-    soft_cap = soft_cap,
-    mask_value = mask_value,
-    num_kv_pages_per_block = num_kv_pages_per_block,
-    num_queries_per_block = num_queries_per_block,
-    vmem_limit_bytes = vmem_limit_bytes,
-)
 
 
