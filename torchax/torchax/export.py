@@ -11,7 +11,6 @@ import jax
 import jax.export
 import sympy
 
-
 DEBUG = False
 
 
@@ -83,7 +82,8 @@ def exported_program_to_jax(exported_program, export_raw: bool = False):
   if torch.__version__ >= '2.2':
     # torch version 2.1 didn't expose this yet
     exported_program = exported_program.run_decompositions()
-    exported_program = exported_program.run_decompositions(decompositions.DECOMPOSITIONS)
+    exported_program = exported_program.run_decompositions(
+        decompositions.DECOMPOSITIONS)
   if DEBUG:
     print(exported_program.graph_module.code)
 
@@ -121,13 +121,15 @@ def extract_avals(exported):
   def _to_aval(arg_meta, symbolic_shapes):
     """Convet from torch type to jax abstract value for export tracing
     """
+
     def _get_dim(d):
       if isinstance(d, torch.SymInt):
         return symbolic_shapes[str(d)]
       return d
 
     val = arg_meta['val']
-    is_scalar = isinstance(val, float) or isinstance(val, int) or isinstance(val, bool)
+    is_scalar = isinstance(val, float) or isinstance(val, int) or isinstance(
+        val, bool)
     if is_scalar:
       return jax.ShapeDtypeStruct([], type(arg_meta['val']))
 
@@ -139,16 +141,15 @@ def extract_avals(exported):
     """Return placeholders with input metadata"""
     placeholders = [p for p in exported.graph.nodes if p.op == "placeholder"]
     input_placeholders = [
-      p
-      for p, s in zip(placeholders, exported.graph_signature.input_specs)
-      if s.kind == torch.export.graph_signature.InputKind.USER_INPUT
+        p for p, s in zip(placeholders, exported.graph_signature.input_specs)
+        if s.kind == torch.export.graph_signature.InputKind.USER_INPUT
     ]
     return input_placeholders
 
   def _build_symbolic_shapes(range_constraints):
     """Convert torch SymInt to JAX symbolic_shape and stores in a map using the
     string name of the torch symbolic int.
- 
+
     TODO: There is probably a better way of storing a key for a symbolic int.
     This value needs to be looked up again in `_to_aval` to figure out which
     JAX symbolic to map to for a given torch tensor.
@@ -163,8 +164,10 @@ def extract_avals(exported):
         torch.export.Dim("a", min=5, max=10)
          ==> ("a >= 5", "a <= 10",)
       """
-      if not isinstance(torch_constraint, torch.utils._sympy.value_ranges.ValueRanges) or torch_constraint.is_bool:
-        raise TypeError(f"No symbolic constraint handler for: {torch_constraint}")
+      if not isinstance(torch_constraint, torch.utils._sympy.value_ranges.
+                        ValueRanges) or torch_constraint.is_bool:
+        raise TypeError(
+            f"No symbolic constraint handler for: {torch_constraint}")
 
       constraints = []
       symbol = sympy.Symbol(symbol_name)
@@ -182,7 +185,7 @@ def extract_avals(exported):
       There are two possible sympy `sym` inputs:
         1. Symbol - (s0) These can have custom constraints.
         2. Expr - (s0*2) These apply the expr to s0's constraints, cannot override.
-      
+
         Currently support is limited to operations with a symbol and and int,
         in `torch/export/dynamic_shapes.py`:
         "Only increasing linear operations with integer coefficients are supported."
@@ -190,7 +193,8 @@ def extract_avals(exported):
       symbol_name = str(sym)
       constraints = _build_symbolic_constraints(symbol_name, constraint)
       if sym.is_symbol:
-        symbolic_shape = jax.export.symbolic_shape(symbol_name, constraints=constraints)
+        symbolic_shape = jax.export.symbolic_shape(
+            symbol_name, constraints=constraints)
       else:
         assert len(sym.free_symbols) > 0
         scope = free_symbols[str(list(sym.free_symbols)[0])].scope
@@ -203,8 +207,12 @@ def extract_avals(exported):
     # integer compuations on symbol variables, so each symbol variable is OK to
     # have its own scope.
     symbolic_shapes = {}
-    symbol_variables = [(s,v) for s,v in range_constraints.items() if s.is_symbol]
-    symbol_exprs = [(s,v) for s,v in range_constraints.items() if not s.is_symbol]
+    symbol_variables = [
+        (s, v) for s, v in range_constraints.items() if s.is_symbol
+    ]
+    symbol_exprs = [
+        (s, v) for s, v in range_constraints.items() if not s.is_symbol
+    ]
     for sym, constraint in symbol_variables + symbol_exprs:
       symbolic_shape = _build_symbolic_shape(sym, constraint, symbolic_shapes)
       symbolic_shapes[str(sym)] = symbolic_shape

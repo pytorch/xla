@@ -19,7 +19,7 @@ litgpt  download  meta-llama/Meta-Llama-3-8B-Instruct
 litgpt  download  --repo_id meta-llama/Meta-Llama-3-8B-Instruct --tokenizer_only true --access_token <your_hf_token>
 ```
 
-Then, run with 
+Then, run with
 ```bash
 python -m examples.train_llama.train_llama_lightning  --mode=all --seqlen=2048 --checkpoint_dir=<dir where the checkpoint is downloaded>
 ```
@@ -27,7 +27,7 @@ python -m examples.train_llama.train_llama_lightning  --mode=all --seqlen=2048 -
 # The training script
 
 The script in [train_llama_lightning.py](train_llama_training.py) is envisioned
-to be what the users need to write for their training setup. In summary it 
+to be what the users need to write for their training setup. In summary it
 consists the following:
 
 ### 1. Put the model in a `LightningModule` subclass:
@@ -40,7 +40,7 @@ class GPTLightningModule(lightning.LightningModule):
         self.gpt = utils.FSDPv2(gpt)
 
     def training_step(self, batch, batch_idx):
-        x, y = batch 
+        x, y = batch
         logits = self.gpt.forward(x)
         num_tokens = logits.shape[-1]
         logits = logits[..., :-1, :].reshape(-1, num_tokens)
@@ -52,14 +52,14 @@ class GPTLightningModule(lightning.LightningModule):
         return None
 ```
 
-This class is responsible of wrapping (or instantiating) a model, call it's forward, and defining the formula to compute loss. 
+This class is responsible of wrapping (or instantiating) a model, call it's forward, and defining the formula to compute loss.
 
 Next, the user need to call our trainer along with the dataloader:
 
 ```python
 def main():
     gpt = ...
-    light_mod = GPTLightningModule(gpt) 
+    light_mod = GPTLightningModule(gpt)
     # data loader setup and stuff skipped
     train_loader = ...
 
@@ -83,7 +83,7 @@ GSPMD. To implement this, we need 2 things:
 1. Shard inputs on batch dimension (i.e. like DDP)
 2. Shard all the weights in the first dimension.
 
-To implement this, we create a mesh with first axis called 'fsdp' and shard 
+To implement this, we create a mesh with first axis called 'fsdp' and shard
 everything on this.
 
 ```python
@@ -105,7 +105,7 @@ class FSDPv2(torch.nn.Module):
         args[0] = self.shard(args[0])
         res = self.mod(*args)
         return self.shard(res)
-    
+
     def shard(self, x):
         return torchax.interop.call_jax(
             jax.lax.with_sharding_constraint,
@@ -118,15 +118,15 @@ We also need a similar function that shards the weights.
 ### Flash attention
 
 Flash attention is a important optimization that enables training with large
-sequence length. Jax has an implementation of flash attention located in 
-`jax.experimental.pallas.ops.tpu.flash_attention`. To make the model uses 
+sequence length. Jax has an implementation of flash attention located in
+`jax.experimental.pallas.ops.tpu.flash_attention`. To make the model uses
 this version of flash attention, we simply register a lowering for PyTorch's
 `torch.nn.functional.scaled_dot_product_attention` like so:
 
 ```python
 @register_function(torch.nn.functional.scaled_dot_product_attention, is_jax_function=False, needs_env=True)
 def scaled_dot_product_attention(
-   query, key, value, attn_mask=None, 
+   query, key, value, attn_mask=None,
    dropout_p=0.0, is_causal=False, scale=None, env=None) -> torch.Tensor:
 
    if env.use_flash_attention:
@@ -137,7 +137,7 @@ def scaled_dot_product_attention(
    return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal, scale)
 ```
 
-this implementation is located in [jtorch.py](../../torchax/ops/jtorch.py) in 
+this implementation is located in [jtorch.py](../../torchax/ops/jtorch.py) in
 torchax. The model itself does not need to change to use TPU version of
 flash attention, because it's calling pytorch's `F.scaled_dot_product_attention`.
 
@@ -148,14 +148,14 @@ flash attention, because it's calling pytorch's `F.scaled_dot_product_attention`
 
 A program compiled with `jax.jit` is a straight graph of XLA operators (StableHLO ops). For the llama3 model, it consists of 32 layers of identical code. This makes compile time extremely long. We can outline one of the layers, and call that one repeatedly to get slightly faster compile time.
 
-To compile the regular 32-layer model, it takes 210s on v4-8; with outlining we 
+To compile the regular 32-layer model, it takes 210s on v4-8; with outlining we
 can reduce this to 190s. And program size (number of chars in `jax.jit(...).lowered.as_text()`) is reduced from 2.6 million to 1.9 million.
 
 To accomplish this, we can wrap the original model with the `GPTOutline` wrapper.
 
 ### Use `jax.lax.scan` to iterate the layers
 
-Another more intrusive change is to wrap to change the loop to use 
+Another more intrusive change is to wrap to change the loop to use
 scan instead of python loop. This way we can get an even smaller program.
 This change is illustrated in `GPTFori` wrapper.
 With this change, we can shrink the program size to 0.49 million characters, and

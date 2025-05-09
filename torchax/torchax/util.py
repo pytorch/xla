@@ -1,7 +1,8 @@
 from typing import Any, Callable
 
 
-def partition(original: list[Any], func: Callable[[Any], bool]) -> tuple[list[Any], list[Any]]:
+def partition(original: list[Any],
+              func: Callable[[Any], bool]) -> tuple[list[Any], list[Any]]:
   """Partitions elements into two parallel lists based on a predicate function.
 
   Iterates through the 'original' list, applying 'func' to each element 'a'.
@@ -15,7 +16,7 @@ def partition(original: list[Any], func: Callable[[Any], bool]) -> tuple[list[An
   placeholders.
 
   This is useful when we want to mark a group of elements as static (via passing
-  static_argnums) or donated (via donate_argnums) when combining with jax.jit 
+  static_argnums) or donated (via donate_argnums) when combining with jax.jit
   and friends.
 
   Args:
@@ -48,7 +49,7 @@ def partition(original: list[Any], func: Callable[[Any], bool]) -> tuple[list[An
     falsy.append(f)
   return truthy, falsy
 
-  
+
 def merge(list1: list[Any], list2: list[Any]) -> list[Any]:
   """Merges two lists element-wise, prioritizing non-None elements from list1.
 
@@ -85,4 +86,3 @@ def merge(list1: list[Any], list2: list[Any]) -> list[Any]:
   for a, b in zip(list1, list2):
     res.append(b if a is None else a)
   return res
-

@@ -55,12 +55,12 @@ class CheckpointManager:
           checkpoint at the next step.
     - Native fsspec integration: Any storage protocol compatible with fsspec
           can be used with CheckpointManager.
-  
+
   The intended usage of CheckpointManager is as follows:
 
   >>> # Create a CheckpointManager to checkpoint every 10 steps into GCS.
   >>> chkpt_mgr = CheckpointManager('gs://my-bucket/my-experiment', 10)
-  
+
   >>> # Select a checkpoint to restore from, and restore if applicable
   >>> tracked_steps = chkpt_mgr.all_steps()
   >>> if tracked_steps:
@@ -286,8 +286,8 @@ class CheckpointManager:
 
     This function will do the following:
     1. Transfer `state_dict` to the CPU device.
-    2. Dispatch the checkpoint workload to an asynchronous execution 
-       queue. This will block training until the ongoing async 
+    2. Dispatch the checkpoint workload to an asynchronous execution
+       queue. This will block training until the ongoing async
        checkpoint finishes when the queue is full.
 
     Args:

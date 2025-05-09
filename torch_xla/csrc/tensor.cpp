@@ -81,12 +81,12 @@ XLATensorPtr XLATensor::Create(
 XLATensorPtr XLATensor::Create(
     torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
     std::optional<at::ScalarType> logical_element_type,
-    bool delay_eager_executation) {
+    bool delay_eager_execution) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type));
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   graph_executor->RegisterTensor(xtensor->data());
-  if (graph_executor->UseEagerMode() && !delay_eager_executation) {
+  if (graph_executor->UseEagerMode() && !delay_eager_execution) {
     std::vector<XLATensorPtr> xtensors({xtensor});
     graph_executor->ApplyEagerSync(xtensors);
   }
@@ -329,7 +329,7 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
 }
 
 void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace,
-                           bool delay_eager_executation) {
+                           bool delay_eager_execution) {
   data()->handle = nullptr;
   data()->tensor_data = std::nullopt;
   if (data()->view != nullptr && inplace) {
@@ -348,7 +348,7 @@ void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace,
 
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   // Update should also be triggered eagerly if configured
-  if (graph_executor->UseEagerMode() && !delay_eager_executation &&
+  if (graph_executor->UseEagerMode() && !delay_eager_execution &&
       ShouldSyncIrNode()) {
     std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
     graph_executor->ApplyEagerSync(xtensors);
@@ -356,13 +356,13 @@ void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace,
 }
 
 void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value,
-                                  bool delay_eager_executation) {
+                                  bool delay_eager_execution) {
   auto xla_shape = shape();
   if (xla_shape.get().element_type() != GetXlaShape(ir_value).element_type()) {
     ir_value =
         torch_xla::MakeNode<Cast>(ir_value, xla_shape.get().element_type());
   }
-  SetIrValue(std::move(ir_value), /*inplace=*/true, delay_eager_executation);
+  SetIrValue(std::move(ir_value), /*inplace=*/true, delay_eager_execution);
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
@@ -637,31 +637,31 @@ torch::lazy::Value XLATensor::MaybeCastIrValue(
 }
 
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
-                                   bool delay_eager_executation) const {
+                                   bool delay_eager_execution) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               /*logical_element_type=*/std::nullopt);
   return Create(std::move(ir_value), GetDevice(), dtype_optional(),
-                delay_eager_executation);
+                delay_eager_execution);
 }
 
 XLATensorPtr XLATensor::CreateFrom(
     torch::lazy::Value ir_value,
     std::optional<at::ScalarType> logical_element_type_opt,
-    bool delay_eager_executation) const {
+    bool delay_eager_execution) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               logical_element_type_opt);
   return Create(std::move(ir_value), GetDevice(), logical_element_type_opt,
-                delay_eager_executation);
+                delay_eager_execution);
 }
 
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
                                    const torch::lazy::BackendDevice& device,
                                    at::ScalarType logical_element_type,
-                                   bool delay_eager_executation) const {
+                                   bool delay_eager_execution) const {
   ir_value =
       MaybeCastIrValue(std::move(ir_value), device, logical_element_type);
   return Create(std::move(ir_value), device, logical_element_type,
-                delay_eager_executation);
+                delay_eager_execution);
 }
 
 void XLATensor::ApplyPendingGraph() {

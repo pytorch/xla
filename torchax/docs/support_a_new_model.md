@@ -4,7 +4,7 @@ Supporting a new model in torchax means
 having this model run using torchax and succeeds.
 
 A model usually consists of executing a list of torch ops
-on a set of tensors (i.e. the parameters and inputs) and 
+on a set of tensors (i.e. the parameters and inputs) and
 produce a new tensor(s). These ops should just work.
 
 However, there are cases that the model doesn't run on
@@ -14,7 +14,7 @@ torchax, because:
 2. Some op it needs is implemented incorrectly
 3. There are some non-torch-op code that interacts with torchax in a non-friendly matter.
 
-Here we present few steps to attempt to fix the related issues. Using dlrm model as 
+Here we present few steps to attempt to fix the related issues. Using dlrm model as
 example.
 
 This assumes that you already installed torchax with `pip install -e .` locally.
@@ -93,14 +93,14 @@ Now let's implement this op.
 Few tricks while implementing the ops:
 
 1. Feel free to edit the script `models/dlrm.py` while debugging.
-2. Useful options to set `env.config.debug_print_each_op = True` will print out each 
+2. Useful options to set `env.config.debug_print_each_op = True` will print out each
    op that goes through the dispatcher.
 3. Set `env.config.debug_accuracy_for_each_op = True` will in addition of running Jax
    op, it also runs it again in Torch CPU. Then it diffs the result. If the diff is too
    large, then it drops you into pdb for inspection.
 4. After inspecting input / output / shapes of the op, maybe it's enough hint for
    you to fix this op. Or, if it's not, then it's adviced to save the inputs / outputs
-   and write a unit test for it and iterate on that. Usually a unit test is faster 
+   and write a unit test for it and iterate on that. Usually a unit test is faster
    to iterate than running a whole model.
 
 After finishing `embedding_bag` badly, I reached the next op
@@ -130,7 +130,7 @@ on top of the same op works.
 
 Now the resulting PR is: https://github.com/pytorch/xla/pull/7583
 
-After this `python models/dlrm.py` runs. 
+After this `python models/dlrm.py` runs.
 
 NOTE:
 The _embedding_bag implementation is actually very crude, just sufficient to make

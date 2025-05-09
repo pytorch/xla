@@ -51,7 +51,3 @@ packages = ["torchax"]
 
 [tool.pytest.ini_options]
 addopts="-n auto"
-
-[tool.ruff]
-line-length = 80
-indent-width = 2

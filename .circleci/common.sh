@@ -92,7 +92,7 @@ function install_pre_deps_pytorch_xla() {
       sudo rm -f "$bazel_path"
     fi
   done
-  
+
   # Install bazelisk
   sudo npm install -g @bazel/bazelisk
 

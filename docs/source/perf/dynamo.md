@@ -203,17 +203,17 @@ TPU v4-8.
 
 ## Feature gaps
 
-There is one gap we want to call out that are preventing us from using the 
+There is one gap we want to call out that are preventing us from using the
 TorchDynamo on larger scale models.
 
-TorchDynamo will trace forward and backward into separate graphs. For 
-PyTorch/XLA it is important to let the XLA compiler see the whole step as one 
-graph to best optimize the speed. There is also a fixed overhead to launch every 
-device execution which make executing multiple graphs per training step less 
+TorchDynamo will trace forward and backward into separate graphs. For
+PyTorch/XLA it is important to let the XLA compiler see the whole step as one
+graph to best optimize the speed. There is also a fixed overhead to launch every
+device execution which make executing multiple graphs per training step less
 ideal.
 
-This gap compared to Lazy Tensor makes it less efficient in real world training 
-use cases, especially the tracing cost can be overlapped wit the execution in 
+This gap compared to Lazy Tensor makes it less efficient in real world training
+use cases, especially the tracing cost can be overlapped wit the execution in
 training.
 
 ## Take away

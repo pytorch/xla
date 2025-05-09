@@ -104,7 +104,7 @@ def save_stablehlo_graph_as_tf(
     stablehlo_program - model to export and save
     path: os.PathLike - location to an empty directory to store the saved_model
     serving_key: str  - serving key tag, this is used by tf.serving to know which function to run.
-    function_alias: str - passed through saved_model.save, used to tag a function for 
+    function_alias: str - passed through saved_model.save, used to tag a function for
        inference converter or other tools.
   """
 
@@ -154,7 +154,7 @@ def save_torch_module_as_tf_saved_model(
     args: Tuple[Any] - a set of args to trace the model with, i.e. torch_model(*args) must run
     saved_model_dir: os.PathLike - location to an empty directory to store the saved_model
     serving_key: str  - serving key tag, this is used by tf.serving to know which function to run.
-    function_alias: str - passed through saved_model.save, used to tag a function for 
+    function_alias: str - passed through saved_model.save, used to tag a function for
        inference converter or other tools.
   """
   exported = torch.export.export(

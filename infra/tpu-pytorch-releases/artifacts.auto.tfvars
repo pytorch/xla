@@ -125,7 +125,7 @@ manual_versioned_builds = [
     python_version  = "3.11"
     bundle_libtpu   = "0"
     cxx11_abi       = "1"
-  }, 
+  },
   # Bundle libtpu for Kaggle
   {
     git_tag         = "v2.6.1"
@@ -190,7 +190,7 @@ manual_versioned_builds = [
     python_version  = "3.11"
     bundle_libtpu   = "0"
     cxx11_abi       = "1"
-  }, 
+  },
   # Bundle libtpu for Kaggle
   {
     git_tag         = "v2.6.0"

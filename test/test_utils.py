@@ -398,7 +398,7 @@ class XlaTestCase(unittest.TestCase):
 def temporary_env(**kwargs):
   """
     Temporarily set environment variables within the context.
-    
+
     Args:
         **kwargs: Key-value pairs representing environment variables to set.
                   For example: temporary_env(PATH='/new/path', DEBUG='1')
