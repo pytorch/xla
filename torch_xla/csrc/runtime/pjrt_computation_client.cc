@@ -738,6 +738,9 @@ PjRtComputationClient::ExecuteComputation(
   for (auto& argument : arguments) {
     const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
 
+    XLA_CHECK(pjrt_data->buffer != nullptr)
+        << "There is no buffer associated with the PjRt data for the "
+        << "device: " << pjrt_device->DebugString();
     XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
         << "The device currently being used : " << pjrt_device->DebugString()
         << " is different from the device where the buffer resides: "
