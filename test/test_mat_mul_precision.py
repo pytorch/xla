@@ -30,8 +30,7 @@ class TestMatMulPrecision(unittest.TestCase):
 
   # TODO: Figure out why either PT/XLA or unittest
   # is unable to successfully run this test in a parameterized way.
-  # Is it something about unittest leaking global state?
-  # Or, switching precision too quickly or without a barrier?
+  # https://github.com/pytorch/xla/issues/9129
   @unittest.skipIf(not test_utils._is_on_tpu(), 'Skipping, not on TPU.')
   @unittest.expectedFailure
   def test_all(self):
