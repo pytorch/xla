@@ -55,9 +55,9 @@ def set_mat_mul_precision(precision: _PrecisionType) -> None:
     See the [precision tutorial](../../tutorials/precision_tutorial.html)
     for more information about the precision levels.
 
-        Args:
-        precision (str): The precision to set for matrix multiplication.
-          Must be one of 'default', 'high', or 'highest'.
+    Args:
+      precision (str): The precision to set for matrix multiplication.
+        Must be one of 'default', 'high', or 'highest'.
     """
   if precision not in [_DEFAULT, _HIGH, _HIGHEST]:
     raise ValueError(f"Invalid precision: {precision}. "
