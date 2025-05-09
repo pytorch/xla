@@ -170,6 +170,27 @@ commands on your Linux machine directly, outside of the container.
     # Output: xla:0
     ```
 
+1.  Set up `clangd` so that C++ code completion/navigation works:
+
+    1. Install `clangd`: open any C++ source file in VS Code to trigger a
+       prompt to install `clangd` in the dev container. Accept the request.
+       Restart VS Code for the change to take effect.
+
+    1. Generate the compilation database so that `clangd` knows how to compile
+       the C++ files:
+
+       ```bash
+       # Run this from a terminal in VS Code, in the pytorch/xla directory
+       # of the workspace.
+       scripts/update_compile_commands.py
+       ```
+
+       This should create the `build/compile_commands.json` file, which
+       describes how each C++ source file is compiled. The script may take
+       several minutes the first time. You may need to rerun the script
+       if build rules or file structures have changed. However, subsequent
+       runs are usually much faster.
+
 **Subsequent builds**: after building the packages from source code for the
 first time, you may need to build everything again, for example, after a
 `git pull`. You can run `scripts/build_developer.sh` which will rebuild PyTorch,

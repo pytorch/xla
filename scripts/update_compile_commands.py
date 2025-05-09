@@ -99,15 +99,15 @@ def main() -> None:
   if len(sys.argv) != 1:
     sys.exit(__doc__)
 
-  print(f"Changing to the repo root directory {_REPO_ROOT}", file=sys.stderr)
   os.chdir(_REPO_ROOT)
 
   print(
       "Rebuilding the repo to ensure that all external repos and "
       "generated files are available locally when generating "
-      "compile_commands.json...",
+      "compile_commands.json. This may take several minutes...",
       file=sys.stderr)
   subprocess.run(['bazel', 'build', '--keep_going', '//...'],
+                 stdout=subprocess.PIPE,
                  stderr=subprocess.PIPE)
 
   print("Querying bazel for the CppCompile actions...", file=sys.stderr)
@@ -120,7 +120,7 @@ def main() -> None:
   aquery_output = aquery_result.stdout.decode('utf-8')
   aquery_json = json.loads(aquery_output)
 
-  print("Generating compile_commands.json...", file=sys.stderr)
+  print(f"Generating {_COMPILE_DB_PATH}...", file=sys.stderr)
   commands = extract_cc_compile_commands(aquery_json)
   with open(_COMPILE_DB_PATH, "w") as f:
     json.dump(
