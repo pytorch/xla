@@ -1,6 +1,6 @@
 # How torch dispatch works
 
-References: 
+References:
 * [__torch_dispatch__](https://dev-discuss.pytorch.org/t/what-and-why-is-torch-dispatch/557)
 * [Dispatcher](http://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/) Note: old but not outdated.
 

@@ -398,7 +398,7 @@ class XlaTestCase(unittest.TestCase):
 def temporary_env(**kwargs):
   """
     Temporarily set environment variables within the context.
-    
+
     Args:
         **kwargs: Key-value pairs representing environment variables to set.
                   For example: temporary_env(PATH='/new/path', DEBUG='1')
@@ -424,5 +424,5 @@ def temporary_env(**kwargs):
 
 
 # Taken from test_operations.py
-def _is_on_tpu():
+def is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'

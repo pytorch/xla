@@ -267,7 +267,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
   static const int64_t max_frame_count =
       runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_MAX_FRAME", 8);
 
-  constexpr std::string_view executation_output_prefix = "Execution Analysis: ";
+  constexpr std::string_view execution_output_prefix = "Execution Analysis: ";
   constexpr std::string_view compilation_output_prefix =
       "Compilation Analysis: ";
   constexpr std::string_view unexpected_execution_prefix =
@@ -297,9 +297,8 @@ void DebugUtil::analyze_graph_execution_python_frame(
 
   std::string_view debug_output_prefix =
       unexpected_execution ? unexpected_execution_prefix
-      : (source == GraphAnalysisSource::Compilation)
-          ? compilation_output_prefix
-          : executation_output_prefix;
+      : (source == GraphAnalysisSource::Compilation) ? compilation_output_prefix
+                                                     : execution_output_prefix;
   // TODO: Make this configurable.
   std::vector<torch::lazy::SourceLocation> frames =
       torch::lazy::GetPythonFrames();
@@ -319,7 +318,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
      << ((source == GraphAnalysisSource::Compilation) ? "Compilation Cause\n"
                                                       : "Execution Cause\n");
   if (source == GraphAnalysisSource::DynamoExecution) {
-    // when executation is from dynamo compiled graph, the python stack will not
+    // when execution is from dynamo compiled graph, the python stack will not
     // show any dynamo related python file since frame is already replaced. We
     // can either analyze the C++ call stack or rely on caller to pass a boolean
     // variable.

@@ -74,17 +74,17 @@ def gradient_accumulation(
 
     >>> # Note: This is a partial example, since it is dependent on the
     >>> # training model. Please refer to existing tests.
-    >>> 
+    >>>
     >>> from torch_xla.experimental.gradient_accumulation import (
     >>>    gradient_accumulation
     >>> )
-    >>> 
+    >>>
     >>> def train_step(input, label, other_tensor):
     >>>   output = model(input_id)
     >>>   loss = loss_fn(output, label)
     >>>   updated_other_tensor += 10
     >>>   return loss, updated_other_tensor
-    >>> 
+    >>>
     >>> some_tensor = torch.tensor(10).to(device)
     >>> for (data, target) in loader:
     >>>   # Assuming data's and target's first iterable dimension is 5.

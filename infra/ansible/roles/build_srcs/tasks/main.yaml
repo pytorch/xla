@@ -99,7 +99,7 @@
     # torch_xla.dev-cp310-cp310-linux_x86_64.whl
     # torch_xla-2.5.0.dev-cp310-cp310-linux_x86_64.whl
     # torch_xla-2.5.0.dev20240819-cp310-cp310-linux_x86_64.whl (extra copy)
-    # 
+    #
     # and so on.
 
     # rename file name like torch_xla-2.5.0+gitac7fd44-cp310-cp310-linux_x86_64.whl into
@@ -111,7 +111,7 @@
     # group 4 (can be empty): group 3 without +: `gitac7fd441`;
     # group 5: anything from next - to the end: `cp310-cp310-linux_x86_64.whl`.
     rename -v "s/^(.*?)\-(.*?)(\+([^ -]+))?\-(.+)/\1-\2.dev-\5/" *.whl
-    
+
     # At this point, we have *.dev*.whl files. Now we want to produce the other
     # versions as copies without losing the .dev one.
     current_date="$(date -u +%Y%m%d)"

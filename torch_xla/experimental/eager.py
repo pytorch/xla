@@ -6,7 +6,7 @@ import logging
 
 
 def eager_mode(enable: bool):
-  """Configure torch_xla's default executation mode.
+  """Configure torch_xla's default execution mode.
 
   Under eager mode only functions that was `torch_xla.compile`d will be
   traced and compiled. Other torch ops will be executed eagerly.

@@ -26,7 +26,7 @@ def _shard_map(func, mesh, input_specs, output_specs):
     Note:
       ``shard_map`` is an experimental API, and still subject to change. For an
       introduction to sharded data. For a more
-      in-depth look at using ``shard_map``, refer to 
+      in-depth look at using ``shard_map``, refer to
       [SPMD multi-device parallelism with shard_map](https://docs.jax.dev/en/latest/notebooks/shard_map.html)
 
     Args:
@@ -668,15 +668,15 @@ def fa_custom_backward(
         partition_spec,  # k
         partition_spec,  # v
         partition_spec,  # o
-        lm_partition_spec,  # l 
-        lm_partition_spec,  # m 
+        lm_partition_spec,  # l
+        lm_partition_spec,  # m
         segment_id_partition_spec,  # q_segment_ids
         segment_id_partition_spec,  # kv_segment_ids
         partition_spec,  # ab
         None,  # causal
         None,  # sm_scale
-        None,  # q_full_shape 
-        None,  # kv_full_shape 
+        None,  # q_full_shape
+        None,  # kv_full_shape
         None,  # ab_full_shape
         None,  # ctx_grad
     ]

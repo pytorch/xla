@@ -6,10 +6,10 @@ TEST_CDIR="$(dirname "$CDIR")"
 source "${TEST_CDIR}/utils/run_tests_utils.sh"
 
 # TODO: merge with other run_tests
-PYTHONPATH="$TEST_CDIR${PYTHONPATH:+:$PYTHONPATH}" python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_high
-PYTHONPATH="$TEST_CDIR${PYTHONPATH:+:$PYTHONPATH}" python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_default
-PYTHONPATH="$TEST_CDIR${PYTHONPATH:+:$PYTHONPATH}" python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_highest
-PYTHONPATH="$TEST_CDIR${PYTHONPATH:+:$PYTHONPATH}" python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_all
+(cd $TEST_CDIR && python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_high)
+(cd $TEST_CDIR && python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_default)
+(cd $TEST_CDIR && python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_highest)
+(cd $TEST_CDIR && python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_all)
 python3 "$TEST_CDIR/test_mat_mul_precision_get_and_set.py"
 python3 "$TEST_CDIR/test_operations.py" -v
 python3 "$TEST_CDIR/pjrt/test_runtime_tpu.py"

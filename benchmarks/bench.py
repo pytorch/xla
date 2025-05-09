@@ -16,7 +16,7 @@ def do_bench(fn,
     With small modifications implementation is taken from
     https://github.com/openai/triton/blob/a767ca41e189988740d35cbb9aecd873c4874a62/python/triton/testing.py#L79.
     Parts modified relate mostly to a custome syncing function used for XLA, and custom device.
-    
+
     Benchmark the runtime of the provided function. By default, return the median runtime of :code:`fn` along with
     the 20-th and 80-th performance percentile.
 

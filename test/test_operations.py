@@ -1833,7 +1833,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(met.metric_data("TransferToDeviceTime")[0], 4)
 
   @skipOnEagerDebug
-  def test_print_executation(self):
+  def test_print_execution(self):
     xla_device = xm.xla_device()
     xm.mark_step()
     xm.wait_device_ops()

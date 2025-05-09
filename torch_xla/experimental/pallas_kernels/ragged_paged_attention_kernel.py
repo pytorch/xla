@@ -530,7 +530,7 @@ def _compute_next_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
                                 num_logical_q_blks, kv_blk_size, seq_ids,
                                 effective_kv_lens_ref):
   """ Compute the next block indices.
-  
+
       Given the current kv_head_idx, logical_q_blk_idx, kv_blk_idx, return the next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx.
 
       Note, k_pages has shape [num_kv_heads, total_num_pages, page_size, head_dim].
@@ -751,9 +751,9 @@ def ragged_paged_attention(
     q: A [num_tokens, num_q_heads, head_dim] jax.Array.
     k_pages: A [num_kv_heads, total_num_pages, page_size, head_dim] jax.Array.
     v_pages: A [num_kv_heads, total_num_pages, page_size, head_dim] jax.Array.
-    kv_lens: A i32[num_tokens] jax.Array the effective kv length of each 
-      sequence. For example, if we have three sequences, lengths could be 
-      [16, 3, 1024, x, x, x, x, ...] where x is any value for padding. While 
+    kv_lens: A i32[num_tokens] jax.Array the effective kv length of each
+      sequence. For example, if we have three sequences, lengths could be
+      [16, 3, 1024, x, x, x, x, ...] where x is any value for padding. While
       lengths's shape is [num_tokens], only the first num_seqs values are valid.
       The rest should be ignored.
     page_indices: A i32[num_tokens, pages_per_sequence] jax.Array. Each entry
