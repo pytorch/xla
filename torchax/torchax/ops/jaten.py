@@ -147,6 +147,16 @@ def _aten_clone(x, memory_format=None):
   return x
 
 
+@op(torch.ops.aten._assert_tensor_metadata)
+def _aten_tensor_metadata(*args, **kwawrgs):
+  pass
+
+
+@op(torch.ops.aten._assert_tensor_metadata.default)
+def _aten_tensor_metadata_default(*args, **kwawrgs):
+  pass
+
+
 # aten.trunc
 @op(torch.ops.aten.trunc)
 def _aten_trunc(x):
