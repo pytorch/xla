@@ -4,13 +4,16 @@ import torch
 import torch_xla
 from torch_xla.experimental.assume_pure import assume_pure_torch
 
+
 class TestAssumePure(absltest.TestCase):
+
   def test_assume_pure_basic(self):
     # Arrange
     @assume_pure_torch(use_cache=True)
     def simple_torch_function(a, b):
       result = torch.sin(a @ b)
       return result
+
     # Act
     a = torch.ones((3, 3), device='xla', requires_grad=True)
     actual = simple_torch_function(a, a)
@@ -19,6 +22,7 @@ class TestAssumePure(absltest.TestCase):
     # Assert
     expected = torch.sin(torch.ones(3, 3) @ torch.ones(3, 3))
     torch.testing.assert_close(actual, expected, check_device=False)
+
 
 # TODO: Support assume_pure_torch with arbitraty inputs.
 # class TracingBenchmark(absltest.TestCase):
