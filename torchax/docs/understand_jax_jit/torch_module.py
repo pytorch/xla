@@ -21,7 +21,6 @@ class Linear(torch.nn.Module):
 
 # Running with torch native
 
-
 print('---- example 1 -----')
 m = Linear()
 x = torch.randn(2, 1000)
@@ -29,7 +28,7 @@ print(m(x))
 print(m.forward(x))
 
 with torch.inference_mode():
-# with torch.no_grad():
+  # with torch.no_grad():
   print(m.forward(x))
 
 print('---- example 2 -----')
@@ -43,8 +42,6 @@ with env:
   x = torch.randn(2, 1000)
   print(m2.forward(x))
 
-
-
 print('---- example 3 -----')
 # where is the jax jit?
 
@@ -56,12 +53,14 @@ print('---- example 3 -----')
 from torchax import tensor
 import jax
 
+
 def t2j(torch_tensor: tensor.Tensor) -> jax.Array:
   return torch_tensor._elem
 
 
 def j2t(jax_array: jax.Array) -> tensor.Tensor:
   return tensor.Tensor(jax_array, env)
+
 
 # # further notice t2j(j2t(x)) == x; j2t(t2j(x)) == x
 
@@ -81,13 +80,12 @@ print(jax_m(jax_x))
 ##   g = j2t . f . t2j (. denotes function composition)
 # The correspondence f -> g is an isomorphism too.
 
-
 jitted_jax_m = jax.jit(jax_m)
 print(jitted_jax_m(jax_x))
 print(jitted_jax_m.lower(jax_x).as_text())
 
-
 from torch.utils import _pytree as pytree
+
 
 def jax_m_functional(states, X):
   states_torch = pytree.tree_map(j2t, states)
@@ -98,27 +96,25 @@ def jax_m_functional(states, X):
   m2.load_state_dict(old_state_dict, assign=True, strict=False)
   return t2j(res)
 
+
 jax_weights = {
-  'weight': m2.weight._elem,
-  'bias': m2.bias._elem,
+    'weight': m2.weight._elem,
+    'bias': m2.bias._elem,
 }
 
 jitted_jax_m_functional = jax.jit(jax_m_functional)
 print(jitted_jax_m_functional.lower(jax_weights, jax_x).as_text())
-
 
 # ## interop module
 
 # print('---- exmaple 4 ----')
 # import torchax.interop
 
-
 # def m_functional(states, x):
 #   return torch.func.functional_call(m2, states, x)
 
 # with jax.checking_leaks():
 #   print(torchax.interop.jax_jit(m_functional)(m2.state_dict(), x))
-
 
 # # Experiment if time:
 # # 1. torch buffer persistence = False

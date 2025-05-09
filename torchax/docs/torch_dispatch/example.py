@@ -8,9 +8,9 @@ class Subclass(torch.Tensor):
 
   def __new__(cls, raw_data, requires_grad=False):
     return torch.Tensor._make_subclass(
-      cls,
-      raw_data,
-      require_grad=requires_grad,
+        cls,
+        raw_data,
+        require_grad=requires_grad,
     )
 
   def __init__(self, raw_data=None, requires_grad=False):
@@ -22,6 +22,7 @@ class Subclass(torch.Tensor):
   def __torch_function__(cls, func, types, args=(), kwargs=None):
     kwargs = kwargs or {}
     print(f'func is {func}')
+
     def unpack(x):
       if isinstance(x, Subclass):
         return x.raw_data
@@ -42,23 +43,24 @@ class Subclass(torch.Tensor):
 
 
 class MyModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.fc1 = nn.Linear(28 * 28, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
 
-    def forward(self, x):
-        x = x.view(-1, 28 * 28)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
+  def __init__(self):
+    super().__init__()
+    self.fc1 = nn.Linear(28 * 28, 120)
+    self.fc2 = nn.Linear(120, 84)
+    self.fc3 = nn.Linear(84, 10)
+
+  def forward(self, x):
+    x = x.view(-1, 28 * 28)
+    x = F.relu(self.fc1(x))
+    x = F.relu(self.fc2(x))
+    x = self.fc3(x)
+    return x
 
 
 model = MyModel()
 
-x = torch.randn(10, 28*28)
+x = torch.randn(10, 28 * 28)
 x2 = Subclass(x)
 print(model(x2))
 
