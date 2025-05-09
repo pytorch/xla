@@ -127,3 +127,6 @@ def compile(fn, options: Optional[CompileOptions] = None):
     raise RuntimeError('dynamo mode is not supported yet')
   elif options.mode == 'export':
     raise RuntimeError('export mode is not supported yet')
+
+# Intercept torch._sync as no-op
+torch._sync = lambda *args, **kwargs: None
