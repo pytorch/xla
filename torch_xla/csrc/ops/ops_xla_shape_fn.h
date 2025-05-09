@@ -104,6 +104,10 @@ xla::Shape CeilOutputShape(const torch::lazy::Value& input);
 xla::Shape CholeskyOutputShape(const torch::lazy::Value& input,
                                const bool upper);
 
+xla::Shape ClampOutputShape(const torch::lazy::Value& input,
+                            const std::optional<torch::lazy::Value>& min,
+                            const std::optional<torch::lazy::Value>& max);
+
 xla::Shape ClampTensorOutputShape(const torch::lazy::Value& input,
                                   const std::optional<torch::lazy::Value>& min,
                                   const std::optional<torch::lazy::Value>& max);
