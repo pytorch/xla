@@ -39,13 +39,13 @@ Save your tutorial as `*_tutorial.py`.
 We do not yet have an automated build system for runnable tutorials that matches 
 PyTorch. For now, include manual instructions and check-in the output ipynb and MD files. 
 
+TODO: Automate build of runnable tutorials. https://github.com/pytorch/xla/issues/9136
+
 Note that the existing .gitattributes in this directory will prevent diffs and merges
-on the ipynb, which is illegible json. 
+on the ipynb's json representation, which is difficult to diff. 
 
-TODO: Automate the docs build system for runnable tutorials. 
-
-Add your runnable tutorial to the list below with build instructions, necessary environments,
-and steps to manually verify correctness.
+Add your runnable tutorial to the list below with build instructions, 
+necessary environments, and steps to manually verify correctness.
 
 ### source/tutorials/precision_tutorial.py
 
@@ -53,17 +53,21 @@ Run on a TPU machine.
 
 One time installs not in requirements.txt:
 
+```sh
 conda install -c conda-forge pandoc
+```
 
 Run every time: 
 
+```sh
 py2nb source/tutorials/precision_tutorial.py
 jupyter nbconvert --to notebook --execute --inplace source/tutorials/precision_tutorial.ipynb 
 # Ignore SIGTERM
-# Manually verify precision_tutorial.ipynb that the final line shows a delta, see below.
+# Manually verify that the final line of precision_tutorial.ipynb matches the snippet below.
 ./docs_build.sh
 # Download build/ to your local machine and visually inspect the precision_tutorial.html in a browser. 
 # Look for issues like headers that didn't render and mathjax that didn't render. 
+```
 
 The final code output in the ipynb and html should look like this: 
 ```

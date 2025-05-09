@@ -20,30 +20,29 @@
 # |
 # | Google TPUs are built with matrix multiplication optimized on silicon
 # | in a physical module called a Matrix Multiply Unit or MXU.
-# | The underlying technology is a systolic array. To maintain speed,
-# | researchers identified an inexpensive tradeoff: running matmuls in
-# | a floating point format called BF16, instead of FP32. BF16 is less
-# | precise than FP32, but
-# | [the research](https://cloud.google.com/blog/products/ai-machine-learning/bfloat16-the-secret-to-high-performance-on-cloud-tpus)
-# | showed that neural networks did not need the precision of FP32.
-# | BF16 does however have the same range of FP32, and important
-# | improvement over FP16.
+# | To maintain speed, researchers identified an inexpensive tradeoff.
+# | [The research](https://cloud.google.com/blog/products/ai-machine-learning/bfloat16-the-secret-to-high-performance-on-cloud-tpus)
+# | showed that neural networks were able to train with less precision
+# | than FP32
+# | \"without having any noticeable impact on model accuracy\".
+# | The same was not true for range. Due to operations like norms,
+# | FP32's range was important to keep. The solution was bfloat16:
+# | the same range as FP32, with less precision.
 # |
-# | Nvidia V100 and later GPUs also include specialized matrix multiplication
-# | units branded as TensorCores. As of A100 and later,
-# | the native math format for Nvidia Tensorcores is the named
-# | TF32, which is really better understood as "BF19": same
-# | range as BF16 and FP32, with 19 total bits.
+# | Nvidia V100 and newer GPUs also include specialized matrix multiplication
+# | units called TensorCores. These GPUs use a numerical format called
+# | TF32, which has the same range as FP32 and bfloat16, but an
+# | intermediate precision (10 bits of mantissa)
+# | because TF32 only has 19 total bits.
 # |
-# | What this means is that for both Google TPUs and Nvidia TensorCores,
-# | multiplying matrices that are apparently in FP32 will actually actually
-# | yield results in BF16 or "BF19" respectively.
+# | Matrix multiplication operations performed on FP32 values will
+# | yield results in bfloat16 for TPUs and BF19 for Nvidia GPUs.
 # |
-# | ![bits](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/tf32-bf16-fp16-fp32.png)
+# | ![bits layout](../_static/img/bit_layout.svg)
 
 # | ## Higher precision math on lower precision hardware
 # |
-# | Even with the seven mantissa bits of BF16, it is possible to calculate
+# | Even with the 7 mantissa bits of bfloat16, it is possible to calculate
 # | math in higher precision. This is done by breaking up a number into
 # | its components. To build intuition, imagine an MXU
 # | that supports 2 digits in a base-10 (decimal) number system.
@@ -53,7 +52,7 @@
 # | two numbers with 4 digits of precision generates twice as many
 # | digits of precision in the result.
 # |
-# | The simplest approach is to round down the numbers to $9.1$ and $9.2$,
+# | The simplest approach is to round the numbers to $9.1$ and $9.2$,
 # | resulting in $8.372e-1$. This is conceptually the "default" precision
 # | setting of PyTorch/XLA on TPU.
 # |
@@ -102,7 +101,7 @@ torch.set_printoptions(precision=20, sci_mode=False, linewidth=240)
 
 # -
 eps = torch.finfo(torch.bfloat16).eps
-print(f"BF16 epsilon: {eps}")
+print(f"bfloat16 epsilon: {eps}")
 print(f"return type of torch.finfo: {type(eps)}")
 
 # | The epsilon is also defined as 1 / 2^p, where p is the number of bits in the mantissa.
@@ -162,7 +161,7 @@ def get_rand_matrix():
 # | ## Examining a number
 # |
 # | Generate an FP32 number representing 1 + bf16_eps/2. This
-# | will put one extra bit out of reach of a BF16's mantissa.
+# | will put one extra bit out of reach of a bfloat16's mantissa.
 
 # -
 one_plus_half_eps = binary_fraction_to_fp32("0b1." + "0" * 7 + "1" + "0" * 15)
@@ -198,7 +197,7 @@ print(f"X: {fp32_to_binary_fraction(X[0][0].item())}")
 print(f"Y: {fp32_to_binary_fraction(Y[0][0].item())}")
 print(f"Z: {fp32_to_binary_fraction(Z[0][0].item())}")
 
-# | ## FP32 precision on BF16 hardware
+# | ## FP32 precision on bfloat16 hardware
 # |
 # | The 3 and 6 pass approaches generate more bits of precision.
 # | Turn on the highest precision mode (six passes) and run
