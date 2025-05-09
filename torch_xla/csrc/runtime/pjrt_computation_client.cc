@@ -1,9 +1,7 @@
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 
 #include <algorithm>
-#include <future>
 #include <stdexcept>
-#include <unordered_set>
 #include <vector>
 
 #include "absl/status/status.h"
@@ -16,16 +14,13 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
-#include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
-#include "torch_xla/csrc/thread_pool.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
-#include "xla/layout_util.h"
 #include "xla/literal.h"
 #include "xla/pjrt/c/pjrt_c_api_gpu_extension.h"
 #include "xla/pjrt/c/pjrt_c_api_wrapper_impl.h"
@@ -33,7 +28,6 @@
 #include "xla/pjrt/pjrt_c_api_client.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
-#include "xla/protobuf_util.h"
 #include "xla/service/custom_call_target_registry.h"
 #include "xla/shape.h"
 
@@ -645,7 +639,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       throw std::invalid_argument(
           std::string(maybe_executable.status().message()));
     }
-    auto executable = std::move(maybe_executable).value();
+    auto executable = *std::move(maybe_executable);
 
     auto memory_stats_status_or = executable->GetCompiledMemoryStats();
     if (memory_stats_status_or.ok()) {

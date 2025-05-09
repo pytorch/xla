@@ -502,6 +502,7 @@ ptxla_cc_test(
         "@xla//xla/tests:literal_test_util",
         "@xla//xla/tools:hlo_module_loader",
     ],
+    timeout = "short",
 )
 
 # ptxla_cc_test(
