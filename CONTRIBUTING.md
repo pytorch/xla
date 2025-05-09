@@ -121,7 +121,16 @@ commands on your Linux machine directly, outside of the container.
        [bazel remote build caching](https://github.com/pytorch/xla/blob/master/docs/source/contribute/bazel.md#remote-caching)
        for faster builds.
 
-2.  Open a new terminal window in VS Code. Since you are running as root in this
+1.  Make sure VSCode discovers the `pytorch/xla` repo so that diff highlighting
+    works (by default VSCode cannot discover it as it's nested inside the
+    `pytorch` repo):
+
+    1. Go to File > Add Folder to Workspace..., and add the `pytorch/xla`
+       folder.
+    1. In the repository list, you should now see 3 repos: `xla` (for
+       `pytorch/xla`), `pytorch`, and `vision`.
+
+1.  Open a new terminal window in VS Code. Since you are running as root in this
     container, mark the repository directories as safe. The commands below assume
     your workspace directory is `torch`, update the commands to use your workspace
     directory.
@@ -132,7 +141,7 @@ commands on your Linux machine directly, outside of the container.
     git config --global --add safe.directory /workspaces/torch/vision
     ```
 
-3.  In the terminal window, run the following commands to build PyTorch,
+1.  In the terminal window, run the following commands to build PyTorch,
     TorchVision, and PyTorch/XLA:
 
     ```bash
@@ -153,7 +162,7 @@ commands on your Linux machine directly, outside of the container.
       -f https://storage.googleapis.com/libtpu-releases/index.html
     ```
 
-4.  If you are running on a TPU VM, ensure `torch` and `torch_xla` were built and
+1.  If you are running on a TPU VM, ensure `torch` and `torch_xla` were built and
     installed correctly:
 
     ```bash
