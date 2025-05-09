@@ -514,6 +514,10 @@ def functional_linear(self, weights, bias=None):
         res += bias
     return res
 
+@register_function(torch.ops.xla.dynamo_set_buffer_donor_)
+def _dynamo_set_buffer_donor(self, donor):
+    pass
+
 @register_function(torch.ops.xla.ragged_paged_attention)
 def _ragged_paged_attention(         
                 q: jax.Array, # [max_num_batched_tokens, num_q_heads, head_dim]
