@@ -28,12 +28,12 @@ import torch.utils._pytree as torch_pytree
 
 def _checkpoint(jax_model, path: pathlib.Path):
   torch.save(
-    torch_pytree.tree_map_only(
-      torchax.tensor.Tensor,
-      torchax.tensor.Tensor.torch,
-      jax_model.state_dict(),
-    ),
-    path,
+      torch_pytree.tree_map_only(
+          torchax.tensor.Tensor,
+          torchax.tensor.Tensor.torch,
+          jax_model.state_dict(),
+      ),
+      path,
   )
 
 
@@ -57,14 +57,13 @@ def main():
     cat = torch.cat([torch.tensor(ex) for ex in exs["ids"]])
     total_len = cat.size()[0]
     num_chunks = total_len // 1025
-    split = torch.split(cat[: num_chunks * 1025], 1025)
+    split = torch.split(cat[:num_chunks * 1025], 1025)
     xs = [ex[:-1] for ex in split]
     ys = [ex[1:] for ex in split]
     return {"x": xs, "y": ys}
 
   dataset = dataset.map(
-    group_texts, batched=True, remove_columns=["text", "ids"], num_proc=16
-  )
+      group_texts, batched=True, remove_columns=["text", "ids"], num_proc=16)
   dataset.shard(dist.get_world_size(), dist.get_rank())
   env = torchax.default_env()
 
@@ -75,8 +74,7 @@ def main():
   local_batch_size = jax.local_device_count() * per_device_batch_size
   global_batch_size = jax.device_count() * per_device_batch_size
   dataloader = torch.utils.data.DataLoader(
-    dataset.with_format("torch"), batch_size=local_batch_size, drop_last=True
-  )
+      dataset.with_format("torch"), batch_size=local_batch_size, drop_last=True)
 
   # Create model and wrap with DDP
   def create_model():
@@ -89,12 +87,9 @@ def main():
     return GPT(model_config)  # .to(dtype=torch.bfloat16)
 
   checkpoint_subdir = pathlib.Path(
-    "checkpoints"
-  ) / datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+      "checkpoints") / datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
   checkpoint_subdir.mkdir(parents=True)
-  jax_model = torchax.distributed.DistributedDataParallel(
-    create_model(), env
-  )
+  jax_model = torchax.distributed.DistributedDataParallel(create_model(), env)
 
   # TODO: LR scheduler
   jax_optimizer = optim.SGD(jax_model.parameters(), lr=6e-4, weight_decay=0.1)
@@ -115,12 +110,10 @@ def main():
   for epoch in range(1):
     print("epoch", epoch)
     for i, batch in enumerate(
-      tqdm(dataloader, unit="tok", unit_scale=tokens_per_batch)
-    ):
+        tqdm(dataloader, unit="tok", unit_scale=tokens_per_batch)):
       data, target = batch["x"], batch["y"]
       jax_data, jax_target = env.j2t_iso(
-        (jax_model.shard_input(data), jax_model.shard_input(target))
-      )
+          (jax_model.shard_input(data), jax_model.shard_input(target)))
       jax_output, jax_loss = step_fn(jax_data, jax_target)
 
       if i % 1000 == 0:
@@ -133,9 +126,9 @@ def main():
       input_jax = torch.tensor([inp], dtype=torch.long)
       # TODO: need to access underlying module for methods
       jax_generated = jax_model._module.generate(
-        jax_model.replicate_input(input_jax),
-        100,
-        do_sample=False,
+          jax_model.replicate_input(input_jax),
+          100,
+          do_sample=False,
       )
 
   print("input sequence:", inp, enc.decode(inp))

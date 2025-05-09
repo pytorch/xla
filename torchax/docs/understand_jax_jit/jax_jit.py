@@ -1,6 +1,4 @@
-
 ## Please read: https://jax.readthedocs.io/en/latest/notebooks/thinking_in_jax.html
-
 
 ## Goal 1. Jax jit what it is
 ## Goal 2. Illustrate that changing shapes == recompile
@@ -13,11 +11,13 @@ import numpy as np
 from jax import jit
 import jax
 
+
 def norm(X):
   for i in range(10):
     X = X @ X
     X = X - X.mean(0)
   return X / X.std(0)
+
 
 norm_compiled = jit(norm)
 
@@ -51,10 +51,8 @@ np.random.seed(1701)
 #   end = time.perf_counter()
 #   print(f'iteration {i}: norm_compiled: {end - start}')
 
-
 #Example 4: print out the graph
 print('--- example 4 ---')
-
 
 X = jnp.array(np.random.rand(1000, 1000))
 
@@ -64,6 +62,7 @@ X = jnp.array(np.random.rand(1000, 1000))
 # Example 5: What happen to closures
 print('--- example 5 ---')
 
+
 def addx(y):
   #print('y is ', y)
   #print('X is ', X)
@@ -72,7 +71,9 @@ def addx(y):
   #jax.debug.breakpoint()
   return y + X
 
-addx_jitted = jax.jit(addx).lower(jax.ShapeDtypeStruct((1000, 1000), jnp.float32.dtype))
+
+addx_jitted = jax.jit(addx).lower(
+    jax.ShapeDtypeStruct((1000, 1000), jnp.float32.dtype))
 #print(addx_jitted.as_text())
 #print(addx_jitted.compile()(X))
 
@@ -80,6 +81,7 @@ addx_jitted = jax.jit(addx).lower(jax.ShapeDtypeStruct((1000, 1000), jnp.float32
 # https://jax.readthedocs.io/en/latest/debugging/print_breakpoint.html
 
 # Example 6: What happens with class attr
+
 
 class Model:
 
