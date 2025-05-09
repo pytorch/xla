@@ -75,12 +75,16 @@ class ScanTest(TestBase):
             if v is not None else 0, tree_leaves(t)), torch.tensor(0.0))
     dupe = lambda v: v.detach().clone().requires_grad_(v.requires_grad)
 
+    def _requires_grad(tensors):
+      return any(tree_flatten(tree_map(lambda v: v.requires_grad, tensors))[0])
+
     # Actual output
     init_scan = tree_map(dupe, init)
     xs_scan = tree_map(dupe, xs)
     final_carry, ys = scan(fn, init_scan, xs_scan, partition_fn=partition_fn)
     # Add up all leaves and `backward()` once.
-    (squish(final_carry) + squish(ys)).backward()
+    if _requires_grad(final_carry) or _requires_grad(ys):
+      (squish(final_carry) + squish(ys)).backward()
     torch_xla.sync()
 
     # Expected output
@@ -88,7 +92,8 @@ class ScanTest(TestBase):
     xs_loop = tree_map(dupe, xs)
     expected_final_carry, expected_ys = _loopy_scan(fn, init_loop, xs_loop)
     # Add up all leaves and `backward()` once.
-    (squish(expected_final_carry) + squish(expected_ys)).backward()
+    if _requires_grad(expected_final_carry) or _requires_grad(expected_ys):
+      (squish(expected_final_carry) + squish(expected_ys)).backward()
     torch_xla.sync()
 
     # Compare values
@@ -116,6 +121,31 @@ class ScanTest(TestBase):
     init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
     xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
                       requires_grad=True,
+                      device=self.device)
+    final_carry, ys = self.run_test(step_fn, init, xs)
+
+    # Also ensure that our loop-based scan is correct, with manual checks
+    # that replicate the step_fn.
+    expected_final_carry = torch.sum(xs, dim=0) + init
+    expected_ys = torch.cumsum(xs, dim=0)
+    self.compare_pytree(expected_final_carry, final_carry)
+    self.compare_pytree(expected_ys, ys)
+
+  def test_scan_long_tensor(self):
+    """This test uses `scan` to implement `torch.cumsum`."""
+
+    def step_fn(carry, x):
+      new_carry = carry + x
+      y = new_carry
+      return new_carry, y
+
+    init = torch.tensor([0.0, 0.0],
+                        requires_grad=False,
+                        device=self.device,
+                        dtype=torch.long)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      requires_grad=False,
+                      dtype=torch.long,
                       device=self.device)
     final_carry, ys = self.run_test(step_fn, init, xs)
 
