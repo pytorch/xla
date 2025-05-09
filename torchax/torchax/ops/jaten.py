@@ -1337,10 +1337,28 @@ def _aten_max_pool2d_with_indices(
 
   return y, indices
 
+
+# Aten ops registered under the `xla` library.
 try:
+
   @op(torch.ops.xla.max_pool2d_forward)
   def _xla_max_pool2d_foward(*args, **kwargs):
     return _aten_max_pool2d_with_indices(*args, **kwargs)[0]
+
+  @op(torch.ops.xla.aot_mark_sharding)
+  def _xla_aot_mark_sharding(t, mesh: str, partition_spec: str):
+    from jax.sharding import PartitionSpec as P, NamedSharding
+    import ast
+    import torch_xla.distributed.spmd as xs
+    pmesh = xs.Mesh.from_str(mesh)
+    assert pmesh is not None
+    partition_spec_eval = ast.literal_eval(partition_spec)
+    op_sharding = tuple(
+        str(i) if i is not None else i for i in partition_spec_eval)
+    jmesh = pmesh.get_jax_mesh()
+    return jax.lax.with_sharding_constraint(
+        t, NamedSharding(jmesh, P(*op_sharding)))
+
 except AttributeError:
   pass
 
