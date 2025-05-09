@@ -15,7 +15,7 @@ from torchax.ops import ops_registry
 from torchax.ops import op_base, mappings
 from torchax import interop
 from torchax.ops import jax_reimplement
-from torchax.view import View
+from torchax.view import View, NarrowInfo, ReshapeInfo
 from torchax.tensor import Tensor
 # Keys are OpOverload, value is a callable that takes
 # Tensor
@@ -57,6 +57,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.scatter_add_: torch.ops.aten.scatter_add,
   torch.ops.aten.scatter_reduce_.two: torch.ops.aten.scatter_reduce,
   torch.ops.aten.scatter_: torch.ops.aten.scatter,
+  torch.ops.aten.index_put_: torch.ops.aten.index_put,
 }
 
 # Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
@@ -103,9 +104,10 @@ def op(*aten, **kwargs):
   torch.ops.aten.view,
   torch.ops.aten._unsafe_view,
   torch.ops.aten.reshape,
+  is_jax_function=False,
 )
 def _aten_unsafe_view(x, shape):
-  return jnp.reshape(x, shape)
+  return View(x, ReshapeInfo(shape=shape), env=x._env)
 
 
 @op(torch.ops.aten.add.Tensor)
@@ -128,6 +130,8 @@ def _aten_copy(x, y, memory_format=None):
   if isinstance(x, View):
     x.update(y)
     return x
+  if isinstance(y, View):
+    y = y.torch()
 
   if x.ndim == 1 and y.ndim == 0:
     # case of torch.empty((1,)).copy_(tensor(N))
@@ -397,8 +401,8 @@ def _aten_triu(m, k):
   return jnp.triu(m, k)
 
 
-@op(torch.ops.aten.slice)
-@op(torch.ops.aten.slice_copy)
+@op(torch.ops.aten.slice, is_jax_function=False, is_view_op=True)
+@op(torch.ops.aten.slice_copy, is_jax_function=False, is_view_op=True)
 def _aten_slice(self, dim=0, start=None, end=None, step=1):
   if dim < 0:
     dim += self.ndim
@@ -411,7 +415,7 @@ def _aten_slice(self, dim=0, start=None, end=None, step=1):
       dims.append(sl)
     else:
       dims.append(slice(None, None, None))
-  return self[tuple(dims)]
+  return View(self, NarrowInfo(slices=tuple(dims)), env = self._env)
 
 
 @op(torch.ops.aten.detach)
@@ -752,7 +756,6 @@ def _aten_empty_strided(sizes, stride, dtype=None, **kwargs):
   return jnp.empty(sizes, dtype=dtype)
 
 
-@op(torch.ops.aten.index_put_)
 @op(torch.ops.aten.index_put)
 def _aten_index_put(self, indexes, values, accumulate=False):
   indexes = [slice(None, None, None) if i is None else i for i in indexes]
