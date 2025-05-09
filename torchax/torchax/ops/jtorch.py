@@ -17,7 +17,6 @@ from torchax.ops import op_base, mappings, jaten
 import torchax.tensor
 from torchax.view import View, NarrowInfo
 import torch.utils._pytree as pytree
-from torchax.ops.ragged_attention import ragged_paged_attention as ragged_paged_attention_kernel
 
 
 def register_function(torch_func, **kwargs):
@@ -536,7 +535,7 @@ def _ragged_paged_attention(
                 vmem_limit_bytes: int | None = None,
 ):
 
-  
+  from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_paged_attention_kernel
   return ragged_paged_attention_kernel(
     q = q,  
     kv_pages = kv_pages,  
