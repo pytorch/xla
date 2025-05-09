@@ -22,25 +22,33 @@ import torchax
 ##   torch_xla_regex = r'%arg.: tensor<8x256x\?xf32>.*%arg.: tensor<8x128x256xf32>.*->.*tensor<8x128x\?xf32>'
 ##   torchax_regex = r'%arg.: tensor<8x128x256xf32>.*%arg.: tensor<8x256x\?xf32>.*->.*tensor<8x128x\?xf32>'
 
+
 # Shim to run tests
 class ExportAdapter():
+
   def __init__(self, export):
     self.export = export
 
   def get_stablehlo_text(self):
     return self.export.mlir_module()
 
+
 def exported_program_to_stablehlo(exported):
   return ExportAdapter(exp2shlo(exported)[1])
 
+
 def wrap_func_as_nn_module(f):
+
   class M(torch.nn.Module):
+
     def __init__(self):
       super().__init__()
 
     def forward(self, *args):
       return f(*args)
+
   return M().eval()
+
 
 class UnboundedDynamismExportTest(unittest.TestCase):
 

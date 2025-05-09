@@ -12,30 +12,31 @@ __version__ = "0.0.4"
 VERSION = __version__
 
 __all__ = [
-  'default_env',
-  'extract_jax',
-  'enable_globally',
+    'default_env',
+    'extract_jax',
+    'enable_globally',
 ]
 
 from jax._src import xla_bridge
+
 os.environ.setdefault('ENABLE_RUNTIME_UPTIME_TELEMETRY', '1')
 
 # torchax:oss-begin
 if getattr(jax.config, 'jax_pjrt_client_create_options', None):
   jax.config.update(
-    'jax_pjrt_client_create_options',
-    f'ml_framework_name:PyTorch/XLA2;ml_framework_version:{"v0.0.1"}'
-  )
+      'jax_pjrt_client_create_options',
+      f'ml_framework_name:PyTorch/XLA2;ml_framework_version:{"v0.0.1"}')
 # torchax:oss-end
 
 env = None
+
+
 def default_env():
   global env
 
   if env is None:
     env = tensor.Environment()
   return env
-
 
 
 def extract_jax(mod: torch.nn.Module, env=None):
@@ -55,20 +56,23 @@ def extract_jax(mod: torch.nn.Module, env=None):
 
   return states, jax_func
 
+
 def enable_globally():
   env = default_env().enable_torch_modes()
   return env
 
+
 def disable_globally():
   global env
   default_env().disable_torch_modes()
+
 
 @contextlib.contextmanager
 def disable_temporarily():
   prev = default_env().enabled
   if prev:
     disable_globally()
-  yield()
+  yield ()
   if prev:
     enable_globally()
 
@@ -76,11 +80,14 @@ def disable_temporarily():
 torch.utils.rename_privateuse1_backend('jax')
 unsupported_dtype = [torch.quint8]
 torch.utils.generate_methods_for_privateuse1_backend(
-  for_tensor=True, for_module=True, for_storage=True,
-  unsupported_dtype=unsupported_dtype)
+    for_tensor=True,
+    for_module=True,
+    for_storage=True,
+    unsupported_dtype=unsupported_dtype)
 
 import jax
 import torchax.device_module
+
 torch._register_device_module('jax', torchax.device_module)
 
 
@@ -96,13 +103,13 @@ def enable_performance_mode():
   default_env().config.internal_respect_torch_return_dtypes = False
 
 
-
 @dataclasses.dataclass
 class CompileOptions:
   # only valid if compiling nn.Module
-  methods_to_compile: List[str] = dataclasses.field(default_factory=lambda: ['forward'])
+  methods_to_compile: List[str] = dataclasses.field(
+      default_factory=lambda: ['forward'])
   jax_jit_kwargs: Dict[str, Any] = dataclasses.field(default_factory=dict)
-  mode: str = 'jax' # or dynamo or export
+  mode: str = 'jax'  # or dynamo or export
 
 
 def compile(fn, options: Optional[CompileOptions] = None):

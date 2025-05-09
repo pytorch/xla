@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.10'
           cache: 'pip'
-      - run: pip install yapf==0.40.2
+      - run: pip install yapf==0.40.2  # N.B.: keep in sync with `torchax/dev-requirements.txt`, `infra/ansible/config/pip.yaml`
 
       - name: Check no TORCH_PIN
         if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
@@ -66,7 +66,7 @@ jobs:
             exit 1
           fi
 
-          yapf -i -r *.py test/ scripts/ torch_xla/ benchmarks/
+          yapf -i -r *.py test/ scripts/ torch_xla/ benchmarks/ torchax/
           git_status=$(git status --porcelain)
           if [[ $git_status ]]; then
             git diff

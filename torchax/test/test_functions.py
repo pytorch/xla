@@ -7,16 +7,17 @@ import torchax.tensor
 
 
 class SeqModel(torch.nn.Module):
-    """ Architecture is LLM generated """
-    def __init__(self):
-        super().__init__()
-        self.gru = torch.nn.GRU(20, 30, batch_first=True)
-        self.linear = torch.nn.Linear(30, 1)
+  """ Architecture is LLM generated """
 
-    def forward(self, x: torch.Tensor):
-        output, _ = self.gru(x)  #output, hidden state
-        output = self.linear(output)
-        return output
+  def __init__(self):
+    super().__init__()
+    self.gru = torch.nn.GRU(20, 30, batch_first=True)
+    self.linear = torch.nn.Linear(30, 1)
+
+  def forward(self, x: torch.Tensor):
+    output, _ = self.gru(x)  #output, hidden state
+    output = self.linear(output)
+    return output
 
 
 class TestTorchFunctions(parameterized.TestCase):
@@ -28,11 +29,10 @@ class TestTorchFunctions(parameterized.TestCase):
 
   @parameterized.named_parameters(
       ('tensor_2d', [[0.1, 1.2], [2.2, 3.1], [4.9, 5.2]]),
-      ('tensor_1d', [0, 1]),
-      ('tensor_scalar', 3.14159),
-      ('tensor_empty', []),
-      ('tensor_dtype', [[0.11111, 0.222222, 0.3333333]], {'dtype': torch.float64})
-  )
+      ('tensor_1d', [0, 1]), ('tensor_scalar', 3.14159), ('tensor_empty', []),
+      ('tensor_dtype', [[0.11111, 0.222222, 0.3333333]], {
+          'dtype': torch.float64
+      }))
   def test_tensor_constructor(self, arg, kwargs=None):
     kwargs = kwargs or {}
     expected = torch.tensor(arg, **kwargs)
@@ -43,25 +43,25 @@ class TestTorchFunctions(parameterized.TestCase):
     torch.testing.assert_close(torchax.tensor.j2t(actual._elem), expected)
 
   def test_dont_capture_conversion(self):
-    t = torch.tensor([1,2,3])
+    t = torch.tensor([1, 2, 3])
     with self.env:
       t2 = self.env.to_xla(t)
       # assert no exceptions
 
   def test_brackets(self):
     with self.env:
-      a = torch.randn((2,3))
+      a = torch.randn((2, 3))
       a[1] = 9
       self.assertEqual(a[1, 0].item(), 9)
 
   def test_bernoulli_inplace(self):
     with self.env:
-      a = torch.randn((2,3))
+      a = torch.randn((2, 3))
       a.bernoulli_(0.4)
 
   def test_flatten(self):
     with self.env:
-      a = torch.randn((2,3,4))
+      a = torch.randn((2, 3, 4))
       a = a.flatten(0, 1)
       self.assertEqual(tuple(a.shape), (6, 4))
 
@@ -86,8 +86,7 @@ class TestTorchFunctions(parameterized.TestCase):
       model.to('jax')
       x = x.to('jax')
       res2 = model(x)
-      self.assertTrue(
-        torch.allclose(res, torchax.tensor.j2t(res2.jax())))
+      self.assertTrue(torch.allclose(res, torchax.tensor.j2t(res2.jax())))
 
   def test_randn_requires_grad(self):
     x = torch.randn((3, 3), requires_grad=True, device='jax')

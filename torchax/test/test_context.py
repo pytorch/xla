@@ -47,7 +47,8 @@ class TestContext(unittest.TestCase):
       y = torch.randn((3, 3))
       self.assertIsInstance(y, tensor.Tensor)
 
-    self.assertTrue(torch.equal(torchax.tensor.j2t(x._elem), torchax.tensor.j2t(y._elem)))
+    self.assertTrue(
+        torch.equal(torchax.tensor.j2t(x._elem), torchax.tensor.j2t(y._elem)))
 
   def test_different_manual_seed(self):
     with xla_env:
@@ -59,9 +60,11 @@ class TestContext(unittest.TestCase):
       y = torch.randn((3, 3))
       self.assertIsInstance(y, tensor.Tensor)
 
-    self.assertFalse(torch.equal(torchax.tensor.j2t(x._elem), torchax.tensor.j2t(y._elem)))
+    self.assertFalse(
+        torch.equal(torchax.tensor.j2t(x._elem), torchax.tensor.j2t(y._elem)))
 
   def test_jit_with_rng(self):
+
     @xla_env
     def random_op():
       x = torch.randn(3, 3)

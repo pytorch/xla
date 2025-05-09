@@ -9,17 +9,16 @@ from torch.utils import _pytree as pytree
 from torchax import tensor
 import torchax
 
-
 skiplist = {
     "_segment_reduce",
-    "bincount", # NOTE: dtype for int input torch gives float. This is weird.
+    "bincount",  # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
     "cat",
     "cholesky_solve",
     "diagonal_copy",
     "geqrf",
-    "histogram", # hard op: AssertionError: Tensor-likes are not close!
-    "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
+    "histogram",  # hard op: AssertionError: Tensor-likes are not close!
+    "histogramdd",  # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
     "index_reduce",
     "kthvalue",
     "linalg.ldl_solve",
@@ -47,58 +46,67 @@ skiplist = {
 }
 
 not_support_ops_list = {
-  "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
-  "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
-               # such as 0 to negative power.
-  "to_sparse", # We are not supporting sparse tensors yet.
-  "nn.functional.rrelu", # pure torch result match torchax test result, only OpInfo mismatch: https://gist.github.com/ManfeiBai/1a449b15f4e946bfcaa3e5ef86da20f4
+    "chalf",  # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
+    "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
+    # such as 0 to negative power.
+    "to_sparse",  # We are not supporting sparse tensors yet.
+    "nn.functional.rrelu",  # pure torch result match torchax test result, only OpInfo mismatch: https://gist.github.com/ManfeiBai/1a449b15f4e946bfcaa3e5ef86da20f4
 }
 
 # These inputs are themselves views
 # We cannot know how are the views created so cannot replicate the behavior.
 variant_test_name_to_skip = {
-  "partial_views",
+    "partial_views",
 }
 
 random_ops = {
-  'empty',
-  'empty_like',
-  'empty_permuted',
-  'empty_strided',
-  'bernoulli',
-  'geometric',
-  'new_empty',
-  'new_empty_strided',
-  'randint_like',
-  'randn',
-  'randn_like',
-  'rand',
-  'rand_like',
-  'uniform',
-  'multinomial',
-  # Dropout is not deterministic https://pytorch.org/docs/stable/generated/torch.nn.functional.feature_alpha_dropout.html
-  'nn.functional.feature_alpha_dropout',
-  'cauchy',
-  'exponential',
-  'log_normal',
-  'randint',
-  'nn.functional.dropout2d',
-  'nn.functional.dropout3d',
-  'nn.functional.dropout',
+    'empty',
+    'empty_like',
+    'empty_permuted',
+    'empty_strided',
+    'bernoulli',
+    'geometric',
+    'new_empty',
+    'new_empty_strided',
+    'randint_like',
+    'randn',
+    'randn_like',
+    'rand',
+    'rand_like',
+    'uniform',
+    'multinomial',
+    # Dropout is not deterministic https://pytorch.org/docs/stable/generated/torch.nn.functional.feature_alpha_dropout.html
+    'nn.functional.feature_alpha_dropout',
+    'cauchy',
+    'exponential',
+    'log_normal',
+    'randint',
+    'nn.functional.dropout2d',
+    'nn.functional.dropout3d',
+    'nn.functional.dropout',
 }
 
-atol_dict = {"cov": (2e-1, 2e-4),
-             "linalg.eig": (2e0, 3e0),
-             "linalg.eigh": (5e1, 3e0),
-             "linalg.eigvalsh": (5e1, 3e0),
-             "linalg.pinv": (8e-1, 2e0),
-             "linalg.svd": (1e0, 1e0),
-             "svd": (1e0, 1e0),
-             "svd_lowrank": (1e0, 1e0),
-             "matrix_exp": (2e-1, 2e-4),
-             "cdist": (5e1, 3e0)}
+atol_dict = {
+    "cov": (2e-1, 2e-4),
+    "linalg.eig": (2e0, 3e0),
+    "linalg.eigh": (5e1, 3e0),
+    "linalg.eigvalsh": (5e1, 3e0),
+    "linalg.pinv": (8e-1, 2e0),
+    "linalg.svd": (1e0, 1e0),
+    "svd": (1e0, 1e0),
+    "svd_lowrank": (1e0, 1e0),
+    "matrix_exp": (2e-1, 2e-4),
+    "cdist": (5e1, 3e0)
+}
 
-def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
+
+def diff_output(testcase,
+                output1,
+                output2,
+                rtol,
+                atol,
+                equal_nan=True,
+                check_output=True):
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
@@ -109,10 +117,8 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_ou
       torch.testing.assert_close(
           output2_cpu, output1, rtol=rtol, atol=atol, equal_nan=equal_nan)
     else:
-      testcase.assertEqual(
-        (output1.shape, output1.dtype),
-        (output2.shape, output2.dtype)
-      )
+      testcase.assertEqual((output1.shape, output1.dtype),
+                           (output2.shape, output2.dtype))
   elif isinstance(output1, (tuple, list)):
     testcase.assertIsInstance(output2, (tuple, list))
     testcase.assertEqual(len(output1), len(output2))
@@ -135,8 +141,8 @@ def run_export_and_compare(testcase,
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torchax_eval"):
-      input2, args2, kwargs2 = testcase.env.to_xla((
-        sample_input.input, sample_input.args, sample_input.kwargs))
+      input2, args2, kwargs2 = testcase.env.to_xla(
+          (sample_input.input, sample_input.args, sample_input.kwargs))
       with testcase.env:
         res2 = func(input2, *args2, **kwargs2)
       res2 = pytree.tree_map_only(tensor.Tensor, lambda t: t.torch(), res2)
@@ -148,10 +154,17 @@ def run_export_and_compare(testcase,
               res2[0],
               atol=atol,
               rtol=rtol,
-              equal_nan=equal_nan, check_output=check_output)
+              equal_nan=equal_nan,
+              check_output=check_output)
         else:
           diff_output(
-              testcase, res, res2, atol=atol, rtol=rtol, equal_nan=equal_nan, check_output=check_output)
+              testcase,
+              res,
+              res2,
+              atol=atol,
+              rtol=rtol,
+              equal_nan=equal_nan,
+              check_output=check_output)
 
 
 ops_to_test = [
@@ -163,10 +176,7 @@ ops_to_test = [
 # Sort related ops should ignore index;
 # For example: sort( [1, 0, 0]) -> [0, 0, 1]
 # the correct index can be [1, 2, 0] or [2, 1, 0]
-should_ignore_indexes = {
-  "topk",
-  "mode"
-}
+should_ignore_indexes = {"topk", "mode"}
 
 
 class TestOpInfo(TestCase):
@@ -191,7 +201,8 @@ class TestOpInfo(TestCase):
   # Replaces all values in the input torch_tensor that are less than the given threshold
   # with the threshold value itself.
   def replace_values_below_threshold(self, torch_tensor, threshold):
-      return torch.where(torch_tensor < threshold, torch.tensor(threshold), torch_tensor)
+    return torch.where(torch_tensor < threshold, torch.tensor(threshold),
+                       torch_tensor)
 
   @ops(ops_to_test, allowed_dtypes=(torch.float32, torch.long))
   def test_reference_eager(self, device, dtype, op):
@@ -221,8 +232,8 @@ class TestOpInfo(TestCase):
 
       ignore_index = op.name in should_ignore_indexes
 
-      run_export_and_compare(self, op, sample_input, check_output,
-                             ignore_indices=ignore_index)
+      run_export_and_compare(
+          self, op, sample_input, check_output, ignore_indices=ignore_index)
 
 
 instantiate_device_type_tests(TestOpInfo, globals(), only_for={'cpu'})

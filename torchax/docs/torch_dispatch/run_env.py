@@ -9,4 +9,3 @@ with env:
   y = torch.tensor([1, 5, 10])
   print(torch.trapezoid(y))
   print(torch.trapz(y, y))
-

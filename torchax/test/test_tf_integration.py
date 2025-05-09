@@ -47,6 +47,5 @@ class TfIntegrationTest(test_base.TestCase):
       self.assertTrue(torch.allclose(pt_res, tf_res, atol=1e-4))
 
 
-
 if __name__ == "__main__":
   test_base.main()

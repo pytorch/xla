@@ -13,40 +13,42 @@ from typing import Callable, Optional, ParamSpec, Concatenate
 
 class InplaceOp:
 
-    def __init__(self, functional_op, replace=False, position_to_mutate=0):
-        self.functional = functional_op
-        self.replace = replace
-        self.position_to_mutate = position_to_mutate
+  def __init__(self, functional_op, replace=False, position_to_mutate=0):
+    self.functional = functional_op
+    self.replace = replace
+    self.position_to_mutate = position_to_mutate
 
-    def __call__(self, *args, **kwargs):
-        to_mutate = args[0]
-        if isinstance(to_mutate, View):
-            view_value = to_mutate.torch()
-            # Convert the target View to a Tensor, and
-            # leave the rest args as is. If other args are
-            # also View, they will be converted to tensors
-            # in the self.functional dispatch.
-            new_value = self.functional(view_value, *args[1:], **kwargs)
-            to_mutate.update(new_value)
-            return to_mutate
-        else:
-          if self.replace:
-            to_mutate._elem = self.functional(*args, **kwargs)._elem
-          else:
-            to_mutate.copy_(self.functional(*args, **kwargs))
-        return to_mutate
+  def __call__(self, *args, **kwargs):
+    to_mutate = args[0]
+    if isinstance(to_mutate, View):
+      view_value = to_mutate.torch()
+      # Convert the target View to a Tensor, and
+      # leave the rest args as is. If other args are
+      # also View, they will be converted to tensors
+      # in the self.functional dispatch.
+      new_value = self.functional(view_value, *args[1:], **kwargs)
+      to_mutate.update(new_value)
+      return to_mutate
+    else:
+      if self.replace:
+        to_mutate._elem = self.functional(*args, **kwargs)._elem
+      else:
+        to_mutate.copy_(self.functional(*args, **kwargs))
+    return to_mutate
+
 
 class OutVariant:
 
-    def __call__(self, *args, **kwargs):
-        to_mutate = kwargs['out']
-        del kwargs['out']
-        to_mutate._elem = self.functional(*args, **kwargs)._elem
-        return to_mutate
-
+  def __call__(self, *args, **kwargs):
+    to_mutate = kwargs['out']
+    del kwargs['out']
+    to_mutate._elem = self.functional(*args, **kwargs)._elem
+    return to_mutate
 
 
 P = ParamSpec('P')
+
+
 def convert_dtype(use_default_dtype: bool = True):
   """Converts `dtype` kwarg of function from torch to JAX.
 
@@ -58,6 +60,7 @@ def convert_dtype(use_default_dtype: bool = True):
   """
 
   def decorator(func: types.TorchCallable):
+
     @functools.wraps(func)
     def wrapper(*args: P.args,
                 dtype: Optional[torch.dtype] = None,
@@ -76,7 +79,8 @@ def convert_dtype(use_default_dtype: bool = True):
   return decorator
 
 
-def maybe_convert_constant_dtype(val: Optional[types.JaxValue], dtype: Optional[jnp.dtype]):
+def maybe_convert_constant_dtype(val: Optional[types.JaxValue],
+                                 dtype: Optional[jnp.dtype]):
   """Optionally converts scalar constant's dtype using `numpy`
 
   Use in cases where you require a constant and can't handle a traced array.
@@ -91,24 +95,24 @@ def maybe_convert_constant_dtype(val: Optional[types.JaxValue], dtype: Optional[
 
 
 def promote_int_input(f: Callable[Concatenate[jax.Array, P], types.JaxValue]):
-   """If the first argument is an int array, promote it to float32."""
-   @functools.wraps(f)
-   def wrapper(x: jax.Array, *args: P.args, **kwargs: P.kwargs):
-      if x.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
-        x = x.astype(mappings.t2j_dtype(torch.get_default_dtype()))
+  """If the first argument is an int array, promote it to float32."""
 
-      return f(x, *args, **kwargs)
+  @functools.wraps(f)
+  def wrapper(x: jax.Array, *args: P.args, **kwargs: P.kwargs):
+    if x.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
+      x = x.astype(mappings.t2j_dtype(torch.get_default_dtype()))
 
-   return wrapper
+    return f(x, *args, **kwargs)
+
+  return wrapper
 
 
-def foreach_loop(
-  seq: jax.Array, fn: Callable[[jax.Array, jax.Array], jax.Array], init_val=0.0
-):
+def foreach_loop(seq: jax.Array,
+                 fn: Callable[[jax.Array, jax.Array], jax.Array],
+                 init_val=0.0):
   """Run `fn` for each element of 1D array `seq`.
 
   Similar to `functools.reduce`, but implemented with `jax.lax.fori_loop`."""
   assert len(seq.shape) == 1
-  return jax.lax.fori_loop(
-    0, len(seq), lambda i, carry: fn(carry, seq[i]), init_val
-  )
+  return jax.lax.fori_loop(0, len(seq), lambda i, carry: fn(carry, seq[i]),
+                           init_val)
