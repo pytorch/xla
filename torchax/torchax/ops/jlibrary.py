@@ -14,11 +14,14 @@ def _jit_composite_impl(composite_name, jaxpr_impl, **jit_args):
   """Wrap a jaxpr in a jitted function with the proper composite name
   TODO: Wrap JIT in a `stablehlo.composite` op, instead of generating a call op.
   """
+
   def composite_impl(*args):
     return jaxpr_impl(*args)
+
   composite_impl.__name__ = composite_name
   composite_impl.__qualname__ = composite_name
   return jax.jit(composite_impl, **jit_args)
+
 
 def register_jax_composite(composite_name, impl, *ops, **jit_args):
   """Register a composite using a JAX implementation.
@@ -36,9 +39,11 @@ def register_jax_composite(composite_name, impl, *ops, **jit_args):
   For jit params and troubleshooting see:
   https://jax.readthedocs.io/en/latest/_autosummary/jax.jit.html
   """
+
   @jaten.op(*ops)
   def _composite_impl(*args):
     return _jit_composite_impl(composite_name, impl, **jit_args)(*args)
+
 
 def register_torch_composite(composite_name, impl, *ops, **jit_args):
   """Register a torch decomposition as a composite.
@@ -56,7 +61,9 @@ def register_torch_composite(composite_name, impl, *ops, **jit_args):
 
   @jaten.op(*ops)
   def _composite_impl(*args):
+
     class ImplWrapper(torch.nn.Module):
+
       def __init__(self):
         super().__init__()
 

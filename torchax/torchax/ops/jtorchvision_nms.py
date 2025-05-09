@@ -53,8 +53,8 @@ def _self_suppression(in_args):
   can_suppress_others = jnp.reshape(
       jnp.max(iou, 1) <= 0.5, [batch_size, -1, 1]).astype(iou.dtype)
   iou_suppressed = jnp.reshape(
-      (jnp.max(can_suppress_others * iou, 1) <= 0.5).astype(iou.dtype),
-      [batch_size, -1, 1]) * iou
+      (jnp.max(can_suppress_others * iou, 1) <= 0.5).astype(
+          iou.dtype), [batch_size, -1, 1]) * iou
   iou_sum_new = jnp.sum(iou_suppressed, [1, 2])
   return iou_suppressed, jnp.any(iou_sum - iou_sum_new > 0.5), iou_sum_new
 
@@ -65,9 +65,8 @@ def _cross_suppression(in_args):
   new_slice = lax.dynamic_slice(boxes, [0, inner_idx * _NMS_TILE_SIZE, 0],
                                 [batch_size, _NMS_TILE_SIZE, 4])
   iou = _bbox_overlap(new_slice, box_slice)
-  ret_slice = jnp.expand_dims(
-      (jnp.all(iou < iou_threshold, [1])).astype(box_slice.dtype),
-      2) * box_slice
+  ret_slice = jnp.expand_dims((jnp.all(iou < iou_threshold, [1])).astype(
+      box_slice.dtype), 2) * box_slice
   return boxes, ret_slice, iou_threshold, inner_idx + 1
 
 
@@ -90,45 +89,40 @@ def _suppression_loop_body(in_args):
   # Iterates over tiles that can possibly suppress the current tile.
   box_slice = lax.dynamic_slice(boxes, [0, idx * _NMS_TILE_SIZE, 0],
                                 [batch_size, _NMS_TILE_SIZE, 4])
+
   def _loop_cond(in_args):
     _, _, _, inner_idx = in_args
     return inner_idx < idx
 
-  _, box_slice, _, _ = lax.while_loop(
-      _loop_cond,
-      _cross_suppression, (boxes, box_slice, iou_threshold,
-                           0))
+  _, box_slice, _, _ = lax.while_loop(_loop_cond, _cross_suppression,
+                                      (boxes, box_slice, iou_threshold, 0))
 
   # Iterates over the current tile to compute self-suppression.
   iou = _bbox_overlap(box_slice, box_slice)
   mask = jnp.expand_dims(
-      jnp.reshape(jnp.arange(_NMS_TILE_SIZE), [1, -1]) > jnp.reshape(
-          jnp.arange(_NMS_TILE_SIZE), [-1, 1]), 0)
+      jnp.reshape(jnp.arange(_NMS_TILE_SIZE), [1, -1])
+      > jnp.reshape(jnp.arange(_NMS_TILE_SIZE), [-1, 1]), 0)
   iou *= (jnp.logical_and(mask, iou >= iou_threshold)).astype(iou.dtype)
 
   def _loop_cond2(in_args):
     _, loop_condition, _ = in_args
     return loop_condition
 
-  suppressed_iou, _, _ = lax.while_loop(
-      _loop_cond2, _self_suppression,
-      (iou, True,
-       jnp.sum(iou, [1, 2])))
+  suppressed_iou, _, _ = lax.while_loop(_loop_cond2, _self_suppression,
+                                        (iou, True, jnp.sum(iou, [1, 2])))
   suppressed_box = jnp.sum(suppressed_iou, 1) > 0
   box_slice *= jnp.expand_dims(1.0 - suppressed_box.astype(box_slice.dtype), 2)
 
   # Uses box_slice to update the input boxes.
-  mask = jnp.reshape(
-      (jnp.equal(jnp.arange(num_tiles), idx)).astype(boxes.dtype),
-      [1, -1, 1, 1])
+  mask = jnp.reshape((jnp.equal(jnp.arange(num_tiles),
+                                idx)).astype(boxes.dtype), [1, -1, 1, 1])
   boxes = jnp.tile(jnp.expand_dims(
       box_slice, 1), [1, num_tiles, 1, 1]) * mask + jnp.reshape(
           boxes, [batch_size, num_tiles, _NMS_TILE_SIZE, 4]) * (1 - mask)
   boxes = jnp.reshape(boxes, [batch_size, -1, 4])
 
   # Updates output_size.
-  output_size += jnp.sum(
-      jnp.any(box_slice > 0, [2]).astype(jnp.int32), [1])
+  output_size += jnp.sum(jnp.any(box_slice > 0, [2]).astype(jnp.int32), [1])
   return boxes, iou_threshold, output_size, idx + 1
 
 
@@ -185,8 +179,8 @@ def non_max_suppression_padded(scores, boxes, max_output_size, iou_threshold):
   """
   batch_size = boxes.shape[0]
   num_boxes = boxes.shape[1]
-  pad = int(jnp.ceil(float(num_boxes) / _NMS_TILE_SIZE)
-           ) * _NMS_TILE_SIZE - num_boxes
+  pad = int(jnp.ceil(
+      float(num_boxes) / _NMS_TILE_SIZE)) * _NMS_TILE_SIZE - num_boxes
   boxes = jnp.pad(boxes.astype(jnp.float32), [[0, 0], [0, pad], [0, 0]])
   scores = jnp.pad(scores.astype(jnp.float32), [[0, 0], [0, pad]])
   num_boxes += pad
@@ -194,15 +188,12 @@ def non_max_suppression_padded(scores, boxes, max_output_size, iou_threshold):
   def _loop_cond(in_args):
     unused_boxes, unused_threshold, output_size, idx = in_args
     return jnp.logical_and(
-        jnp.min(output_size) < max_output_size,
-        idx < num_boxes // _NMS_TILE_SIZE)
+        jnp.min(output_size) < max_output_size, idx
+        < num_boxes // _NMS_TILE_SIZE)
 
   selected_boxes, _, output_size, _ = lax.while_loop(
-      _loop_cond, _suppression_loop_body, (
-          boxes, iou_threshold,
-          jnp.zeros([batch_size], jnp.int32),
-          0
-      ))
+      _loop_cond, _suppression_loop_body,
+      (boxes, iou_threshold, jnp.zeros([batch_size], jnp.int32), 0))
   idx = num_boxes - lax.top_k(
       jnp.any(selected_boxes > 0, [2]).astype(jnp.int32) *
       jnp.expand_dims(jnp.arange(num_boxes, 0, -1), 0),
@@ -212,28 +203,26 @@ def non_max_suppression_padded(scores, boxes, max_output_size, iou_threshold):
       idx + jnp.reshape(jnp.arange(batch_size) * num_boxes, [-1, 1]), [-1])
 
   return idx
-  boxes = jnp.reshape(
-      (jnp.reshape(boxes, [-1, 4]))[idx],
-      [batch_size, max_output_size, 4])
-  boxes = boxes * (
-      jnp.reshape(jnp.arange(max_output_size), [1, -1, 1]) < jnp.reshape(
-          output_size, [-1, 1, 1])).astype(boxes.dtype)
+  boxes = jnp.reshape((jnp.reshape(boxes, [-1, 4]))[idx],
+                      [batch_size, max_output_size, 4])
+  boxes = boxes * (jnp.reshape(jnp.arange(max_output_size), [1, -1, 1])
+                   < jnp.reshape(output_size, [-1, 1, 1])).astype(boxes.dtype)
   scores = jnp.reshape(
-      jnp.reshape(scores, [-1, 1])[idx],
-      [batch_size, max_output_size])
-  scores = scores * (
-      jnp.reshape(jnp.arange(max_output_size), [1, -1]) < jnp.reshape(
-          output_size, [-1, 1])).astype(scores.dtype)
+      jnp.reshape(scores, [-1, 1])[idx], [batch_size, max_output_size])
+  scores = scores * (jnp.reshape(jnp.arange(max_output_size), [1, -1])
+                     < jnp.reshape(output_size, [-1, 1])).astype(scores.dtype)
   return scores, boxes
 
 
 # registry:
 
+
 def nms(boxes, scores, iou_threshold):
   max_output_size = boxes.shape[0]
   boxes = boxes.reshape((1, *boxes.shape))
   scores = scores.reshape((1, *scores.shape))
-  res = non_max_suppression_padded(scores, boxes, max_output_size, iou_threshold)
+  res = non_max_suppression_padded(scores, boxes, max_output_size,
+                                   iou_threshold)
   return res
 
 
