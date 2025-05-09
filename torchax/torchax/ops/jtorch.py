@@ -532,8 +532,6 @@ def _ragged_paged_attention(
                 vmem_limit_bytes: int | None = None,
 ):
 
-#   if vmem_limit_bytes is None:
-#     vmem_limit_bytes = 64 * 1024 * 1024
   
   return ragged_paged_attention_kernel(
     q = q,  
