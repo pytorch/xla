@@ -139,8 +139,7 @@ class ReshapeInfo(ViewInfo):
         return jax_array.reshape(self.shape)
 
     def update_tensor(self, new_value: jax.Array, jax_array: jax.Array) -> jax.Array:
-        original_shape = jax_array.shape
-        return jax_array.at[...].set(new_value.reshape(original_shape))
+        return new_value.reshape(jax_array.shape)
 
     def calculate_output_shape(self, source: jax.Array) -> List[int]:
         return source.reshape(self.shape).shape
