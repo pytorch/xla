@@ -454,11 +454,31 @@ xla::Shape ClampTensorOutputShape(
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
+xla::Shape ClampMaxOutputShape(const torch::lazy::Value& input,
+                               const torch::lazy::Value& target) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return xla::Min(operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
 xla::Shape ClampMaxTensorOutputShape(const torch::lazy::Value& input,
                                      const torch::lazy::Value& other) {
   auto lower_for_shape_fn =
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::Min(operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape ClampMinOutputShape(const torch::lazy::Value& input,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return xla::Max(operands[0], operands[1]);
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
                           lower_for_shape_fn);

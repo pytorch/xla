@@ -112,8 +112,14 @@ xla::Shape ClampTensorOutputShape(const torch::lazy::Value& input,
                                   const std::optional<torch::lazy::Value>& min,
                                   const std::optional<torch::lazy::Value>& max);
 
+xla::Shape ClampMaxOutputShape(const torch::lazy::Value& input,
+                               const torch::lazy::Value& target);
+
 xla::Shape ClampMaxTensorOutputShape(const torch::lazy::Value& input,
                                      const torch::lazy::Value& target);
+
+xla::Shape ClampMinOutputShape(const torch::lazy::Value& input,
+                               const torch::lazy::Value& target);
 
 xla::Shape ClampMinTensorOutputShape(const torch::lazy::Value& input,
                                      const torch::lazy::Value& target);

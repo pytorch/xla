@@ -35,7 +35,9 @@ full_codegen:
   - cholesky
   - clamp
   - clamp.Tensor
+  - clamp_max
   - clamp_max.Tensor
+  - clamp_min
   - clamp_min.Tensor
   - _conj_copy
   - cos
@@ -184,8 +186,6 @@ supported:
   - cat
   - celu
   - celu_
-  - clamp_max
-  - clamp_min
   - clone
   - constant_pad_nd
   - convolution_backward_overrideable
