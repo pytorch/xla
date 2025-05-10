@@ -48,23 +48,40 @@
 # | that supports 2 digits in a base-10 (decimal) number system.
 # | The goal is to multiply numbers with
 # | 4 digits of precision, for example, $9.111$ and $9.222$.
-# | In infinite precision, the product is $8.4021642e-1$. Notice that
+# | In infinite precision, the product is $84.021642$. Notice that
 # | two numbers with 4 digits of precision generates twice as many
-# | digits of precision in the result.
+# | digits of precision in the result. But given the number system
+# | is 4 digits, the result will be rounded to $84.02$.
 # |
 # | The simplest approach is to round the numbers to $9.1$ and $9.2$,
-# | resulting in $8.372e-1$. This is conceptually the "default" precision
+# | resulting in $83.72$. This is conceptually the "default" precision
 # | setting of PyTorch/XLA on TPU.
 # |
 # | The next approach is to break each number up into two parts,
 # | high and low (H and L):
 # | $(9.1 + 0.011) \times (9.2 + 0.022)$.
 # | This equals $(H \times H + H \times L + L \times H + L \times L)$.
-# | The fourth term is negligible, so it is ignored. The first three matrix
-# | multiplications comprise the three-pass approach and it roughly
-# | doubles the effective precision.
+# | The first three matrix
+# | multiplications comprise the three-pass approach and roughly
+# | doubles the effective precision. The fourth term, $L \times L$, is ignored
+# | and looking at the result, $0.000242$, it is easy to see that
+# | this value will not contribute to the final result. Some values of $L$
+# | could generate a fourth term that moves the value by one bit, but adding
+# | one bit of information half the time provides little value relative
+# | to the cost of running another full mat mul.
 # |
-# | ![decomposing multiplication](../_static/img/decomposing_multiplication.png)
+# | ```plain
+# |                   +--------+--------+
+# |                   | 9.222           |
+# |                   +--------+--------+
+# |                   | 9.2    | 0.022  |
+# | +--------+--------+--------+--------+
+# | |9.111   | 9.1    |83.72   | 0.2002 |
+# | +--------+--------+--------+--------+
+# | |        | 0.011  | 0.1012 |        | = 84.0214 => 84.02
+# | +--------+--------+--------+--------+
+# | ```
+# |
 # |
 # | Extending this approach again would yield roughly triple the precision.
 # | The idea is to break the number into
@@ -132,7 +149,9 @@ import struct
 
 
 def binary_fraction_to_fp32(bstr: str) -> float:
-  fraction_bits = bstr[4:]  # skip "0b1."
+  if bstr[:4] != "0b1.":
+    raise ValueError(f"Invalid binary string: {bstr}")
+  fraction_bits = bstr[4:]
   mantissa = 1.0
   for i, bit in enumerate(fraction_bits):
     mantissa += int(bit) * 2**-(i + 1)
