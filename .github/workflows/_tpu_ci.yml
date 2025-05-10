@@ -7,23 +7,31 @@ on:
         type: number
         description: Timeout in minutes for the job run
         default: 120
+      has_code_changes:
+        required: false
+        type: string
+        description: Whether to run full workflow or not
+        default: 'true'
 jobs:
   tpu-test:
     runs-on: v4-runner-set
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - name: Checkout actions
+        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
+        if: inputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
           wheels-artifact: torch-xla-wheels
       - name: Install test dependencies
+        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           # TODO: Add these in setup.py
@@ -34,9 +42,14 @@ jobs:
           pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
           pip install --upgrade protobuf
       - name: Run Tests
+        if: inputs.has_code_changes == 'true'
         env:
           PJRT_DEVICE: TPU
           TPU_LOG_DIR: tpu_logs
         run: |
           cd pytorch/xla
           test/tpu/run_tests.sh
+      - name: Report no code changes
+        if: inputs.has_code_changes == 'false'
+        run: |
+          echo "No code changes were detected that require running the full test suite."
