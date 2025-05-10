@@ -125,8 +125,7 @@ def train():
 
   def train_loop_fn(data, target, running_loss):
     if FLAGS.use_gradient_accumulation_loop:
-      running_loss, = gradient_accumulation(train_step, (data, target), model,
-                                            None)
+      running_loss = gradient_accumulation(train_step, (data, target), model)
     else:
       for i in range(FLAGS.gradient_accumulation_steps):
         loss = train_step(data[i], target[i])

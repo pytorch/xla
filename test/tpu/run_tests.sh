@@ -24,6 +24,7 @@ python3 "$TEST_CDIR/spmd/test_train_spmd_linear_model.py"
 python3 "$TEST_CDIR/spmd/test_xla_spmd_python_api_interaction.py"
 python3 "$TEST_CDIR/spmd/test_xla_auto_sharding.py"
 python3 "$TEST_CDIR/spmd/test_fsdp_v2.py"
+python3 "$TEST_CDIR/test_gradient_accumulation.py"
 XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 "$TEST_CDIR/ds/test_dynamic_shape_models.py" -v
 python3 "$TEST_CDIR/test_autocast.py"
 python3 "$TEST_CDIR/test_fp8.py"
