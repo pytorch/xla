@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,27 @@ absl::StatusOr<xla::XlaComputation> MakeComputation() {
   xla::XlaOp y = xla::Parameter(&builder, 1, input_shape, "y");
   xla::XlaOp sum = xla::Add(x, y);
   return builder.Build();
+}
+
+TEST(PjRtComputationClient, ThrowsExpectedExceptionWhenCompileFails) {
+  // Get a CPU client.
+  tsl::setenv("PJRT_DEVICE", "CPU", true);
+  const auto client = std::make_unique<PjRtComputationClient>();
+  const std::string device = client->GetDefaultDevice();
+
+  // Compose a computation with an enormous shape.
+  const auto shape =
+      xla::ShapeUtil::MakeShape(xla::F32, {8000000000, 1000000000});
+  std::vector<ComputationClient::CompileInstance> instances;
+  instances.push_back(ComputationClient::CompileInstance(
+      std::move(MakeComputation().value()), device,
+      client->GetCompilationDevices(device, client->GetLocalDevices()),
+      &shape));
+
+  // Compiling the graph should fail, which should throw instead of crashing.
+  // TODO(https://github.com/pytorch/xla/issues/9096): ensure that
+  // the exception has type std::invalid_argument.
+  EXPECT_ANY_THROW(client->Compile(std::move(instances)));
 }
 
 TEST(PjRtComputationClientTest, Init) {
@@ -69,7 +91,7 @@ TEST(PjRtComputationClientTest, Init) {
       *computations[0], client->TransferToDevice(absl::MakeConstSpan(args)),
       device, options);
 
-  // Copy the output from device back to host and assert correctness..
+  // Copy the output from device back to host and assert correctness.
   ASSERT_EQ(results.size(), 1);
   auto result_literals = client->TransferFromDevice(results);
   ASSERT_THAT(result_literals, ::testing::SizeIs(1));
