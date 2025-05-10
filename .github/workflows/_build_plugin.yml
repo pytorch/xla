@@ -16,6 +16,11 @@ on:
         type: number
         description: Timeout in minutes for the build job
         default: 120
+      has_code_changes:
+        required: false
+        type: string
+        description: Whether to run full workflow or not
+        default: 'true'
     secrets:
       gcloud-service-key:
         required: true
@@ -32,23 +37,31 @@ jobs:
       BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Checkout actions
+        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
+        if: inputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
           cuda: true
       - name: Build
+        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           cd pytorch/xla/infra/ansible
           ansible-playbook playbook.yaml -vvv -e "stage=build_plugin arch=amd64 accelerator=cuda cuda_compute_capabilities=5.2,7.5,8.6 src_root=${GITHUB_WORKSPACE} cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
+        if: inputs.has_code_changes == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: cuda-plugin
           path: /dist/*.whl
+      - name: Report no code changes
+        if: inputs.has_code_changes == 'false'
+        run: |
+          echo "No code changes were detected that require running the full test suite."

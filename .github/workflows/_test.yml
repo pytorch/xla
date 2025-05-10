@@ -32,7 +32,11 @@ on:
           required: true
           type: string
           description: torch-commit
-
+      has_code_changes:
+        required: false
+        type: string
+        description: Whether to run full workflow or not
+        default: 'true'
     secrets:
       gcloud-service-key:
         required: true
@@ -42,7 +46,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.dev-image }}
-      options: "${{ inputs.install-cuda-plugin && '--gpus all' || '' }} --shm-size 16g"
+      options: "${{ inputs.install-cuda-plugin == true && '--gpus all' || '' }} --shm-size 16g"
     strategy:
       fail-fast: false
       matrix:
@@ -78,12 +82,14 @@ jobs:
       BAZEL_REMOTE_CACHE: 1
     steps:
       - name: Checkout actions
+        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
+        if: inputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
@@ -91,38 +97,42 @@ jobs:
           wheels-artifact: torch-xla-wheels
           cuda-plugin-artifact: ${{ inputs.install-cuda-plugin && 'cuda-plugin' || null }}
       - name: Fetch CPP test binaries
+        if: inputs.has_code_changes == 'true' && matrix.run_cpp_tests
         uses: actions/download-artifact@v4
         with:
           name: cpp-test-bin
           path: /tmp/test/bin
-        if: ${{ matrix.run_cpp_tests }}
       # GitHub Actions doesn't preserve executable permissions
       # https://github.com/actions/download-artifact?tab=readme-ov-file#permission-loss
       - name: Set CPP test permissions
+        if: inputs.has_code_changes == 'true' && matrix.run_cpp_tests
         run: |
           chmod +x /tmp/test/bin/*
           ls -l /tmp/test/bin
-        if: ${{ matrix.run_cpp_tests }}
       - name: Check GPU
+        if: inputs.has_code_changes == 'true' && inputs.install-cuda-plugin
         run: nvidia-smi
-        if: ${{ inputs.install-cuda-plugin }}
       - name: Install test deps
+        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           # TODO: Add these in setup.py
           pip install fsspec
           pip install rich
       - name: Checkout PyTorch Repo
+        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           repository: pytorch/pytorch
           path: pytorch
           ref: ${{ inputs.torch-commit }}
       - name: Checkout PyTorch/XLA Repo
+        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
       - name: Extra CI deps
+        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           set -x
@@ -133,10 +143,11 @@ jobs:
             pip install -r pytorch/xla/benchmarks/requirements.txt
           fi
       - name: Test
+        if: inputs.has_code_changes == 'true'
         shell: bash
         run: pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
       - name: Upload coverage results
-        if: ${{ inputs.collect-coverage }}
+        if: inputs.has_code_changes == 'true' && inputs.collect-coverage
         shell: bash
         env:
           CIRCLE_WORKFLOW_ID: ${{ github.run_id }}
@@ -180,3 +191,7 @@ jobs:
                 gsutil cp inc_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
               fi
             fi
+      - name: Report no code changes
+        if: inputs.has_code_changes == 'false'
+        run: |
+          echo "No code changes were detected that require running the full test suite."

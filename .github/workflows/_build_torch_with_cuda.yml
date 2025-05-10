@@ -20,6 +20,11 @@ on:
         type: number
         description: Timeout in minutes for the build job
         default: 120
+      has_code_changes:
+        required: false
+        type: string
+        description: Whether to run full workflow or not
+        default: 'true'
 jobs:
   build:
     runs-on: ${{ inputs.runner }}
@@ -33,23 +38,31 @@ jobs:
       MAX_JOBS: 24
     steps:
       - name: Checkout actions
+        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
+        if: inputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
           cuda: true
       - name: Build PyTorch with CUDA enabled
+        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           cd pytorch
           python setup.py bdist_wheel
       - name: Upload wheel
+        if: inputs.has_code_changes == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: torch-with-cuda
           path: pytorch/dist/*.whl
+      - name: Report no code changes
+        if: inputs.has_code_changes == 'false'
+        run: |
+          echo "No code changes were detected that require running the full test suite."

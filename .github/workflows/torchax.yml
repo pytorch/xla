@@ -15,28 +15,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check_code_changes:
+    name: Check Code Changes
+    uses: ./.github/workflows/_check_code_changes.yml
+    with:
+      event_name: ${{ github.event_name }}
+      # For pull_request, use PR's base and head. For push, use event's before and sha.
+      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
   torchax-cpu:
     runs-on: ubuntu-24.04
+    needs: [check_code_changes]
     strategy:
       matrix:
         python-version: ['3.10']
     steps:
       - name: Checkout repo
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             torchax
       - name: Setup Python
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         shell: bash
         working-directory: torchax
         run: |
           pip install -r test-requirements.txt
           pip install -e .[cpu]
       - name: Run tests
+        if: needs.check_code_changes.outputs.has_code_changes == 'true'
         working-directory: torchax
         shell: bash
         run: |
@@ -59,3 +72,8 @@ jobs:
           pytest test/test_view.py
           pytest test/test_util.py
           XLA_FLAGS=--xla_force_host_platform_device_count=4 pytest -n 0 test_dist/
+          echo "Tests completed."
+      - name: Report no code changes
+        if: needs.check_code_changes.outputs.has_code_changes == 'false'
+        run: |
+          echo "No code changes were detected that require running the full test suite."
