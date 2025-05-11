@@ -2209,14 +2209,17 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     def fn(inp, s):
       return inp.mul_(s)
 
-    inp = torch.rand(10, dtype=torch.half)
-    s = torch.tensor(7, dtype=torch.double)
+    inp = torch.arange(10).to(torch.half)
+    s = torch.tensor(3, dtype=torch.double)
 
     Xinp = inp.to(xm.xla_device())
     Xs = s.to(xm.xla_device())
 
     out = fn(inp, s)
     Xout = fn(Xinp, Xs)
+
+    print(out)
+    print(Xout)
 
     self.assertEqual(out, Xout.cpu())
     self.assertEqual("f16", torch_xla._XLAC._get_xla_tensor_shape_type(Xout))

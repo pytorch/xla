@@ -385,13 +385,48 @@ class XlaTestCase(unittest.TestCase):
   def runAtenTest(self, tensors, fn, device=None, rel_err=1e-2, abs_err=1e-5):
     if device is None:
       device = xm.xla_device()
+
+    def to_device(tensors):
+        return [
+            x.to(device).clone().detach().requires_grad_(x.requires_grad)
+            if isinstance(x, torch.Tensor) else x
+            for x in tensors
+        ]
+
+    orig = to_device(xu.as_list(tensors))
+
     tensors = xu.as_list(tensors)
-    xla_tensors = [
-        x.to(device).detach().requires_grad_(x.requires_grad) for x in tensors
-    ]
+    xla_tensors = to_device(tensors)
     results = xu.as_list(fn(*tensors))
     xla_results = xu.as_list(fn(*xla_tensors))
-    self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
+
+    try:
+        self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
+    except:
+        xla_tensors = to_device(orig)
+
+        import torch_xla.debug.metrics as met
+        met.clear_all()
+        xla_results = xu.as_list(fn(*xla_tensors))
+        print("++++++++++++++++++++++ Fallback")
+        print(met.executed_fallback_ops())
+
+        print("++++++++++++++++++++++ CPU Tensors")
+        print("++++++++++++++++++++++++++++++++++ Input")
+        for t in tensors:
+            print(t)
+        print("++++++++++++++++++++++++++++++++++ Output")
+        for r in results:
+            print(r)
+        print("++++++++++++++++++++++ XLA Tensors")
+        print("++++++++++++++++++++++++++++++++++ Input")
+        for t in xla_tensors:
+            print(t)
+        print("++++++++++++++++++++++++++++++++++ Output")
+        for r in xla_results:
+            print(r)
+
+        raise
 
 
 @contextmanager
