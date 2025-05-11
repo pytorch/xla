@@ -15,8 +15,8 @@ apt:
       - wget
       - clang-format
       - clang-17
-      - gcc-10
-      - g++-10
+      - gcc-11
+      - g++-11
       - lcov
       - less
 
@@ -35,7 +35,7 @@ apt:
       - git
       - gnupg
       - libgomp1
-      - libopenblas-base
+      - libopenblas-dev
       - patch
       - vim
 
