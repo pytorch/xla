@@ -59,7 +59,7 @@ ENV RUSTUP_HOME /opt/rustup
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN . $CARGO_HOME/env && \
-    git clone --recursive https://github.com/pytorch/sccache.git && \
+    git clone --recursive https://github.com/mozilla/sccache.git -b v0.10.0 && \
     cd sccache && \
     cargo install --path . && \
     cd .. && \

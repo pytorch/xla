@@ -4,11 +4,11 @@ Training based on torchtitan llama model
 This examples demonstrates how we can make a model implemented for single device
 run on multiple devices without modifying the model itself.
 
-We choose [torchtitan's llama implementation](https://github.com/pytorch/torchtitan/tree/main/torchtitan/models/llama); 
+We choose [torchtitan's llama implementation](https://github.com/pytorch/torchtitan/tree/main/torchtitan/models/llama);
 because torchtitan's model implementation is a clean single device version. (Not those
 sprinkled with `ColumnParallelLinear`'s from megatron). torchtitan accomplishes running
 single device model code in multi-device environment through module-swaps, and we accomplishes
-the same with gSPMD. 
+the same with gSPMD.
 
 
 
@@ -100,12 +100,12 @@ def sharded_device_put(tensor: jax.Array, sharding) -> jax.Array:
     # meaning we are in multi-host setup. Each host will run the same process
     # and each process only need to handle the devices accessible to this host.
     shape = tensor.shape
-    x_split = [jax.device_put(tensor[i], device) 
+    x_split = [jax.device_put(tensor[i], device)
                for device, i in sharding.addressable_devices_indices_map(shape).items()]
     return jax.make_array_from_single_device_arrays(shape, sharding, x_split)
 ```
 
-When running on single-host, `jax.device_put` suffices. Multi-host need some 
+When running on single-host, `jax.device_put` suffices. Multi-host need some
 extra incantations so that we split an array to only the shards corresponding
 to the accessible devices in this host.
 
@@ -163,7 +163,7 @@ sharding_map_scan_fsdp = {
 ```
 
 The above are different sharding schemes. Because we are using gSPMD, we need some
-mechanism of sharding the weights. Because we don't (can't) modify the model code 
+mechanism of sharding the weights. Because we don't (can't) modify the model code
 itself, we can just use a dictionary of names to keep that information
 
 
@@ -214,7 +214,7 @@ class Trainer:
 
             if i == 0:
                 train_step = helper.compile_step_func(
-                    train_step, 
+                    train_step,
                     jittable_mod.params, jittable_mod.buffers, opt_state, inputs, labels,
                     self.mesh
                 )
@@ -223,7 +223,7 @@ class Trainer:
             step_start = time.perf_counter()
             loss, jittable_mod.params, opt_state = train_step(
                 jittable_mod.params, jittable_mod.buffers, opt_state, inputs, labels)
-            # wait for iteration to finish to measure time 
+            # wait for iteration to finish to measure time
             torchax.interop.call_jax(jax.block_until_ready, (loss, jittable_mod.params))
             step_end = time.perf_counter()
             print(i, 'loss', loss, 'step latency: ', step_end - step_start)
@@ -266,7 +266,7 @@ Few things to note:
 4. We use `jax.profiler` to capture profiles. Tools listed in here: https://jax.readthedocs.io/en/latest/profiling.html
    all works out of the box.
 
-5. `interop.call_jax` API is used whenever we need something from Jax. Those API can be 
+5. `interop.call_jax` API is used whenever we need something from Jax. Those API can be
    wrapped and have the "jaxiness" hidden. However, I don't think we need to do such hidding.
 
 6. Precompile: call to `helpers.compile_step_func`. This is not needed. If not used, then
@@ -327,7 +327,7 @@ def create_sharded_weights(model, mesh, sharding_map):
     return res
 ```
 The strategy of not OOMing the host on larger scale training:
-allocate the model on meta device, then re-initialize weights one by one, 
+allocate the model on meta device, then re-initialize weights one by one,
 shard the weight immediately after creation.
 
 
@@ -379,7 +379,7 @@ Scan is implemented as the `TransformerWithScan` below.
     env.config.shmap_flash_attention = True
     env._mesh = mesh  # this is the mesh used by flash attention pallas kernel
 ```
-this bit tells TX to use flash_attention implemented in pallas. Because pallas is 
+this bit tells TX to use flash_attention implemented in pallas. Because pallas is
 single device by default, we apply `jax.shard_map` with a mesh.
 
 ```python
@@ -397,7 +397,7 @@ single device by default, we apply `jax.shard_map` with a mesh.
     with torch.device('meta'):
         gpt = titan.Transformer(args)
 ```
-Above, instantiate the model on meta device so no OOM.        
+Above, instantiate the model on meta device so no OOM.
 
 ```python
     with torch.device('cpu'):
@@ -409,7 +409,7 @@ Compute freqs_cis on CPU because we actually need its value.
 ```python
     if use_scan:
         checkpoint_policy=jax.checkpoint_policies.offload_dot_with_no_batch_dims('device', 'pinned_host')
-        gpt = TransfomerWithScan(gpt, checkpoint_policy) 
+        gpt = TransfomerWithScan(gpt, checkpoint_policy)
 
     state_dict = dict(gpt.state_dict())
     state_dict.pop('freqs_cis') # dont shard freqs_cis
@@ -418,16 +418,16 @@ Compute freqs_cis on CPU because we actually need its value.
 
     state_dict['freqs_cis'] = freqs_cis.to('jax').apply_jax(jax.device_put, replicated)
     gpt.load_state_dict(state_dict, assign=True)
-    
+
     train_loader = fake_dataloader(10, seqlen, batch_size)
 ```
 Put the sharded arrays inside of XLATensor back to the model with `load_state_dict`
-    
+
 ```python
     # NOTE: overriding attention to capture mesh and sharding info
     partition = P('fsdp', 'tp', None, None)
     attention = functools.partial(
-      splash_attn.tpu_splash_attention, 
+      splash_attn.tpu_splash_attention,
       mesh, partition, True)
     attention = jax.jit(attention)
 
@@ -463,17 +463,17 @@ batch dim (not both batch and sequence)
     with mesh:
         trainer = Trainer(mesh)
         return trainer.fit(
-            gpt, 
+            gpt,
             loss_fn,
-            train_loader 
+            train_loader
         )
 ```
 Invoking the traininer.
 
-        
+
 ```python
 class TransfomerWithScan(torch.nn.Module):
-    
+
     def __init__(self, old_transformer, checkpoint_policy):
         super().__init__()
         self.tok_embeddings = old_transformer.tok_embeddings
@@ -506,6 +506,6 @@ class TransfomerWithScan(torch.nn.Module):
         output = self.output(h) if self.output else h
         return output
 ```
-The goal of this class is to replace the for loop that iterate the layers with 
+The goal of this class is to replace the for loop that iterate the layers with
 a loop with scan. The use of scan is encaptured in `ScanedModule`. This class
 is to override the `forward` to call `ScannedModule` instead of calling it in a loop.

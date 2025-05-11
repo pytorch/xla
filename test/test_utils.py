@@ -13,6 +13,7 @@ import random
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
+import torch_xla.runtime as xr
 
 
 def _set_rng_seed(seed):
@@ -397,7 +398,7 @@ class XlaTestCase(unittest.TestCase):
 def temporary_env(**kwargs):
   """
     Temporarily set environment variables within the context.
-    
+
     Args:
         **kwargs: Key-value pairs representing environment variables to set.
                   For example: temporary_env(PATH='/new/path', DEBUG='1')
@@ -420,3 +421,8 @@ def temporary_env(**kwargs):
       else:
         # Restore the original value
         os.environ[key] = old_value
+
+
+# Taken from test_operations.py
+def is_on_tpu():
+  return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'

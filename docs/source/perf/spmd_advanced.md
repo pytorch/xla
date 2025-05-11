@@ -1,13 +1,13 @@
 # SPMD advanced topics
 
-This guide covers advanced topics with SPMD. Please read the 
+This guide covers advanced topics with SPMD. Please read the
 [SPMD user guide](https://github.com/pytorch/xla/blob/master/docs/spmd_basic.md) as a prerequisite.
 
 ### Sharding-Aware Host-to-Device Data Loading
 
-SPMD takes a single-device program, shards it, and executes it in parallel. 
+SPMD takes a single-device program, shards it, and executes it in parallel.
 
-SPMD execution does not work well with the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step. 
+SPMD execution does not work well with the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step.
 
 To improve the native data loading performance, use PyTorch/XLA's ParallelLoader, which shards the directly when passed the optional kwarg _input\_sharding_:
 
@@ -32,7 +32,7 @@ train_loader = pl.MpDeviceLoader(
          device,
 	 # specify different sharding for each input of the batch.
          input_sharding={
-          'x': xs.ShardingSpec(input_mesh, ('data', None, None, None)), 
+          'x': xs.ShardingSpec(input_mesh, ('data', None, None, None)),
           'y': xs.ShardingSpec(input_mesh, ('data', None))
         }
 )
@@ -80,14 +80,14 @@ The main use case for `XLAShardedTensor` [[RFC](https://github.com/pytorch/xla/i
 There is also an ongoing effort to integrate <code>XLAShardedTensor</code> into <code>DistributedTensor</code> API to support XLA backend [[RFC](https://github.com/pytorch/pytorch/issues/92909)].
 
 ### DTensor Integration
-PyTorch has prototype-released [DTensor](https://github.com/pytorch/pytorch/blob/main/torch/distributed/_tensor/README.md) in 2.1.
+PyTorch has prototype-released [DTensor](https://github.com/pytorch/pytorch/blob/main/torch/distributed/tensor/README.md) since 2.1.
 We are integrating PyTorch/XLA SPMD into DTensor API [RFC](https://github.com/pytorch/pytorch/issues/92909). We have a proof-of-concept integration for `distribute_tensor`, which calls `mark_sharding` annotation API to shard a tensor and its computation using XLA:
 ```python
 import torch
-from torch.distributed import DeviceMesh, Shard, distribute_tensor
+from torch.distributed.tensor import init_device_mesh, Shard, distribute_tensor
 
 # distribute_tensor now works with `xla` backend using PyTorch/XLA SPMD.
-mesh = DeviceMesh("xla", list(range(world_size)))
+mesh = init_device_mesh("xla", mesh_shape=(world_size,))
 big_tensor = torch.randn(100000, 88)
 my_dtensor = distribute_tensor(big_tensor, mesh, [Shard(0)])
 ```
@@ -152,15 +152,15 @@ PyTorch/XLA auto-sharding can be enabled by one of the following:
 import torch_xla.runtime as xr
 xr.use_spmd(auto=True)
 ```
-- Calling `pytorch.distributed._tensor.distribute_module` with `auto-policy` and `xla`:
+- Calling `pytorch.distributed.tensor.distribute_module` with `auto-policy` and `xla`:
 
 ```python
 import torch_xla.runtime as xr
-from torch.distributed._tensor import DeviceMesh, distribute_module
+from torch.distributed.tensor import init_device_mesh, distribute_module
 from torch_xla.distributed.spmd import auto_policy
 
 device_count = xr.global_runtime_device_count()
-device_mesh = DeviceMesh("xla", list(range(device_count)))
+device_mesh = init_device_mesh("xla", mesh_shape=(device_count,))
 
 # Currently, model should be loaded to xla device via distribute_module.
 model = MyModule()  # nn.module

@@ -4,8 +4,8 @@ import sys
 import torch
 from torch import nn
 import torch.optim as optim
-from torch.distributed._tensor import (DeviceMesh, Shard, distribute_tensor,
-                                       distribute_module)
+from torch.distributed.tensor import init_device_mesh, Shard, distribute_tensor, distribute_module
+
 import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.runtime as xr
@@ -25,7 +25,7 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_xla_distribute_tensor(self):
     device_count = xr.global_runtime_device_count()
-    device_mesh = DeviceMesh("xla", list(range(device_count)))
+    device_mesh = init_device_mesh("xla", mesh_shape=(device_count,))
     shard_spec = [Shard(0)]
 
     for requires_grad in [True, False]:
@@ -53,7 +53,7 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
 
     # Running the same mark_sharding test with xla_distribute_tensor instead
     device_count = xr.global_runtime_device_count()
-    device_mesh = DeviceMesh("xla", list(range(device_count)))
+    device_mesh = init_device_mesh("xla", mesh_shape=(device_count,))
     shard_spec = [Shard(0)]
     distribute_tensor(model.fc1.weight, device_mesh, shard_spec)
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight)
@@ -79,7 +79,7 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
     model = self.SimpleLinear().to(xm.xla_device())
 
     device_count = xr.global_runtime_device_count()
-    device_mesh = DeviceMesh("xla", list(range(device_count)))
+    device_mesh = init_device_mesh("xla", mesh_shape=(device_count,))
 
     def shard_params(mod_name, mod, mesh):
       shard_spec = [Shard(0)]

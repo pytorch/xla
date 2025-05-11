@@ -97,12 +97,12 @@ def scan(
       the next invocation of `fn`.
 
     init: The initial carry object passed to the first invocation of `fn`.
-    
+
     xs: The input PyTree to scan over. If `xs` is a tensor, then `fn` will get slices along
       the leading dimension (`xs[i]`). If `xs` is some other PyTree (e.g. tuple of
       tensor), `fn` will get PyTrees of slices. In that case the leading dimension size
       of the leaves in the PyTree must be the same.
-        
+
     partition_fn: (Optional[Callable]) Since `scan` uses AOTAutograd to trace `fn`, you may
       override what computation happen in the forward and backward passes by specifying
       different partition functions. `default_partition` implies no activation checkpointing.
@@ -116,19 +116,19 @@ def scan(
     by stacking the leaf outputs of `fn` respectively. This means if your `fn` returns
     `(carry, (y1, y2))` then this function will return
     `(carry, (torch.stack(all_y1), torch.stack(all_y2)))`.
-    
+
   Example:
-  
+
     >>> # Example of using `scan` to implement `torch.cumsum`.
     >>> import torch_xla.runtime
     >>> import torch
     >>> from torch_xla.experimental.scan import scan
-    >>> 
+    >>>
     >>> def fn(carry, x):
     >>>   new_carry = carry + x
     >>>   y = new_carry
     >>>   return new_carry, y
-    >>> 
+    >>>
     >>> with torch_xla.runtime.xla_device():
     >>>   init = torch.tensor([0.0, 0.0], requires_grad=True)
     >>>   xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
@@ -447,7 +447,7 @@ class Scan(torch.autograd.Function):
 def _scan_impl_pytree(fn, init, xs, reverse: bool = False):
   """Forward logic of scan without gradient tracking. `fn` operates on
   PyTrees. `init` and `xs` are also PyTrees.
-  
+
   See the `Scan` class which implements an autograd `Function` and builds
   autograd support on top of `_scan_impl`.
   """
@@ -562,10 +562,10 @@ def _scan_impl_flat(fn,
   """Forward logic of scan without gradient tracking. `fn` operates on
   two flat list of tensors. `init` and `xs` are also flat lists of tensors. None
   of the tensors will be `None`.
-  
+
   See the `Scan` class which implements an autograd `Function` and builds
   autograd support on top of `_scan_impl`.
-  
+
   ## Handling of random numbers
 
   When `fn` generates random numbers (e.g. it uses a dropout layer), we need to
@@ -579,21 +579,21 @@ def _scan_impl_flat(fn,
   - Create N different copies of the RNG state contained in a tensor.
   - While building the `While` op body, index into the RNG state tensor at the
     current iteration and provide that seed value to `fn`.
-  
+
   ## Handling of HLO parameters
-  
+
   Let's say the user writes a `fn` like this:
-  
+
     def fn(carry, x):
       foo = torch.zeros(8)
       return carry, x + foo
-  
+
   `fn` will lower into an HLO computation like this:
 
     HloModule Fn, entry_computation_layout={
       (f32[8], f32[8], f32[8]) -> (f32[8], f32[8])
     }
-  
+
   The HLO computation takes three parameters while `fn` takes two arguments.
   That's because IR lowering does not distinguish if a leaf data tensor comes from
   a function argument or from within the function. All data tensors are lowered

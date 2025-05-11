@@ -27,7 +27,11 @@ on:
         required: true
         type: string
         description: torch-commit
-
+      has_code_changes:
+        required: false
+        type: string
+        description: Whether to run full workflow or not
+        default: 'true'
 jobs:
   test:
     container:
@@ -48,12 +52,14 @@ jobs:
       BAZEL_REMOTE_CACHE: 1
     steps:
       - name: Checkout actions
+        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
+        if: inputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
@@ -62,8 +68,10 @@ jobs:
           cuda-plugin-artifact: cuda-plugin
           cuda-torch-artifact: torch-with-cuda
       - name: Check GPU
+        if: inputs.has_code_changes == 'true'
         run: nvidia-smi
       - name: Install wheels
+        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           pip install /tmp/wheels/*.whl
@@ -78,35 +86,42 @@ jobs:
           python -c "import torch; assert torch.cuda.is_available()"
           echo "CUDA is available for PyTorch."
       - name: Checkout PyTorch Repo
+        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           repository: pytorch/pytorch
           path: pytorch
           ref: ${{ inputs.torch-commit }}
       - name: Checkout PyTorch/XLA Repo
+        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
       - name: Extra CI deps
+        if: inputs.has_code_changes == 'true' && matrix.run_triton_tests
         shell: bash
         run: |
           set -x
           pip install -U --pre jax jaxlib "jax-cuda12-plugin[with_cuda]" jax-cuda12-pjrt -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
-        if: ${{ matrix.run_triton_tests }}
       - name: Install Triton
+        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           cd pytorch
           make triton
       - name: Python Tests
+        if: inputs.has_code_changes == 'true' && matrix.run_python_tests
         shell: bash
         run: |
           set -xue
           PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
           PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
-        if: ${{ matrix.run_python_tests }}
       - name: Triton Tests
+        if: inputs.has_code_changes == 'true' && matrix.run_triton_tests
         shell: bash
         run: |
           PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.3/bin/ptxas python pytorch/xla/test/test_triton.py
-        if: ${{ matrix.run_triton_tests }}
+      - name: Report no code changes
+        if: inputs.has_code_changes == 'false'
+        run: |
+          echo "No code changes were detected that require running the full test suite."

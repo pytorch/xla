@@ -157,22 +157,22 @@ class XLATensor : public torch::lazy::LazyTensor {
   static XLATensorPtr Create(
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
       std::optional<at::ScalarType> logical_element_type = std::nullopt,
-      bool delay_eager_executation = false);
+      bool delay_eager_execution = false);
   static XLATensorPtr Create(std::shared_ptr<Data> data);
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
   XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
-                          bool delay_eager_executation = false) const;
+                          bool delay_eager_execution = false) const;
   XLATensorPtr CreateFrom(
       torch::lazy::Value ir_value,
       std::optional<at::ScalarType> logical_element_type_opt,
-      bool delay_eager_executation = false) const;
+      bool delay_eager_execution = false) const;
   // TODO: We should remove this one once MaybeCastIrValue is no longer needed.
   XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
                           const torch::lazy::BackendDevice& device,
                           at::ScalarType logical_element_type,
-                          bool delay_eager_executation = false) const;
+                          bool delay_eager_execution = false) const;
 
   // The default ctor previously created a null LazyTensor (one with no 'data'
   // obj). Creating a null XLATensor is no longer possible, since the same can
@@ -232,9 +232,9 @@ class XLATensor : public torch::lazy::LazyTensor {
   // TODO(alanwaketan): Reuse the upstream ones once Functionalization is done.
   torch::lazy::Value GetIrValue() const;
   void SetIrValue(torch::lazy::Value ir_value, bool inplace = true,
-                  bool delay_eager_executation = false);
+                  bool delay_eager_execution = false);
   void SetInPlaceIrValue(torch::lazy::Value ir_value,
-                         bool delay_eager_executation = false);
+                         bool delay_eager_execution = false);
 
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   std::optional<at::Tensor> CurrentTensorData() const;

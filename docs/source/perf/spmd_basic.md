@@ -1,7 +1,7 @@
 # SPMD User Guide
 
 In this user guide, you will learn how
-[SPMD](https://arxiv.org/abs/2105.04663) is integrated in PyTorch/XLA. 
+[SPMD](https://arxiv.org/abs/2105.04663) is integrated in PyTorch/XLA.
 
 For a conceptual guide of the SPMD model of computation, refer to the
 [Sharded Matrices and How to Multiply Them](https://jax-ml.github.io/scaling-book/sharding/)
@@ -57,7 +57,7 @@ SPMD with other distributed libraries.
 
 ### Mesh
 
-The SPMD programming model is built around the concept of a device mesh. 
+The SPMD programming model is built around the concept of a device mesh.
 A device mesh is a logical N-dimensional
 arrangement of compute devices (e.g. TPU cores) where MPI-style collective
 operations may be requested for devices along an axis. The device mesh shape
