@@ -100,7 +100,7 @@ class ProcessGroupJax(ProcessGroup):
     return self._work(tensors)
 
 
-dist.Backend.register_backend("jax", ProcessGroupJax)
+dist.Backend.register_backend("jax", ProcessGroupJax, devices=["jax"])
 
 
 def jax_rendezvous_handler(url: str,
