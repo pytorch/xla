@@ -116,6 +116,7 @@ test --test_env=PJRT_LOCAL_PROCESS_RANK
 
 # This environmental variable is important for properly integrating with XLA.
 test --test_env=XLA_EXPERIMENTAL
+test --test_env=XLA_STABLEHLO_COMPILE
 
 # To find `libpython` that is required to run tests (they run using installed wheels).
 test --test_env=LD_LIBRARY_PATH
