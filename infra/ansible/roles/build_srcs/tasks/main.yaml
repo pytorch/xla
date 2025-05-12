@@ -195,7 +195,10 @@
 - name: Collect GCNO files
   ansible.builtin.shell: |
     BAZELBIN=$(find . -name "bazel-bin")
-    CSRC=$(find "$BAZELBIN" -path "*/torch_xla/csrc")
+    echo "BAZELBIN: $BAZELBIN"
+
+    CSRC=$(find "$BAZELBIN/" -path "*/torch_xla/csrc")
+    echo "CSRC: $CSRC"
 
     # Go to the directory with the build files of torch_xla/csrc.
     cd "$CSRC"
