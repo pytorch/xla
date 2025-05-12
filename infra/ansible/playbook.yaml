@@ -41,6 +41,7 @@
 
     - role: install_deps
       vars:
+        stage: "{{ stage }}"
         apt_keys: "{{ apt.signing_keys }}"
 
         # If a variable (like `apt.pkgs.common`) is defined, but not set to

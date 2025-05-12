@@ -40,3 +40,4 @@
   loop:
     - clang
     - clang++
+  when: stage == "build"
