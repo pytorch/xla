@@ -18,9 +18,9 @@ import test_utils
 
 
 class TestMatMulPrecision(unittest.TestCase):
+
   def setUp(self):
     self.logger_name = torch_xla.backends.logger.name
-
 
   def _make_input(self):
     eye = torch.eye(1024, device='cpu', dtype=torch.float64)
