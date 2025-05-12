@@ -1,4 +1,4 @@
-# | # Controlling Floating Point Precision
+# | # Control MXU Floating Point Precision
 # | **Author:** `Yaoshiang Ho`
 # |
 # | **Date created:** 2025/05/15
@@ -10,11 +10,6 @@
 # | when using certain accelerators with PyTorch/XLA, such as TPUs.
 # | You will also learn how to access torch's floating point info
 # | and how to visually inspect the floating point representation of numbers.
-# |
-# | **Acknowledgments**
-# |
-# | 1) This tutorial uses a diagram from HuggingFace.
-# | 2) This tutorial draws on the JAX documentation for matmul precision.
 
 # | ## Introduction
 # |
@@ -36,7 +31,8 @@
 # | because TF32 only has 19 total bits.
 # |
 # | Matrix multiplication operations performed on FP32 values will
-# | yield results in bfloat16 for TPUs and BF19 for Nvidia GPUs.
+# | yield results in bfloat16 for TPUs and TF32 (with 19 bits)
+# | for Nvidia GPUs.
 # |
 # | ![bits layout](../_static/img/bit_layout.svg)
 
@@ -50,7 +46,7 @@
 # | 4 digits of precision, for example, $9.111$ and $9.222$.
 # | In infinite precision, the product is $84.021642$. Notice that
 # | two numbers with 4 digits of precision generates twice as many
-# | digits of precision in the result. But given the number system
+# | digits of precision in the result. But given the number format
 # | is 4 digits, the result will be rounded to $84.02$.
 # |
 # | The simplest approach is to round the numbers to $9.1$ and $9.2$,
@@ -65,12 +61,13 @@
 # | multiplications comprise the three-pass approach and roughly
 # | doubles the effective precision. The fourth term, $L \times L$, is ignored
 # | and looking at the result, $0.000242$, it is easy to see that
-# | this value will not contribute to the final result. Some values of $L$
+# | this value will not contribute to the final result. Some values of
+# | $L \times L$
 # | could generate a fourth term that moves the value by one bit, but adding
 # | one bit of information half the time provides little value relative
 # | to the cost of running another full mat mul.
 # |
-# | ```plain
+# | ```text
 # |                   +--------+--------+
 # |                   | 9.222           |
 # |                   +--------+--------+
@@ -91,12 +88,14 @@
 # | It is essentially equivalent to FP32, with some room for variances in the minor bit.
 
 # | ## PyTorch/XLA and TPUs
-# | PyTorch/XLA allows control of the one pass, three pass, and six pass
-# | approach in the `[torch_xla.backends.set_mat_mul_precision()]` function.
+# | PyTorch/XLA allows control of the one-pass, three-pass, and six-pass
+# | approaches in the `torch_xla.backends.set_mat_mul_precision()`
+# | function.
 # | The valid values are `default`, `high`, and `highest`. Now, you'll investigate
 # | the differences between these three settings.
 # |
-# | Warning: Although this notebook demonstrates different precision settings,
+# | Warning: Although this notebook demonstrates setting precision multiple
+# | times
 # | it is recommended to only set the precision once at the beginning of your
 # | script.
 
@@ -234,9 +233,9 @@ print(f"Z:     {fp32_to_binary_fraction(Z[0][0].item())}")
 # | ## Edge-case numbers
 # |
 # | In the previous example, you saw no difference between
-# | the six-pass and FP32 multiplication. Now, you'll use an edge
+# | the six-pass and FP32 multiplication. Now, you will use an edge
 # | case number to demonstrate a difference in the
-# | final bit between the six pass approach and full FP32.
+# | final bit between the six-pass approach and full FP32.
 
 # -
 X = get_rand_matrix()
