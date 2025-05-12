@@ -200,7 +200,7 @@
     OUTPUT_BASE=$(bazel info output_base)
     echo "OUTPUT_BASE: $OUTPUT_BASE"
 
-    CSRC=$(find "$OUTPUT_BASE/" -path "*/torch_xla/csrc")
+    CSRC=$(find "$OUTPUT_BASE/" -path "*/bazel-out/k8-opt/bin/torch_xla/csrc")
     echo "CSRC: $CSRC"
 
     # Go to the directory with the build files of torch_xla/csrc.
