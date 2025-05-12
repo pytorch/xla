@@ -192,6 +192,17 @@
     chdir: "{{ src_root }}"
   when: build_cpp_tests
 
+- name: Collect GCNO files
+  ansible.builtin.shell: |
+    BAZELBIN=$(find . -name "bazel-bin")
+    CSRC=$(find "$BAZELBIN" -path "*/torch_xla/csrc")
+
+    # Go to the directory with the build files of torch_xla/csrc.
+    cd "$CSRC"
+
+    # Find all GCNO files, and install them into a temporary directory.
+    find . -name "*.gcno" -exec install -D \{} $GCNO_OUTPUT_DIR/\{} \;
+
 - name: Read Torchvision pin
   ansible.builtin.command: cat {{ (src_root, 'pytorch') | path_join }}/.github/ci_commit_pins/vision.txt
   register: torchvision_pin
