@@ -24,13 +24,10 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-    'm2r',
-    'nbsphinx',
+    'm2r'
 ]
 
 napoleon_use_ivar = True
-
-nbsphinx_execute = 'never' # Given diverse hardware requirements, authors must run notebooks manually.
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
