@@ -7,8 +7,8 @@ the tests are split into three files to ensure a fresh
 environment for each test.
 """
 
+import logging
 import unittest
-import time
 
 import torch
 import torch_xla
@@ -18,6 +18,9 @@ import test_utils
 
 
 class TestMatMulPrecision(unittest.TestCase):
+  def setUp(self):
+    self.logger_name = torch_xla.backends.logger.name
+
 
   def _make_input(self):
     eye = torch.eye(1024, device='cpu', dtype=torch.float64)
@@ -61,7 +64,8 @@ class TestMatMulPrecision(unittest.TestCase):
   # DO NOT add epsilons to this test. These tests must be numerically exact.
   def _test_parameterized(self, precision, bits):
     # Arrange
-    torch_xla.backends.set_mat_mul_precision(precision)
+    with self.assertLogs(self.logger_name, level=logging.WARNING):
+      torch_xla.backends.set_mat_mul_precision(precision)
 
     # Diagonal matrices force mat mul through MXU
     # but require only one non-zero accumulation.
