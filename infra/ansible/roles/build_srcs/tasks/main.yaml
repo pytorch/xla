@@ -194,10 +194,13 @@
 
 - name: Collect GCNO files
   ansible.builtin.shell: |
-    BAZELBIN=$(find . -name "bazel-bin")
-    echo "BAZELBIN: $BAZELBIN"
+    set -x
 
-    CSRC=$(find "$BAZELBIN/" -path "*/torch_xla/csrc")
+    # Bazel output directory.
+    OUTPUT_BASE=$(bazel info output_base)
+    echo "OUTPUT_BASE: $OUTPUT_BASE"
+
+    CSRC=$(find "$OUTPUT_BASE/" -path "*/torch_xla/csrc")
     echo "CSRC: $CSRC"
 
     # Go to the directory with the build files of torch_xla/csrc.
@@ -205,6 +208,8 @@
 
     # Find all GCNO files, and install them into a temporary directory.
     find . -name "*.gcno" -exec install -D \{} $GCNO_OUTPUT_DIR/\{} \;
+
+    set +x
 
 - name: Read Torchvision pin
   ansible.builtin.command: cat {{ (src_root, 'pytorch') | path_join }}/.github/ci_commit_pins/vision.txt
