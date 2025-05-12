@@ -343,16 +343,15 @@ class View(torch.Tensor):
       intermediate_values.append(
           view_info.transform_tensor(intermediate_values[-1]))
 
-        # TODO: Investigate efficiency of this algorithm
-        # Update the source array with the new value by
-        # applying inverse transformations in reverse order
-        for view_info, parent_array in zip(
-            reversed(view_infos), reversed(intermediate_values)
-        ):
-            assert isinstance(new_values, jax.Array)
-            assert isinstance(parent_array, jax.Array)
-            # Apply the inverse transformation to propagate changes back
-            new_values = view_info.update_tensor(new_values, parent_array)
+    # TODO: Investigate efficiency of this algorithm
+    # Update the source array with the new value by
+    # applying inverse transformations in reverse order
+    for view_info, parent_array in zip(
+        reversed(view_infos), reversed(intermediate_values)):
+      assert isinstance(new_values, jax.Array)
+      assert isinstance(parent_array, jax.Array)
+      # Apply the inverse transformation to propagate changes back
+      new_values = view_info.update_tensor(new_values, parent_array)
 
     # Update the source tensor with the new values
     self.replace_source_jax(new_values)
@@ -395,14 +394,14 @@ class View(torch.Tensor):
       result = view_info.transform_tensor(result)
     return result
 
-    def __setitem__(self, indexes, val):
-        # Handle tensor indexing 
-        indexes = pytree.tree_map(lambda x: x.jax() if isinstance(x, torch.Tensor) else x, indexes)
-        view_infos = self.get_transformation_chain() + [NarrowInfo(indexes)]
-        self.update(view_infos=view_infos, new_values=val)
-    
-    def dim(self):
-        return self.ndim
+  def __setitem__(self, indexes, val):
+    # Handle tensor indexing 
+    indexes = pytree.tree_map(lambda x: x.jax() if isinstance(x, torch.Tensor) else x, indexes)
+    view_infos = self.get_transformation_chain() + [NarrowInfo(indexes)]
+    self.update(view_infos=view_infos, new_values=val)
+
+  def dim(self):
+    return self.ndim
 
   @property
   def device(self):
@@ -412,12 +411,12 @@ class View(torch.Tensor):
   def jax_device(self):
     return self.jax().device
 
-    @property
-    def ndim(self):
-        return len(self.shape)
+  @property
+  def ndim(self):
+    return len(self.shape)
+
+  @property
+  def data(self):
+      return self
   
-    @property
-    def data(self):
-        return self
-    
-    __repr__ = __str__
+  __repr__ = __str__

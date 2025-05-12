@@ -764,7 +764,7 @@ DECOMPOSITIONS = decomp.get_decompositions([
 ])
 
 MUTABLE_DECOMPOSITION = [
-  torch.ops.aten.bernoulli_.Tensor,
-  torch.ops.aten.bernoulli_.float,
-  torch.ops.aten.index_copy_.default,
+    torch.ops.aten.bernoulli_.Tensor,
+    torch.ops.aten.bernoulli_.float,
+    torch.ops.aten.index_copy_.default,
 ]

@@ -508,10 +508,11 @@ def linalg_tensorsolve(A, b, dims=None):
 
 @register_function(torch.nn.functional.linear)
 def functional_linear(self, weights, bias=None):
-    res = jnp.einsum("...a,ba->...b", self, weights)
-    if bias is not None:
-        res += bias
-    return res
+  res = jnp.einsum("...a,ba->...b", self, weights)
+  if bias is not None:
+    res += bias
+  return res
+
 
 try: 
     # TODO: Currently the following ops are wrapped in the try 
