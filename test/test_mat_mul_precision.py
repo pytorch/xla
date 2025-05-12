@@ -1,5 +1,6 @@
 """Numeric tests for default precision of mat mul."""
 
+import logging
 import unittest
 
 import torch

@@ -51,14 +51,14 @@ def set_mat_mul_precision(precision: _PrecisionType) -> None:
     which scalar products are computed.
 
     On a TPU:
-    * `default` is the fastest and least precise,
-    downcasting an FP32 to BF16 before multiplying.
+      `default` is the fastest and least precise,
+      downcasting an FP32 to BF16 before multiplying.
 
-    * `high` takes three passes and generates approximately 14 bits of
-    precision.
+      `high` takes three passes and generates approximately 14 bits of
+      precision.
 
-    * `highest` is the most precise, and the slowest. It takes six
-    passes and generates approximately 22 bits of precision.
+      `highest` is the most precise, and the slowest. It takes six
+      passes and generates approximately 22 bits of precision.
 
     See the [precision tutorial](../../tutorials/precision_tutorial.html)
     for more information about the precision levels.

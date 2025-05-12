@@ -31,7 +31,6 @@ class TestMatMulPrecisionGetAndSet(unittest.TestCase):
       torch_xla.backends.set_mat_mul_precision('default')
 
       # Assert
-      breakpoint()
       self.assertEqual(expected, cm.output)
 
   def test_set_mat_mul_precision_error(self):
