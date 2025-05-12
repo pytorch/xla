@@ -633,13 +633,25 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       mlir::ModuleOp mlir_module =
           mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
       ConvertHloToStableHlo(instance.computation.mutable_proto(), &mlir_module);
-      maybe_executable = client_->CompileAndLoad(mlir_module, compile_options);
+      try {
+        maybe_executable =
+            client_->CompileAndLoad(mlir_module, compile_options);
+      } catch (const absl::BadStatusOrAccess& e) {
+        LOG(ERROR) << e.what();
+        throw std::invalid_argument(e.what());
+      }
       StableHloCompileCounter()->AddValue(1);
     } else {
-      maybe_executable =
-          client_->CompileAndLoad(instance.computation, compile_options);
+      try {
+        maybe_executable =
+            client_->CompileAndLoad(instance.computation, compile_options);
+      } catch (const absl::BadStatusOrAccess& e) {
+        LOG(ERROR) << e.what();
+        throw std::invalid_argument(e.what());
+      }
     }
     if (!maybe_executable.ok()) {
+      LOG(ERROR) << maybe_executable.status().message();
       // This will automatically raise a Python ValueError exception.
       // See https://pybind11.readthedocs.io/en/stable/advanced/exceptions.html.
       throw std::invalid_argument(
