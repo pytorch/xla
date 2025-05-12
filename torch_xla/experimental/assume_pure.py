@@ -9,7 +9,7 @@ def assume_pure(fn):
   Returns a new function that will only be traced once for each unique
   input tensor shapes or non-tensor input argument values. This is useful
   for removing Lazy Tensor tracing overhead.
-  
+
   The decorated function must be pure (i.e. no side-effects, behavior
   only depends on inputs).
 

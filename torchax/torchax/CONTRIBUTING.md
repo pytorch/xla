@@ -8,7 +8,7 @@ If you plan to contribute new features, utility functions or extensions to the c
 # Developer setup
 
 ## Mac setup:
-@qihqi 
+@qihqi
 
 I am able to develop directly on mac (m1) laptop for most of parts. Using steps
 in README.md works. The condensed version for easy copy & paste:
@@ -24,7 +24,7 @@ pytest test
 
 ### VSCode
 
-I use vscode on my Mac. I loosely followed instruction in 
+I use vscode on my Mac. I loosely followed instruction in
 https://code.visualstudio.com/docs/python/python-tutorial
 to setup a proper python environment.
 

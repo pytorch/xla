@@ -12,7 +12,7 @@ def scan_layers(layers: Iterable[torch.nn.Module],
                 input_data,
                 partition_fn=default_partition):
   """Runs each layer in `layers` sequentially, starting with `input_data`.
-  
+
   `input_data` is provided as input to the first layer in `layers`. The output of one
   layer is provided as input to next layer.
 
@@ -28,7 +28,7 @@ def scan_layers(layers: Iterable[torch.nn.Module],
 
   This function can be faster to compile since it reuses the XLA computation of the
   first layer to perform the computation of all other layers.
-  
+
   Args:
     layers: (Iterable[torch.nn.Module]) A list of layers to run.
 
@@ -41,10 +41,10 @@ def scan_layers(layers: Iterable[torch.nn.Module],
       `functorch.compile.min_cut_rematerialization_partition` to use min-cut based
       activation checkpointing. You may also write your own partitioner to insert any custom
       logic such as host offloading of activations.
-      
+
   Returns:
     The output of the last layer from `layers`.
-    
+
   Example:
 
     >>> import torch_xla.runtime

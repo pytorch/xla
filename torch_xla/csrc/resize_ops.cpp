@@ -316,7 +316,7 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
     // If the resize is too large, do one dimension at a time.
     xla::Shape partial_shape = resized_shape;
     // Partial shape is in NHWC, while input shape is in NCHW.
-    partial_shape.mutable_dimensions()[1] = input_shape.dimensions(2);
+    partial_shape.set_dimensions(1, input_shape.dimensions(2));
     tinput = xla::CustomCall(input.builder(), target, {tinput}, partial_shape,
                              backend_config);
   }

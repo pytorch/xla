@@ -472,7 +472,7 @@ class DynamoCpuFallbackTest(parameterized.TestCase):
     xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
     cpu_res_3 = fn_fallback(t * 3)
     self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
-    # Compilation and executation are caused by `t * 3`
+    # Compilation and execution are caused by `t * 3`
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
@@ -503,7 +503,7 @@ class DynamoCpuFallbackTest(parameterized.TestCase):
     met.clear_all()
     xla_dynamo_res_2 = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
-    # We don't expect any new compilations. There will be 2 new executations
+    # We don't expect any new compilations. There will be 2 new executions
     # since there is a fallback in the middle.
     self.assertEqual(met.metric_data('CompileTime'), None)
     self.assertEqual(met.metric_data('ExecuteTime')[0], 2)

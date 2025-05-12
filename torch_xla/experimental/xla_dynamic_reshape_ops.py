@@ -19,11 +19,11 @@ def dynamic_expand_xla(
     target_dim: int,
 ):
   """torch.expand with unbounded dynamic input shape.
-  
+
      At most one dim of output shape can be unbounded dynamic.
      A static dim of input tensor can be expanded to an unbounded dynamic size.
-     The unbounded dim of input cannot be expanded to a different unbounded size. 
-    
+     The unbounded dim of input cannot be expanded to a different unbounded size.
+
     Args:
         input: torch.Tensor - input tensor to be expanded.
         size: List[Any] - Expanded size.
@@ -75,7 +75,7 @@ def dynamic_view_xla(
     mul_scaler: int,
 ):
   """torch.view with unbounded dynamic input shape.
-  
+
      At most one dim of output shape can be unbounded dynamic.
      The unbounded dimension size can be the same,
      or scaled by an integer factor.

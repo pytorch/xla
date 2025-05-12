@@ -8,8 +8,8 @@ from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
 import torch
 
 import torch.nn as nn
-from torch.distributed._tensor.device_mesh import DeviceMesh
-from torch.distributed._tensor.placement_types import Placement, Replicate
+from torch.distributed import DeviceMesh
+from torch.distributed.tensor.placement_types import Placement, Replicate
 
 import torch_xla.core.xla_model as xm  # type:ignore[import]  # noqa: F401
 import torch_xla.runtime as xr  # type:ignore[import]

@@ -34,7 +34,7 @@ Consider this following pseudocode:
 
 ```python
 class Tensor:
-  _data: jax.Array 
+  _data: jax.Array
   def __torch_dispatch__(...):
       # do stuff with _data, get new data
       return Tensor(new_data)
@@ -58,17 +58,17 @@ will attempt to trace through the `__torch_dispatch__` method,
 and throws error because it doesn't know what is `_data` and the
 operations on it.
 
-If `inputs` is of type `torch.Tensor`, then it works: dynamo 
+If `inputs` is of type `torch.Tensor`, then it works: dynamo
 calls the backend, the backend can produce correct result.
 But, `inputs` need to be converted to `TensorSubclass` first inside of
-the backend; which usually means a data copy. This happens everytime 
+the backend; which usually means a data copy. This happens everytime
 the compiled backend is executed, therefore not desirable.
 
 ## The Desired behavior
 
 When *tracing* dynamo treats TensorSubclass as if it is a regular tensor
 without dispatch override; and when executing the compiled callable,
-TensorSubclass is passed in as-is. We know that dynamo can do this with 
+TensorSubclass is passed in as-is. We know that dynamo can do this with
 some tensor subclass, namely `FakeTensor`.
 
 
@@ -79,10 +79,10 @@ Let's list out the possible ways we could accomplish this behavior.
 
 Roughly we would have a `Tensor` subclass in C++, this is very
 similar to the `LazyTensor` subclass that is the current `XLATensor`.
-This tensor can hold it's own states in C++. In our case, that would 
-be a `PyObject*` that happens to point to either `jnp.ndarray` or 
+This tensor can hold it's own states in C++. In our case, that would
+be a `PyObject*` that happens to point to either `jnp.ndarray` or
 jax's `Traced<ShapedArray>` during jax.jit. We might further result the
-`XLA` dispatch key to route the operators to the jax implementation, 
+`XLA` dispatch key to route the operators to the jax implementation,
 emulating what `__torch_dispatch__` does.
 
 This way, eager mode will continue to work, and dynamo would work
@@ -90,7 +90,7 @@ because the Python class is still `torch.Tensor` (not a subclass), and
 there are no Python logic in dispatching so dynamo cannot trace through.
 
 ## Pros:
-* Very clear that this will work. 
+* Very clear that this will work.
 * Recommended by ezyang
 
 ## Cons:
@@ -111,7 +111,7 @@ not `XLATensor`. and only after the creation of fx graph and backend, dynamo
 calls the compiled callable with `XLATensor`.
 
 Pros:
-* Likely pure python changes. 
+* Likely pure python changes.
 
 Cons:
 * We also need to design a mechanism to represent tensor subclasses that
@@ -125,7 +125,7 @@ So currently dynamo traces `__torch_dispatch__`, and we don't like that
 because it will find the operations on Jax arrays, and doesn't understand those.
 
 What if we make dynamo **able** to understand what is inside?
-The [Black box python functions](https://docs.google.com/document/d/1ZuCVyMfibExwvtzhd9cfMWk5zXT3Dhy1b3kuvAIkBoU/edit#heading=h.56tggsazyrkh) doc 
+The [Black box python functions](https://docs.google.com/document/d/1ZuCVyMfibExwvtzhd9cfMWk5zXT3Dhy1b3kuvAIkBoU/edit#heading=h.56tggsazyrkh) doc
 points the possibility of registering things that we don't want dynamo
 to go into as a custom op. So we could, theoretically do the following:
 
@@ -140,7 +140,7 @@ When dynamo attempts to go inside of `__torch_dispatch__`, it will find
 Our backend will see the same ops but in a different namespace (`jaten`).
 That is fine as long as we know how to look up its implementation.
 
-Note: we probably also need to hook up gradients of custom ops via. `autograph.Function`. 
+Note: we probably also need to hook up gradients of custom ops via. `autograph.Function`.
 
 
 Pros / Cons:
@@ -167,7 +167,7 @@ class Subclass(torch.Tensor):
         shape[i] = 1
     if dtype is None:
       dtype = torch.float32
-    
+
     self = torch.Tensor._make_wrapper_subclass(
         cls,
         shape,
@@ -188,7 +188,7 @@ class Subclass(torch.Tensor):
   def __str__(self):
     return "Subclass({} {})".format(str(type(self._elem)), str(self._elem))
 
-``` 
+```
 
 This fails with an error saying that exhausted subclasses and all the `__torch_dispatch__` returned `NotImplemented`.
 

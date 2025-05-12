@@ -208,6 +208,10 @@ xla::PrecisionConfig DotPrecisonConfig(py::dict args) {
       precision = xla::PrecisionConfig::HIGH;
     } else if (*arg_precision_config == "highest") {
       precision = xla::PrecisionConfig::HIGHEST;
+    } else {
+      XLA_ERROR() << "Invalid precision config in args: "
+                  << *arg_precision_config
+                  << " (valid values: default, high, highest)";
     }
   }
   return XlaHelpers::BuildPrecisionConfig(precision);

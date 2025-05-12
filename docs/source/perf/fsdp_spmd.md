@@ -1,10 +1,10 @@
 # Fully Sharded Data Parallel (FSDP) using SPMD
 
 FSDP in PyTorch/XLA is a utility for
-sharding Module parameters across data-parallel workers. 
+sharding Module parameters across data-parallel workers.
 
 This differs from the [other](./fsdp_spmd.md) implementation of FSDP in PyTorch/XLA
-in that this implementation uses SPMD. 
+in that this implementation uses SPMD.
 
 Please review the [SPMD user guide](./spmd_basic.html) before
 proceeding. You can also find a minimum runnable example

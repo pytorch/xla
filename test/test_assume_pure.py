@@ -251,7 +251,7 @@ class TestAssumePure(absltest.TestCase):
 
   def test_assume_pure_partial_grads_args(self):
     """Tests a function where only some positional inputs require gradients.
-    
+
     In this test, tensor a, c require grad; b does not.
     """
 

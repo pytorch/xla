@@ -28,7 +28,7 @@ pip:
       - tqdm
       - typing_extensions
       - sympy
-      - yapf==0.40.2
+      - yapf==0.40.2  # N.B.: keep in sync with `torchax/dev-requirements.txt`, `.github/workflows/lintercheck.yml`
 
     build_amd64:
       - mkl
