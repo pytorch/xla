@@ -85,7 +85,7 @@ python xla/benchmarks/experiment_runner.py \
     --suite-name=torchbench \
     --progress-bar  \
     --model-config='{"model_name":"BERT_pytorch"}' \
-    --experiment-config='{"accelerator":"cuda","xla":"PJRT","xla_flags":null,"dynamo":"openxla","torch_xla2":null,"test":"train","keep_model_data_on_cuda":"false"}' \
+    --experiment-config='{"accelerator":"cuda","xla":"PJRT","xla_flags":null,"dynamo":"openxla","torch_xla2":null,"test":"train","keep_model_data_on_cuda":false,"enable_functionalization":false}' \
     --repeat 1
 ```
 
