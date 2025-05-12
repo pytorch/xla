@@ -269,7 +269,7 @@ def getitem(self, indexes):
   elif isinstance(indexes, list):
     indexes = tuple(indexes)
 
-  def is_narrow_slicing():
+  def is_view_slicing():
     tensor_free = not pytree.tree_any(
         lambda x: isinstance(x, torch.Tensor) or isinstance(x, jax.Array),
         indexes)
@@ -277,7 +277,7 @@ def getitem(self, indexes):
         [False if isinstance(x, list) else True for x in indexes])
     return tensor_free and list_free
 
-  if is_narrow_slicing():
+  if is_view_slicing():
     return View(self, view_info=NarrowInfo(indexes), env=self._env)
 
   indexes = self._env.t2j_iso(indexes)

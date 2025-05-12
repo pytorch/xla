@@ -385,6 +385,10 @@ class View(torch.Tensor):
   def __str__(self) -> str:
     return f"View({self.torch()})"
 
+  @property
+  def _elem(self) -> jax.Array:
+    return self.jax()
+  
   def jax(self) -> jax.Array:
     """
         Returns a copy of the source tensor after transformations.
@@ -420,3 +424,15 @@ class View(torch.Tensor):
       return self
   
   __repr__ = __str__
+
+
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_masked_std_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_masked_var_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_masked_std_cpu_int64 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_masked_var_cpu_int64 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_nn_functional_interpolate_bilinear_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_nn_functional_interpolate_linear_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_nn_functional_interpolate_trilinear_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_nn_functional_upsample_bilinear_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_take_cpu_float32 - AttributeError: 'View' object has no attribute '_elem'
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_take_cpu_int64 - AttributeError: 'View' object has no attribute '_elem'

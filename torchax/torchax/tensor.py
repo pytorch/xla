@@ -373,7 +373,7 @@ class Environment(contextlib.ContextDecorator):
         )
 
   def _to_copy(self, the_tensor, new_dtype, new_device):
-    if isinstance(the_tensor, Tensor):
+    if isinstance(the_tensor, Tensor) or isinstance(the_tensor, View):
       arr = the_tensor.jax()
       if new_dtype is not None and new_dtype != arr.dtype:
         arr = arr.astype(mappings.t2j_dtype(new_dtype))
