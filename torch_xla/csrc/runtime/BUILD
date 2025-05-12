@@ -14,7 +14,7 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "runtime",
     srcs = [
-        "runtime.cc",
+        "runtime.cpp",
     ],
     hdrs = [
         "runtime.h",
@@ -31,7 +31,7 @@ cc_library(
 cc_library(
     name = "computation_client",
     srcs = [
-        "computation_client.cc",
+        "computation_client.cpp",
     ],
     hdrs = [
         "computation_client.h",
@@ -70,7 +70,7 @@ cc_library(
 cc_library(
     name = "ifrt_computation_client",
     srcs = [
-        "ifrt_computation_client.cc",
+        "ifrt_computation_client.cpp",
     ],
     hdrs = [
         "ifrt_computation_client.h",
@@ -102,7 +102,7 @@ cc_library(
 cc_library(
     name = "pjrt_computation_client",
     srcs = [
-        "pjrt_computation_client.cc",
+        "pjrt_computation_client.cpp",
     ],
     hdrs = [
         "pjrt_computation_client.h",
@@ -150,7 +150,7 @@ cc_library(
 cc_test(
     name = "cache_test",
     size = "small",
-    srcs = ["cache_test.cc"],
+    srcs = ["cache_test.cpp"],
     deps = [
         ":cache",
         "@com_google_googletest//:gtest_main",
@@ -171,13 +171,13 @@ cc_library(
 
 cc_library(
     name = "env_vars",
-    srcs = ["env_vars.cc"],
+    srcs = ["env_vars.cpp"],
     hdrs = ["env_vars.h"],
 )
 
 cc_library(
     name = "env_hash",
-    srcs = ["env_hash.cc"],
+    srcs = ["env_hash.cpp"],
     hdrs = ["env_hash.h"],
     deps = [
         ":sys_util",
@@ -188,7 +188,7 @@ cc_library(
 cc_test(
     name = "env_hash_test",
     size = "small",
-    srcs = ["env_hash_test.cc"],
+    srcs = ["env_hash_test.cpp"],
     deps = [
         ":env_hash",
         "@com_google_googletest//:gtest_main",
@@ -198,7 +198,7 @@ cc_test(
 
 cc_library(
     name = "pjrt_registry",
-    srcs = ["pjrt_registry.cc"],
+    srcs = ["pjrt_registry.cpp"],
     hdrs = ["pjrt_registry.h"],
     deps = [
         ":debug_macros",
@@ -218,7 +218,7 @@ cc_library(
 
 cc_library(
     name = "metrics_analysis",
-    srcs = ["metrics_analysis.cc"],
+    srcs = ["metrics_analysis.cpp"],
     hdrs = ["metrics_analysis.h"],
     deps = [
         ":metrics",
@@ -230,7 +230,7 @@ cc_library(
 
 cc_library(
     name = "metrics_reader",
-    srcs = ["metrics_reader.cc"],
+    srcs = ["metrics_reader.cpp"],
     hdrs = ["metrics_reader.h"],
     deps = [
         ":debug_macros",
@@ -241,7 +241,7 @@ cc_library(
 
 cc_library(
     name = "xla_coordinator",
-    srcs = ["xla_coordinator.cc"],
+    srcs = ["xla_coordinator.cpp"],
     hdrs = ["xla_coordinator.h"],
     deps = [
         ":debug_macros",
@@ -254,7 +254,7 @@ cc_library(
 
 cc_library(
     name = "metrics",
-    srcs = ["metrics.cc"],
+    srcs = ["metrics.cpp"],
     hdrs = ["metrics.h"],
     deps = [
         ":debug_macros",
@@ -269,7 +269,7 @@ cc_library(
 
 cc_library(
     name = "operation_manager",
-    srcs = ["operation_manager.cc"],
+    srcs = ["operation_manager.cpp"],
     hdrs = ["operation_manager.h"],
     visibility = ["//visibility:private"],
     deps = [
@@ -294,7 +294,7 @@ cc_library(
 
 cc_library(
     name = "profiler",
-    srcs = ["profiler.cc"],
+    srcs = ["profiler.cpp"],
     hdrs = ["profiler.h"],
     deps = [
         ":tf_logging",
@@ -322,7 +322,7 @@ cc_library(
 
 cc_library(
     name = "stablehlo_composite_helper",
-    srcs = ["stablehlo_composite_helper.cc"],
+    srcs = ["stablehlo_composite_helper.cpp"],
     hdrs = ["stablehlo_composite_helper.h"],
     deps = [
         ":types",
@@ -334,7 +334,7 @@ cc_library(
 
 cc_library(
     name = "xla_mlir_debuginfo_helper",
-    srcs = ["xla_mlir_debuginfo_helper.cc"],
+    srcs = ["xla_mlir_debuginfo_helper.cpp"],
     hdrs = ["xla_mlir_debuginfo_helper.h"],
     deps = [
         ":types",
@@ -345,7 +345,7 @@ cc_library(
 
 cc_library(
     name = "stablehlo_helper",
-    srcs = ["stablehlo_helper.cc"],
+    srcs = ["stablehlo_helper.cpp"],
     hdrs = ["stablehlo_helper.h"],
     deps = [
         ":stablehlo_composite_helper",
@@ -362,7 +362,7 @@ cc_library(
 
 cc_library(
     name = "sys_util",
-    srcs = ["sys_util.cc"],
+    srcs = ["sys_util.cpp"],
     hdrs = ["sys_util.h"],
     deps = [
         "@com_google_absl//absl/strings",
@@ -373,7 +373,7 @@ cc_library(
 cc_test(
     name = "sys_util_test",
     size = "small",
-    srcs = ["sys_util_test.cc"],
+    srcs = ["sys_util_test.cpp"],
     deps = [
         ":sys_util",
         "@com_google_googletest//:gtest_main",
@@ -382,7 +382,7 @@ cc_test(
 
 cc_library(
     name = "tf_logging",
-    srcs = ["tf_logging.cc"],
+    srcs = ["tf_logging.cpp"],
     hdrs = ["tf_logging.h"],
     deps = [
         "@tsl//tsl/platform:statusor",
@@ -429,7 +429,7 @@ cc_library(
 cc_test(
     name = "util_test",
     size = "small",
-    srcs = ["util_test.cc"],
+    srcs = ["util_test.cpp"],
     deps = [
         ":util",
         "@com_google_absl//absl/types:span",
@@ -440,7 +440,7 @@ cc_test(
 
 cc_library(
     name = "xla_util",
-    srcs = ["xla_util.cc"],
+    srcs = ["xla_util.cpp"],
     hdrs = ["xla_util.h"],
     deps = [
         ":metrics",
@@ -464,7 +464,7 @@ cc_library(
 ptxla_cc_test(
     name = "xla_util_test",
     size = "small",
-    srcs = ["xla_util_test.cc"],
+    srcs = ["xla_util_test.cpp"],
     deps = [
         ":debug_macros",
         ":xla_util",
@@ -481,7 +481,7 @@ ptxla_cc_test(
 
 ptxla_cc_test(
     name = "pjrt_computation_client_test",
-    srcs = ["pjrt_computation_client_test.cc"],
+    srcs = ["pjrt_computation_client_test.cpp"],
     deps = [
         ":computation_client",
         ":pjrt_computation_client",
@@ -506,7 +506,7 @@ ptxla_cc_test(
 
 # ptxla_cc_test(
 #     name = "ifrt_computation_client_test",
-#     srcs = ["ifrt_computation_client_test.cc"],
+#     srcs = ["ifrt_computation_client_test.cpp"],
 #     deps = [
 #         ":computation_client",
 #         ":ifrt_computation_client",
