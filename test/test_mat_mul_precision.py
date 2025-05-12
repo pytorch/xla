@@ -1,13 +1,5 @@
-"""Numeric tests for default precision of mat mul.
+"""Numeric tests for default precision of mat mul."""
 
-There are three similar test files, suffixed default, high, and highest.
-Unfortunately, the precision cannot reliably
-be dynamically changed between tensor operations, so
-the tests are split into three files to ensure a fresh
-environment for each test.
-"""
-
-import logging
 import unittest
 
 import torch
