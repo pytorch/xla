@@ -86,7 +86,7 @@ at::Tensor & wrapper_Scalar_lerp_(at::Tensor & self, const at::Tensor & end, con
 
 ```
 
-The codegen will automatically generate lowerings for `lerp_.Scalar` and `lerp.Scalar_out` that use our `lerp.Scalar` implementation, without us having to provide an explicit lowering. FOOBAR
+The codegen will automatically generate lowerings for `lerp_.Scalar` and `lerp.Scalar_out` that use our `lerp.Scalar` implementation, without us having to provide an explicit lowering.
 
 In general, if there is an operator in pytorch core that has both an out-of-place and an out= variant, it's better to write a lowering for the out-of-place variant, since you'll get a code-generated out= lowering for free.
 
