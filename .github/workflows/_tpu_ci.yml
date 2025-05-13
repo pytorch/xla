@@ -2,6 +2,10 @@ name: TPU Integration Test
 on:
   workflow_call:
     inputs:
+      torch-commit:
+        required: false
+        type: string
+        description: torch-commit
       timeout-minutes:
         required: false
         type: number
