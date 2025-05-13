@@ -1,3 +1,4 @@
+from copy import copy
 from functools import wraps
 
 import torch
@@ -46,59 +47,112 @@ def j2t_autograd(fn):
       fn, call_jax=lambda fn, *args: xb.call_jax(fn, args))
 
 
-def assume_pure_torch(use_cache=False):
+def make_function_tensor_inputs(fn, flat_inputs, input_tree_spec):
+  # Create a wrapper function that takes only tensor inputs.
+  @wraps(fn)
+  def wrapper(*tensor_args):
+    # Go from a list of tensor args to the full list of flattened arguments,
+    # by referencing the original flattened inputs.
+    new_flattened = copy(flat_inputs)
+    tensor_args_iter = iter(tensor_args)
+    for i in range(len(flat_inputs)):
+      if isinstance(flat_inputs[i], torch.Tensor):
+        new_flattened[i] = next(tensor_args_iter)
+    args, kwargs = tree_unflatten(new_flattened, input_tree_spec)
+    out = fn(*args, **kwargs)
+    return out
+
+  return wrapper
+
+
+def pick_tensor_inputs(inputs):
+  assert isinstance(inputs, (tuple, list))
+  return tuple(i for i in inputs if isinstance(i, torch.Tensor))
+
+
+def make_fake_inputs(input):
+  """Creates a fake input for the given input torch tensor. If the input
+  is not a tensor, it returns the input as is.
+  """
+  if isinstance(input, torch.Tensor):
+    t = xb.create_placeholder_tensor(input.shape, input.dtype)
+    return t.requires_grad_(input.requires_grad)
+  return input
+
+
+def assume_pure_torch(func=None, use_cache=False):
   """Decorator to mark a function as pure for PyTorch/XLA.
   This decorator builds an XLA computation from the function and caches it.
   The decorated function must be pure (i.e. no side-effects, behavior
   only depends on inputs). 
   Args:
-    fn: The function to be decorated.
+    func: The function to be decorated.
     use_cache: If True, caches the XLA computation for the function with
       the same name as the function. It is the user's responsibility to ensure
       that the function is called with the same input shapes and types each time
       when using this.
-  NOTE: This decorator only works for forward pass. Using it with torch autograd
-  will lead to undefined behavior.
+  NOTE: This decorator only works for forward pass.
   """
+  assert not torch.is_grad_enabled()
 
-  def wrapper(fn):
+  def wrapper(_func):
 
-    @wraps(fn)
+    @wraps(_func)
     def inner(*args, **kwargs):
       global _XLA_COMPUTATION_CACHE
 
-      def make_fake_tensor(v: torch.Tensor) -> torch.Tensor:
-        t = xb.create_placeholder_tensor(v.shape, v.dtype)
-        return t.requires_grad_(v.requires_grad)
-
-      fake_args = tree_map(make_fake_tensor, args)
-      fake_kwargs = tree_map(make_fake_tensor, kwargs)
+      flat_inputs, input_tree_spec = tree_flatten((args, kwargs))
+      tensor_inputs = pick_tensor_inputs(flat_inputs)
+      computation_inputs = [None] * len(tensor_inputs)
 
       # TODO: Decide what to include in the cache key.
-      if use_cache and _XLA_COMPUTATION_CACHE.get(fn.__name__,
+      if use_cache and _XLA_COMPUTATION_CACHE.get(_func.__name__,
                                                   None) is not None:
-        print(f"Using cached computation for {fn.__name__}")
-        fn_computation, output_tree_spec = _XLA_COMPUTATION_CACHE[fn.__name__]
+        fn_computation, output_tree_spec, parameter_ids = _XLA_COMPUTATION_CACHE[_func.__name__]
+        for i in range(len(tensor_inputs)):
+          computation_inputs[parameter_ids[i]] = tensor_inputs[i]
       else:
-        fake_outputs = fn(*fake_args, **fake_kwargs)
-        fake_outputs, output_tree_spec = tree_flatten(fake_outputs)
+        flat_fake_inputs = [make_fake_inputs(a) for a in flat_inputs]
+        tensor_inputs_function = make_function_tensor_inputs(
+            _func, flat_fake_inputs, input_tree_spec)
+        fake_tensor_inputs = pick_tensor_inputs(flat_fake_inputs)
+        for i in range(len(fake_tensor_inputs)):
+          assert fake_tensor_inputs[i].shape == tensor_inputs[i].shape
+
+        fake_outputs = tensor_inputs_function(*fake_tensor_inputs)
+        flat_fake_outputs, output_tree_spec = tree_flatten(fake_outputs)
 
         fn_ctx = torch_xla._XLAC.lowering.LoweringContext("FnComputation")
         fn_ctx.set_name_string("fn_ctx")
-        fn_ctx.build(fake_outputs)
+        fn_ctx.build(flat_fake_outputs)
         fn_hlo = fn_ctx.hlo()
+        # print(f"fn_hlo: {fn_ctx.hlo_text()}")
+        parameter_ids = []
+        for t in fake_tensor_inputs:
+          param_id = fn_ctx.tensor_parameter_id(t)
+          if param_id != -1:
+            parameter_ids.append(param_id)
+        for i in range(len(fake_tensor_inputs)):
+          computation_inputs[parameter_ids[i]] = tensor_inputs[i]
 
         fn_computation = xb.computation_from_module_proto(
-            f"xla::xb_computation_{fn.__name__}", fn_hlo)
+            f"xla::xb_computation_{_func.__name__}", fn_hlo)
         if use_cache:
-          _XLA_COMPUTATION_CACHE[fn.__name__] = (fn_computation,
-                                                 output_tree_spec)
+          _XLA_COMPUTATION_CACHE[_func.__name__] = (fn_computation,
+                                                 output_tree_spec, parameter_ids)
 
       result = torch_xla._XLAC._xla_user_computation(
-          f"xla::xb_computation_{fn.__name__}", args, fn_computation)
+          f"xla::xb_computation_{_func.__name__}", computation_inputs, fn_computation)
       result_tree = tree_unflatten(result, output_tree_spec)
       return result_tree
 
     return inner
 
-  return wrapper
+  if func is None:
+    # Decorator was called with arguments, e.g., @assume_pure_torch(use_cache=True)
+    # Return the actual decorator that will take the function
+    return wrapper
+  else:
+    # Decorator was called without arguments, e.g., @assume_pure_torch
+    # Call the wrapper directly with the function
+    return wrapper(func)
