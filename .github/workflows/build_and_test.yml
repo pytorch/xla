@@ -128,8 +128,7 @@ jobs:
   test-torchprime:
     name: "torchprime tests"
     uses: ./.github/workflows/_torchprime_ci.yml
-    # needs: [build-torch-xla, check_code_changes]
-    needs: [check_code_changes]
+    needs: [build-torch-xla, check_code_changes]
     with:
       timeout-minutes: 100
       has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
