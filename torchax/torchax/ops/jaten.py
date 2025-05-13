@@ -1251,9 +1251,15 @@ def _aten_cat(tensors, dims=0):
   # handle it as a special case if the first tensor is empty.
   # torch.cat will ignore the empty tensor, while jnp.concatenate
   # will error if the dims > 0.
-  if len(tensors) > 0 and tensors[0].ndim == 1 and tensors[0].shape[0] == 0:
-    return jnp.concatenate(tensors[1:], dims)
-  return jnp.concatenate(tensors, dims)
+  # index = 0
+  # while index < len(tensors) and tensors[index].ndim == 1 and tensors[index].shape[0] == 0:
+  #  index = index + 1
+  #if index == len(tensors):
+  #  return tensors[0]
+  filtered_tensors = list(filter(lambda x: not(x.ndim == 1 and x.shape[0] == 0), tensors))
+  if filtered_tensors:
+    return jnp.concatenate(filtered_tensors, dims)
+  return tensors[0]
 
 
 def _ceil_mode_padding(
