@@ -1,0 +1,37 @@
+name: torchprime tests
+on:
+  workflow_call:
+    inputs:
+      timeout-minutes:
+        required: false
+        type: number
+        description: Timeout in minutes for the job run
+        default: 120
+      has_code_changes:
+        required: false
+        type: string
+        description: Whether to run full workflow or not
+        default: 'true'
+    secrets:
+      PERSONAL_ACCESS_TOKEN_FOR_TRIGGERING_TORCHPRIME:
+        required: true
+jobs:
+  torchprime-e2e-test:
+    name: Run torchprime E2E tests
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout actions
+        if: inputs.has_code_changes == 'true'
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/workflows/setup
+          path: .actions
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
+        with:
+          owner: AI-Hypercomputer
+          repo: torchprime
+          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN_FOR_TRIGGERING_TORCHPRIME }}
+          workflow_file_name: e2e_test.yml
+          ref: yifeit/torchprime-ci
