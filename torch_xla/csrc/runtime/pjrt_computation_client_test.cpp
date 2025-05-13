@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <exception>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -24,14 +25,31 @@
 
 namespace torch_xla {
 namespace runtime {
+namespace {
 
-absl::StatusOr<xla::XlaComputation> MakeComputation() {
-  xla::Shape input_shape =
+// Returns a computation to compute x + y where x and y are both F32[2,2]
+// arrays.
+absl::StatusOr<xla::XlaComputation> MakeAddComputation() {
+  const xla::Shape input_shape =
       xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {2, 2});
   xla::XlaBuilder builder("AddComputation");
   xla::XlaOp x = xla::Parameter(&builder, 0, input_shape, "x");
   xla::XlaOp y = xla::Parameter(&builder, 1, input_shape, "y");
   xla::XlaOp sum = xla::Add(x, y);
+  return builder.Build();
+}
+
+// Returns a computation to compute the matrix multiplication of two matrices:
+//   x: F32[size, 1] mul y: F32[1, size] => z: F32[size, size]
+absl::StatusOr<xla::XlaComputation> MakeMatMulComputation(int64_t size) {
+  const xla::Shape x_shape =
+      xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {size, 1});
+  const xla::Shape y_shape =
+      xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {1, size});
+  xla::XlaBuilder builder("MatMulComputation");
+  xla::XlaOp x = xla::Parameter(&builder, 0, x_shape, "x");
+  xla::XlaOp y = xla::Parameter(&builder, 1, y_shape, "y");
+  xla::XlaOp matmul = xla::Dot(x, y);
   return builder.Build();
 }
 
@@ -41,37 +59,34 @@ TEST(PjRtComputationClient, ThrowsExpectedExceptionWhenCompileFails) {
   const auto client = std::make_unique<PjRtComputationClient>();
   const std::string device = client->GetDefaultDevice();
 
-  xla::Shape shape;
-  try {
-    // Compose a computation with an enormous shape.
-    shape = xla::ShapeUtil::MakeShape(xla::F32, {8000000000, 5, 1000000000});
-  } catch (const std::exception& e) {
-    LOG(ERROR) << "ZW: " << e.what();
-  }
-
-  shape = xla::Shape(xla::F32, {8000000000, 5, 1000000000},
-                     /*dynamic_dimensions=*/{});
-
+  // Compose a computation to multiply two matrices.
+  const int64_t size = 2L*1000000000;
+  xla::Shape out_shape(xla::F32, {size, size},
+                       /*dynamic_dimensions=*/{});
   std::vector<ComputationClient::CompileInstance> instances;
   try {
-    instances.push_back(ComputationClient::CompileInstance(
-        std::move(MakeComputation().value()), device,
-        client->GetCompilationDevices(device, client->GetLocalDevices()),
-        &shape));
+  instances.push_back(ComputationClient::CompileInstance(
+      std::move(MakeMatMulComputation(size).value()), device,
+      client->GetCompilationDevices(device, client->GetLocalDevices()),
+      &out_shape));
   } catch (const std::exception& e) {
-    LOG(ERROR) << "ZW: " << e.what();
+    LOG(ERROR) << "ZW1: " << e.what();
+  } catch (...) {
+    LOG(ERROR) << "ZW1: Exception thrown!";
   }
 
+  LOG(ERROR) << "ZW1: done";
   try {
     // Compiling the graph should fail, which should throw instead of crashing.
     // TODO(https://github.com/pytorch/xla/issues/9096): ensure that
     // the exception has type std::invalid_argument.
     client->Compile(std::move(instances));
   } catch (const std::exception& e) {
-    LOG(ERROR) << "ZW: " << e.what();
+    LOG(ERROR) << "ZW2: " << e.what();
   } catch (...) {
-    LOG(ERROR) << "Exception thrown!";
+    LOG(ERROR) << "ZW2: Exception thrown!";
   }
+  LOG(ERROR) << "ZW2: done";
   // EXPECT_ANY_THROW(client->Compile(std::move(instances)));
 }
 
@@ -81,13 +96,13 @@ TEST(PjRtComputationClientTest, Init) {
   auto client = std::make_unique<PjRtComputationClient>();
   std::string device = client->GetDefaultDevice();
 
-  // Compose a computation.
-  auto shape = xla::ShapeUtil::MakeShape(xla::F32, {2, 2});
+  // Compose a computation to add two 2x2 matrices.
+  auto out_shape = xla::ShapeUtil::MakeShape(xla::F32, {2, 2});
   std::vector<ComputationClient::CompileInstance> instances;
   instances.push_back(ComputationClient::CompileInstance(
-      std::move(MakeComputation().value()), device,
+      std::move(MakeAddComputation().value()), device,
       client->GetCompilationDevices(device, client->GetLocalDevices()),
-      &shape));
+      &out_shape));
 
   // Prepare inputs.
   xla::Literal literal_x =
@@ -119,5 +134,6 @@ TEST(PjRtComputationClientTest, Init) {
       result_literals[0]));
 }
 
+}  // namespace
 }  // namespace runtime
 }  // namespace torch_xla
