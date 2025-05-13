@@ -66,7 +66,18 @@ def sync(wait: bool = False, reset_scope: bool = True):
     wait (bool): whether to block the current process until the execution finished.
     reset_scope (bool): whether to reset the torch::lazy::ScopeContext of the IR Nodes.
   """
-  xm.mark_step(wait, reset_scope)
+  if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False):
+    print('torch_xla.torch_xla::sync\n', end='', file=sys.stderr, flush=True)
+  torch_xla._XLAC._xla_step_marker(
+      torch_xla._XLAC._xla_get_default_device(), [],
+      wait=xu.getenv_as('XLA_SYNC_WAIT', bool, wait),
+      reset_scope=reset_scope)
+  # Only emit metrics from the first local device index, to avoid emitting the
+  # same values from different threads.
+  if is_master_ordinal():
+    ms.save_metrics()
+  devctx = xm._run_step_closures()
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
 
 def step():

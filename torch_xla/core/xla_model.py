@@ -15,6 +15,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
 from torch_xla import runtime
+from torch_xla.experimental.deprecation import mark_deprecated
+from typing_extensions import deprecated
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
@@ -1051,23 +1053,9 @@ def _run_step_closures() -> DeviceContext:
   return devctx
 
 
+@deprecated("Use torch_xla.sync instead")
 def mark_step(wait: bool = False, reset_scope: bool = True):
-  if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False):
-    print(
-        'torch_xla.core.xla_model::mark_step\n',
-        end='',
-        file=sys.stderr,
-        flush=True)
-  torch_xla._XLAC._xla_step_marker(
-      torch_xla._XLAC._xla_get_default_device(), [],
-      wait=xu.getenv_as('XLA_SYNC_WAIT', bool, wait),
-      reset_scope=reset_scope)
-  # Only emit metrics from the first local device index, to avoid emitting the
-  # same values from different threads.
-  if is_master_ordinal():
-    ms.save_metrics()
-  devctx = _run_step_closures()
-  torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
+  torch_xla(wait, reset_scope)
 
 
 # TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
