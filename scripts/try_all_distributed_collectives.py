@@ -1,4 +1,5 @@
 import argparse
+import traceback
 import warnings
 
 import torch
@@ -261,7 +262,7 @@ def main(rank: int, verbose: bool = False, input_size: int = 8):
       except Exception as e:
         result_str = f"FAILED with exception {type(e).__name__}"
         if verbose:
-          result_str += f"\t{e}"
+          result_str += f"\t{e}\n{traceback.format_exc()}"
       torch_xla.sync(wait=True)
       if rank == 0:
         print(result_str)
