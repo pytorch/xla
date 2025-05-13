@@ -430,7 +430,7 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
   int64_t total_size = 0;
-  for (auto handle : handles) {
+  for (const auto& handle : handles) {
     // Use XLA replication to reassemble the sharded data. If input handle
     // is not sharded, then it is a no-op.
     auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(handle);
@@ -501,9 +501,9 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
         mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
     torch_xla::ConvertHloToStableHlo(instance.computation.mutable_proto(),
                                      &mlir_module);
-    std::unique_ptr<xla::ifrt::LoadedExecutable> executable =
+    std::shared_ptr<xla::ifrt::LoadedExecutable> executable =
         ConsumeValue(client_->GetDefaultCompiler()->Compile(
-            std::make_unique<xla::ifrt::HloProgram>(std::move(mlir_module)),
+            std::make_unique<xla::ifrt::HloProgram>(mlir_module),
             std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options,
                                                            devices_list)));
     StableHloCompileCounter()->AddValue(1);
