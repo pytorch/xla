@@ -86,7 +86,7 @@ at::Tensor & wrapper_Scalar_lerp_(at::Tensor & self, const at::Tensor & end, con
 
 ```
 
-The codegen will automatically generate lowerings for `lerp_.Scalar` and `lerp.Scalar_out` that use our `lerp.Scalar` implementation, without us having to provide an explicit lowering.
+The codegen will automatically generate lowerings for `lerp_.Scalar` and `lerp.Scalar_out` that use our `lerp.Scalar` implementation, without us having to provide an explicit lowering. FOOBAR
 
 In general, if there is an operator in pytorch core that has both an out-of-place and an out= variant, it's better to write a lowering for the out-of-place variant, since you'll get a code-generated out= lowering for free.
 
@@ -98,5 +98,3 @@ In certain cases, it might be that we need to manually override the `XLA` key im
 If you need to override the `XLA` dispatch key you can do this through macros in the [xla_manual_registration.cpp](https://github.com/pytorch/xla/blob/master/torch_xla/csrc/xla_manual_registration.cpp) file.
 
 You can use the https://github.com/pytorch/xla/pull/8801 PR for reference on what files to change.
-
-FOOBAR
