@@ -28,6 +28,11 @@ jobs:
     env:
       BRANCH_NAME: ${{ github.ref_name }}
     steps:
+    - name: Checkout PyTorch Repo
+      uses: actions/checkout@v4
+      with:
+        repository: pytorch/pytorch
+        path: pytorch/pytorch
     - name: Checkout PyTorch/XLA Repo
       if: inputs.has_code_changes == 'true'
       uses: actions/checkout@v4
