@@ -24,6 +24,9 @@ build -c opt
 
 build --config=short_logs
 
+# PyTorch/XLA uses exceptions to communicate with Python.
+build --copt=-fexceptions
+
 # Force GCC because clang/bazel has issues.
 build --action_env=CC=gcc
 build --action_env=CXX=g++

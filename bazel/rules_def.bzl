@@ -26,7 +26,6 @@ def ptxla_cc_test(
         linkstatic = True,
         copts = copts + [
             "-isystemexternal/torch",  # Required for system includes.
-            "-fexceptions",  # Required for testing crashes.
         ],
         deps = deps + [
             "@pybind11//:pybind11_embed",  # libpython
