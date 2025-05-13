@@ -340,6 +340,8 @@ git fetch upstream
 git checkout main 
 # Merge the changes from upstream/main into your local branch.
 git merge upstream/main
+# Update submodules to match the latest changes.
+git submodule update --recursive 
 # Push the updated branch to your fork on GitHub.
 git push origin main
 ```
