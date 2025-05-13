@@ -23,6 +23,15 @@ jobs:
     env:
       BRANCH_NAME: ${{ github.ref_name }}
     steps:
+    - name: Fetch wheels
+      uses: actions/download-artifact@v4
+      with:
+        name: torch-xla-wheels
+        path: /tmp/wheels/
+    - name: Install wheels
+      shell: bash
+      run: |
+        pip install /tmp/wheels/*.whl
     - name: Checkout PyTorch/XLA Repo
       uses: actions/checkout@v4
       with:
@@ -51,7 +60,6 @@ jobs:
         name: github-pages
         path: pytorch/xla/docs/build/
     - name: Deploy
-      if: github.event_name == 'push'
       shell: bash
       run: |
         cd gh-pages
