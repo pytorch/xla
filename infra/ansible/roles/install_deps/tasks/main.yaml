@@ -34,3 +34,10 @@
   ansible.builtin.pip:
     name: "{{ pip_pkgs_nodeps }}"
     extra_args: "--no-deps"
+
+- name: Install Clang Alternatives
+  command: update-alternatives --install /usr/bin/{{ item }} {{ item }} {{ llvm_path }}/{{ item }} 100
+  loop:
+    - clang
+    - clang++
+  when: stage == "build"
