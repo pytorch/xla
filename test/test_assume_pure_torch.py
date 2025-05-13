@@ -119,7 +119,6 @@ import torch_xla.experimental.assume_pure as ap
 #     # Check that the outputs are close
 #     torch.testing.assert_close(pure_output, orig_output, check_device=False)
 
-
 #   def test_assume_pure_avoid_retracing_avoid_rejit(self):
 #     """Tests that we avoid retracing and re-jitting when using assume_pure."""
 
@@ -166,6 +165,7 @@ import torch_xla.experimental.assume_pure as ap
 
 # TODO: Support assume_pure_torch with arbitraty inputs.
 class TracingBenchmark(absltest.TestCase):
+
   def setUp(self):
     super().setUp()
     torch.set_grad_enabled(False)

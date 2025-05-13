@@ -1,5 +1,6 @@
 from copy import copy
 from functools import wraps
+from typing import Dict
 
 import torch
 from torch.utils._pytree import tree_map, tree_flatten, tree_unflatten
@@ -103,14 +104,18 @@ def assume_pure_torch(func=None, use_cache=False):
 
       flat_inputs, input_tree_spec = tree_flatten((args, kwargs))
       tensor_inputs = pick_tensor_inputs(flat_inputs)
-      computation_inputs = [None] * len(tensor_inputs)
+      computation_inputs = None
 
       # TODO: Decide what to include in the cache key.
       if use_cache and _XLA_COMPUTATION_CACHE.get(_func.__name__,
                                                   None) is not None:
-        fn_computation, output_tree_spec, parameter_ids = _XLA_COMPUTATION_CACHE[_func.__name__]
+        fn_computation, output_tree_spec, parameter_ids, hoisted_vars = _XLA_COMPUTATION_CACHE[
+            _func.__name__]
+        computation_inputs = [None] * (len(hoisted_vars) + len(tensor_inputs))
         for i in range(len(tensor_inputs)):
           computation_inputs[parameter_ids[i]] = tensor_inputs[i]
+        for i, var in hoisted_vars.items():
+          computation_inputs[i] = var
       else:
         flat_fake_inputs = [make_fake_inputs(a) for a in flat_inputs]
         tensor_inputs_function = make_function_tensor_inputs(
@@ -126,23 +131,31 @@ def assume_pure_torch(func=None, use_cache=False):
         fn_ctx.set_name_string("fn_ctx")
         fn_ctx.build(flat_fake_outputs)
         fn_hlo = fn_ctx.hlo()
-        # print(f"fn_hlo: {fn_ctx.hlo_text()}")
-        parameter_ids = []
-        for t in fake_tensor_inputs:
-          param_id = fn_ctx.tensor_parameter_id(t)
-          if param_id != -1:
-            parameter_ids.append(param_id)
-        for i in range(len(fake_tensor_inputs)):
-          computation_inputs[parameter_ids[i]] = tensor_inputs[i]
-
         fn_computation = xb.computation_from_module_proto(
             f"xla::xb_computation_{_func.__name__}", fn_hlo)
+        hoisted_vars: Dict[
+            int, torch.Tensor] = fn_ctx.device_parameter_id_tensor_mapping()
+        computation_inputs = [None] * len(hoisted_vars)
+
+        parameter_ids = []
+        for i, t in enumerate(fake_tensor_inputs):
+          param_id = fn_ctx.tensor_parameter_id(t)
+          if param_id != -1:
+            del hoisted_vars[param_id]
+            parameter_ids.append(param_id)
+            computation_inputs[param_id] = tensor_inputs[i]
+
+        for i, var in hoisted_vars.items():
+          computation_inputs[i] = var
+
         if use_cache:
           _XLA_COMPUTATION_CACHE[_func.__name__] = (fn_computation,
-                                                 output_tree_spec, parameter_ids)
+                                                    output_tree_spec,
+                                                    parameter_ids, hoisted_vars)
 
       result = torch_xla._XLAC._xla_user_computation(
-          f"xla::xb_computation_{_func.__name__}", computation_inputs, fn_computation)
+          f"xla::xb_computation_{_func.__name__}", computation_inputs,
+          fn_computation)
       result_tree = tree_unflatten(result, output_tree_spec)
       return result_tree
 
