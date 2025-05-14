@@ -22,8 +22,6 @@ build --define=grpc_no_ares=true
 
 build -c opt
 
-build --copt=-fexceptions
-
 build --config=short_logs
 
 # PyTorch/XLA uses exceptions to communicate with Python.
