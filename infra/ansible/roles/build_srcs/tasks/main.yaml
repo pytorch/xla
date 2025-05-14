@@ -46,7 +46,7 @@
   ansible.builtin.command:
     cmd: python setup.py bdist_wheel
     chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
-  environment: "{{ env_vars }}"
+  environment: "{{ env_vars | combine({'DEBUG': '1', 'USE_CLANG': '1'}) }}"
 
 - name: Find XLA *.whl files in pytorch/xla/dist
   ansible.builtin.find:
@@ -191,25 +191,6 @@
     executable: bash
     chdir: "{{ src_root }}"
   when: build_cpp_tests
-
-- name: Collect GCNO files
-  ansible.builtin.shell: |
-    set -x
-
-    # Bazel output directory.
-    OUTPUT_BASE=$(bazel info output_base)
-    echo "OUTPUT_BASE: $OUTPUT_BASE"
-
-    CSRC=$(find "$OUTPUT_BASE/" -path "*/bazel-out/k8-opt/bin/torch_xla/csrc")
-    echo "CSRC: $CSRC"
-
-    # Go to the directory with the build files of torch_xla/csrc.
-    cd "$CSRC"
-
-    # Find all GCNO files, and install them into a temporary directory.
-    find . -name "*.gcno" -exec install -D \{} $GCNO_OUTPUT_DIR/\{} \;
-
-    set +x
 
 - name: Read Torchvision pin
   ansible.builtin.command: cat {{ (src_root, 'pytorch') | path_join }}/.github/ci_commit_pins/vision.txt

@@ -10,7 +10,7 @@ function run_torch_xla_python_tests() {
   ./test/run_tests.sh
   if [ "$USE_COVERAGE" != "0" ]; then
     coverage combine
-    coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
+    coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
   fi
   popd
 }
@@ -74,7 +74,7 @@ function run_torch_xla_benchmark_tests() {
   popd
   if [ "$USE_COVERAGE" != "0" ]; then
     coverage combine
-    coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
+    coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
   fi
 }
 

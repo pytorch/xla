@@ -148,18 +148,18 @@ jobs:
         shell: bash
         run: |
           set -x
-          pip install -U coverage coverage-lcov
+          pip install -U coverage
         if: ${{ inputs.collect-coverage }}
       - name: Test
         shell: bash
         env:
           COVERAGE_FILE: "${{ env.COVERAGE_DIR }}/py-coverage"
-          GCOV_PREFIX: "${{ env.COVERAGE_DIR }}/cpp-coverage"
+          LLVM_PROFILE_FILE: "${{ env.COVERAGE_DIR }}/cpp-coverage/data-%p.profraw"
         run: pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
       - name: Upload coverage results
         uses: actions/upload-artifact@v4
         with:
-          name: "lcov-${{ inputs.device-type }}-${{ matrix.name }}"
+          name: "coverage-${{ inputs.device-type }}-${{ matrix.name }}"
           path: "${{ env.COVERAGE_DIR }}"
         if: ${{ inputs.collect-coverage }}
 

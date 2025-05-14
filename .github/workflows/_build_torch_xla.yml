@@ -64,9 +64,4 @@ jobs:
         with:
           name: cpp-test-bin
           path: /tmp/test/bin
-      - name: Upload GCNO files
-        uses: actions/upload-artifact@v4
-        with:
-          name: torch-xla-gcnos
-          path: ${{ env.GCNO_OUTPUT_DIR }}
 
