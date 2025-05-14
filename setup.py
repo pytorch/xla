@@ -67,9 +67,9 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
 
-_date = '20250424'
+_date = '20250512'
 
-_libtpu_version = '0.0.14'
+_libtpu_version = '0.0.15'
 _jax_version = '0.6.1'
 _jaxlib_version = '0.6.1'
 
@@ -358,11 +358,11 @@ def _get_jax_install_requirements():
     ]
 
   # Install nightly JAX libraries from the JAX package registries.
-  jax = f'jax @ https://storage.googleapis.com/jax-releases/nightly/jax/jax-{_jax_version}-py3-none-any.whl'
+  jax = f'jax @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax/jax/jax-{_jax_version}-py3-none-any.whl'
   jaxlib = []
   for python_minor_version in [9, 10, 11]:
     jaxlib.append(
-        f'jaxlib @ https://storage.googleapis.com/jax-releases/nightly/nocuda/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
+        f'jaxlib @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax/jaxlib/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
     )
   return [jax] + jaxlib
 
@@ -431,7 +431,7 @@ setup(
         ],
         # As of https://github.com/pytorch/xla/pull/8895, jax is always a dependency of torch_xla.
         # However, this no-op extras_require entrypoint is left here for backwards compatibility.
-        # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+        # pip install torch_xla[pallas] -i https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/
         'pallas': [f'jaxlib=={_jaxlib_version}', f'jax=={_jax_version}'],
     },
     cmdclass={
