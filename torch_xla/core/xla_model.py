@@ -15,7 +15,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
 from torch_xla import runtime
-from torch_xla.experimental.deprecation import mark_deprecated
 from typing_extensions import deprecated
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
@@ -1053,7 +1052,7 @@ def _run_step_closures() -> DeviceContext:
   return devctx
 
 
-# @deprecated("Use torch_xla.sync instead")
+@deprecated("Use torch_xla.sync instead")
 def mark_step(wait: bool = False, reset_scope: bool = True):
   torch_xla.sync(wait, reset_scope)
 

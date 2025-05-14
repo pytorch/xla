@@ -59,8 +59,8 @@ class PtXLADebugTest(unittest.TestCase):
     self.assertIn('GB', post_compilation_infos[0].program_size)
 
     if self.debug_level > 1:
-      self.assertEqual(len(executation_causes), 1)
-      self.assertIn('user sync', executation_causes[0])
+      self.assertEqual(len(execution_causes), 1)
+      self.assertIn('user sync', execution_causes[0])
     else:
       self.assertEqual(len(execution_causes), 0)
 
@@ -125,9 +125,9 @@ class PtXLADebugTest(unittest.TestCase):
       graph_infos = extract_graph_infos(lines)
 
     if self.debug_level > 1:
-      self.assertEqual(len(executation_causes), 2)
+      self.assertEqual(len(execution_causes), 2)
       self.assertIn('mark_step when dynamo processing input graphs',
-                    executation_causes[0])
+                    execution_causes[0])
       self.assertIn('dynamo is executing a compiled program',
                     execution_causes[1])
     else:
@@ -175,11 +175,11 @@ class PtXLADebugTest(unittest.TestCase):
       graph_infos = extract_graph_infos(lines)
 
     if self.debug_level > 1:
-      self.assertEqual(len(executation_causes), 2)
+      self.assertEqual(len(execution_causes), 2)
       self.assertIn(
           'torch_xla.compile clear the pending graph prior calling the target function',
-          executation_causes[0])
-      self.assertIn('torch_xla.compile\n', executation_causes[1])
+          execution_causes[0])
+      self.assertIn('torch_xla.compile\n', execution_causes[1])
     else:
       self.assertEqual(len(execution_causes), 0)
 
@@ -264,8 +264,8 @@ class PtXLADebugTest(unittest.TestCase):
       graph_infos = extract_graph_infos(lines)
 
     if self.debug_level > 1:
-      self.assertEqual(len(executation_causes), batch_size)
-      for cause in executation_causes:
+      self.assertEqual(len(execution_causes), batch_size)
+      for cause in execution_causes:
         self.assertIn('mark_step in parallel loader at step end', cause)
     else:
       self.assertEqual(len(execution_causes), 0)
