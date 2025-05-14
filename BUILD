@@ -26,11 +26,14 @@ cc_binary(
         "-fopenmp",
         "-fPIC",
         "-fwrapv",
+        "-fprofile-instr-generate",
+        "-fcoverage-mapping",
     ],
     linkopts = [
         "-Wl,-rpath,$$ORIGIN/torch_xla/lib",  # for libtpu
         "-Wl,-soname,_XLAC.so",
         "-lstdc++fs",  # For std::filesystem
+        "-fprofile-instr-generate",
     ],
     linkshared = 1,
     visibility = ["//visibility:public"],
@@ -51,9 +54,12 @@ cc_binary(
     copts = [
         "-fopenmp",
         "-fPIC",
+        "-fprofile-instr-generate",
+        "-fcoverage-mapping",
     ],
     linkopts = [
         "-Wl,-soname,_XLAC_cuda_functions.so",
+        "-fprofile-instr-generate",
     ],
     linkshared = 1,
     visibility = ["//visibility:public"],

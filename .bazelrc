@@ -24,18 +24,16 @@ build -c opt
 
 build --config=short_logs
 
-# PyTorch/XLA uses exceptions to communicate with Python.
-build --copt=-fexceptions
-
 # Force GCC because clang/bazel has issues.
-build --action_env=CC=gcc
-build --action_env=CXX=g++
 build --spawn_strategy=standalone
 
 ###########################################################################
 
-build:clang --action_env=CC=/usr/bin/clang-17
-build:clang --action_env=CXX=/usr/bin/clang++-17
+build:gcc --action_env=CC=gcc
+build:gcc --action_env=CXX=g++
+
+build:clang --action_env=CC=/usr/lib/llvm-17/bin/clang
+build:clang --action_env=CXX=/usr/lib/llvm-17/bin/clang++
 
 # clang requires the sandbox mode. Without this, `bazel build` generates an
 # error like:
@@ -251,7 +249,9 @@ build:linux --copt="-Werror=unused-result"
 build:linux --copt="-Wswitch"
 build:linux --copt="-Werror=switch"
 # Required for building with clang
-build:linux --copt="-Wno-error=unused-but-set-variable"
+# build:linux --copt="-Wno-error=unused-but-set-variable"
+build:linux --copt="-Wno-gnu-offsetof-extensions"
+build:linux --copt="-Wno-unused-command-line-argument"
 
 # Only include debug info for files not under XLA.
 build:dbg -c dbg

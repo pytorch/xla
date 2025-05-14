@@ -1,25 +1,16 @@
 set -ex
 
+
 function run_torch_xla_python_tests() {
   XLA_DIR=$1
   USE_COVERAGE="${2:-0}"
 
   pushd $XLA_DIR
   echo "Running Python Tests"
+  ./test/run_tests.sh
   if [ "$USE_COVERAGE" != "0" ]; then
-    pip install coverage==6.5.0 --upgrade
-    pip install coverage-lcov
-    pip install toml
-    ./test/run_tests.sh
     coverage combine
-    mkdir lcov && cp .coverage lcov/
-    coverage-lcov --data_file_path lcov/.coverage
-    coverage html
-    cp lcov.info htmlcov/
-    mv htmlcov ~/
-    chmod -R 755 ~/htmlcov
-  else
-    ./test/run_tests.sh
+    coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
   fi
   popd
 }
@@ -81,6 +72,10 @@ function run_torch_xla_benchmark_tests() {
   echo "Running Torchbench Tests"
   test/benchmarks/run_torchbench_tests.sh "${TORCHBENCH_MODELS[@]}"
   popd
+  if [ "$USE_COVERAGE" != "0" ]; then
+    coverage combine
+    coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
+  fi
 }
 
 PYTORCH_DIR=$1

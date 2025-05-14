@@ -1,6 +1,7 @@
 load(
     "//bazel:rules_def.bzl",
     "ptxla_cc_library",
+    "cov_library",
 )
 
 genrule(
@@ -208,7 +209,7 @@ ptxla_cc_library(
     ],
 )
 
-cc_library(
+cov_library(
     name = "einsum_utilities",
     hdrs = ["ops/einsum_utilities.h"],
     deps = [
@@ -247,7 +248,7 @@ ptxla_cc_library(
     ],
 )
 
-cc_library(
+cov_library(
     name = "version",
     srcs = ["version.cpp"],
     hdrs = ["version.h"],
@@ -310,7 +311,7 @@ ptxla_cc_library(
     ],
 )
 
-cc_library(
+cov_library(
     name = "shape_helper",
     srcs = ["shape_helper.cpp"],
     hdrs = ["shape_helper.h"],
@@ -320,7 +321,7 @@ cc_library(
     ],
 )
 
-cc_library(
+cov_library(
     name = "thread_pool",
     srcs = ["thread_pool.cpp"],
     hdrs = ["thread_pool.h"],
