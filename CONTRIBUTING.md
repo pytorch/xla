@@ -366,3 +366,24 @@ git checkout master
 git merge upstream/master
 git push origin master
 ```
+
+## Updating Local Branch with Upstream Changes
+
+While you work on a PR, other PRs may be merged into the upstream repo's
+default branch, and you may want to make sure your PR works with them.
+In this case, you'll want to rebase your commits on top of the upstream
+commits. You can do this by:
+
+```bash
+cd $WORKSPACE_DIR/pytorch/xla
+git checkout your-branch-name
+# Update the remote-tracking branches for upstream.
+git fetch upstream
+# Rebase commits in your PR on top of the upstream master branch.
+git rebase upstream/master
+# If the above command fails due to merge conflicts, follow the error messages
+# to resolve the conflicts.
+# When you are done, push the updated branch to your fork on GitHub. This will
+# update the PR.
+git push --force-with-lease origin your-branch-name
+```
