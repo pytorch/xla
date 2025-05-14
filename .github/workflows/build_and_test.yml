@@ -79,7 +79,7 @@ jobs:
   test-python-cpu:
     name: "CPU tests"
     uses: ./.github/workflows/_test.yml
-    needs: [build-torch-xla, check_code_changes, get-torch-commit]
+    needs: [check_code_changes, get-torch-commit]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
       timeout-minutes: 120
@@ -92,7 +92,7 @@ jobs:
   test-cuda:
     name: "GPU tests"
     uses: ./.github/workflows/_test.yml
-    needs: [build-torch-xla, build-cuda-plugin, check_code_changes, get-torch-commit]
+    needs: [build-cuda-plugin, check_code_changes, get-torch-commit]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
       runner: linux.g4dn.12xlarge.nvidia.gpu
@@ -107,7 +107,7 @@ jobs:
   test-cuda-with-pytorch-cuda-enabled:
     name: "GPU tests requiring torch CUDA"
     uses: ./.github/workflows/_test_requiring_torch_cuda.yml
-    needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin, check_code_changes, get-torch-commit]
+    needs: [build-torch-with-cuda, build-cuda-plugin, check_code_changes, get-torch-commit]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
       runner: linux.8xlarge.nvidia.gpu
@@ -119,7 +119,7 @@ jobs:
   test-tpu:
     name: "TPU tests"
     uses: ./.github/workflows/_tpu_ci.yml
-    needs: [build-torch-xla, check_code_changes]
+    needs: [check_code_changes]
     with:
       timeout-minutes: 300
       has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
@@ -128,7 +128,6 @@ jobs:
   push-docs:
     name: "Build docs"
     uses: ./.github/workflows/_docs.yml
-    needs: build-torch-xla
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
     secrets:
