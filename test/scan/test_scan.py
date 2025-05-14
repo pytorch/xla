@@ -10,6 +10,7 @@ from torch.utils._pytree import tree_map, tree_flatten, tree_iter, tree_leaves, 
 
 import torch_xla
 import torch_xla.debug.metrics as met
+import torch_xla.experimental.scan as scan_module
 from torch_xla.experimental.scan import scan, value_and_grad_partitioned, tree_flatten_none
 
 parent_folder = os.path.dirname(os.path.dirname(__file__))
@@ -485,6 +486,98 @@ class ScanTest(TestBase):
     # Test that it's literally the same object as the input tensor,
     # as opposed to just numerically identical but otherwise an extra copy.
     assert id(stored_xs) == id(xs)
+
+  def test_scan_computation_cache(self):
+    """
+    Test that the computation cache is populated correctly.
+    """
+
+    def fn1(carry, x):
+      return carry + x, x
+
+    init = torch.tensor([0.0, 0.0], device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      device=self.device,
+                      requires_grad=True)
+    scan(fn1, init, xs)
+
+    cache = scan_module._SCAN_COMPUTATION_CACHE
+
+    # Check if my_scan_fn is in the cache
+    assert fn1 in cache, "fn1 should be in the cache"
+
+    # Inspect the second-level cache for my_scan_fn
+    second_level_cache = cache[fn1]
+    assert len(second_level_cache) > 0, "Second-level cache should not be empty"
+
+    # You can further inspect the contents of the second-level cache if needed
+    for key, value in second_level_cache.items():
+      forward, alias_input, backward = value
+      # Add assertions or print statements to check the functions
+      assert callable(forward)
+      assert callable(alias_input)
+      assert callable(backward)
+
+  def test_scan_computation_cache_by_fn_and_partition_fn(self):
+    """
+    Test that the computation cache is populated by fn and partition_fn.
+    """
+
+    def fn1(carry, x):
+      return carry + x, x
+
+    def fn2(carry, x):
+      return carry * x, x
+
+    init = torch.tensor([0.0, 0.0], device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      device=self.device,
+                      requires_grad=True)
+    scan(fn1, init, xs)
+    scan(fn2, init, xs)
+
+    cache = scan_module._SCAN_COMPUTATION_CACHE
+
+    # Check if fn is in the cache
+    assert fn1 in cache, "fn1 should be in the cache"
+    assert fn2 in cache, "fn2 should be in the cache"
+
+    # Inspect the second-level cache for fn
+    second_level_cache = cache[fn1]
+    assert len(
+        second_level_cache) == 1, "Second-level cache should be exactly 1"
+
+    # Inspect the second-level cache for fn
+    second_level_cache = cache[fn2]
+    assert len(
+        second_level_cache) == 1, "Second-level cache should be exactly 1"
+
+    # Check if the partition function created a new cache entry
+    scan(fn1, init, xs, partition_fn=min_cut_rematerialization_partition)
+    second_level_cache = cache[fn1]
+    # Inspect the second-level cache for fn2
+    assert len(second_level_cache
+              ) == 2, "Second-level cache should be exactly 2. Got: " + str(
+                  len(second_level_cache))
+
+  def test_scan_computation_cache_disabled_when_fn_is_not_pure(self):
+    """
+    Test that the computation cache is not populated when the function is not pure.
+    """
+
+    def fn1(carry, x):
+      return carry + x, x
+
+    init = torch.tensor([0.0, 0.0], device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      device=self.device,
+                      requires_grad=True)
+    scan(fn1, init, xs, is_fn_pure=False)
+
+    cache = scan_module._SCAN_COMPUTATION_CACHE
+
+    # Check if my_scan_fn is in the cache
+    assert fn1 not in cache, "fn1 should not be in the cache"
 
 
 class PyTreeTest(TestBase):
