@@ -51,64 +51,61 @@ class ProcessGroupJax(ProcessGroup):
 
   @staticmethod
   def _work(
-    tensors: Union[torch.Tensor, List[torch.Tensor], List[List[torch.Tensor]]],
+      tensors: Union[torch.Tensor, List[torch.Tensor],
+                     List[List[torch.Tensor]]],
   ) -> dist.Work:
     fut = torch.futures.Future()
     fut.set_result(tensors)
     return torch._C._distributed_c10d._create_work_from_future(fut)
 
   def _allgather_base(
-    self,
-    output: torch.Tensor,
-    input: torch.Tensor,
-    opts=...,
+      self,
+      output: torch.Tensor,
+      input: torch.Tensor,
+      opts=...,
   ) -> dist.Work:
     assert isinstance(input, torchax.tensor.Tensor)
     assert isinstance(output, torchax.tensor.Tensor)
     torch.distributed._functional_collectives.all_gather_tensor_inplace(
-      output, input, group=self
-    )
+        output, input, group=self)
     return self._work(output)
 
   def allreduce(
-    self,
-    tensors: List[torch.Tensor],
-    opts: dist.AllreduceOptions = ...,
+      self,
+      tensors: List[torch.Tensor],
+      opts: dist.AllreduceOptions = ...,
   ) -> dist.Work:
     assert len(tensors) == 1
     assert isinstance(tensors[0], torchax.tensor.Tensor)
     torch.distributed._functional_collectives.all_reduce_inplace(
-      tensors[0],
-      torch.distributed._functional_collectives.REDUCE_OP_TO_STR[
-        opts.reduceOp.op
-      ],
-      self,
+        tensors[0],
+        torch.distributed._functional_collectives.REDUCE_OP_TO_STR[
+            opts.reduceOp.op],
+        self,
     )
 
     return self._work(tensors)
 
   def broadcast(
-    self,
-    tensors: List[torch.Tensor],
-    opts: dist.BroadcastOptions = ...,
+      self,
+      tensors: List[torch.Tensor],
+      opts: dist.BroadcastOptions = ...,
   ) -> dist.Work:
     assert len(tensors) == 1
     assert isinstance(tensors[0], torchax.tensor.Tensor)
     tensors[0].copy_(
-      torch.distributed._functional_collectives.broadcast(
-        tensors[0], opts.rootRank, group=self
-      )
-    )
+        torch.distributed._functional_collectives.broadcast(
+            tensors[0], opts.rootRank, group=self))
 
     return self._work(tensors)
 
 
-dist.Backend.register_backend("jax", ProcessGroupJax)
+dist.Backend.register_backend("jax", ProcessGroupJax, devices=["jax"])
 
 
-def jax_rendezvous_handler(
-  url: str, timeout: datetime.timedelta = ..., **kwargs
-):
+def jax_rendezvous_handler(url: str,
+                           timeout: datetime.timedelta = ...,
+                           **kwargs):
   """Initialize distributed store with JAX process IDs.
 
   Requires `$MASTER_ADDR` and `$MASTER_PORT`.
@@ -120,10 +117,10 @@ def jax_rendezvous_handler(
   master_port = int(os.environ["MASTER_PORT"])
   # TODO(wcromar): Use `torchrun`'s store if available
   store = dist.TCPStore(
-    master_ip,
-    master_port,
-    jax.process_count(),
-    is_master=jax.process_index() == 0,
+      master_ip,
+      master_port,
+      jax.process_count(),
+      is_master=jax.process_index() == 0,
   )
 
   yield (store, jax.process_index(), jax.process_count())
@@ -145,9 +142,9 @@ def spawn(f, args=(), env: Optional[torchax.tensor.Environment] = None):
     torch_outputs = f(index, *args)
     return env.t2j_iso(torch_outputs)
 
-  jax_outputs = jax.pmap(jax_wrapper, axis_name="torch_dist")(
-    np.arange(jax.device_count()), env.t2j_iso(args)
-  )
+  jax_outputs = jax.pmap(
+      jax_wrapper, axis_name="torch_dist")(np.arange(jax.device_count()),
+                                           env.t2j_iso(args))
   return env.j2t_iso(jax_outputs)
 
 
@@ -172,11 +169,12 @@ class DistributedDataParallel(torch.nn.Module):
     jax_output = jax_model(jax_data)
   ```
   """
+
   def __init__(
-    self,
-    module: torch.nn.Module,
-    env: Optional[torchax.tensor.Environment] = None,
-    **kwargs,
+      self,
+      module: torch.nn.Module,
+      env: Optional[torchax.tensor.Environment] = None,
+      **kwargs,
   ):
     if kwargs:
       logging.warning(f"Unsupported kwargs {kwargs}")
@@ -184,17 +182,15 @@ class DistributedDataParallel(torch.nn.Module):
     super().__init__()
     self._env = env or torchax.default_env()
     self._mesh = Mesh(
-      mesh_utils.create_device_mesh((jax.device_count(),)),
-      axis_names=("batch",),
+        mesh_utils.create_device_mesh((jax.device_count(),)),
+        axis_names=("batch",),
     )
     replicated_state = torch_pytree.tree_map_only(
-      torch.Tensor,
-      lambda t: self._env.j2t_iso(
-        jax.device_put(
-          self._env.to_xla(t)._elem, NamedSharding(self._mesh, P())
-        )
-      ),
-      module.state_dict(),
+        torch.Tensor,
+        lambda t: self._env.j2t_iso(
+            jax.device_put(
+                self._env.to_xla(t)._elem, NamedSharding(self._mesh, P()))),
+        module.state_dict(),
     )
     # TODO: broadcast
     module.load_state_dict(replicated_state, assign=True)
@@ -208,25 +204,24 @@ class DistributedDataParallel(torch.nn.Module):
     global_batch_shape = (global_batch_size,) + inp.shape[1:]
 
     sharding = NamedSharding(self._mesh, P("batch"))
-    return self._env.j2t_iso(jax.make_array_from_single_device_arrays(
-      global_batch_shape,
-      NamedSharding(self._mesh, P("batch")),
-      arrays=[
-        jax.device_put(self._env.to_xla(batch)._elem, device)
-        for batch, device in zip(
-          per_replica_batches, sharding.addressable_devices
-        )
-      ],
-    ))
+    return self._env.j2t_iso(
+        jax.make_array_from_single_device_arrays(
+            global_batch_shape,
+            NamedSharding(self._mesh, P("batch")),
+            arrays=[
+                jax.device_put(self._env.to_xla(batch)._elem, device) for batch,
+                device in zip(per_replica_batches, sharding.addressable_devices)
+            ],
+        ))
 
   def replicate_input(self, inp):
     return self._env.j2t_iso(
-      jax.device_put(inp._elem, NamedSharding(self._mesh, P()))
-    )
+        jax.device_put(inp._elem, NamedSharding(self._mesh, P())))
 
   def jit_step(self, func):
-    @functools.partial(interop.jax_jit,
-                       kwargs_for_jax_jit={'donate_argnums': 0})
+
+    @functools.partial(
+        interop.jax_jit, kwargs_for_jax_jit={'donate_argnums': 0})
     def _jit_fn(states, args):
       self.load_state_dict(states)
       outputs = func(*args)

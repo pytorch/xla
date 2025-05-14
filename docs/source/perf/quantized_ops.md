@@ -1,4 +1,4 @@
-# Quantized Operations for XLA (Experimental feature)
+# Quantized Operations
 
 This document outlines how to utilize quantized operations to enable
 quantization on XLA devices.
@@ -135,13 +135,13 @@ orig_model.linear = q_linear
     <td>per-token</td>
     <td>W8A8</td>
     <td>No</td>
-  </tr>  
+  </tr>
   <tr>
     <td>per-channel</td>
     <td>per-token</td>
     <td>W4A8</td>
     <td>No</td>
-  </tr>  
+  </tr>
   <tr>
     <td>blockwise (sym/asym)</td>
     <td>N/A</td>
@@ -165,7 +165,7 @@ orig_model.linear = q_linear
     <td>per-token</td>
     <td>W4A8</td>
     <td>No</td>
-  </tr>     
+  </tr>
 </table>
 
 **Note** `W[X]A[Y]` refers to Weight in `X`-bit, Activation in `Y`-bit.

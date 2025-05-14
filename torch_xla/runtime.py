@@ -228,7 +228,7 @@ def use_spmd(auto: Optional[bool] = False):
   devices. This means that those tensors would be replicated across the devices.
 
   Args:
-    auto (bool): Whether to enable the auto-sharding. Read 
+    auto (bool): Whether to enable the auto-sharding. Read
       https://github.com/pytorch/xla/blob/master/docs/spmd_advanced.md#auto-sharding
       for more detail
   """
@@ -299,7 +299,7 @@ def initialize_cache(path: str, readonly: bool = False):
 
 def get_num_cached_compilation_graph():
   """Returns the number of cached compilation graph hash.
-  
+
   When persistent cache is used, returns the number of in-memory cached
   compilation graph hash. When there is a look up in the persistent cache,
   it will look up the in-memory cache first, and if it is not found, it will

@@ -9,8 +9,8 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
-#include "xla/client/xla_builder.h"
-#include "xla/client/xla_computation.h"
+#include "xla/hlo/builder/xla_builder.h"
+#include "xla/hlo/builder/xla_computation.h"
 #include "xla/service/hlo.pb.h"
 
 namespace torch_xla {

@@ -84,7 +84,7 @@ ptxla_cc_test(
         "@com_google_absl//absl/synchronization",
         "@com_google_googletest//:gtest_main",
         "@xla//xla:shape_util",
-        "@xla//xla/client:xla_builder",
+        "@xla//xla/hlo/builder:xla_builder",
     ],
 )
 

@@ -8,7 +8,7 @@
 #include "absl/status/status.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/types.h"
-#include "xla/client/xla_computation.h"
+#include "xla/hlo/builder/xla_computation.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/service/hlo.pb.h"
 #include "xla/status_macros.h"

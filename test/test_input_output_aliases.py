@@ -340,6 +340,69 @@ class InputOutputAliasesTest(parameterized.TestCase):
     self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
 
 
+def test_device_data_node_tracing_aliasing(self):
+  """
+    Test that _get_tensors_xla_device_data_node does not return new XLA tensors
+    for a given set of unmutated input tensor during its tracing. This helps ensure that
+    aliasings can be retained if using the binding for tracing purposes.
+    """
+  xla_device = xm.xla_device()
+  t0 = torch.tensor(10).to(xla_device)
+
+  t1 = t0 + 5
+  t0_input_tensor_id = torch_xla._XLAC._xla_get_tensor_id(t0)
+  t1_output_tensor_id = torch_xla._XLAC._xla_get_tensor_id(t1)
+
+  # We feed t0 as an input to the API that computes the tensor values of all
+  # the specified nodes, ensuring that it does not return a new XLA tensor
+  # for the same backend data, if it is not mutated. Note that t0 is captured
+  # when doing a post order traversal of t1.
+  results_with_inputs = torch_xla._XLAC._get_tensors_xla_device_data_node([t1],
+                                                                          [t0])
+  self.assertEqual(len(results_with_inputs), 2)
+  try:
+    input_index = results_with_inputs[0].index(t0_input_tensor_id)
+    non_input_index = 0 if input_index == 0 else 1
+  except ValueError:
+    self.fail(
+        f"Input tensor ID {t0_input_tensor_id} is not present in the results: {results_with_inputs[0]}"
+    )
+
+  # Since t0 is an input tensor and not mutated, we expect the resulting
+  # tensor ID and the ID associated with the XLA Tensor to match the original
+  # value.
+  self.assertEqual(results_with_inputs[0][input_index], t0_input_tensor_id)
+  self.assertEqual(
+      torch_xla._XLAC._xla_get_tensor_id(results_with_inputs[1][input_index]),
+      t0_input_tensor_id)
+
+  # Since t1 is not an input to the API, we expect a new XLA tensor to be
+  # generated for the resulting values that map to t1.
+  self.assertNotEqual(results_with_inputs[0][non_input_index],
+                      t1_output_tensor_id)
+  self.assertNotEqual(
+      torch_xla._XLAC._xla_get_tensor_id(
+          results_with_inputs[1][non_input_index]), t1_output_tensor_id)
+
+  torch_xla._XLAC._xla_sync_multi([t0, t1], [str(xla_device)], True, False)
+  self.assertTrue(t1.item(), 16)
+
+  # In case we do have a mutation of the input, then we should expect that a
+  # different tensor ID is returned.
+  t0 += 10
+  t1 = t0 + 5
+
+  t0_input_tensor_id = torch_xla._XLAC._xla_get_tensor_id(t0)
+  results_with_inputs = torch_xla._XLAC._get_tensors_xla_device_data_node([t1],
+                                                                          [t0])
+
+  self.assertFalse(t0_input_tensor_id in results_with_inputs[0])
+  self.assertFalse(t0_input_tensor_id in [
+      torch_xla._XLAC._xla_get_tensor_id(tensor)
+      for tensor in results_with_inputs[1]
+  ])
+
+
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)

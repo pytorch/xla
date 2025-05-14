@@ -47,7 +47,7 @@ locals {
         bundle_libtpu   = "0"
       }
     ],
-    
+
     # Special Kaggle build with libtpu
     [
       {

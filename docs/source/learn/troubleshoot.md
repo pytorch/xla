@@ -1,4 +1,4 @@
-# Troubleshoot
+# Troubleshooting Basics
 
 Note that the information in this section is subject to be removed in
 future releases of the *PyTorch/XLA* software, since many of them are
@@ -96,11 +96,11 @@ model. Some example output would be:
 Compilation Analysis: ================================================================================
 Compilation Analysis: Compilation Cause
 Compilation Analysis:   mark_step in parallel loader at step end
-Compilation Analysis: Graph Info: 
+Compilation Analysis: Graph Info:
 Compilation Analysis:   Graph Hash: c74c3b91b855b2b123f833b0d5f86943
 Compilation Analysis:   Number of Graph Inputs: 35
 Compilation Analysis:   Number of Graph Outputs: 107
-Compilation Analysis: Python Frame Triggered Execution: 
+Compilation Analysis: Python Frame Triggered Execution:
 Compilation Analysis:   mark_step (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
 Compilation Analysis:   next (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44)
 Compilation Analysis:   __next__ (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32)
@@ -122,11 +122,11 @@ Post Compilation Analysis: =====================================================
 Execution Analysis: ================================================================================
 Execution Analysis: Execution Cause
 Execution Analysis:   mark_step in parallel loader at step end
-Execution Analysis: Graph Info: 
+Execution Analysis: Graph Info:
 Execution Analysis:   Graph Hash: c74c3b91b855b2b123f833b0d5f86943
 Execution Analysis:   Number of Graph Inputs: 35
 Execution Analysis:   Number of Graph Outputs: 107
-Execution Analysis: Python Frame Triggered Execution: 
+Execution Analysis: Python Frame Triggered Execution:
 Execution Analysis:   mark_step (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
 Execution Analysis:   next (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44)
 Execution Analysis:   __next__ (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32)
@@ -147,7 +147,7 @@ region](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3b
 access(often due to logging) the value of a tensor before the
 `mark_step`.
 
-The executation caused by 1-4 are expected, and we want to avoid 5 by
+The execution caused by 1-4 are expected, and we want to avoid 5 by
 either reduce the frequency of accessing tensor values or manually add a
 `mark_step` before accessing.
 
@@ -443,13 +443,13 @@ degradation, so they should only be enabled for debugging.
     set `TF_CPP_MIN_LOG_LEVEL=0`.
 -   `XLA_DUMP_HLO_GRAPH`: If set to `=1` in case of a compilation or
     execution error the offending HLO graph will be dumped as part of
-    the runtime error raised by `xla_util.cc`.
+    the runtime error raised by `xla_util.cpp`.
 
 ### Common Debugging Environment Variables Combinations
 
 -   Record the graph execution in the IR format
 
-        XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="text" XLA_SAVE_TENSORS_FILE="/tmp/save1.ir"  
+        XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="text" XLA_SAVE_TENSORS_FILE="/tmp/save1.ir"
 
 -   Record the graph execution in the HLO format
 

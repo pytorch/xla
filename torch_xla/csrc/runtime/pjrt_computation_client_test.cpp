@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/runtime/ifrt_computation_client.h"
+#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 
 #include <gtest/gtest.h>
 
@@ -8,13 +8,14 @@
 
 #include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/logging.h"
 #include "tsl/platform/statusor.h"
 #include "tsl/platform/test.h"
-#include "xla/client/xla_builder.h"
-#include "xla/client/xla_computation.h"
+#include "xla/hlo/builder/xla_builder.h"
+#include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/literal_util.h"
 #include "xla/tests/literal_test_util.h"
@@ -36,7 +37,7 @@ absl::StatusOr<xla::XlaComputation> MakeComputation() {
 TEST(PjRtComputationClientTest, Init) {
   // Get a CPU client.
   tsl::setenv("PJRT_DEVICE", "CPU", true);
-  auto client = std::make_unique<IfrtComputationClient>();
+  auto client = std::make_unique<PjRtComputationClient>();
   std::string device = client->GetDefaultDevice();
 
   // Compose a computation.
@@ -44,8 +45,8 @@ TEST(PjRtComputationClientTest, Init) {
   std::vector<ComputationClient::CompileInstance> instances;
   instances.push_back(ComputationClient::CompileInstance(
       std::move(MakeComputation().value()), device,
-      client->GetCompilationDevices(device, client->GetLocalDevices()), &shape,
-      /*parameter_is_tupled_arguments=*/false, /*is_sharded=*/true));
+      client->GetCompilationDevices(device, client->GetLocalDevices()),
+      &shape));
 
   // Prepare inputs.
   xla::Literal literal_x =
@@ -58,15 +59,15 @@ TEST(PjRtComputationClientTest, Init) {
       client->Compile(std::move(instances));
 
   // Copy inputs to device.
-  ComputationClient::ExecuteReplicatedOptions options{};
+  ComputationClient::ExecuteComputationOptions options{};
   std::vector<std::shared_ptr<const TensorSource>> args = {
       std::make_shared<LiteralSource>(std::move(literal_x), device),
       std::make_shared<LiteralSource>(std::move(literal_y), device)};
 
   // Execute the graph.
-  std::vector<ComputationClient::DataPtr> results = client->ExecuteReplicated(
+  std::vector<ComputationClient::DataPtr> results = client->ExecuteComputation(
       *computations[0], client->TransferToDevice(absl::MakeConstSpan(args)),
-      {device}, options);
+      device, options);
 
   // Copy the output from device back to host and assert correctness..
   ASSERT_EQ(results.size(), 1);

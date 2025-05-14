@@ -1,4 +1,4 @@
-# Codegen migration Guide
+# Codegen Migration Guide
 
 As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean
 up the existing stub code (which spans over 6+ files) that were used to
@@ -143,13 +143,13 @@ at::Tensor XLANativeFunctions::abs(const at::Tensor& self) {
 Find the op in `xla/codegen/xla_native_functions.yaml` and move it to
 the `full_codegen` column and run `python setup.py install` under the xla
 directory again. The build will fail (reason explained later in this
-guide) but you can still see the generated file. 
+guide) but you can still see the generated file.
 
 If while generating the file you run into an error involving
 [`shape_inference.h`](https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h),
 you might be running into a problem with PyTorch not yet having the
 necessary implementation for the function to be generated. You can
-attempt to add the necessary function in 
+attempt to add the necessary function in
 [`shape_inference.h`](https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h)
 to be unblocked.
 
@@ -193,7 +193,7 @@ if (!node) {
 }
 ```
 
-Wrap the newly created IR node in a XLATensor. And wrap the XLATensor within the at::Tensor 
+Wrap the newly created IR node in a XLATensor. And wrap the XLATensor within the at::Tensor
 and return it as a result. Note that this part used to be manually done in tensor_method.cpp.
 
 ``` c++

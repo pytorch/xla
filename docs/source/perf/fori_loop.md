@@ -1,4 +1,4 @@
-# Optimize memory utilization using `while_loop` 
+# Optimize Memory Utilization with `while_loop`
 
 ## `while_loop`
 
@@ -29,15 +29,15 @@ result = while_loop(cond_fn, body_fn, init)
 >>> import torch_xla.experimental.fori_loop
 >>> from torch._higher_order_ops.while_loop import while_loop
 >>> import torch_xla.core.xla_model as xm
->>> 
+>>>
 >>> device = xm.xla_device()
->>> 
+>>>
 >>> def cond_fn(iteri, x):
 ...   return iteri > 0
-... 
+...
 >>> def body_fn(iteri, x):
 ...   return iteri - 1, torch.add(x, 1)
-... 
+...
 >>> init_val = torch.tensor(3, device=device)
 >>> iteri = torch.tensor(10, device=device)
 >>> _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
@@ -59,16 +59,16 @@ with similar logic: cumulative plus 1 for ten times:
 >>> import torch
 >>> import torch_xla
 >>> import torch_xla.core.xla_model as xm
->>> 
+>>>
 >>> device = xm.xla_device()
->>> 
+>>>
 >>> init_val = torch.tensor(1, device=device)
 >>> iteri = torch.tensor(50, device=device)
->>> 
+>>>
 >>> while iteri > 0:
 ...   init_val = init_val + 1
 ...   iteri -= 1
-... 
+...
 >>> init_val
 tensor(51, device='xla:0')
 ```

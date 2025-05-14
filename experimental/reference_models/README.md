@@ -1,10 +1,10 @@
-This directory will contain a list of reference models that 
+This directory will contain a list of reference models that
 we have optimized and runs well on TPU.
 
 Contents of this directory is organized in the following way:
 
 * Every subdirectory is a self-contained model, as a seperate pip package.
- 
+
 * Each subdirectory must has a README indicating:
 ** is this training or inference
 ** on what devices it has been tested / developed

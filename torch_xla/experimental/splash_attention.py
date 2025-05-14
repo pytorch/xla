@@ -86,7 +86,7 @@ def splash_attention_jax_wrapper(
       splash_attention_kernel,
       splash_attention_mask,
   )
-  mesh = Mesh.from_str(config.mesh).maybe_convert_and_get_jax_mesh()
+  mesh = Mesh.from_str(config.mesh).get_jax_mesh()
   # input q,k,v shape: [batch, #head, seq_len, head_dim]
   if decoder_segment_ids is not None and not decoder_segment_ids.shape:
     decoder_segment_ids = None
@@ -346,7 +346,7 @@ def splash_attention(
     attn_logits_soft_cap: float | None = None,
 ) -> torch.Tensor:
   """Splash attention function.
-  
+
   Args:
     decoder_segment_ids: Segment ids are a pair of 1D jax.Arrays, one for Q (of
     size q_seq_len) and one for KV (of size kv_seq_len).  A segment id mask is

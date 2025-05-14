@@ -16,8 +16,8 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "tsl/profiler/lib/traceme.h"
-#include "xla/client/xla_builder.h"
-#include "xla/client/xla_computation.h"
+#include "xla/hlo/builder/xla_builder.h"
+#include "xla/hlo/builder/xla_computation.h"
 #include "xla/layout_util.h"
 #include "xla/literal.h"
 #include "xla/pjrt/distributed/distributed.h"
@@ -430,7 +430,7 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
   int64_t total_size = 0;
-  for (auto handle : handles) {
+  for (const auto& handle : handles) {
     // Use XLA replication to reassemble the sharded data. If input handle
     // is not sharded, then it is a no-op.
     auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(handle);
@@ -462,6 +462,9 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
   tsl::profiler::TraceMe activity("IfrtComputationClient::Compile",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
+  xla::ifrt::DeviceListRef devices_list = xla::ifrt::BasicDeviceList::Create(
+      {client_->addressable_devices().begin(),
+       client_->addressable_devices().end()});
 
   for (auto& instance : instances) {
     xla::CompileOptions compile_options;
@@ -498,10 +501,11 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
         mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
     torch_xla::ConvertHloToStableHlo(instance.computation.mutable_proto(),
                                      &mlir_module);
-    std::unique_ptr<xla::ifrt::LoadedExecutable> executable =
+    std::shared_ptr<xla::ifrt::LoadedExecutable> executable =
         ConsumeValue(client_->GetDefaultCompiler()->Compile(
-            std::make_unique<xla::ifrt::HloProgram>(std::move(mlir_module)),
-            std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options)));
+            std::make_unique<xla::ifrt::HloProgram>(mlir_module),
+            std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options,
+                                                           devices_list)));
     StableHloCompileCounter()->AddValue(1);
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());

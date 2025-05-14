@@ -8,10 +8,10 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "xla/client/lib/math.h"
-#include "xla/client/lib/matrix.h"
-#include "xla/client/lib/pooling.h"
 #include "xla/hlo/builder/lib/logdet.h"
+#include "xla/hlo/builder/lib/math.h"
+#include "xla/hlo/builder/lib/matrix.h"
+#include "xla/hlo/builder/lib/pooling.h"
 #include "xla/primitive_util.h"
 #include "xla/shape_util.h"
 
@@ -208,6 +208,10 @@ xla::PrecisionConfig DotPrecisonConfig(py::dict args) {
       precision = xla::PrecisionConfig::HIGH;
     } else if (*arg_precision_config == "highest") {
       precision = xla::PrecisionConfig::HIGHEST;
+    } else {
+      XLA_ERROR() << "Invalid precision config in args: "
+                  << *arg_precision_config
+                  << " (valid values: default, high, highest)";
     }
   }
   return XlaHelpers::BuildPrecisionConfig(precision);

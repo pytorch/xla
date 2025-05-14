@@ -189,7 +189,7 @@ class ParallelLoader(object):
       batch -> List(torch.Tensor), List(Dict(str: torch.Tensor)): Input batch
         present in the cpu memory
       device: TPU device where the batch should be moved
-    
+
     Returns:
       result -> List(torch.Tensor), Dict(str: torch.Tensor): Returns a dict if the
         input batch is a dict. Otherwise, returns a list of torch.Tensor.

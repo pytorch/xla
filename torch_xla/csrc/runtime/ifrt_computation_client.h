@@ -12,7 +12,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
 #include "torch_xla/csrc/runtime/util.h"
-#include "xla/client/xla_computation.h"
+#include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
@@ -253,13 +253,13 @@ class IfrtComputationClient : public ComputationClient {
   struct IfrtComputation : public Computation {
     IfrtComputation(xla::XlaComputation computation,
                     std::vector<std::string> devices,
-                    std::unique_ptr<xla::ifrt::LoadedExecutable> executable)
+                    std::shared_ptr<xla::ifrt::LoadedExecutable> executable)
         : Computation(std::move(computation), std::move(devices)),
           executable(std::move(executable)) {
       output_shardings_ = this->executable->GetOutputShardings();
     }
 
-    std::unique_ptr<xla::ifrt::LoadedExecutable> executable;
+    std::shared_ptr<xla::ifrt::LoadedExecutable> executable;
     std::optional<std::vector<xla::OpSharding>> output_shardings_;
   };
 };

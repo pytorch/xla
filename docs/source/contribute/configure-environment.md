@@ -1,4 +1,4 @@
-# Configure a development environment
+# Configure A Development Environment
 
 The goal of this guide is to set up an interactive development
 environment on a Cloud TPU with PyTorch/XLA installed. If this is your
@@ -100,7 +100,7 @@ import torch_xla as xla
 # Optional
 xla.runtime.set_device_type("TPU")
 
-print("XLA devices:", xla.real_devices()) 
+print("XLA devices:", xla.real_devices())
 ```
 
 Run the test script from your terminal:

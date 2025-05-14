@@ -6,7 +6,7 @@ on:
 
 jobs:
   update_and_create_pr:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -22,7 +22,7 @@ jobs:
 
       - name: Get JAX version for specified date
         run: |
-          # Here catch jax dev version with hard-code format, where _version is defined ever changes, this will break. 
+          # Here catch jax dev version with hard-code format, where _version is defined ever changes, this will break.
           # Contributors who help to update OpenXLA-pin update please check line number here if the JAX version doesn't update.
           version_line=$(curl -s https://raw.githubusercontent.com/google/jax/main/jax/version.py | sed -n '24p')
           JAX_VERSION=$(echo "$version_line" | grep -oP '(?<=")[0-9.]+(?=")')

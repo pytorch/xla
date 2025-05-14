@@ -2,8 +2,8 @@
 
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/shape_helper.h"
-#include "xla/client/lib/constants.h"
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 namespace {

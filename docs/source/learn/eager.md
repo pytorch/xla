@@ -121,7 +121,7 @@ the number I observed.
   : Eager mode benchmarks
 
 Eager mode can achieve ~45% performance of the fully compiled model for
-the decoder only model. For more information, see 
+the decoder only model. For more information, see
 [train_decoder_only_base.py](https://github.com/pytorch/xla/blob/master/examples/train_decoder_only_base.py)
 and [eager example](https://github.com/pytorch/xla/tree/master/examples/eager).
 Note that perfomrane of the eager mode is very model dependent. When I

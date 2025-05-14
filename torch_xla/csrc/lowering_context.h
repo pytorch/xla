@@ -19,7 +19,7 @@
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "tsl/platform/macros.h"
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 #include "xla/types.h"
 
 namespace torch_xla {

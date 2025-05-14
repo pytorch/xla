@@ -1,11 +1,10 @@
-# Fully Sharded Data Parallel using SPMD
+# Fully Sharded Data Parallel (FSDP) using SPMD
 
-Fully Sharded Data Parallel via SPMD or FSDPv2 is an utility that
-re-expresses the famous FSDP algorithm in SPMD.
-[This](https://github.com/pytorch/xla/blob/master/torch_xla/experimental/spmd_fully_sharded_data_parallel.py)
-is an experimental feature that aiming to offer a familiar interface for
-users to enjoy all the benefits that SPMD brings into the table. The
-design doc is [here](https://github.com/pytorch/xla/issues/6379).
+FSDP in PyTorch/XLA is a utility for
+sharding Module parameters across data-parallel workers.
+
+This differs from the [other](./fsdp_spmd.md) implementation of FSDP in PyTorch/XLA
+in that this implementation uses SPMD.
 
 Please review the [SPMD user guide](./spmd_basic.html) before
 proceeding. You can also find a minimum runnable example
@@ -13,7 +12,7 @@ proceeding. You can also find a minimum runnable example
 
 Example usage:
 
-``` python3
+```python
 import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
@@ -42,7 +41,7 @@ It is also possible to shard individual layers separately and have an
 outer wrapper handle any leftover parameters. Here is an example to
 autowrap each `DecoderLayer`.
 
-``` python3
+```python
 from torch_xla.distributed.fsdp.wrap import transformer_auto_wrap_policy
 
 # Apply FSDP sharding on each DecoderLayer layer.
@@ -67,7 +66,7 @@ tensor 2. A tuple of tensors where the 0th element is the activation.
 
 Example usage:
 
-``` python3
+```python
 def shard_output(output, mesh):
     xs.mark_sharding(output.logits, mesh, ('fsdp', None, None))
 
@@ -83,13 +82,8 @@ future releases.
 
 Example usage:
 
-``` python3
+```python
 from torch_xla.distributed.fsdp import checkpoint_module
 
 model = FSDPv2(checkpoint_module(my_module), mesh)
 ```
-
-## HuggingFace Llama 2 Example
-
-We have a fork of HF Llama 2 to demonstrate a potential integration
-[here](https://github.com/huggingface/transformers/compare/main...pytorch-tpu:transformers:llama2-spmd-fsdp).

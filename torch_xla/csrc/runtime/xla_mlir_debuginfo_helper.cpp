@@ -42,14 +42,14 @@ class PrepareXlaMlirDebuginfoPass : public mlir::OperationPass<mlir::ModuleOp> {
 
   void ExtractXlaMlirDebuginfo(mlir::Location loc,
                                llvm::SmallVector<std::string>& debuginfos) {
-    if (loc.isa<mlir::FusedLoc>()) {
+    if (mlir::isa<mlir::FusedLoc>(loc)) {
       for (mlir::Location subloc :
-           loc.dyn_cast<mlir::FusedLoc>().getLocations()) {
+           mlir::dyn_cast<mlir::FusedLoc>(loc).getLocations()) {
         ExtractXlaMlirDebuginfo(subloc, debuginfos);
       }
     }
-    if (loc.isa<mlir::NameLoc>()) {
-      std::string name(loc.dyn_cast<mlir::NameLoc>().getName().str());
+    if (mlir::isa<mlir::NameLoc>(loc)) {
+      std::string name(mlir::dyn_cast<mlir::NameLoc>(loc).getName().str());
 
       for (size_t i = 0; i < name.size();) {
         size_t begin = name.find(XLA_MLIR_DEBUGINFO_BEGIN, i);

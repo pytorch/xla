@@ -9,7 +9,6 @@ import torch_xla
 from torch_xla.distributed.spmd import Mesh
 import torch_xla.distributed.spmd as xs
 from torch_xla._internal.jax_workarounds import requires_jax
-from torch_xla.experimental.tuned_block_sizes import get_ragged_attention_tuned_block_size
 
 # Re-expose this API used that is referenced by docs
 from torch_xla._internal.jax_workarounds import jax_import_guard  # noqa: F401, pylint: disable=unused-import
@@ -27,7 +26,7 @@ def _shard_map(func, mesh, input_specs, output_specs):
     Note:
       ``shard_map`` is an experimental API, and still subject to change. For an
       introduction to sharded data. For a more
-      in-depth look at using ``shard_map``, refer to 
+      in-depth look at using ``shard_map``, refer to
       [SPMD multi-device parallelism with shard_map](https://docs.jax.dev/en/latest/notebooks/shard_map.html)
 
     Args:
@@ -669,15 +668,15 @@ def fa_custom_backward(
         partition_spec,  # k
         partition_spec,  # v
         partition_spec,  # o
-        lm_partition_spec,  # l 
-        lm_partition_spec,  # m 
+        lm_partition_spec,  # l
+        lm_partition_spec,  # m
         segment_id_partition_spec,  # q_segment_ids
         segment_id_partition_spec,  # kv_segment_ids
         partition_spec,  # ab
         None,  # causal
         None,  # sm_scale
-        None,  # q_full_shape 
-        None,  # kv_full_shape 
+        None,  # q_full_shape
+        None,  # kv_full_shape
         None,  # ab_full_shape
         None,  # ctx_grad
     ]
@@ -989,16 +988,6 @@ def ragged_paged_attention(
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_attention
-
-  if num_kv_pages_per_block is None:
-    assert num_queries_per_block is None
-    token_num, q_head_num, _ = q.shape
-    _, page_size, num_combined_kv_heads, _ = kv_pages.shape
-    _, pages_per_seq = page_indices.shape
-    num_kv_heads = num_combined_kv_heads // 2
-    max_model_len = pages_per_seq * page_size
-    num_kv_pages_per_block, num_queries_per_block = get_ragged_attention_tuned_block_size(
-        q_head_num, num_kv_heads, token_num, max_model_len)
 
   if vmem_limit_bytes is None:
     vmem_limit_bytes = 64 * 1024 * 1024

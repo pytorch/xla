@@ -141,18 +141,18 @@ ptxla_cc_library(
         "@xla//xla:permutation_util",
         "@xla//xla:shape_util",
         "@xla//xla:types",
-        "@xla//xla/client:xla_builder",
-        "@xla//xla/client/lib:arithmetic",
-        "@xla//xla/client/lib:comparators",
-        "@xla//xla/client/lib:constants",
-        "@xla//xla/client/lib:logdet",
-        "@xla//xla/client/lib:math",
-        "@xla//xla/client/lib:matrix",
-        "@xla//xla/client/lib:pooling",
-        "@xla//xla/client/lib:self_adjoint_eig",
-        "@xla//xla/client/lib:slicing",
-        "@xla//xla/client/lib:sorting",
-        "@xla//xla/client/lib:svd",
+        "@xla//xla/hlo/builder:xla_builder",
+        "@xla//xla/hlo/builder/lib:arithmetic",
+        "@xla//xla/hlo/builder/lib:comparators",
+        "@xla//xla/hlo/builder/lib:constants",
+        "@xla//xla/hlo/builder/lib:logdet",
+        "@xla//xla/hlo/builder/lib:math",
+        "@xla//xla/hlo/builder/lib:matrix",
+        "@xla//xla/hlo/builder/lib:pooling",
+        "@xla//xla/hlo/builder/lib:self_adjoint_eig",
+        "@xla//xla/hlo/builder/lib:slicing",
+        "@xla//xla/hlo/builder/lib:sorting",
+        "@xla//xla/hlo/builder/lib:svd",
         "@xla//xla/hlo/pass:hlo_pass_pipeline",
         "@xla//xla/stream_executor:dnn",
         "@tsl//tsl/platform:errors",
@@ -175,7 +175,7 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:util",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
-        "@xla//xla/client:xla_builder",
+        "@xla//xla/hlo/builder:xla_builder",
     ],
 )
 
@@ -249,7 +249,7 @@ ptxla_cc_library(
     hdrs = ["ir_builder.h"],
     deps = [
         "@com_google_absl//absl/types:span",
-        "@xla//xla/client:xla_builder",
+        "@xla//xla/hlo/builder:xla_builder",
     ],
 )
 
@@ -296,8 +296,8 @@ ptxla_cc_library(
         "@tsl//tsl/profiler/lib:traceme",
         "@tsl//tsl/profiler/lib:traceme_encode",
         "@xla//xla/python/profiler/internal:traceme_wrapper",
-        "@xla//xla/service:hlo_parser",
-        "@xla//xla/service:hlo_pass_pipeline",
+        "@xla//xla/hlo/parser:hlo_parser",
+        "@xla//xla/hlo/pass:hlo_pass_pipeline",
         "@xla//xla/service:hlo_verifier",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
@@ -334,13 +334,13 @@ cc_library(
     hdrs = ["shape_helper.h"],
     deps = [
         "//torch_xla/csrc/runtime:debug_macros",
-        "@xla//xla/client:xla_builder",
+        "@xla//xla/hlo/builder:xla_builder",
     ],
 )
 
 cc_library(
     name = "thread_pool",
-    srcs = ["thread_pool.cc"],
+    srcs = ["thread_pool.cpp"],
     hdrs = ["thread_pool.h"],
     deps = [
         "//torch_xla/csrc/runtime:sys_util",

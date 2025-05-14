@@ -1,4 +1,4 @@
 -f https://download.pytorch.org/whl/torch
 torch==2.6.0 ; sys_platform == 'darwin'  # macOS
 torch==2.6.0+cpu; sys_platform != 'darwin' # Non-macOS (CPU-only), like on TPU
-ruff~=0.3.5
+yapf==0.40.2  # N.B.: keep in sync with `infra/ansible/config/pip.yaml`, `.github/workflows/lintercheck.yml`

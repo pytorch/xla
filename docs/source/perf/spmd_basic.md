@@ -1,17 +1,15 @@
-# PyTorch/XLA SPMD User Guide
+# SPMD User Guide
 
-In this user guide, we discuss how
-[GSPMD](https://arxiv.org/abs/2105.04663) is integrated in PyTorch/XLA,
-and provide a design overview to illustrate how the SPMD sharding
-annotation API and its constructs work.
+In this user guide, you will learn how
+[SPMD](https://arxiv.org/abs/2105.04663) is integrated in PyTorch/XLA.
 
-For a conceptual guide of the SPMD model of computation, you may refer to the
+For a conceptual guide of the SPMD model of computation, refer to the
 [Sharded Matrices and How to Multiply Them](https://jax-ml.github.io/scaling-book/sharding/)
 section of the _How to Scale Your Model_ book.
 
 ## What is PyTorch/XLA SPMD?
 
-[GSPMD](https://arxiv.org/abs/2105.04663) is an automatic
+[SPMD](https://arxiv.org/abs/2105.04663) is an automatic
 parallelization system for common ML workloads. The XLA compiler will
 transform the single device program into a partitioned one with proper
 collectives, based on the user provided sharding hints. This feature
@@ -24,7 +22,7 @@ _<span style="text-decoration:underline;">Figure 1. Comparison of two different 
 
 ## How to use PyTorch/XLA SPMD?
 
-Here is an simple example of using SPMD
+Here is an example of using SPMD
 
 ```python
 import numpy as np
@@ -34,10 +32,8 @@ import torch_xla.runtime as xr
 import torch_xla.distributed.spmd as xs
 from torch_xla.distributed.spmd import Mesh
 
-
 # Enable XLA SPMD execution mode.
 xr.use_spmd()
-
 
 # Device mesh, this and partition spec as well as the input tensor shape define the individual shard shape.
 num_devices = xr.global_runtime_device_count()
@@ -45,35 +41,31 @@ mesh_shape = (num_devices, 1)
 device_ids = np.array(range(num_devices))
 mesh = Mesh(device_ids, mesh_shape, ('data', 'model'))
 
-
 t = torch.randn(8, 4).to(xm.xla_device())
-
 
 # Mesh partitioning, each device holds 1/8-th of the input
 partition_spec = ('data', 'model')
 xs.mark_sharding(t, mesh, partition_spec)
 ```
 
-Let's explain these concepts one by one
-
 ### SPMD Mode
 
 In order to use SPMD, you need to enable it via `xr.use_spmd()`. In SPMD
 mode there is only one logical device. Distributed computation and
-collective is handled by the `mark_sharding`. Note that user can not mix
+collective is handled by the `mark_sharding`. Note that you can not mix
 SPMD with other distributed libraries.
 
 ### Mesh
 
-The SPMD programming model is built around the concept of a device mesh,
-commonly referred to as a mesh. A device mesh is a logical N-dimensional
+The SPMD programming model is built around the concept of a device mesh.
+A device mesh is a logical N-dimensional
 arrangement of compute devices (e.g. TPU cores) where MPI-style collective
 operations may be requested for devices along an axis. The device mesh shape
 shape does not necessarily reflect the physical network layout. You
-can create differently shaped device meshes over the same set of physical
-devices. For example, a 512-core TPU slice could be treated as a 3D mesh of
+can create different device mesh shapes over the same set of physical
+devices. For example, a 512-core TPU slice can be treated as a 3D mesh of
 16×16×2, a 2D mesh of 32×16, or a 1D mesh of 512, depending on how you want to
-partition tensors. You can use the `Mesh` class to create a device mesh.
+partition tensors. Use the `Mesh` class to create a device mesh.
 
 In the following snippet:
 
@@ -99,9 +91,9 @@ mesh = Mesh(device_ids, mesh_shape, ('data', 'model'))
   parallelization. In the previous example, the first mesh dimension is the
   `data` dimension and the second mesh dimension is the `model` dimension.
 
-You can also check more mesh info via
+Retrieve more mesh info via:
 
-``` python
+```python
     >>> mesh.shape()
     OrderedDict([('data', 4), ('model', 1)])
 
@@ -188,11 +180,9 @@ You can also visualize how a tensor is sharded over devices with our
 
 1.  [Example](https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_spmd_data_parallel.py)
     to use SPMD to express data parallelism.
-2.  [Example](https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py)
+1.  [Example](https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py)
     to use SPMD to express FSDP(Fully Sharded Data Parallel).
-3.  [SPMD advanced topics](./spmd_advanced.md)
-4.  [Spmd Distributed Checkpoint](./spmd_distributed_checkpoint.md)
-
-
-[multislice]: https://cloud.google.com/tpu/docs/multislice-introduction
-[debug-tool]: ./spmd_advanced.md#spmd-debugging-tool
+1.  [SPMD advanced topics](./spmd_advanced.md)
+1.  [Spmd Distributed Checkpoint](./spmd_distributed_checkpoint.md)
+1.  [multislice]: https://cloud.google.com/tpu/docs/multislice-introduction
+1.  [debug-tool]: ./spmd_advanced.md#spmd-debugging-tool

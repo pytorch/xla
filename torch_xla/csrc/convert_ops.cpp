@@ -7,7 +7,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "xla/client/lib/constants.h"
+#include "xla/hlo/builder/lib/constants.h"
 #include "xla/literal_util.h"
 #include "xla/primitive_util.h"
 #include "xla/shape_util.h"

@@ -309,7 +309,8 @@ AllGatherResultCoalesced BuildAllGatherCoalesced(
           xla::AllGather(xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
                          dim, shard_count, cc_groups);
     }
-    if (ShapeHelper::ShapeOfXlaOp(all_gather_result).dimensions_size() == 0) {
+    if (ShapeHelper::ShapeOfXlaOp(all_gather_result).tuple_shapes().size() !=
+        0) {
       for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
         size_t op_idx = type_ctx.second.indices[i];
         result[op_idx] = xla::GetTupleElement(all_gather_result, i);
@@ -328,19 +329,22 @@ at::Tensor all_to_all_single(const at::Tensor& input,
   // this basically is the code copy from
   // init_python_bindings.cpp:_xla_all_to_all
   TORCH_LAZY_FN_COUNTER("xla::");
-  if (output_split_sizes.size() != 0 && input_split_sizes.size() != 0) {
-    for (size_t i = 0; i < input_split_sizes.size(); i++) {
-      if (input_split_sizes[i] != 1)
-        throw std::runtime_error(
-            "torch_xla does not support arbitrary split sizes for all_to_all");
-    }
-  }
   bool pin_layout = false;
   const torch::lazy::Value& token =
       GetAllReduceToken(bridge::GetCurrentDevice());
   int64_t split_count = runtime::GetComputationClient()->GetAllDevices().size();
   std::vector<int64_t> all_groups(split_count);
   std::iota(all_groups.begin(), all_groups.end(), 0);
+
+  if (output_split_sizes.size() != 0 && input_split_sizes.size() != 0) {
+    int64_t split_size = input.size(0) / split_count;
+    for (size_t i = 0; i < input_split_sizes.size(); i++) {
+      if (input_split_sizes[i] != split_size ||
+          output_split_sizes[i] != split_size)
+        throw std::runtime_error(
+            "torch_xla does not support arbitrary split sizes for all_to_all");
+    }
+  }
   XLATensorPtr result_ptr;
   torch::lazy::Value new_token;
   std::tie(result_ptr, new_token) =

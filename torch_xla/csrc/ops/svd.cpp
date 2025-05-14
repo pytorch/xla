@@ -7,9 +7,9 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
-#include "xla/client/lib/constants.h"
-#include "xla/client/lib/matrix.h"
-#include "xla/client/lib/svd.h"
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/lib/matrix.h"
+#include "xla/hlo/builder/lib/svd.h"
 
 namespace torch_xla {
 namespace {

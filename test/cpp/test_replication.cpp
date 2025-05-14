@@ -13,7 +13,7 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 #include "xla/shape_util.h"
 
 namespace torch_xla {

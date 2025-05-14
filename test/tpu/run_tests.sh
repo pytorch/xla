@@ -6,6 +6,11 @@ TEST_CDIR="$(dirname "$CDIR")"
 source "${TEST_CDIR}/utils/run_tests_utils.sh"
 
 # TODO: merge with other run_tests
+(cd $TEST_CDIR && python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_high)
+(cd $TEST_CDIR && python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_default)
+(cd $TEST_CDIR && python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_highest)
+(cd $TEST_CDIR && python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_all)
+python3 "$TEST_CDIR/test_mat_mul_precision_get_and_set.py"
 python3 "$TEST_CDIR/test_operations.py" -v
 python3 "$TEST_CDIR/pjrt/test_runtime_tpu.py"
 python3 "$TEST_CDIR/pjrt/test_collective_ops_tpu.py"
@@ -19,6 +24,7 @@ python3 "$TEST_CDIR/spmd/test_train_spmd_linear_model.py"
 python3 "$TEST_CDIR/spmd/test_xla_spmd_python_api_interaction.py"
 python3 "$TEST_CDIR/spmd/test_xla_auto_sharding.py"
 python3 "$TEST_CDIR/spmd/test_fsdp_v2.py"
+python3 "$TEST_CDIR/test_gradient_accumulation.py"
 XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 "$TEST_CDIR/ds/test_dynamic_shape_models.py" -v
 python3 "$TEST_CDIR/test_autocast.py"
 python3 "$TEST_CDIR/test_fp8.py"
@@ -37,6 +43,7 @@ python3 "$TEST_CDIR/scan/test_scan_pallas.py"
 python3 "$TEST_CDIR/scan/test_scan_layers.py"
 python3 "$TEST_CDIR/test_gru.py"
 python3 "$TEST_CDIR/test_assume_pure.py"
+python3 "$TEST_CDIR/test_assume_pure_spmd.py"
 python3 "$TEST_CDIR/test_as_stride_use_slice.py"
 run_xla_hlo_debug python3 "$TEST_CDIR/scan/test_scan_debug.py"
 python3 "$TEST_CDIR/test_pallas.py" -v

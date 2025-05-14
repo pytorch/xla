@@ -3,7 +3,7 @@
 #include "absl/status/status.h"
 #include "tsl/platform/errors.h"
 #include "tsl/platform/tensor_float_32_utils.h"
-#include "xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 #include "xla/shape_util.h"
 #include "xla/xla_data.pb.h"
 
