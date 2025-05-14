@@ -326,24 +326,23 @@ void DebugUtil::analyze_graph_execution_python_frame(
   } else if (frames[0].function == "mark_step" ||
              (frames[0].function == "sync" &&
               endsWith(frames[0].file, "torch_xla.py"))) {
-    bool called_by_sync =
-        frames[0].function == "mark_step" && frames[1].function == "sync";
-    // sync internally calls mark_step leading to one extra call stack, so shift
+    bool called_by_mark_step =
+        frames[0].function == "sync" && frames[1].function == "mark_step";
+    // mark_step internally calls sync leading to one extra call stack, so shift
     // the frame index by 1.
-    int i = called_by_sync ? 2 : 1;
+    int i = called_by_mark_step ? 2 : 1;
     if (frames[i].function == "next" &&
         endsWith(frames[i].file, "parallel_loader.py")) {
-      ss << debug_output_prefix
-         << "  mark_step in parallel loader at step end\n";
+      ss << debug_output_prefix << "  sync in parallel loader at step end\n";
     } else if (frames[i].function == "__exit__" &&
                endsWith(frames[i].file, "profiler.py")) {
       ss << debug_output_prefix
-         << "  mark_step when exiting a profiler StepTrace region\n";
+         << "  sync when exiting a profiler StepTrace region\n";
     } else if ((frames[i].function == "extract_compiled_graph_helper" ||
                 frames[i].function == "extract_internal") &&
                endsWith(frames[i].file, "dynamo_bridge.py")) {
       ss << debug_output_prefix
-         << "  mark_step when dynamo processing input graphs\n";
+         << "  sync when dynamo processing input graphs\n";
     } else if (frames[i].function == "_compile" &&
                endsWith(frames[i].file, "torch_xla.py")) {
       ss << debug_output_prefix << "  torch_xla.compile\n";
@@ -353,7 +352,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
          << "  torch_xla.compile clear the pending graph prior calling the "
             "target function\n";
     } else {
-      ss << debug_output_prefix << "  user mark_step\n";
+      ss << debug_output_prefix << "  user sync\n";
     }
   } else if (frames[0].function == "extract_graph_helper" &&
              endsWith(frames[0].file, "dynamo_bridge.py")) {
@@ -362,8 +361,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
     // TODO(JackCaoG): be more specific about  exeuction caused by printing
     // tensor or fallback or some weird indexing.
     ss << debug_output_prefix
-       << "  most likely user code trying to access tensor value before "
-          "mark_step\n";
+       << "  most likely user code trying to access tensor value before sync\n";
   }
 
   ss << debug_output_prefix << "Graph Info: \n";

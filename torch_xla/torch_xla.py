@@ -74,8 +74,8 @@ def sync(wait: bool = False, reset_scope: bool = True):
       reset_scope=reset_scope)
   # Only emit metrics from the first local device index, to avoid emitting the
   # same values from different threads.
-  if is_master_ordinal():
-    ms.save_metrics()
+  if xm.is_master_ordinal():
+    xm.ms.save_metrics()
   devctx = xm._run_step_closures()
   torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 

@@ -1053,9 +1053,9 @@ def _run_step_closures() -> DeviceContext:
   return devctx
 
 
-@deprecated("Use torch_xla.sync instead")
+# @deprecated("Use torch_xla.sync instead")
 def mark_step(wait: bool = False, reset_scope: bool = True):
-  torch_xla(wait, reset_scope)
+  torch_xla.sync(wait, reset_scope)
 
 
 # TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
