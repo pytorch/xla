@@ -101,7 +101,7 @@ jobs:
         shell: bash
         run: |
           set -x
-          pip install -U coverage coverage-lcov
+          pip install -U coverage
         if: ${{ inputs.collect-coverage }}
       - name: Install Triton
         shell: bash
@@ -112,7 +112,7 @@ jobs:
         shell: bash
         env:
           COVERAGE_FILE: "${{ env.COVERAGE_DIR }}/py-coverage"
-          GCOV_PREFIX: "${{ env.COVERAGE_DIR }}/cpp-coverage"
+          LLVM_PROFILE_FILE: "${{ env.COVERAGE_DIR }}/cpp-coverage/data-%p.profraw"
         run: |
           set -xue
 
@@ -130,13 +130,13 @@ jobs:
           run_coverage pytorch/xla/test/dynamo/test_dynamo.py -v
 
           coverage combine
-          coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
+          coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
         if: ${{ matrix.run_python_tests }}
       - name: Triton Tests
         shell: bash
         env:
           COVERAGE_FILE: "${{ env.COVERAGE_DIR }}/py-coverage"
-          GCOV_PREFIX: "${{ env.COVERAGE_DIR }}/cpp-coverage"
+          LLVM_PROFILE_FILE: "${{ env.COVERAGE_DIR }}/cpp-coverage/data-%p.profraw"
           TRITON_PTXAS_PATH: "/usr/local/cuda-12.3/bin/ptxas"
         run: |
           set -x
@@ -154,11 +154,11 @@ jobs:
           run_coverage pytorch/xla/test/test_triton.py
 
           coverage combine
-          coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
+          coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
         if: ${{ matrix.run_triton_tests }}
       - name: Upload coverage results
         uses: actions/upload-artifact@v4
         with:
-          name: "lcov-${{ matrix.name }}"
+          name: "coverage-${{ matrix.name }}"
           path: "${{ env.COVERAGE_DIR }}"
         if: ${{ inputs.collect-coverage }}

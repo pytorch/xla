@@ -25,9 +25,15 @@ build -c opt
 build --config=short_logs
 
 # Force GCC because clang/bazel has issues.
-build --action_env=CC=/usr/lib/llvm-17/bin/clang
-build --action_env=CXX=/usr/lib/llvm-17/bin/clang++
 build --spawn_strategy=standalone
+
+###########################################################################
+
+build:gcc --action_env=CC=gcc
+build:gcc --action_env=CXX=g++
+
+build:clang --action_env=CC=/usr/lib/llvm-17/bin/clang
+build:clang --action_env=CXX=/usr/lib/llvm-17/bin/clang++
 
 # Why we use the sandbox mode:
 #
@@ -88,9 +94,6 @@ build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain
 build:cuda --@local_config_cuda//:enable_cuda
 build:cuda --define=xla_python_enable_gpu=true
 build:cuda --cxxopt=-DXLA_CUDA=1
-
-build:cuda --copt=-Qunused-arguments
-build:cuda --copt=-Wno-unused-command-line-argument
 
 # Coverage with cuda/gcc/nvcc requires manually setting coverage flags.
 coverage:cuda --per_file_copt=third_party/.*,torch_xla/.*@--coverage

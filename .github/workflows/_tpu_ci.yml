@@ -52,14 +52,14 @@ jobs:
         shell: bash
         run: |
           set -x
-          pip install -U coverage coverage-lcov
+          pip install -U coverage
         if: ${{ inputs.collect-coverage }}
       - name: Run Tests (${{ matrix.test_script }})
         env:
           PJRT_DEVICE: TPU
           TPU_LOG_DIR: tpu_logs_${{ strategy.job-index }}
           COVERAGE_FILE: "${{ env.COVERAGE_DIR }}/py-coverage"
-          GCOV_PREFIX: "${{ env.COVERAGE_DIR }}/cpp-coverage"
+          LLVM_PROFILE_FILE: "${{ env.COVERAGE_DIR }}/cpp-coverage/data-%p.profraw"
         run: |
           cd pytorch/xla
           ${{ matrix.test_script }}
@@ -71,6 +71,6 @@ jobs:
       - name: Upload coverage results
         uses: actions/upload-artifact@v4
         with:
-          name: "lcov-tpu"
+          name: "coverage-tpu"
           path: "${{ env.COVERAGE_DIR }}"
         if: ${{ inputs.collect-coverage }}

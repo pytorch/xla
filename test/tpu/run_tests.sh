@@ -143,7 +143,7 @@ if [ "$USE_COVERAGE" != "0" ]; then
   ls -l "$PYTHONBIN"
   run
   $PYTHONBIN/coverage combine
-  $PYTHONBIN/coverage-lcov --data_file_path $COVERAGE_FILE --output_file_path $COVERAGE_FILE.info
+  $PYTHONBIN/coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
 else
   run
 fi

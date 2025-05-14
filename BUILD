@@ -5,7 +5,6 @@ load(
 
 load("@python//:defs.bzl", "compile_pip_requirements")
 load("@python_version_repo//:py_version.bzl", "REQUIREMENTS")
-load("//bazel:rules_def.bzl", "cov_library")
 
 compile_pip_requirements(
     name = "requirements",
@@ -27,18 +26,14 @@ cc_binary(
         "-fopenmp",
         "-fPIC",
         "-fwrapv",
-        "-fprofile-arcs",
-        "-ftest-coverage",
-        "-O0",
-        "-g",
+        "-fprofile-instr-generate",
+        "-fcoverage-mapping",
     ],
     linkopts = [
         "-Wl,-rpath,$$ORIGIN/torch_xla/lib",  # for libtpu
         "-Wl,-soname,_XLAC.so",
         "-lstdc++fs",  # For std::filesystem
-        "-fprofile-arcs",
-        "-ftest-coverage",
-        "-lgcov",
+        "-fprofile-instr-generate",
     ],
     linkshared = 1,
     visibility = ["//visibility:public"],
@@ -59,16 +54,12 @@ cc_binary(
     copts = [
         "-fopenmp",
         "-fPIC",
-        "-fprofile-arcs",
-        "-ftest-coverage",
-        "-O0",
-        "-g",
+        "-fprofile-instr-generate",
+        "-fcoverage-mapping",
     ],
     linkopts = [
         "-Wl,-soname,_XLAC_cuda_functions.so",
-        "-fprofile-arcs",
-        "-ftest-coverage",
-        "-lgcov",
+        "-fprofile-instr-generate",
     ],
     linkshared = 1,
     visibility = ["//visibility:public"],
