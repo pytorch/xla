@@ -92,3 +92,4 @@ jobs:
           workflow_file_name: e2e_test.yml
           wait_interval: 60
           ref: yifeit/torchprime-ci
+          client_payload: '{"docker_url": "gcr.io/tpu-pytorch/for-torchprime-ci:test"}'
