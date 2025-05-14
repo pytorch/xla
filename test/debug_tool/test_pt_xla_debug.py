@@ -126,7 +126,7 @@ class PtXLADebugTest(unittest.TestCase):
 
     if self.debug_level > 1:
       self.assertEqual(len(execution_causes), 2)
-      self.assertIn('mark_step when dynamo processing input graphs',
+      self.assertIn('sync when dynamo processing input graphs',
                     execution_causes[0])
       self.assertIn('dynamo is executing a compiled program',
                     execution_causes[1])
@@ -266,7 +266,7 @@ class PtXLADebugTest(unittest.TestCase):
     if self.debug_level > 1:
       self.assertEqual(len(execution_causes), batch_size)
       for cause in execution_causes:
-        self.assertIn('mark_step in parallel loader at step end', cause)
+        self.assertIn('sync in parallel loader at step end', cause)
     else:
       self.assertEqual(len(execution_causes), 0)
 
