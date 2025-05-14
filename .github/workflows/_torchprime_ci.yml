@@ -54,13 +54,14 @@ jobs:
         if: inputs.has_code_changes == 'true'
         run: gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
         shell: bash
-      - name: Checkout actions
+      - name: Checkout infra
         if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
-            .github/workflows/setup
-          path: .actions
+            infra
+          fetch-depth: 1
+          path: pytorch-xla
       # Build a docker image for torchprime E2E test
       # First download the torch-xla-wheels
       - name: Fetch wheels
@@ -72,13 +73,15 @@ jobs:
       # Then run docker to install them and push a docker
       - name: Build and push docker image
         if: inputs.has_code_changes == 'true'
+        shell: bash
+        working-directory: pytorch-xla
         run: |
           . ./infra/ansible/build_for_torchprime.sh
         env:
-          XLA_WHEELS_PATH: /tmp/wheels/
-          DOCKER_IMAGE_NAME: torch-xla-torchprime-ci
-          DOCKER_IMAGE_TAG: latest
-          DOCKER_ORG: pytorch
+          XLA_WHEELS_PATH: /tmp/wheels/todo
+          DOCKER_IMAGE_NAME: todo-torch-xla-torchprime-ci
+          DOCKER_IMAGE_TAG: todo
+          DOCKER_PROJECT: pytorch-todo
       # Trigger torchprime E2E test workflow
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         if: inputs.has_code_changes == 'true'
