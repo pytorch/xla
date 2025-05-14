@@ -1,3 +1,6 @@
+ARG python_version=3.10
+ARG debian_version=bullseye
+
 FROM python:${python_version}-${debian_version} AS release
 
 WORKDIR /tmp/wheels
