@@ -519,6 +519,7 @@ class ZeroRedundancyOptimizer(Optimizer):
 
     tmp = self.base_optimizer.state_dict()
     tmp['state'] = base_state
+    tmp['param_groups'] = state_dict['param_groups']
     self.base_optimizer.load_state_dict(tmp)
     if 'sharded_master_weights' in state_dict:
       master_weights = state_dict['sharded_master_weights']
