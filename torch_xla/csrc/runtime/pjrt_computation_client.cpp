@@ -16,14 +16,15 @@
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/pjrt/c/pjrt_c_api_gpu_extension.h"
-#include "xla/pjrt/c/pjrt_c_api_wrapper_impl.h"  // Needed for PJRT_Error's full definition.
-#include "xla/pjrt/pjrt_api.h"                   // Needed for ?
+#include "xla/pjrt/c/pjrt_c_api_wrapper_impl.h"
+#include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
@@ -620,15 +621,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     }
 
     // Compile the computation to an executible. For better user experience, if
-    // the XLA compiler fails for any reason, we raise a Python exception:
-    //   - if the compilation returns an error, throw an std::invalid_argument,
-    //     which is translated to a Python ValueError exception;
-    //     (https://pybind11.readthedocs.io/en/stable/advanced/exceptions.html).
-    //   - if the compilation throws any exception, rethrow it as an
-    //     std::invalid_argument so that we get a Python ValueError;
-    //   - however, if the compilation crashes (e.g. due to a CHECK), we cannot
-    //     catch it; therefore we should ensure that the compilation never
-    //     crashes (and fix any crash as an XLA bug).
+    // the XLA compiler fails for any reason, we raise a Python exception.
     std::function<absl::StatusOr<std::unique_ptr<xla::PjRtLoadedExecutable>>()>
         compile;
     if (runtime::sys_util::GetEnvBool("XLA_STABLEHLO_COMPILE", false)) {
@@ -646,24 +639,10 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
         return client_->CompileAndLoad(instance.computation, compile_options);
       };
     }
-    absl::StatusOr<std::unique_ptr<xla::PjRtLoadedExecutable>> maybe_executable;
-    try {
-      maybe_executable =
-          fake_xla_compile_
-              ? fake_xla_compile_()
-              : client_->CompileAndLoad(instance.computation, compile_options);
-    } catch (const std::exception& e) {
-      throw std::invalid_argument(e.what());
-    } catch (...) {
-      throw std::invalid_argument(
-          "XLA threw an unknown exception. Please file a bug at "
-          "https://github.com/pytorch/xla/issues");
-    }
-    if (!maybe_executable.ok()) {
-      throw std::invalid_argument(
-          std::string(maybe_executable.status().message()));
-    }
-    auto executable = *std::move(maybe_executable);
+    std::unique_ptr<xla::PjRtLoadedExecutable> executable =
+        util::RaisePythonValueErrorOnFailure([&] {
+          return fake_xla_compile_ ? fake_xla_compile_() : compile();
+        });
 
     auto memory_stats_status_or = executable->GetCompiledMemoryStats();
     if (memory_stats_status_or.ok()) {
