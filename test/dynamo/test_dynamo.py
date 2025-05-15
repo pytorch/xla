@@ -763,7 +763,8 @@ class DynamoErrorMessageTest(parameterized.TestCase):
       res = dynamo_resnet18_cpu(input)
       # there should be 18 paramters + 1 input
       self.assertGreater(len(w), 15)
-      self.assertIn('Found tensor with shape torch.Size', str(w[0].message))
+      # TODO(gunhyun): revert back when mark_step deprecation is complete
+      self.assertIn('Found tensor with shape torch.Size', str(w[1].message))
     self.assertLessEqual(len(met.counter_names()), 1)
 
 
