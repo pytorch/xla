@@ -7,7 +7,6 @@ import sys
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.utils.utils as xu
 import unittest
 import test_utils
 
@@ -21,7 +20,6 @@ print(FLAGS)
 class TestXlaGraphExecution(test_utils.XlaTestCase):
 
   def test_graph_execution_allowed(self):
-    # Test graph execution allowed
     torch_xla._XLAC._set_allow_execution(True)
     x = torch.ones(2, device=xm.xla_device())
     self.assertEqual(x[0], 1.0)  # This should trigger the checking
@@ -29,17 +27,18 @@ class TestXlaGraphExecution(test_utils.XlaTestCase):
 
   def test_graph_execution_disallowed_with_error(self):
     # Test ERROR when graph execution is not allowed
-    print("Trigger runtime error for unexpected graph execution")
+    # Trigger runtime error for unexpected graph execution
     torch_xla._XLAC._set_allow_execution(
         False)  # this flag disallows graph execution
     x = torch.ones(2, device=xm.xla_device())
     with self.assertRaises(RuntimeError) as e:
       self.assertEqual(x[0], 1.0)  # This should trigger the checking
+    self.assertIn(
+        "Unexpected execution happens inside the compiled function, exiting",
+        str(e.exception))
     del x
 
 
 if __name__ == '__main__':
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
-  if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
-    print(met.metrics_report())
   sys.exit(0 if test.result.wasSuccessful() else 1)
