@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita9ba21c )
+                  master (2.8.0+gitbbafe35 )
                 </div>
               
             
@@ -499,18 +499,23 @@
   <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">real_devices</span><span class="p">())</span></div>
 
 
-<div class="viewcode-block" id="sync"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.sync">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sync</span><span class="p">(</span><span class="n">wait</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="sync"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.sync">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sync</span><span class="p">(</span><span class="n">wait</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">reset_scope</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Launches all pending graph operations.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    wait (bool): whether to block the current process until the execution finished.</span>
-
+<span class="sd">    reset_scope (bool): whether to reset the torch::lazy::ScopeContext of the IR Nodes.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_EMIT_STEPLOG&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;torch_xla.torch_xla::sync</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_step_marker</span><span class="p">(</span>
-      <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span>
-      <span class="p">[],</span>
-      <span class="n">wait</span><span class="o">=</span><span class="n">wait</span><span class="p">,</span>
-  <span class="p">)</span>
+      <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span> <span class="p">[],</span>
+      <span class="n">wait</span><span class="o">=</span><span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_SYNC_WAIT&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">wait</span><span class="p">),</span>
+      <span class="n">reset_scope</span><span class="o">=</span><span class="n">reset_scope</span><span class="p">)</span>
+  <span class="c1"># Only emit metrics from the first local device index, to avoid emitting the</span>
+  <span class="c1"># same values from different threads.</span>
+  <span class="k">if</span> <span class="n">xm</span><span class="o">.</span><span class="n">is_master_ordinal</span><span class="p">():</span>
+    <span class="n">xm</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">save_metrics</span><span class="p">()</span>
   <span class="n">devctx</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">_run_step_closures</span><span class="p">()</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span></div>
 

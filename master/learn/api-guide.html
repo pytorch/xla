@@ -284,7 +284,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita9ba21c )
+                  master (2.8.0+gitbbafe35 )
                 </div>
               
             
@@ -480,11 +480,14 @@ to this process.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.sync">
-<span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wait</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/torch_xla.html#sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.sync" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wait</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset_scope</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/torch_xla.html#sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.sync" title="Permalink to this definition">¶</a></dt>
 <dd><p>Launches all pending graph operations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>wait</strong> (<em>bool</em>) – whether to block the current process until the execution finished.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>wait</strong> (<em>bool</em>) – whether to block the current process until the execution finished.</p></li>
+<li><p><strong>reset_scope</strong> (<em>bool</em>) – whether to reset the torch::lazy::ScopeContext of the IR Nodes.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>

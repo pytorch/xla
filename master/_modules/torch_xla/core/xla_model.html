@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita9ba21c )
+                  master (2.8.0+gitbbafe35 )
                 </div>
               
             
@@ -455,6 +455,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch.optim</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">optim</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla</span><span class="w"> </span><span class="kn">import</span> <span class="n">runtime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing_extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">deprecated</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_env_vars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xenv</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.debug.metrics_saver</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ms</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.utils.utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xu</span>
@@ -1491,23 +1492,9 @@
   <span class="k">return</span> <span class="n">devctx</span>
 
 
+<span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;Use torch_xla.sync instead&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">mark_step</span><span class="p">(</span><span class="n">wait</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">reset_scope</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
-  <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_EMIT_STEPLOG&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span>
-        <span class="s1">&#39;torch_xla.core.xla_model::mark_step</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span>
-        <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
-        <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span>
-        <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_step_marker</span><span class="p">(</span>
-      <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span> <span class="p">[],</span>
-      <span class="n">wait</span><span class="o">=</span><span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_SYNC_WAIT&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">wait</span><span class="p">),</span>
-      <span class="n">reset_scope</span><span class="o">=</span><span class="n">reset_scope</span><span class="p">)</span>
-  <span class="c1"># Only emit metrics from the first local device index, to avoid emitting the</span>
-  <span class="c1"># same values from different threads.</span>
-  <span class="k">if</span> <span class="n">is_master_ordinal</span><span class="p">():</span>
-    <span class="n">ms</span><span class="o">.</span><span class="n">save_metrics</span><span class="p">()</span>
-  <span class="n">devctx</span> <span class="o">=</span> <span class="n">_run_step_closures</span><span class="p">()</span>
-  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">(</span><span class="n">wait</span><span class="p">,</span> <span class="n">reset_scope</span><span class="p">)</span>
 
 
 <span class="c1"># TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be</span>
