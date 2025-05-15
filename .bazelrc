@@ -53,14 +53,17 @@ build --copt=-fexceptions
 #    safer than o+rx.
 build --spawn_strategy=sandboxed
 
-# Use GCC for C/C++ compilation.
-build --action_env=CC=gcc
-build --action_env=CXX=g++
+# By default, use Clang for C/C++ compilation.
+build --action_env=CC=/usr/bin/clang-17
+build --action_env=CXX=/usr/bin/clang++-17
 
 ###########################################################################
 
-build:clang --action_env=CC=/usr/bin/clang-17
-build:clang --action_env=CXX=/usr/bin/clang++-17
+# Use GCC for C/C++ compilation. By default, PyTorch/XLA continuous build
+# uses Clang. This option is useful for debugging, e.g. when we suspect
+# that the Clang set-up is buggy.
+build:gcc --action_env=CC=gcc
+build:gcc --action_env=CXX=g++
 
 ###########################################################################
 
