@@ -323,7 +323,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
     // can either analyze the C++ call stack or rely on caller to pass a boolean
     // variable.
     ss << debug_output_prefix << "  dynamo is executing a compiled program\n";
-  } else if (frames[0].function == "`torch_xla.sync()`" ||
+  } else if (frames[0].function == "mark_step" ||
              (frames[0].function == "sync" &&
               endsWith(frames[0].file, "torch_xla.py"))) {
     // TODO: the deprecation warning of mark_step adds extra call stack,
@@ -334,18 +334,19 @@ void DebugUtil::analyze_graph_execution_python_frame(
     for (; idx < frames.size(); ++idx) {
       if (frames[idx].function == "next" &&
           endsWith(frames[idx].file, "parallel_loader.py")) {
-        ss << debug_output_prefix << "  sync in parallel loader at step end\n";
+        ss << debug_output_prefix
+           << "  torch_xla.sync in parallel loader at step end\n";
         break;
       } else if (frames[idx].function == "__exit__" &&
                  endsWith(frames[idx].file, "profiler.py")) {
         ss << debug_output_prefix
-           << "  sync when exiting a profiler StepTrace region\n";
+           << "  torch_xla.sync when exiting a profiler StepTrace region\n";
         break;
       } else if ((frames[idx].function == "extract_compiled_graph_helper" ||
                   frames[idx].function == "extract_internal") &&
                  endsWith(frames[idx].file, "dynamo_bridge.py")) {
         ss << debug_output_prefix
-           << "  sync when dynamo processing input graphs\n";
+           << "  torch_xla.sync when dynamo processing input graphs\n";
         break;
       } else if (frames[idx].function == "_compile" &&
                  endsWith(frames[idx].file, "torch_xla.py")) {
@@ -361,7 +362,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
     }
     // function not found in frame
     if (idx == frames.size()) {
-      ss << debug_output_prefix << "  user `torch_xla.sync()`\n";
+      ss << debug_output_prefix << "  user torch_xla.sync\n";
     }
   } else if (frames[0].function == "extract_graph_helper" &&
              endsWith(frames[0].file, "dynamo_bridge.py")) {
@@ -371,7 +372,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
     // tensor or fallback or some weird indexing.
     ss << debug_output_prefix
        << "  most likely user code trying to access tensor value before "
-          "`torch_xla.sync()`\n";
+          "torch_xla.sync\n";
   }
 
   ss << debug_output_prefix << "Graph Info: \n";

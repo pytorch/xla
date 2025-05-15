@@ -619,8 +619,8 @@ class XLATestBase(DeviceTypeTestBase):
             setattr(cls, dtype_test_name, disallowed_test)
           if not skipped:
             xla_dtypes.append(
-                dtype_combination
-                if len(dtype_combination) > 1 else dtype_combination[0])
+                dtype_combination if len(dtype_combination) >
+                1 else dtype_combination[0])
         if len(xla_dtypes) != 0:
           test.dtypes[cls.device_type] = xla_dtypes
           super().instantiate_test(name, test, generic_cls=generic_cls)

@@ -60,12 +60,12 @@ class PtXLADebugTest(unittest.TestCase):
 
     if self.debug_level > 1:
       self.assertEqual(len(execution_causes), 1)
-      self.assertIn('user sync', execution_causes[0])
+      self.assertIn('user torch_xla.sync', execution_causes[0])
     else:
       self.assertEqual(len(execution_causes), 0)
 
     self.assertEqual(len(compilation_causes), 1)
-    self.assertIn('user sync', compilation_causes[0])
+    self.assertIn('user torch_xla.sync', compilation_causes[0])
 
     if self.debug_level > 1:
       self.assertEqual(len(graph_infos), 2)
@@ -90,14 +90,13 @@ class PtXLADebugTest(unittest.TestCase):
 
     if self.debug_level > 1:
       self.assertEqual(len(causes), 1)
-      self.assertIn(
-          '`torch_xla.sync()` when exiting a profiler StepTrace region',
-          causes[0])
+      self.assertIn('torch_xla.sync when exiting a profiler StepTrace region',
+                    causes[0])
     else:
       self.assertEqual(len(causes), 0)
 
     self.assertEqual(len(compilation_causes), 1)
-    self.assertIn('`torch_xla.sync()` when exiting a profiler StepTrace region',
+    self.assertIn('torch_xla.sync when exiting a profiler StepTrace region',
                   compilation_causes[0])
 
     if self.debug_level > 1:
@@ -127,16 +126,16 @@ class PtXLADebugTest(unittest.TestCase):
       graph_infos = extract_graph_infos(lines)
 
     if self.debug_level > 1:
-      self.assertEqual(len(executation_causes), 2)
-      self.assertIn('`torch_xla.sync()` when dynamo processing input graphs',
-                    executation_causes[0])
+      self.assertEqual(len(execution_causes), 2)
+      self.assertIn('torch_xla.sync when dynamo processing input graphs',
+                    execution_causes[0])
       self.assertIn('dynamo is executing a compiled program',
                     execution_causes[1])
     else:
       self.assertEqual(len(execution_causes), 0)
 
     self.assertEqual(len(compilation_causes), 2)
-    self.assertIn('`torch_xla.sync()` when dynamo processing input graphs',
+    self.assertIn('torch_xla.sync when dynamo processing input graphs',
                   compilation_causes[0])
     self.assertIn('dynamo is compiling a FX graph to HLO',
                   compilation_causes[1])
@@ -266,16 +265,15 @@ class PtXLADebugTest(unittest.TestCase):
       graph_infos = extract_graph_infos(lines)
 
     if self.debug_level > 1:
-      self.assertEqual(len(executation_causes), batch_size)
-      for cause in executation_causes:
-        self.assertIn('`torch_xla.sync()` in parallel loader at step end',
-                      cause)
+      self.assertEqual(len(execution_causes), batch_size)
+      for cause in execution_causes:
+        self.assertIn('torch_xla.sync in parallel loader at step end', cause)
     else:
       self.assertEqual(len(execution_causes), 0)
 
     # We should only compile once.
     self.assertEqual(len(compilation_causes), 1)
-    self.assertIn('`torch_xla.sync()` in parallel loader at step end',
+    self.assertIn('torch_xla.sync in parallel loader at step end',
                   compilation_causes[0])
 
     if self.debug_level > 1:
@@ -338,8 +336,8 @@ class PtXLADebugTest(unittest.TestCase):
     # second frame will be empty from the post-compilation-analysis
     if self.debug_level > 1:
       self.assertEqual(len(frames[2].split('\n')), max_frame + 3)
-    # Check `torch_xla.sync()` is the first frame
-    self.assertIn('`torch_xla.sync()`', frames[0].split('\n')[1])
+    # Check torch_xla.sync is the first frame
+    self.assertIn('sync', frames[0].split('\n')[1])
 
     open(self.debug_file_name, 'w').close()
 
