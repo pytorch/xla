@@ -162,6 +162,16 @@ class PjRtComputationClient : public ComputationClient {
                        const std::function<void()>& callback) override;
 
  private:
+  friend class PjRtComputationClientTest;
+
+  // void MakeXlaFailForTesting(absl::Status status) {
+  //   fake_xla_compile_ = [status = std::move(status)]() { return status; };
+  // }
+
+  void FakeXlaCompileForTesting(std::function<absl::Status()> function) {
+    fake_xla_compile_ = std::move(function);
+  }
+
   std::unique_ptr<xla::PjRtClient> client_;
   std::unique_ptr<XlaCoordinator> coordinator_;
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's
@@ -173,6 +183,10 @@ class PjRtComputationClient : public ComputationClient {
   tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(
       tsl::Env::Default(), "pjrt", std::thread::hardware_concurrency());
   torch::lazy::hash_t comp_env_hash_;
+
+  // If not nullptr, invoke this instead of the actual XLA compilation. Used
+  // only for testing.
+  std::function<absl::Status()> fake_xla_compile_ = nullptr;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 

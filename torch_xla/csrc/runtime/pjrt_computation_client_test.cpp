@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include <exception>
+#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -12,20 +12,23 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
-#include "tsl/platform/env.h"
-#include "tsl/platform/logging.h"
-#include "tsl/platform/statusor.h"
-#include "tsl/platform/test.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/literal_util.h"
 #include "xla/tests/literal_test_util.h"
-#include "xla/tsl/lib/core/status_test_util.h"
 
 namespace torch_xla {
 namespace runtime {
-namespace {
+
+class PjRtComputationClientTest : public ::testing::Test {
+ protected:
+  static void FakeXlaCompileForTesting(
+      PjRtComputationClient* client,
+      std::function<absl::Status()> fake_compile) {
+    client->FakeXlaCompileForTesting(std::move(fake_compile));
+  }
+};
 
 // Returns a computation to compute x + y where x and y are both F32[2,2]
 // arrays.
@@ -39,58 +42,54 @@ absl::StatusOr<xla::XlaComputation> MakeAddComputation() {
   return builder.Build();
 }
 
-// Returns a computation to compute the matrix multiplication of two matrices:
-//   x: F32[size, 1] mul y: F32[1, size] => z: F32[size, size]
-absl::StatusOr<xla::XlaComputation> MakeMatMulComputation(int64_t size) {
-  const xla::Shape x_shape =
-      xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {size, 1});
-  const xla::Shape y_shape =
-      xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {1, size});
-  xla::XlaBuilder builder("MatMulComputation");
-  xla::XlaOp x = xla::Parameter(&builder, 0, x_shape, "x");
-  xla::XlaOp y = xla::Parameter(&builder, 1, y_shape, "y");
-  xla::XlaOp matmul = xla::Dot(x, y);
-  return builder.Build();
-}
-
-TEST(PjRtComputationClient, ThrowsExpectedExceptionWhenCompileFails) {
+TEST_F(PjRtComputationClientTest, ThrowsExpectedExceptionWhenCompileFails) {
   // Get a CPU client.
   tsl::setenv("PJRT_DEVICE", "CPU", true);
   const auto client = std::make_unique<PjRtComputationClient>();
   const std::string device = client->GetDefaultDevice();
 
-  // Compose a computation to multiply two matrices.
-  const int64_t size = 2L*1000000000;
-  xla::Shape out_shape(xla::F32, {size, size},
+  // Compose a computation to add two matrices.
+  xla::Shape out_shape(xla::F32, {2, 2},
                        /*dynamic_dimensions=*/{});
   std::vector<ComputationClient::CompileInstance> instances;
-  try {
   instances.push_back(ComputationClient::CompileInstance(
-      std::move(MakeMatMulComputation(size).value()), device,
+      std::move(MakeAddComputation().value()), device,
       client->GetCompilationDevices(device, client->GetLocalDevices()),
       &out_shape));
-  } catch (const std::exception& e) {
-    LOG(ERROR) << "ZW1: " << e.what();
-  } catch (...) {
-    LOG(ERROR) << "ZW1: Exception thrown!";
-  }
 
-  LOG(ERROR) << "ZW1: done";
-  try {
-    // Compiling the graph should fail, which should throw instead of crashing.
-    // TODO(https://github.com/pytorch/xla/issues/9096): ensure that
-    // the exception has type std::invalid_argument.
-    client->Compile(std::move(instances));
-  } catch (const std::exception& e) {
-    LOG(ERROR) << "ZW2: " << e.what();
-  } catch (...) {
-    LOG(ERROR) << "ZW2: Exception thrown!";
-  }
-  LOG(ERROR) << "ZW2: done";
-  // EXPECT_ANY_THROW(client->Compile(std::move(instances)));
+  // Force XLA to fail with the given error when invoked by Compile() below.
+  FakeXlaCompileForTesting(
+      client.get(), [] { return absl::InvalidArgumentError("invalid arg"); });
+
+  // Compiling the graph should fail, which should throw instead of crashing.
+  EXPECT_THROW(client->Compile(std::move(instances)), std::invalid_argument);
 }
 
-TEST(PjRtComputationClientTest, Init) {
+TEST_F(PjRtComputationClientTest, ThrowsExpectedExceptionWhenCompileThrows) {
+  // Get a CPU client.
+  tsl::setenv("PJRT_DEVICE", "CPU", true);
+  const auto client = std::make_unique<PjRtComputationClient>();
+  const std::string device = client->GetDefaultDevice();
+
+  // Compose a computation to add two matrices.
+  xla::Shape out_shape(xla::F32, {2, 2},
+                       /*dynamic_dimensions=*/{});
+  std::vector<ComputationClient::CompileInstance> instances;
+  instances.push_back(ComputationClient::CompileInstance(
+      std::move(MakeAddComputation().value()), device,
+      client->GetCompilationDevices(device, client->GetLocalDevices()),
+      &out_shape));
+
+  // Force XLA to throw with the given error when invoked by Compile() below.
+  FakeXlaCompileForTesting(client.get(), []() -> absl::Status {
+    throw absl::BadStatusOrAccess(absl::InvalidArgumentError("invalid arg"));
+  });
+
+  // Compiling the graph should fail, which should throw instead of crashing.
+  EXPECT_THROW(client->Compile(std::move(instances)), std::invalid_argument);
+}
+
+TEST_F(PjRtComputationClientTest, Init) {
   // Get a CPU client.
   tsl::setenv("PJRT_DEVICE", "CPU", true);
   auto client = std::make_unique<PjRtComputationClient>();
@@ -134,6 +133,5 @@ TEST(PjRtComputationClientTest, Init) {
       result_literals[0]));
 }
 
-}  // namespace
 }  // namespace runtime
 }  // namespace torch_xla
