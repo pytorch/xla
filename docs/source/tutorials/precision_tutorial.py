@@ -65,7 +65,7 @@
 # | $L \times L$
 # | could generate a fourth term that moves the value by one bit, but adding
 # | one bit of information half the time provides little value relative
-# | to the cost of running another full mat mul.
+# | to the cost of running another multiplication.
 # |
 # | ```text
 # |                   +--------+--------+

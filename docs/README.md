@@ -55,8 +55,7 @@ One time installs not in requirements.txt:
 
 ```sh
 conda install -c conda-forge pandoc
-pip install nbsphinx==0.9.3
-pip install lxml[html_clean] # Workaround for an issue in nbsphinx
+pip install py2nb
 ```
 
 Install nbsphinx and lxml manually as there is a problem with nbsphinx's

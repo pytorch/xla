@@ -24,8 +24,11 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-    'm2r'
+    'm2r',
+    'nbsphinx',
 ]
+
+nbsphinx_execute = 'never' # Given diverse hardware requirements, authors must run notebooks manually.
 
 napoleon_use_ivar = True
 
