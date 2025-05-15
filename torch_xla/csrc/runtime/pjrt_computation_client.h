@@ -27,7 +27,7 @@ namespace runtime {
 class PjRtComputationClient : public ComputationClient {
  public:
   PjRtComputationClient();
-  ~PjRtComputationClient();
+  ~PjRtComputationClient() override;
 
   DataPtr CreateDataPlaceholder(
       std::string device, xla::Shape shape,
@@ -164,10 +164,8 @@ class PjRtComputationClient : public ComputationClient {
  private:
   friend class PjRtComputationClientTest;
 
-  // void MakeXlaFailForTesting(absl::Status status) {
-  //   fake_xla_compile_ = [status = std::move(status)]() { return status; };
-  // }
-
+  // If `function` is not nullptr, makes the client call it instead of the real
+  // XLA compiler when compiling. Used for injecting fault for testing.
   void FakeXlaCompileForTesting(std::function<absl::Status()> function) {
     fake_xla_compile_ = std::move(function);
   }
