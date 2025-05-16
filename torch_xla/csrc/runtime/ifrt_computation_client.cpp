@@ -626,6 +626,10 @@ size_t IfrtComputationClient::GetNumDevices() const {
   return client_->addressable_device_count();
 }
 
+size_t PjRtComputationClient::GetNumGlobalDevices() const {
+  return client_->device_count();
+}
+
 std::string IfrtComputationClient::GetDefaultDevice() const {
   return IfrtDeviceToString(client_->addressable_devices()[0]);
 }

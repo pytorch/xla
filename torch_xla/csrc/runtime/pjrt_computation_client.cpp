@@ -932,8 +932,12 @@ PjRtComputationClient::ExecuteReplicated(
   return data_handles;
 }
 
-size_t PjRtComputationClient::GetNumDevices() const {
+size_t PjRtComputationClient::GetNumLocalDevices() const {
   return client_->addressable_device_count();
+}
+
+size_t PjRtComputationClient::GetNumGlobalDevices() const {
+  return client_->device_count();
 }
 
 std::string PjRtComputationClient::GetDefaultDevice() const {
