@@ -1,3 +1,7 @@
+"""Try to apply every collective in torch.distributed,
+both in eager and compiled mode, and report the resulting
+error for those that fail."""
+
 import argparse
 import traceback
 import warnings

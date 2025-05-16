@@ -1,3 +1,5 @@
+"""Print the IR and HLO for an all_gather operation."""
+
 import torch
 import torch.distributed as dist
 import torch_xla
