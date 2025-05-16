@@ -101,14 +101,6 @@ class Tensor(torch.Tensor):
   def ndim(self):
     return len(self._elem.shape)
 
-  def flatten(self, start_dim=0, end_dim=-1):
-    if end_dim == -1:
-      end_dim = self.ndim
-    new_shape = (
-        self._elem.shape[:start_dim] + (-1,) + self._elem.shape[end_dim + 1:])
-    new_elem = jnp.reshape(self._elem, new_shape)
-    return Tensor(new_elem, self._env)
-    # return torch.reshape(self, new_shape)
 
   def __setitem__(self, key, val):
     key, val = self._env.t2j_iso((key, val))
@@ -381,7 +373,7 @@ class Environment(contextlib.ContextDecorator):
         )
 
   def _to_copy(self, the_tensor, new_dtype, new_device):
-    if isinstance(the_tensor, Tensor):
+    if isinstance(the_tensor, Tensor) or isinstance(the_tensor, View):
       arr = the_tensor.jax()
       if new_dtype is not None and new_dtype != arr.dtype:
         arr = arr.astype(mappings.t2j_dtype(new_dtype))

@@ -4,6 +4,7 @@ import jax
 from enum import Enum
 from typing import Union, List, Tuple, Optional, Any, cast
 from abc import ABC, abstractmethod
+import torch.utils._pytree as pytree
 
 # Reference to original PyTorch native functions
 # https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/native_functions.yaml
@@ -113,6 +114,35 @@ class NarrowInfo(ViewInfo):
 
   def calculate_output_shape(self, source: jax.Array) -> List[int]:
     return source[self.slices].shape
+
+class ReshapeInfo(ViewInfo):
+    """
+    Represents a reshape operation on a tensor.
+    Handles operations like tensor.reshape(1, 2, 3) and tensor.reshape(-1, 1)
+    """
+
+    def __init__(self, shape: Tuple[int, ...]) -> None:
+        """
+        Args:
+            shape: The shape to reshape the tensor to.
+                E.g. jax_array.reshape(shape) will return the transformed tensor.
+        """
+        super().__init__(ViewInfoType.RESHAPE)
+        self.shape = shape
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ReshapeInfo):
+            return False
+        return self.shape == other.shape
+
+    def transform_tensor(self, jax_array: jax.Array) -> jax.Array:
+        return jax_array.reshape(self.shape)
+
+    def update_tensor(self, new_value: jax.Array, jax_array: jax.Array) -> jax.Array:
+        return new_value.reshape(jax_array.shape)
+
+    def calculate_output_shape(self, source: jax.Array) -> List[int]:
+        return source.reshape(self.shape).shape
 
 
 class SelectInfo(ViewInfo):
@@ -318,6 +348,8 @@ class View(torch.Tensor):
     # applying inverse transformations in reverse order
     for view_info, parent_array in zip(
         reversed(view_infos), reversed(intermediate_values)):
+      assert isinstance(new_values, jax.Array)
+      assert isinstance(parent_array, jax.Array)
       # Apply the inverse transformation to propagate changes back
       new_values = view_info.update_tensor(new_values, parent_array)
 
@@ -353,6 +385,10 @@ class View(torch.Tensor):
   def __str__(self) -> str:
     return f"View({self.torch()})"
 
+  @property
+  def _elem(self) -> jax.Array:
+    return self.jax()
+  
   def jax(self) -> jax.Array:
     """
         Returns a copy of the source tensor after transformations.
@@ -363,6 +399,8 @@ class View(torch.Tensor):
     return result
 
   def __setitem__(self, indexes, val):
+    # Handle tensor indexing 
+    indexes = pytree.tree_map(lambda x: x.jax() if isinstance(x, torch.Tensor) else x, indexes)
     view_infos = self.get_transformation_chain() + [NarrowInfo(indexes)]
     self.update(view_infos=view_infos, new_values=val)
 
@@ -381,4 +419,20 @@ class View(torch.Tensor):
   def ndim(self):
     return len(self.shape)
 
+  @property
+  def data(self):
+      return self
+  
   __repr__ = __str__
+
+
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_masked_std_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_masked_var_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_masked_std_cpu_int64 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_masked_var_cpu_int64 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_nn_functional_interpolate_bilinear_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_nn_functional_interpolate_linear_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_nn_functional_interpolate_trilinear_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_nn_functional_upsample_bilinear_cpu_float32 - NotImplementedError: Cannot copy out of meta tensor; no data!
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_take_cpu_float32 - AttributeError: 'View' object has no attribute '_elem'
+# FAILED test/test_ops.py::TestOpInfoCPU::test_reference_eager_take_cpu_int64 - AttributeError: 'View' object has no attribute '_elem'
