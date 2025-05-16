@@ -314,7 +314,7 @@ def discover_master_worker_ip(use_localhost: bool = True) -> str:
 
   t = torch.tensor([current_worker_id], device=xm.xla_device())
   xm.collective_broadcast([t])
-  xm.mark_step()
+  torch_xla.sync()
 
   master_worker_id = int(t.cpu())
   return worker_ips[master_worker_id]

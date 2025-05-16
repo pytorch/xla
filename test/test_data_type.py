@@ -59,7 +59,7 @@ class XlaDataTypeTest(unittest.TestCase):
     linear = torch.nn.Linear(
         5, 10, dtype=torch.float32).to(device).to(torch.bfloat16)
     input = torch.randn(10, 5).to(device).to(torch.bfloat16)
-    xm.mark_step()
+    torch_xla.sync()
     res = linear(input)
 
     hlo_text = torch_xla._XLAC._get_xla_tensors_text([res])

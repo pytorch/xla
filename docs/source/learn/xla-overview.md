@@ -53,9 +53,9 @@ A *barrier* is a special instruction that tells XLA to execute the IR
 graph and materialize the tensors. This means that the PyTorch XLA
 tensors will be evaluated, and the results will be available to the
 host. The user-exposed barrier in Pytorch XLA is
-[xm.mark_step()](https://github.com/pytorch/xla/blob/bdceee54eca1269ee954f6cdd1868c584d0e88a4/torch_xla/core/xla_model.py#L808),
+[torch_xla.sync()](https://github.com/pytorch/xla/blob/bdceee54eca1269ee954f6cdd1868c584d0e88a4/torch_xla/core/xla_model.py#L808),
 which breaks the IR graph and results in code execution on the XLA
-devices. One of the key properties of `xm.mark_step` is that unlike
+devices. One of the key properties of `torch_xla.sync()` is that unlike
 synchronous operations it does not block the further tracing while the
 device is executing the graph. However, it does block access to the
 values of the tensors that are being materialized.
@@ -89,7 +89,7 @@ reused.
 ``` python
 for x, y in tensors_on_device:
     z += x + y
-    xm.mark_step()
+    torch_xla.sync()
 ```
 
 In this case there will be a small graph that is used
@@ -118,7 +118,7 @@ a lot of time on optimization and fusion of the ops. This can result in
 a very long compilation time. However, the later execution may be much
 faster, due to the optimizations that were performed during compilation.
 
-Sometimes it is worth breaking the IR graph with `xm.mark_step()`. As
+Sometimes it is worth breaking the IR graph with `torch_xla.sync()`. As
 explained above, this will result in a smaller graph that can be reused
 later. However making graphs smaller can reduce optimizations that
 otherwise could be done by the XLA compiler.
@@ -127,12 +127,12 @@ Another important point to consider is
 [MPDeviceLoader](https://github.com/pytorch/xla/blob/a1f822e2627a5639464273241821852677401026/torch_xla/distributed/parallel_loader.py#L186).
 Once your code is running on an XLA device, consider wrapping the torch
 dataloader with XLA `MPDeviceLoader` which preloads data to the device
-to improve performance and includes `xm.mark_step()` in it. The latter
+to improve performance and includes `torch_xla.sync()` in it. The latter
 automatically breaks the iterations over batches of data and sends them
 for execution. Note, if you are not using MPDeviceLoader, you might need
 to set `barrier=True` in the `optimizer_step()` to enable
-`xm.mark_step()` if running a training job or explicitly adding
-`xm.mark_step()`.
+`torch_xla.sync()` if running a training job or explicitly adding
+`torch_xla.sync()`.
 
 ## TPU Setup
 
@@ -261,7 +261,7 @@ build a single (huge) graph that wraps the number of inference steps (in
 this case, 50) as there is no barrier inside the for loop. It is
 difficult for the compiler to optimize the graph, and this leads to
 significant performance degradation. As discussed above, breaking the
-for loop with the barrier (xm.mark_step()) will result in a smaller
+for loop with the barrier (torch_xla.sync()) will result in a smaller
 graph that is easier for the compiler to optimize. This will also allow
 the compiler to reuse the graph from the previous step, which can
 improve performance.
@@ -368,13 +368,13 @@ will notice that the compilation time is very long (\>6 hours). This is
 because the XLA compiler tries to build a single graph for all of the
 scheduler steps at once similar to what we have discussed in the
 previous example. To make the code run faster, we need to break the
-graph up into smaller pieces with `xm.mark_step()` and reuse them in the
+graph up into smaller pieces with `torch_xla.sync()` and reuse them in the
 next steps. This happens inside the `pipe.__call__`
 [function](https://github.com/huggingface/diffusers/blob/2b1786735e27bc97f4d4699712292d5c463a7380/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py#L559)
 in [these
 lines](https://github.com/huggingface/diffusers/blob/2b1786735e27bc97f4d4699712292d5c463a7380/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py#L805-L839).
 Disabling the progress bar, removing callbacks and adding
-`xm.mark_step()` at the end of the for loop speeds up the code
+`torch_xla.sync()` at the end of the for loop speeds up the code
 significantly. Changes are provided in this
 [commit](https://github.com/huggingface/diffusers/compare/main...pytorch-tpu:diffusers:main).
 
@@ -425,7 +425,7 @@ on the host, then this might be a bottleneck and there is no further
 straightforward optimization that can be done. Otherwise, the code
 should be analyzed further to understand the caveats and improve the
 performance further. Note that you cannot `xp.Trace()` wrap portions of
-the code where `xm.mark_step()` is called.
+the code where `torch_xla.sync()` is called.
 
 To illustrate this we can look at already captured profiles that were
 uploaded to tensorboard following the profiling guide.

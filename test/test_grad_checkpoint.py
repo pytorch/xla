@@ -43,7 +43,7 @@ def run():
     dummy_loss = x.sum()
     dummy_loss.backward()
     optimizer.step()
-    xm.mark_step()
+    torch_xla.sync()
 
 
 if __name__ == "__main__":

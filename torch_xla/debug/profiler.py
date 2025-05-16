@@ -120,7 +120,7 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
 
   with xp.Trace('fwd_context'):
     model(input)
-    xm.mark_step()
+    torch_xla.sync()
   ```
   """
 
@@ -170,7 +170,7 @@ class StepTrace(Trace):
       # In ir.cpp ResetScopeContext we ensure that we have no remaining scope
       # before marking step.
       del self.scope
-    xm.mark_step()
+    torch_xla.sync()
     super().__exit__(type, value, traceback)
 
 
