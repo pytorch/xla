@@ -47,14 +47,6 @@ do
 done
 shift $(($OPTIND - 1))
 
-# Set the `CONTINUE_ON_ERROR` env var to `1` to make the CI tests continue on error.
-# This will allow you to see all the failures on your PR, not stopping with the first
-# test failure like the default behavior.
-CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-1}"
-if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
-  set +e
-fi
-
 export TRIM_GRAPH_SIZE=$MAX_GRAPH_SIZE
 export TRIM_GRAPH_CHECK_FREQUENCY=$GRAPH_CHECK_FREQUENCY
 export TORCH_TEST_DEVICES="$CDIR/pytorch_test_base.py"
@@ -66,8 +58,8 @@ TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__
 COVERAGE_FILE="$CDIR/../.coverage"
 
 # Given $1 as a (possibly not normalized) test filepath, returns successfully
-# if it matches the glob $_TEST_FILTER. If $_TEST_FILTER is empty, returns
-# successfully. 
+# if it matches any of the space-separated globs $_TEST_FILTER. If
+# $_TEST_FILTER is empty, returns successfully. 
 function test_is_selected {
   if [[ -z "$_TEST_FILTER" ]]; then
     return 0  # success
@@ -479,21 +471,6 @@ function run_tests {
     fi
   fi
 }
-
-# if [[ $# -eq 1 ]]; then
-#   # There is one positional commandline argument - set $_TEST_FILTER to it.
-#   _TEST_FILTER=$1
-#   # Sometimes a test may fail even if it doesn't match _TEST_FILTER. Therefore,
-#   # we need to set this to be able to get to the test(s) we want to run.
-#   CONTINUE_ON_ERROR=1
-# elif [[ $# -gt 1 ]]; then
-#   # There are >= positional arguments - it's an error.
-#   echo "Usage: $0 [TEST_FILTER]\nwhere TEST_FILTER is a glob matching a test .py file."
-#   exit 1
-# else
-#   # No positional argument - run all tests.
-#   _TEST_FILTER=""
-# fi
 
 if [[ $# -ge 1 ]]; then
   # There are positional arguments - set $_TEST_FILTER to them.
