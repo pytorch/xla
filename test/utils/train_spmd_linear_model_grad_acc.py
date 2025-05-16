@@ -154,7 +154,7 @@ def train():
           running_loss = train_loop_fn(data, target, running_loss)
           training_step += FLAGS.gradient_accumulation_steps
       optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
       losses.append(running_loss.clone().detach())
       if training_step % FLAGS.log_steps == 0:
         print(

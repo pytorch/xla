@@ -136,7 +136,7 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
 
     # execute replicated
     t += 1
-    xm.mark_step(True)
+    torch_xla.sync(wait=True)
     self.assertEqual(met.counter_value("ExecuteReplicated"), 1)
 
 

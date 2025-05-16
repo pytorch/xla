@@ -434,7 +434,7 @@ class TestDynamicShape(test_utils.XlaTestCase):
     # index type is s64 on cpu and gpu, but s32 on TPU. We should be
     # able to cast it to any other type without error.
     t2 = torch.nonzero(t1.int()).float()
-    xm.mark_step()
+    torch_xla.sync()
 
 
 class TestOptimizationBarrier(test_utils.XlaTestCase):
@@ -1081,7 +1081,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     t1 = torch.zeros(50, device=xm.xla_device())
     t1 += 1
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
 
     t2 = torch.zeros(10, device=xm.xla_device())
@@ -1099,7 +1099,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     t1 = torch.zeros(50, device=xm.xla_device())
     t1 += 1
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
 
     t2 = torch.zeros(10, device=xm.xla_device())
@@ -1734,13 +1734,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     y[::2].copy_(x[::2])
     self.assertEqual(y, [1, 0, 3, 0, 5, 0])
 
-  def test_view_and_multi_mark_step(self):
+  def test_view_and_multi_sync(self):
     xla_device = xm.xla_device()
     t1 = torch.zeros(100, device=xla_device)
     t1[10] = 113
-    xm.mark_step()
+    torch_xla.sync()
     t1[12] = 1123
-    xm.mark_step()
+    torch_xla.sync()
     self.assertNotIn('update_slice',
                      torch_xla._XLAC._get_xla_tensors_text([t1]))
 
@@ -1823,25 +1823,25 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t2 = torch.randn(1, 3).to(xla_device)
     t3 = torch.randn(1, 3).to(xla_device)
     t1.addcdiv_(t2, t3, value=0.1)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.metric_data("TransferToDeviceTime")[0], 4)
 
     # The following two scalars shouldn't trigger TransferToDeviceTime.
     t1.addcdiv_(t2, t3, value=0.1)
     t1.addcdiv_(t2, t3, value=0.1)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.metric_data("TransferToDeviceTime")[0], 4)
 
   @skipOnEagerDebug
   def test_print_execution(self):
     xla_device = xm.xla_device()
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
 
-    # case 1 mark_step
+    # case 1 `torch_xla.sync()`
     t1 = torch.randn(1, 4, device=xla_device)
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
     for _ in range(3):
@@ -1850,7 +1850,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertIn('xla::device_data',
                   torch_xla._XLAC._get_xla_tensors_text([t1]))
 
-    # case 2 no mark_step, directly print
+    # case 2 no `torch_xla.sync()`, directly print
     met.clear_all()
     t1 = torch.randn(1, 4, device=xla_device)
     for _ in range(3):
@@ -1859,7 +1859,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertIn('xla::device_data',
                   torch_xla._XLAC._get_xla_tensors_text([t1]))
 
-    # case 2 no mark_step, print with .cpu
+    # case 2 no `torch_xla.sync()`, print with .cpu
     met.clear_all()
     t1 = torch.randn(1, 4, device=xla_device)
     for _ in range(3):
@@ -2260,7 +2260,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
       if is_xla:
         # Mark the end of the HLO graph.
-        xm.mark_step()
+        torch_xla.sync()
 
       # Start a new HLO graph using the upsample_bilinear result as
       # one of its arguments.
@@ -2488,7 +2488,7 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
       new_val = value * torch.randn(10000, 10000, device=xm.xla_device())
       val_list.append(new_val)
       val_mean_list.append(new_val.mean())
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     self.assertTrue("ExecuteTime" in met.metric_names() or
                     "EagerOpExecuteTime" in met.metric_names())
@@ -2513,7 +2513,7 @@ class TestDebuggingUtil(test_utils.XlaTestCase):
     self.assertIn('XLAData: None', t2_info)
 
     # after makr_step XLAData should present
-    xm.mark_step()
+    torch_xla.sync()
     t2_info_new = torch_xla._XLAC._get_xla_tensor_debug_info(t2)
     self.assertNotIn('XLAData: None', t2_info_new)
     self.assertIn('Data Shape: f32[5]', t2_info_new)
@@ -2665,13 +2665,13 @@ class XpTraceTest(test_utils.XlaTestCase):
     with self.assertRaisesRegex(
         RuntimeError, r'Expecting scope to be empty but it is conv1.1'):
       with xp.Trace('conv1'):
-        xm.mark_step()
+        torch_xla.sync()
 
   def test_non_empty_scope_decorator(self):
 
     @xp.trace_me("conv2")
     def func():
-      xm.mark_step()
+      torch_xla.sync()
 
     with self.assertRaisesRegex(RuntimeError,
                                 r'Expecting scope to be empty but it is conv2'):
@@ -2903,8 +2903,8 @@ class TestGeneric(test_utils.XlaTestCase):
   def test_unsafe_buffer_pointer(self):
     xla_device = xm.xla_device()
     xla_tensor_0 = torch.tensor(42).to(xla_device)
-    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
-    xm.mark_step()
+    # `torch_xla.sync()` ensures xtensor->CurrentDataHandle() != nullptr
+    torch_xla.sync()
     buf_ptr_0 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_0)
     self.assertGreaterEqual(buf_ptr_0, 0)
 
@@ -2919,7 +2919,7 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertGreaterEqual(buf_ptr_2, 0)
 
     xla_tensor_3 = torch.arange(5, device=xm.xla_device())
-    xm.mark_step()
+    torch_xla.sync()
     # Without the `wait_device_ops()`, the pjrt buffer (pjrt_data->buffer) at https://github.com/pytorch/xla/blob/e3fc03314dab5f44e3ed9ccbba6c15fbca3285cd/torch_xla/csrc/runtime/pjrt_computation_client.cc#L467 will be nullptr.
     xm.wait_device_ops()
     buf_ptr_3 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_3)
@@ -2954,7 +2954,7 @@ class TestDLPack(parameterized.TestCase):
 
     # xla_tensor_3 uses arange_out IR node.
     xla_tensor_3 = torch.arange(5, dtype=dtype, device=xm.xla_device())
-    xm.mark_step()
+    torch_xla.sync()
     self._test_dlpack_capsule_conversion_helper(xla_tensor_3)
 
   @onlyIfTorchSupportsCUDA
@@ -2965,8 +2965,8 @@ class TestDLPack(parameterized.TestCase):
   def test_dlpack_roundtrip_scalar(self, dtype):
     xla_device = xm.xla_device()
     xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)
-    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
-    xm.mark_step()
+    # `torch_xla.sync()` ensures xtensor->CurrentDataHandle() != nullptr
+    torch_xla.sync()
     self._test_dlpack_capsule_conversion_helper(xla_tensor_0)
 
     xla_tensor_1 = torch.tensor(42, dtype=dtype).to(xla_device)
@@ -3128,7 +3128,7 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
     output = model(_input)
     output = torch.sum(output)
     output.backward()
-    xm.mark_step()
+    torch_xla.sync()
     same_output = torch.allclose(model.to_save[0], model.to_save[1])
     self.assertTrue(same_output,
                     f"in fwd {model.to_save[0]}, in bwd {model.to_save[1]}")

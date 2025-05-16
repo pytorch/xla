@@ -7,6 +7,7 @@ FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
 
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import collections
 import unittest
@@ -495,7 +496,7 @@ class TestOtherOps(unittest.TestCase):
     batch_norm = torch.nn.BatchNorm2d(16)
     with autocast(device, dtype=torch.bfloat16):
       output = batch_norm(data)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(output.dtype, torch.bfloat16)
 
   # On TPU, the input of batch norm is casted into fp32, see torch_xla/csrc/autocast_mode.cpp
@@ -508,7 +509,7 @@ class TestOtherOps(unittest.TestCase):
     batch_norm = torch.nn.BatchNorm2d(16)
     with autocast(device, dtype=torch.bfloat16):
       output = batch_norm(data)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(output.dtype, torch.float32)
 
 

@@ -519,6 +519,7 @@ class ZeroRedundancyOptimizer(Optimizer):
 
     tmp = self.base_optimizer.state_dict()
     tmp['state'] = base_state
+    tmp['param_groups'] = state_dict['param_groups']
     self.base_optimizer.load_state_dict(tmp)
     if 'sharded_master_weights' in state_dict:
       master_weights = state_dict['sharded_master_weights']
@@ -540,10 +541,11 @@ class ZeroRedundancyOptimizer(Optimizer):
           else:
             param.grad = torch.zeros_like(param.data)
           index += 1
-      xm.mark_step()
-      # add mark_step around allgather to avoid large number of compilation
+      torch_xla.sync()
+      # add `torch_xla.sync()` around allgather to avoid large number of
+      # compilation
       self.allgather_weights_and_update_full_parameter()
-      xm.mark_step()
+      torch_xla.sync()
 
   def get_shape_info(self):
     shape_info = {}

@@ -41,14 +41,14 @@ class InputOutputAliasesTest(parameterized.TestCase):
     xla_device = xm.xla_device()
     t1 = torch.randn(4, 2, 2).to(xla_device)
     t2 = torch.randn(4, 2, 2).to(xla_device)
-    xm.mark_step()
+    torch_xla.sync()
     met.clear_all()
 
     # check in place op aliasing.
     t3 = t1 + t2
     t1 *= 2.0
     t2 += 2.0
-    xm.mark_step()
+    torch_xla.sync()
 
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
 
@@ -59,7 +59,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     # t1_cloned share the same storage as t1
     t1_cloned = torch.clone(t1)
     t1 += 1
-    xm.mark_step()
+    torch_xla.sync()
     # t1's storage will be alised with the ouput, need to make sure t1_cloned
     # got a new buffer and is still valid.
     torch.allclose(t1 - 1, t1_cloned)
@@ -70,22 +70,22 @@ class InputOutputAliasesTest(parameterized.TestCase):
     met.clear_all()
     t1 = torch.randn(4, 5).to(xla_device)
     t1 *= t1
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
     xm.optimization_barrier_([t1])
     t1 *= 100
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
 
-  def test_aliasing_across_mark_step(self):
+  def test_aliasing_across_sync(self):
     xla_device = xm.xla_device()
     met.clear_all()
     t1 = torch.randn(4, 5).to(xla_device)
     t1 += 1
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
     t1 *= 100
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
 
   def test_aliasing_with_multiple_inplace_update(self):
@@ -112,11 +112,11 @@ class InputOutputAliasesTest(parameterized.TestCase):
     slot_mapping = torch.randint(
         0, num_blocks, (BATCH_SIZE, SEQ_LEN), device=device, dtype=torch.int64)
     # materalize k_cache to device data
-    xm.mark_step()
+    torch_xla.sync()
     met.clear_all()
     for _ in range(10):
       k_cache.index_copy_(0, slot_mapping.flatten(), key)
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
     torch.allclose(k_cache[slot_mapping[0][0]].cpu(), key[0].cpu())
@@ -142,7 +142,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
         output = model(train_x)
         t_loss = loss_fn(output, train_label)
         t_loss.backward()
-        xm.mark_step()
+        torch_xla.sync()
       return [p.grad.to('cpu').numpy() for p in model.parameters()]
 
     dev = xm.xla_device()
@@ -174,15 +174,15 @@ class InputOutputAliasesTest(parameterized.TestCase):
     xla_device = xm.xla_device()
     t0 = torch.tensor([1], device=xla_device)
     t1 = torch.tensor([2], device=xla_device)
-    xm.mark_step()
+    torch_xla.sync()
 
     t1.add_(t0)
-    xm.mark_step()
+    torch_xla.sync()
 
     # This needs to be a separate graph, otherwise t1 can be corrupted
     # or result in PJRT error.
     t2 = t1 + t0
-    xm.mark_step()
+    torch_xla.sync()
 
     self.assertEqual(t1.item(), 3)
 
@@ -193,7 +193,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     xla_device = xm.xla_device()
     t0 = torch.tensor([1], device=xla_device)
     t1 = torch.tensor([2], device=xla_device)
-    xm.mark_step()
+    torch_xla.sync()
 
     t2 = t0 + t1
     t1.add_(1)
@@ -202,9 +202,9 @@ class InputOutputAliasesTest(parameterized.TestCase):
     # being donated...
     xm.save(t1, os.devnull)
 
-    # otherwise this mark_step could crash, or compute the wrong value
+    # otherwise this `torch_xla.sync()` could crash, or compute the wrong value
     # for t2.
-    xm.mark_step()
+    torch_xla.sync()
 
     self.assertEqual(t2.item(), 3)
 
@@ -216,19 +216,19 @@ class InputOutputAliasesTest(parameterized.TestCase):
 
     t0 = torch.tensor(42, device=xla_device)
     # drops the read-only bit on t0's device_data
-    xm.mark_step()
+    torch_xla.sync()
 
     # cached value of 42 is donated
     t0.add_(1)
-    xm.mark_step()
+    torch_xla.sync()
 
     # t1 get the cached device_data, which was donated
     t1 = torch.tensor(42, device=xla_device)
-    xm.mark_step()
+    torch_xla.sync()
 
     t1.add_(1)
     # XLA crashes here because parameter is donated buffer...
-    xm.mark_step()
+    torch_xla.sync()
 
     # ...if it doesn't crash, the value here would be 44.
     self.assertEqual(t1.item(), 43)
@@ -243,7 +243,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     self.assertFalse(torch_xla._XLAC._get_buffer_donation(t1))
     t2 = t0 + t1
     t1 += 2
-    xm.mark_step(wait=True)
+    torch_xla.sync(wait=True)
 
     # We surface the C++ runtime error by checking that the backend data is
     # no longer present for the IR node.
@@ -284,7 +284,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
     self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
     t0 += 2
-    xm.mark_step()
+    torch_xla.sync()
 
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
 
@@ -320,23 +320,23 @@ class InputOutputAliasesTest(parameterized.TestCase):
 
       self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
 
-  def test_user_config_donation_no_op_mark_step(self):
+  def test_user_config_donation_no_op_sync(self):
     with alias_with_buffer_donor_config_context(True):
       xla_device = xm.xla_device()
       t0 = torch.randn(4, 2, 2).to(xla_device)
       self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
-      xm.mark_step()
+      torch_xla.sync()
       self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
-      xm.mark_step()
+      torch_xla.sync()
       self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
 
-  def test_no_op_mark_step_keep_buffer_donation(self):
+  def test_no_op_sync_keep_buffer_donation(self):
     xla_device = xm.xla_device()
     input = torch.randn(5, 5).to(xla_device)
     self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
 
 
