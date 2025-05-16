@@ -126,6 +126,7 @@ ptxla_cc_library(
         ":shape_builder",
         ":shape_helper",
         ":version",
+        "//torch_xla/csrc:thread_pool",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:stablehlo_helper",
         "//torch_xla/csrc/runtime:xla_util",
