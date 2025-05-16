@@ -23,11 +23,21 @@ namespace runtime {
 
 class PjRtComputationClientTest : public ::testing::Test {
  protected:
+  PjRtComputationClientTest() {
+    // Get a CPU client.
+    tsl::setenv("PJRT_DEVICE", "CPU", true);
+    client_ = std::make_unique<PjRtComputationClient>();
+    device_ = client_->GetDefaultDevice();
+  }
+
   static void FakeXlaCompileForTesting(
       PjRtComputationClient* client,
       std::function<absl::Status()> fake_compile) {
     client->FakeXlaCompileForTesting(std::move(fake_compile));
   }
+
+  std::unique_ptr<PjRtComputationClient> client_;
+  std::string device_;
 };
 
 // Returns a computation to compute x + y where x and y are both F32[2,2]
@@ -43,64 +53,49 @@ absl::StatusOr<xla::XlaComputation> MakeAddComputation() {
 }
 
 TEST_F(PjRtComputationClientTest, ThrowsExpectedExceptionWhenCompileFails) {
-  // Get a CPU client.
-  tsl::setenv("PJRT_DEVICE", "CPU", true);
-  const auto client = std::make_unique<PjRtComputationClient>();
-  const std::string device = client->GetDefaultDevice();
-
   // Compose a computation to add two matrices.
   xla::Shape out_shape(xla::F32, {2, 2},
                        /*dynamic_dimensions=*/{});
   std::vector<ComputationClient::CompileInstance> instances;
   instances.push_back(ComputationClient::CompileInstance(
-      std::move(MakeAddComputation().value()), device,
-      client->GetCompilationDevices(device, client->GetLocalDevices()),
+      std::move(MakeAddComputation().value()), device_,
+      client_->GetCompilationDevices(device_, client_->GetLocalDevices()),
       &out_shape));
 
   // Force XLA to fail with the given error when invoked by Compile() below.
   FakeXlaCompileForTesting(
-      client.get(), [] { return absl::InvalidArgumentError("invalid arg"); });
+      client_.get(), [] { return absl::InvalidArgumentError("invalid arg"); });
 
   // Compiling the graph should fail, which should throw instead of crashing.
-  EXPECT_THROW(client->Compile(std::move(instances)), std::invalid_argument);
+  EXPECT_THROW(client_->Compile(std::move(instances)), std::invalid_argument);
 }
 
 TEST_F(PjRtComputationClientTest, ThrowsExpectedExceptionWhenCompileThrows) {
-  // Get a CPU client.
-  tsl::setenv("PJRT_DEVICE", "CPU", true);
-  const auto client = std::make_unique<PjRtComputationClient>();
-  const std::string device = client->GetDefaultDevice();
-
   // Compose a computation to add two matrices.
   xla::Shape out_shape(xla::F32, {2, 2},
                        /*dynamic_dimensions=*/{});
   std::vector<ComputationClient::CompileInstance> instances;
   instances.push_back(ComputationClient::CompileInstance(
-      std::move(MakeAddComputation().value()), device,
-      client->GetCompilationDevices(device, client->GetLocalDevices()),
+      std::move(MakeAddComputation().value()), device_,
+      client_->GetCompilationDevices(device_, client_->GetLocalDevices()),
       &out_shape));
 
   // Force XLA to throw with the given error when invoked by Compile() below.
-  FakeXlaCompileForTesting(client.get(), []() -> absl::Status {
+  FakeXlaCompileForTesting(client_.get(), []() -> absl::Status {
     throw absl::BadStatusOrAccess(absl::InvalidArgumentError("invalid arg"));
   });
 
   // Compiling the graph should fail, which should throw instead of crashing.
-  EXPECT_THROW(client->Compile(std::move(instances)), std::invalid_argument);
+  EXPECT_THROW(client_->Compile(std::move(instances)), std::invalid_argument);
 }
 
 TEST_F(PjRtComputationClientTest, Init) {
-  // Get a CPU client.
-  tsl::setenv("PJRT_DEVICE", "CPU", true);
-  auto client = std::make_unique<PjRtComputationClient>();
-  std::string device = client->GetDefaultDevice();
-
   // Compose a computation to add two 2x2 matrices.
   auto out_shape = xla::ShapeUtil::MakeShape(xla::F32, {2, 2});
   std::vector<ComputationClient::CompileInstance> instances;
   instances.push_back(ComputationClient::CompileInstance(
-      std::move(MakeAddComputation().value()), device,
-      client->GetCompilationDevices(device, client->GetLocalDevices()),
+      std::move(MakeAddComputation().value()), device_,
+      client_->GetCompilationDevices(device_, client_->GetLocalDevices()),
       &out_shape));
 
   // Prepare inputs.
@@ -111,22 +106,22 @@ TEST_F(PjRtComputationClientTest, Init) {
 
   // Compile the graph.
   std::vector<ComputationClient::ComputationPtr> computations =
-      client->Compile(std::move(instances));
+      client_->Compile(std::move(instances));
 
   // Copy inputs to device.
   ComputationClient::ExecuteComputationOptions options{};
   std::vector<std::shared_ptr<const TensorSource>> args = {
-      std::make_shared<LiteralSource>(std::move(literal_x), device),
-      std::make_shared<LiteralSource>(std::move(literal_y), device)};
+      std::make_shared<LiteralSource>(std::move(literal_x), device_),
+      std::make_shared<LiteralSource>(std::move(literal_y), device_)};
 
   // Execute the graph.
-  std::vector<ComputationClient::DataPtr> results = client->ExecuteComputation(
-      *computations[0], client->TransferToDevice(absl::MakeConstSpan(args)),
-      device, options);
+  std::vector<ComputationClient::DataPtr> results = client_->ExecuteComputation(
+      *computations[0], client_->TransferToDevice(absl::MakeConstSpan(args)),
+      device_, options);
 
   // Copy the output from device back to host and assert correctness.
   ASSERT_EQ(results.size(), 1);
-  auto result_literals = client->TransferFromDevice(results);
+  auto result_literals = client_->TransferFromDevice(results);
   ASSERT_THAT(result_literals, ::testing::SizeIs(1));
   EXPECT_TRUE(xla::LiteralTestUtil::Equal(
       xla::LiteralUtil::CreateR2<float>({{6.0f, 8.0f}, {10.0f, 12.0f}}),

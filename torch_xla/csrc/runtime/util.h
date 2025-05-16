@@ -134,7 +134,7 @@ namespace internal {
 
 // ExtractValue<U>::type is T if U is absl::StatusOr<T>, and is undefined
 // otherwise.
-template <typename T>
+template <typename U>
 struct ExtractValue;
 template <typename T>
 struct ExtractValue<absl::StatusOr<T>> {
@@ -153,6 +153,7 @@ struct ExtractValue<absl::StatusOr<T>> {
 //     (https://pybind11.readthedocs.io/en/stable/advanced/exceptions.html).
 //   - if `func()` throws any exception, rethrows it as an
 //     std::invalid_argument so that we get a Python ValueError;
+//   - if `func()` successfully returns a value of type T, returns the value;
 //   - however, if `func()` crashes (e.g. due to a CHECK), we cannot
 //     catch it; therefore we should ensure that `func()` never
 //     crashes (and fix any crash as a bug).
@@ -168,8 +169,7 @@ RaisePythonValueErrorOnFailure(const Func& func) {
     throw std::invalid_argument(
         "Function threw an unknown exception. Please file a bug at "
         "https://github.com/pytorch/xla/issues with details on how to "
-        "reproduce "
-        "the error.");
+        "reproduce the error.");
   }
   if (result.ok()) {
     return *std::move(result);
