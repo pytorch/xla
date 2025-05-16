@@ -86,9 +86,11 @@ class PjRtComputationClient : public ComputationClient {
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
 
+  // Count of devices local to a given process.
   size_t GetNumLocalDevices() const override;
 
-  size_t GetNumGlobalDevices() const override;
+  // Count of all devices in backend.
+  size_t GetNumDevices() const override;
 
   std::string GetDefaultDevice() const override;
 
