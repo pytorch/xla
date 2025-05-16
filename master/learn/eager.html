@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gite724225 )
+                  master (2.8.0+git8c71b04 )
                 </div>
               
             
@@ -460,7 +460,7 @@ the following code</p>
 <span class="c1"># model tracing</span>
 <span class="n">res</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
 
-<span class="c1"># model execution, same as `xm.mark_step`</span>
+<span class="c1"># model execution</span>
 <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -506,7 +506,7 @@ compile.</p>
 by <code class="docutils literal notranslate"><span class="pre">torch_xla.compile</span></code>.</p></li>
 </ol>
 <p>The implementation of the <code class="docutils literal notranslate"><span class="pre">torch_xla.compile</span></code> is actually pretty
-straight forward, it disable the eager mode when entering the target
+straight forward, it disables the eager mode when entering the target
 function and start tracing. It will call the <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> when
 target function returns and reenable the eager mode. You can expect the
 same perfomrance by using the <code class="docutils literal notranslate"><span class="pre">eager</span></code> + <code class="docutils literal notranslate"><span class="pre">compile</span></code> API compared to the

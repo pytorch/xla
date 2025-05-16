@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gite724225 )
+                  master (2.8.0+git8c71b04 )
                 </div>
               
             
@@ -554,7 +554,7 @@ your script.</p>
     <span class="n">loss_fn</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
     <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
     <span class="c1"># xla specific API to execute the graph</span>
-    <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 
     <span class="n">cleanup</span><span class="p">()</span>
 

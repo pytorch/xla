@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gite724225 )
+                  master (2.8.0+git8c71b04 )
                 </div>
               
             
@@ -527,13 +527,13 @@ pt-xla-profiler:<span class="w"> </span>TransferFromDeviceTime<span class="w"> <
 model. Some example output would be:</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>Compilation<span class="w"> </span>Analysis:<span class="w"> </span><span class="o">================================================================================</span>
 Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Compilation<span class="w"> </span>Cause
-Compilation<span class="w"> </span>Analysis:<span class="w">   </span>mark_step<span class="w"> </span><span class="k">in</span><span class="w"> </span>parallel<span class="w"> </span>loader<span class="w"> </span>at<span class="w"> </span>step<span class="w"> </span>end
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span><span class="sb">`</span>torch_xla.sync<span class="o">()</span><span class="sb">`</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>parallel<span class="w"> </span>loader<span class="w"> </span>at<span class="w"> </span>step<span class="w"> </span>end
 Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Graph<span class="w"> </span>Info:
 Compilation<span class="w"> </span>Analysis:<span class="w">   </span>Graph<span class="w"> </span>Hash:<span class="w"> </span>c74c3b91b855b2b123f833b0d5f86943
 Compilation<span class="w"> </span>Analysis:<span class="w">   </span>Number<span class="w"> </span>of<span class="w"> </span>Graph<span class="w"> </span>Inputs:<span class="w"> </span><span class="m">35</span>
 Compilation<span class="w"> </span>Analysis:<span class="w">   </span>Number<span class="w"> </span>of<span class="w"> </span>Graph<span class="w"> </span>Outputs:<span class="w"> </span><span class="m">107</span>
 Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Python<span class="w"> </span>Frame<span class="w"> </span>Triggered<span class="w"> </span>Execution:
-Compilation<span class="w"> </span>Analysis:<span class="w">   </span>mark_step<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055<span class="o">)</span>
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>sync<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055<span class="o">)</span>
 Compilation<span class="w"> </span>Analysis:<span class="w">   </span>next<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44<span class="o">)</span>
 Compilation<span class="w"> </span>Analysis:<span class="w">   </span>__next__<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32<span class="o">)</span>
 Compilation<span class="w"> </span>Analysis:<span class="w">   </span>train_loop_fn<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:48<span class="o">)</span>
@@ -553,13 +553,13 @@ Post<span class="w"> </span>Compilation<span class="w"> </span>Analysis:<span cl
 
 Execution<span class="w"> </span>Analysis:<span class="w"> </span><span class="o">================================================================================</span>
 Execution<span class="w"> </span>Analysis:<span class="w"> </span>Execution<span class="w"> </span>Cause
-Execution<span class="w"> </span>Analysis:<span class="w">   </span>mark_step<span class="w"> </span><span class="k">in</span><span class="w"> </span>parallel<span class="w"> </span>loader<span class="w"> </span>at<span class="w"> </span>step<span class="w"> </span>end
+Execution<span class="w"> </span>Analysis:<span class="w">   </span><span class="sb">`</span>torch_xla.sync<span class="o">()</span><span class="sb">`</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>parallel<span class="w"> </span>loader<span class="w"> </span>at<span class="w"> </span>step<span class="w"> </span>end
 Execution<span class="w"> </span>Analysis:<span class="w"> </span>Graph<span class="w"> </span>Info:
 Execution<span class="w"> </span>Analysis:<span class="w">   </span>Graph<span class="w"> </span>Hash:<span class="w"> </span>c74c3b91b855b2b123f833b0d5f86943
 Execution<span class="w"> </span>Analysis:<span class="w">   </span>Number<span class="w"> </span>of<span class="w"> </span>Graph<span class="w"> </span>Inputs:<span class="w"> </span><span class="m">35</span>
 Execution<span class="w"> </span>Analysis:<span class="w">   </span>Number<span class="w"> </span>of<span class="w"> </span>Graph<span class="w"> </span>Outputs:<span class="w"> </span><span class="m">107</span>
 Execution<span class="w"> </span>Analysis:<span class="w"> </span>Python<span class="w"> </span>Frame<span class="w"> </span>Triggered<span class="w"> </span>Execution:
-Execution<span class="w"> </span>Analysis:<span class="w">   </span>mark_step<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055<span class="o">)</span>
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>sync<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055<span class="o">)</span>
 Execution<span class="w"> </span>Analysis:<span class="w">   </span>next<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44<span class="o">)</span>
 Execution<span class="w"> </span>Analysis:<span class="w">   </span>__next__<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32<span class="o">)</span>
 Execution<span class="w"> </span>Analysis:<span class="w">   </span>train_loop_fn<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:48<span class="o">)</span>
@@ -570,19 +570,19 @@ Execution<span class="w"> </span>Analysis:<span class="w"> </span><span class="o
 </pre></div>
 </div>
 <p>Some common causes of Compilation/Executation are 1. User manually call
-<code class="docutils literal notranslate"><span class="pre">mark_step</span></code>. 2. <a class="reference external" href="https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51">Parallel
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>. 2. <a class="reference external" href="https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51">Parallel
 loader</a>
-call <code class="docutils literal notranslate"><span class="pre">mark_step</span></code> for every x (configurable) batch. 3. Exiting a
+call <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> for every x (configurable) batch. 3. Exiting a
 <a class="reference external" href="https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/debug/profiler.py#L165-L171">profiler StepTrace
 region</a>.</p>
 <ol class="arabic simple">
 <li><p>Dynamo decide to compile/execute the graph. 5. User trying to
 access(often due to logging) the value of a tensor before the
-<code class="docutils literal notranslate"><span class="pre">mark_step</span></code>.</p></li>
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>.</p></li>
 </ol>
 <p>The execution caused by 1-4 are expected, and we want to avoid 5 by
 either reduce the frequency of accessing tensor values or manually add a
-<code class="docutils literal notranslate"><span class="pre">mark_step</span></code> before accessing.</p>
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> before accessing.</p>
 <p>Users should expect to see this <code class="docutils literal notranslate"><span class="pre">Compilation</span> <span class="pre">Cause</span></code> +
 <code class="docutils literal notranslate"><span class="pre">Executation</span> <span class="pre">Cause</span></code> pairs for first couple steps. After the model
 stabilize users should expect to only see <code class="docutils literal notranslate"><span class="pre">Execution</span> <span class="pre">Cause</span></code>(you can
@@ -810,7 +810,7 @@ the result tensor prints out the IR.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">print(torch_xla._XLAC._get_xla_tensors_hlo([res]))</span></code> where <code class="docutils literal notranslate"><span class="pre">res</span></code> is
 the result tensor prints out the generated XLA HLO.</p></li>
 </ul>
-<p>Note these functions must be called prior to <code class="docutils literal notranslate"><span class="pre">mark_step()</span></code>, otherwise
+<p>Note these functions must be called prior to <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>, otherwise
 the tensor will already be materialized.</p>
 </div>
 <div class="section" id="environment-variables">

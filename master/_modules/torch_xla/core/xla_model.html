@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gite724225 )
+                  master (2.8.0+git8c71b04 )
                 </div>
               
             
@@ -1668,7 +1668,7 @@
   <span class="n">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
   <span class="n">loss</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="o">**</span><span class="n">optimizer_args</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">barrier</span><span class="p">:</span>
-    <span class="n">mark_step</span><span class="p">()</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
   <span class="k">return</span> <span class="n">loss</span></div>
 
 
@@ -1776,7 +1776,7 @@
 <span class="sd">  `tag` is ignored except for logging.</span>
 
 <span class="sd">  Uses XLA collective communication to communicate between replicas, so this</span>
-<span class="sd">  will sync the graph (`xm.mark_step`).</span>
+<span class="sd">  will sync the graph (`torch_xla.sync()`).</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    tag: Name of this rendezvous operation.</span>
@@ -1792,7 +1792,7 @@
     <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`payload` must be bytes, not </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">payload</span><span class="p">)))</span>
 
   <span class="c1"># Finish all execution of previous graphs to avoid recompilation</span>
-  <span class="n">mark_step</span><span class="p">()</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 
   <span class="n">device</span> <span class="o">=</span> <span class="n">xla_device</span><span class="p">()</span>
 
@@ -1805,7 +1805,7 @@
   <span class="n">sizes</span> <span class="o">=</span> <span class="n">all_gather</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
 
   <span class="n">max_size</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span>
-  <span class="n">mark_step</span><span class="p">()</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 
   <span class="c1"># If all payloads are empty, return immediately to avoid more CPU transfers</span>
   <span class="k">if</span> <span class="n">max_size</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -1819,7 +1819,7 @@
   <span class="n">data_list</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">raw_data</span><span class="p">,</span> <span class="n">max_size</span><span class="p">)</span>
 
   <span class="n">payloads</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span><span class="p">[:</span><span class="n">sz</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">sz</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">data_list</span><span class="p">,</span> <span class="n">sizes</span><span class="o">.</span><span class="n">cpu</span><span class="p">())]</span>
-  <span class="n">mark_step</span><span class="p">()</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 
   <span class="k">return</span> <span class="p">[</span><span class="nb">bytes</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">payloads</span><span class="p">]</span>
 
@@ -2008,7 +2008,7 @@
   <span class="n">parameters_and_buffers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
       <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">model</span><span class="o">.</span><span class="n">buffers</span><span class="p">()))</span>
   <span class="n">collective_broadcast</span><span class="p">(</span><span class="n">parameters_and_buffers</span><span class="p">)</span>
-  <span class="n">mark_step</span><span class="p">()</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 </pre></div>
 
              </article>

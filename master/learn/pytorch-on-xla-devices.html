@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gite724225 )
+                  master (2.8.0+git8c71b04 )
                 </div>
               
             
@@ -521,14 +521,14 @@ and multiple devices with XLA multi-processing.</p>
   <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
 
   <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
-  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>This snippet highlights how easy it is to switch your model to run on
 XLA. The model definition, dataloader, optimizer and training loop can
 work on any device. The only XLA-specific code is a couple lines that
-acquire the XLA device and mark the step. Calling <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> at
-the end of each training iteration causes XLA to execute its current
+acquire the XLA device and materializing the tensors. Calling <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>
+at the end of each training iteration causes XLA to execute its current
 graph and update the model’s parameters. See <a class="reference external" href="#xla-tensor-deep-dive">XLA Tensor Deep
 Dive</a> for more on how XLA creates graphs and runs
 operations.</p>
@@ -587,7 +587,7 @@ for more details).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">MpDeviceLoader</span></code> can wrap on a torch dataloader. It can preload
 the data to the device and overlap the dataloading with device
 execution to improve the performance.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">MpDeviceLoader</span></code> also call <code class="docutils literal notranslate"><span class="pre">xm.mark_step</span></code> for you every
+<li><p><code class="docutils literal notranslate"><span class="pre">MpDeviceLoader</span></code> also call <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> for you every
 <code class="docutils literal notranslate"><span class="pre">batches_per_execution</span></code>(default to 1) batch being yield.</p></li>
 </ul>
 </li>
@@ -596,7 +596,7 @@ execution to improve the performance.</p></li>
 <li><p>Consolidates the gradients between devices and issues the XLA
 device step computation.</p></li>
 <li><p>It is pretty much a <code class="docutils literal notranslate"><span class="pre">all_reduce_gradients</span></code> +
-<code class="docutils literal notranslate"><span class="pre">optimizer.step()</span></code> + <code class="docutils literal notranslate"><span class="pre">mark_step</span></code> and returns the loss being
+<code class="docutils literal notranslate"><span class="pre">optimizer.step()</span></code> + <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> and returns the loss being
 reduced.</p></li>
 </ul>
 </li>

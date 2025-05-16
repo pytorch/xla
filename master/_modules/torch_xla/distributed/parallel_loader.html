@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gite724225 )
+                  master (2.8.0+git8c71b04 )
                 </div>
               
             
@@ -464,7 +464,7 @@
   <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">loader</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_device</span> <span class="o">=</span> <span class="n">device</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_mark_step_batch_count</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">batches_per_execution</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_sync_batch_count</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">batches_per_execution</span> <span class="o">-</span> <span class="mi">1</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_batches_yielded</span> <span class="o">=</span> <span class="mi">0</span>
 
   <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -481,9 +481,9 @@
       <span class="n">xp</span><span class="o">.</span><span class="n">set_tracer_marked_step</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_batches_yielded</span> <span class="o">+=</span> <span class="mi">1</span>
     <span class="k">else</span><span class="p">:</span>
-      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mark_step_batch_count</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batches_yielded</span><span class="p">:</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sync_batch_count</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batches_yielded</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_batches_yielded</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
+        <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
       <span class="k">else</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_batches_yielded</span> <span class="o">+=</span> <span class="mi">1</span>
 
@@ -491,7 +491,7 @@
     <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="o">.</span><span class="n">_exception_queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
         <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="o">.</span><span class="n">_exception_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-      <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
+      <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
       <span class="k">raise</span> <span class="ne">StopIteration</span>
     <span class="k">return</span> <span class="n">item</span>
 

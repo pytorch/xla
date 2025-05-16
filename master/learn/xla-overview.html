@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gite724225 )
+                  master (2.8.0+git8c71b04 )
                 </div>
               
             
@@ -490,9 +490,9 @@ performance.</p>
 graph and materialize the tensors. This means that the PyTorch XLA
 tensors will be evaluated, and the results will be available to the
 host. The user-exposed barrier in Pytorch XLA is
-<a class="reference external" href="https://github.com/pytorch/xla/blob/bdceee54eca1269ee954f6cdd1868c584d0e88a4/torch_xla/core/xla_model.py#L808">xm.mark_step()</a>,
+<a class="reference external" href="https://github.com/pytorch/xla/blob/bdceee54eca1269ee954f6cdd1868c584d0e88a4/torch_xla/core/xla_model.py#L808">torch_xla.sync()</a>,
 which breaks the IR graph and results in code execution on the XLA
-devices. One of the key properties of <code class="docutils literal notranslate"><span class="pre">xm.mark_step</span></code> is that unlike
+devices. One of the key properties of <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> is that unlike
 synchronous operations it does not block the further tracing while the
 device is executing the graph. However, it does block access to the
 values of the tensors that are being materialized.</p>
@@ -519,7 +519,7 @@ if that graph has been seen before, a cached compiled program will be
 reused.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">tensors_on_device</span><span class="p">:</span>
     <span class="n">z</span> <span class="o">+=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>
-    <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>In this case there will be a small graph that is used
@@ -543,7 +543,7 @@ to consider. If there is one large IR graph, the XLA compiler can spend
 a lot of time on optimization and fusion of the ops. This can result in
 a very long compilation time. However, the later execution may be much
 faster, due to the optimizations that were performed during compilation.</p>
-<p>Sometimes it is worth breaking the IR graph with <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code>. As
+<p>Sometimes it is worth breaking the IR graph with <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>. As
 explained above, this will result in a smaller graph that can be reused
 later. However making graphs smaller can reduce optimizations that
 otherwise could be done by the XLA compiler.</p>
@@ -551,12 +551,12 @@ otherwise could be done by the XLA compiler.</p>
 <a class="reference external" href="https://github.com/pytorch/xla/blob/a1f822e2627a5639464273241821852677401026/torch_xla/distributed/parallel_loader.py#L186">MPDeviceLoader</a>.
 Once your code is running on an XLA device, consider wrapping the torch
 dataloader with XLA <code class="docutils literal notranslate"><span class="pre">MPDeviceLoader</span></code> which preloads data to the device
-to improve performance and includes <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> in it. The latter
+to improve performance and includes <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> in it. The latter
 automatically breaks the iterations over batches of data and sends them
 for execution. Note, if you are not using MPDeviceLoader, you might need
 to set <code class="docutils literal notranslate"><span class="pre">barrier=True</span></code> in the <code class="docutils literal notranslate"><span class="pre">optimizer_step()</span></code> to enable
-<code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> if running a training job or explicitly adding
-<code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> if running a training job or explicitly adding
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>.</p>
 <div class="section" id="tpu-setup">
 <h2>TPU Setup<a class="headerlink" href="#tpu-setup" title="Permalink to this heading">¶</a></h2>
 <p>Create TPU with base image to use nightly wheels or from the stable
@@ -668,7 +668,7 @@ build a single (huge) graph that wraps the number of inference steps (in
 this case, 50) as there is no barrier inside the for loop. It is
 difficult for the compiler to optimize the graph, and this leads to
 significant performance degradation. As discussed above, breaking the
-for loop with the barrier (xm.mark_step()) will result in a smaller
+for loop with the barrier (torch_xla.sync()) will result in a smaller
 graph that is easier for the compiler to optimize. This will also allow
 the compiler to reuse the graph from the previous step, which can
 improve performance.</p>
@@ -763,13 +763,13 @@ will notice that the compilation time is very long (&amp;gt;6 hours). This is
 because the XLA compiler tries to build a single graph for all of the
 scheduler steps at once similar to what we have discussed in the
 previous example. To make the code run faster, we need to break the
-graph up into smaller pieces with <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> and reuse them in the
+graph up into smaller pieces with <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> and reuse them in the
 next steps. This happens inside the <code class="docutils literal notranslate"><span class="pre">pipe.__call__</span></code>
 <a class="reference external" href="https://github.com/huggingface/diffusers/blob/2b1786735e27bc97f4d4699712292d5c463a7380/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py#L559">function</a>
 in <a class="reference external" href="https://github.com/huggingface/diffusers/blob/2b1786735e27bc97f4d4699712292d5c463a7380/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py#L805-L839">these
 lines</a>.
 Disabling the progress bar, removing callbacks and adding
-<code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> at the end of the for loop speeds up the code
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> at the end of the for loop speeds up the code
 significantly. Changes are provided in this
 <a class="reference external" href="https://github.com/huggingface/diffusers/compare/main...pytorch-tpu:diffusers:main">commit</a>.</p>
 <p>Additionally, the <code class="docutils literal notranslate"><span class="pre">self.scheduler.step()</span></code> function, which by default
@@ -818,7 +818,7 @@ on the host, then this might be a bottleneck and there is no further
 straightforward optimization that can be done. Otherwise, the code
 should be analyzed further to understand the caveats and improve the
 performance further. Note that you cannot <code class="docutils literal notranslate"><span class="pre">xp.Trace()</span></code> wrap portions of
-the code where <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> is called.</p>
+the code where <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> is called.</p>
 <p>To illustrate this we can look at already captured profiles that were
 uploaded to tensorboard following the profiling guide.</p>
 <p>Starting from Stable Diffusion model version 2.1</p>

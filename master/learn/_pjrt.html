@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gite724225 )
+                  master (2.8.0+git8c71b04 )
                 </div>
               
             
@@ -540,7 +540,7 @@ def _mp_fn(index):
 <span class="w"> </span>   loss.backward()
 
 <span class="w"> </span>   optimizer.step()
-<span class="w"> </span>   xm.mark_step()
+<span class="w"> </span>   torch_xla.sync()
 
 <span class="w"> </span> # Print mean parameters so we can confirm they&#39;re the same across replicas
 <span class="w"> </span> print([p.mean() for p in model.parameters()])
@@ -775,10 +775,10 @@ communication, which is much more stable and well-tested on large TPU
 pods. This imposes two new constraints compared to the XRT
 implementation:</p>
 <ul class="simple">
-<li><p>Because the payload has to become part of the XLA graph,
-<code class="docutils literal notranslate"><span class="pre">xm.mark_step</span></code> is called both before and after the data is
-transferred. Calling <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> in the middle of model code may
-force an unwanted compilation.</p></li>
+<li><p>Because the payload has to become part of the XLA graph, <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>
+is called both before and after the data is transferred. Calling
+<code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> in the middle of model code may force an unwanted
+compilation.</p></li>
 <li><p>Because XLA does not permit collective operations to run on a subset
 of workers, all workers must participate in the <code class="docutils literal notranslate"><span class="pre">rendezvous</span></code>.</p></li>
 </ul>
@@ -829,7 +829,7 @@ querying the runtime. For example:</p>
   <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">get_world_size</span><span class="p">())]</span>
   <span class="n">dist</span><span class="o">.</span><span class="n">all_gather</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
 
-  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
   <span class="nb">print</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
