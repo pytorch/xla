@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git3781920 )
+                  master (2.8.0+gitfd10b96 )
                 </div>
               
             
@@ -450,6 +450,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_env_vars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xenv</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.utils.utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xu</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla._internal.neuron</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">neuron</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla._internal.utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_utils</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla._internal.tpu</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tpu</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental</span><span class="w"> </span><span class="kn">import</span> <span class="n">plugins</span>
@@ -717,6 +718,8 @@
 <span class="sd">    master worker&#39;s IP address as a string.&quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">device_type</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">tpu</span><span class="o">.</span><span class="n">discover_master_worker_ip</span><span class="p">()</span>
+  <span class="k">elif</span> <span class="n">device_type</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;NEURON&quot;</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">neuron</span><span class="o">.</span><span class="n">get_master_worker_ip</span><span class="p">()</span>
   <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;IP discovery not supported for device: </span><span class="si">{</span><span class="n">device_type</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
 
