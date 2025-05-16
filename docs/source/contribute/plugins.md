@@ -31,7 +31,7 @@ as a C API implementation. This process is explained in detail in
 documentation](https://openxla.org/xla/pjrt_integration#how_to_integrate_with_pjrt).
 
 For a concrete example, see the [example
-implementation](https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_cpu_internal.cc).
+implementation](https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_cpu_internal.cpp).
 
 ### PyTorch/XLA Plugin Package
 

@@ -63,6 +63,10 @@ import zipfile
 
 import build_util
 
+import platform
+
+platform_machine = platform.machine()
+
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
@@ -77,13 +81,13 @@ if USE_NIGHTLY:
   _libtpu_version += f".dev{_date}"
   _jax_version += f'.dev{_date}'
   _jaxlib_version += f'.dev{_date}'
-  _libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_date}+nightly-py3-none-manylinux_2_31_x86_64'
+  _libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_date}+nightly-py3-none-manylinux_2_31_{platform_machine}'
   _libtpu_storage_directory = 'libtpu-nightly-releases'
 else:
   # The postfix can be changed when the version is updated. Check
   # https://storage.googleapis.com/libtpu-wheels/index.html for correct
   # versioning.
-  _libtpu_wheel_name = f'libtpu-{_libtpu_version}-py3-none-manylinux_2_31_x86_64'
+  _libtpu_wheel_name = f'libtpu-{_libtpu_version}-py3-none-manylinux_2_31_{platform_machine}'
   _libtpu_storage_directory = 'libtpu-lts-releases'
 
 _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'

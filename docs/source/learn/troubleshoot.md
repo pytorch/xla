@@ -443,7 +443,7 @@ degradation, so they should only be enabled for debugging.
     set `TF_CPP_MIN_LOG_LEVEL=0`.
 -   `XLA_DUMP_HLO_GRAPH`: If set to `=1` in case of a compilation or
     execution error the offending HLO graph will be dumped as part of
-    the runtime error raised by `xla_util.cc`.
+    the runtime error raised by `xla_util.cpp`.
 
 ### Common Debugging Environment Variables Combinations
 

@@ -167,6 +167,7 @@ function run_xla_op_tests1 {
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"
   run_save_tensor_ir run_test "$CDIR/spmd/test_spmd_graph_dump.py"
   run_save_tensor_hlo run_test "$CDIR/spmd/test_spmd_graph_dump.py"
+  run_test "$CDIR/test_gradient_accumulation.py"
 }
 
 function run_xla_op_tests2 {

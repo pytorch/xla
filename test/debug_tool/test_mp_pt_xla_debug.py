@@ -19,7 +19,7 @@ def _mp_fn(index):
   device = xm.xla_device()
   t1 = torch.randn(10, 10, device=device)
   t2 = t1 * 100
-  xm.mark_step()
+  torch_xla.sync()
   xm.wait_device_ops()
 
   if index == 0:
@@ -31,7 +31,7 @@ def _mp_fn(index):
       frames = extract_python_frames(lines)
     # only the local master process should dump the execution analysis
     assert (len(causes) == 1)
-    assert ('user mark_step' in causes[0])
+    assert ('user sync' in causes[0])
     assert (len(frames) == 3)
     max_frame = os.getenv('PT_XLA_DEBUG_MAX_FRAME', 8)
     # Additonal lines are
