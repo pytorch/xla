@@ -2,6 +2,7 @@ from absl.testing import absltest
 from copy import deepcopy
 import time
 import unittest
+import functools
 
 import torch
 import torch.nn as nn
@@ -126,7 +127,7 @@ class TestAssumePure(absltest.TestCase):
     # Arrange
     trace_counter = 0
 
-    @ap.assume_pure_torch(use_cache=True)
+    @functools.partial(ap.assume_pure_torch, use_cache=True)
     def simple_torch_function(a, b):
       nonlocal trace_counter
       trace_counter += 1
@@ -164,7 +165,6 @@ class TestAssumePure(absltest.TestCase):
         check_device=False)
 
 
-# TODO: Support assume_pure_torch with arbitraty inputs.
 class TracingBenchmark(absltest.TestCase):
 
   def setUp(self):
@@ -208,7 +208,7 @@ class TracingBenchmark(absltest.TestCase):
     print(f"No `@assume_pure` time: {model_time * 1000:.4f} ms")
 
     # Test tracing the model with assume_pure.
-    @ap.assume_pure_torch(use_cache=True)
+    @functools.partial(ap.assume_pure_torch, use_cache=True)
     def pure_call(params, x):
       return torch.func.functional_call(pure_model, params, x)
 
