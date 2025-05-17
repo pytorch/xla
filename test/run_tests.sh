@@ -366,6 +366,10 @@ function run_xla_op_tests3 {
   # Test examples
   run_test "$CDIR/../examples/scan/scan_examples.py"
 
+  # Experimental sparse
+  run_test "$CDIR/test_sparse_coo.py"
+  run_test "$CDIR/test_sparse_embedding.py"
+
   # CUDA tests
   if [ -x "$(command -v nvidia-smi)" ]; then
     # Please keep PJRT_DEVICE and GPU_NUM_DEVICES explicit in the following test commands.
