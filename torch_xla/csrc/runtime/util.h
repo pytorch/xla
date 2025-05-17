@@ -132,12 +132,12 @@ T Multiply(const S& input) {
 
 namespace internal {
 
-// ExtractValue<U>::type is T if U is absl::StatusOr<T>, and is undefined
-// otherwise.
+// ExtractStatusOrValue<U>::type is T if U is absl::StatusOr<T>, and is
+// undefined otherwise.
 template <typename U>
-struct ExtractValue;
+struct ExtractStatusOrValue;
 template <typename T>
-struct ExtractValue<absl::StatusOr<T>> {
+struct ExtractStatusOrValue<absl::StatusOr<T>> {
   using type = T;
 };
 
@@ -158,7 +158,7 @@ struct ExtractValue<absl::StatusOr<T>> {
 //     catch it; therefore we should ensure that `func()` never
 //     crashes (and fix any crash as a bug).
 template <typename Func>
-typename internal::ExtractValue<decltype(std::declval<Func>()())>::type
+typename internal::ExtractStatusOrValue<decltype(std::declval<Func>()())>::type
 RaisePythonValueErrorOnFailure(const Func& func) {
   decltype(std::declval<Func>()()) result;
   try {
