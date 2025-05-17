@@ -1,0 +1,229 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="140" font-family="monospace" font-size="10">
+  <style>
+    .label { font-weight: bold; fill: black; text-anchor: left; }
+    .text { text-anchor: middle; }
+  </style>
+
+<rect x="0" y="0" width="55" height="20" fill="white" stroke="black"/>
+<text x="2" y="14" class="label">FP32</text>
+<rect x="60" y="0" width="20" height="20" fill="#cccccc" stroke="black" />
+<text x="70" y="14" class="text">S</text>
+<rect x="80" y="0" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="90" y="14" class="text">E</text>
+<rect x="100" y="0" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="110" y="14" class="text">E</text>
+<rect x="120" y="0" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="130" y="14" class="text">E</text>
+<rect x="140" y="0" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="150" y="14" class="text">E</text>
+<rect x="160" y="0" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="170" y="14" class="text">E</text>
+<rect x="180" y="0" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="190" y="14" class="text">E</text>
+<rect x="200" y="0" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="210" y="14" class="text">E</text>
+<rect x="220" y="0" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="230" y="14" class="text">E</text>
+<rect x="240" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="250" y="14" class="text">M</text>
+<rect x="260" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="270" y="14" class="text">M</text>
+<rect x="280" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="290" y="14" class="text">M</text>
+<rect x="300" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="310" y="14" class="text">M</text>
+<rect x="320" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="330" y="14" class="text">M</text>
+<rect x="340" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="350" y="14" class="text">M</text>
+<rect x="360" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="370" y="14" class="text">M</text>
+<rect x="380" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="390" y="14" class="text">M</text>
+<rect x="400" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="410" y="14" class="text">M</text>
+<rect x="420" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="430" y="14" class="text">M</text>
+<rect x="440" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="450" y="14" class="text">M</text>
+<rect x="460" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="470" y="14" class="text">M</text>
+<rect x="480" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="490" y="14" class="text">M</text>
+<rect x="500" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="510" y="14" class="text">M</text>
+<rect x="520" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="530" y="14" class="text">M</text>
+<rect x="540" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="550" y="14" class="text">M</text>
+<rect x="560" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="570" y="14" class="text">M</text>
+<rect x="580" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="590" y="14" class="text">M</text>
+<rect x="600" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="610" y="14" class="text">M</text>
+<rect x="620" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="630" y="14" class="text">M</text>
+<rect x="640" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="650" y="14" class="text">M</text>
+<rect x="660" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="670" y="14" class="text">M</text>
+<rect x="680" y="0" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="690" y="14" class="text">M</text>
+
+<rect x="0" y="30" width="55" height="20" fill="white" stroke="black"/>
+<text x="2" y="44" class="label">TF32</text>
+<rect x="60" y="30" width="20" height="20" fill="#cccccc" stroke="black" />
+<text x="70" y="44" class="text">S</text>
+<rect x="80" y="30" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="90" y="44" class="text">E</text>
+<rect x="100" y="30" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="110" y="44" class="text">E</text>
+<rect x="120" y="30" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="130" y="44" class="text">E</text>
+<rect x="140" y="30" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="150" y="44" class="text">E</text>
+<rect x="160" y="30" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="170" y="44" class="text">E</text>
+<rect x="180" y="30" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="190" y="44" class="text">E</text>
+<rect x="200" y="30" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="210" y="44" class="text">E</text>
+<rect x="220" y="30" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="230" y="44" class="text">E</text>
+<rect x="240" y="30" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="250" y="44" class="text">M</text>
+<rect x="260" y="30" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="270" y="44" class="text">M</text>
+<rect x="280" y="30" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="290" y="44" class="text">M</text>
+<rect x="300" y="30" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="310" y="44" class="text">M</text>
+<rect x="320" y="30" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="330" y="44" class="text">M</text>
+<rect x="340" y="30" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="350" y="44" class="text">M</text>
+<rect x="360" y="30" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="370" y="44" class="text">M</text>
+<rect x="380" y="30" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="390" y="44" class="text">M</text>
+<rect x="400" y="30" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="410" y="44" class="text">M</text>
+<rect x="420" y="30" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="430" y="44" class="text">M</text>
+<rect x="440" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="460" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="480" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="500" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="520" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="540" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="560" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="580" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="600" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="620" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="640" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="660" y="30" width="20" height="20" fill="white" stroke="black" />
+<rect x="680" y="30" width="20" height="20" fill="white" stroke="black" />
+
+<rect x="0" y="60" width="55" height="20" fill="white" stroke="black"/>
+<text x="2" y="74" class="label">bfloat16</text>
+<rect x="60" y="60" width="20" height="20" fill="#cccccc" stroke="black" />
+<text x="70" y="74" class="text">S</text>
+<rect x="80" y="60" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="90" y="74" class="text">E</text>
+<rect x="100" y="60" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="110" y="74" class="text">E</text>
+<rect x="120" y="60" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="130" y="74" class="text">E</text>
+<rect x="140" y="60" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="150" y="74" class="text">E</text>
+<rect x="160" y="60" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="170" y="74" class="text">E</text>
+<rect x="180" y="60" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="190" y="74" class="text">E</text>
+<rect x="200" y="60" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="210" y="74" class="text">E</text>
+<rect x="220" y="60" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="230" y="74" class="text">E</text>
+<rect x="240" y="60" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="250" y="74" class="text">M</text>
+<rect x="260" y="60" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="270" y="74" class="text">M</text>
+<rect x="280" y="60" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="290" y="74" class="text">M</text>
+<rect x="300" y="60" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="310" y="74" class="text">M</text>
+<rect x="320" y="60" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="330" y="74" class="text">M</text>
+<rect x="340" y="60" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="350" y="74" class="text">M</text>
+<rect x="360" y="60" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="370" y="74" class="text">M</text>
+<rect x="380" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="400" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="420" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="440" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="460" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="480" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="500" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="520" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="540" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="560" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="580" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="600" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="620" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="640" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="660" y="60" width="20" height="20" fill="white" stroke="black" />
+<rect x="680" y="60" width="20" height="20" fill="white" stroke="black" />
+
+<rect x="0" y="90" width="55" height="20" fill="white" stroke="black"/>
+<text x="2" y="104" class="label">FP16</text>
+<rect x="60" y="90" width="20" height="20" fill="#cccccc" stroke="black" />
+<text x="70" y="104" class="text">S</text>
+<rect x="80" y="90" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="90" y="104" class="text">E</text>
+<rect x="100" y="90" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="110" y="104" class="text">E</text>
+<rect x="120" y="90" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="130" y="104" class="text">E</text>
+<rect x="140" y="90" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="150" y="104" class="text">E</text>
+<rect x="160" y="90" width="20" height="20" fill="#add8e6" stroke="black" />
+<text x="170" y="104" class="text">E</text>
+<rect x="180" y="90" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="190" y="104" class="text">M</text>
+<rect x="200" y="90" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="210" y="104" class="text">M</text>
+<rect x="220" y="90" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="230" y="104" class="text">M</text>
+<rect x="240" y="90" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="250" y="104" class="text">M</text>
+<rect x="260" y="90" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="270" y="104" class="text">M</text>
+<rect x="280" y="90" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="290" y="104" class="text">M</text>
+<rect x="300" y="90" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="310" y="104" class="text">M</text>
+<rect x="320" y="90" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="330" y="104" class="text">M</text>
+<rect x="340" y="90" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="350" y="104" class="text">M</text>
+<rect x="360" y="90" width="20" height="20" fill="#ffd580" stroke="black" />
+<text x="370" y="104" class="text">M</text>
+<rect x="380" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="400" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="420" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="440" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="460" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="480" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="500" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="520" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="540" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="560" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="580" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="600" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="620" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="640" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="660" y="90" width="20" height="20" fill="white" stroke="black" />
+<rect x="680" y="90" width="20" height="20" fill="white" stroke="black" />
+</svg>
