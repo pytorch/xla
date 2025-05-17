@@ -374,6 +374,10 @@ class ComputationClient {
 
   virtual std::intptr_t GetCudaStreamForDevice(int local_device_id) const = 0;
 
+  // Count of devices local to a given process.
+  virtual size_t GetNumLocalDevices() const = 0;
+
+  // Count of all devices in backend.
   virtual size_t GetNumDevices() const = 0;
 
   virtual std::vector<std::string> GetLocalDevices() const = 0;
