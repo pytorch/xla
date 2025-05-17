@@ -47,6 +47,14 @@ do
 done
 shift $(($OPTIND - 1))
 
+# Set the `CONTINUE_ON_ERROR` flag to `1` to make the CI tests continue on error.
+# This will allow you to see all the failures on your PR, not stopping with the first
+# test failure like the default behavior.
+CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
+if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
+  set +e
+fi
+
 export TRIM_GRAPH_SIZE=$MAX_GRAPH_SIZE
 export TRIM_GRAPH_CHECK_FREQUENCY=$GRAPH_CHECK_FREQUENCY
 export TORCH_TEST_DEVICES="$CDIR/pytorch_test_base.py"
