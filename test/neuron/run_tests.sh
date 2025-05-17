@@ -1,42 +1,24 @@
 #!/bin/bash
 set -exo pipefail
 CDIR="$(cd "$(dirname "$0")"/../ ; pwd -P)"
-LOGFILE=/tmp/pytorch_py_test.log
-MAX_GRAPH_SIZE=500
-GRAPH_CHECK_FREQUENCY=100
-VERBOSITY=2
 
 # Utils file
 source "${CDIR}/utils/run_tests_utils.sh"
 
+parse_options_to_vars $@
+
+# Consume the parsed commandline arguments.
+shift $(($OPTIND - 1))
+
 # Note [Keep Going]
 #
-# Set the `CONTINUE_ON_ERROR` flag to `true` to make the CI tests continue on error.
+# Set the `CONTINUE_ON_ERROR` flag to `1` to make the CI tests continue on error.
 # This will allow you to see all the failures on your PR, not stopping with the first
 # test failure like the default behavior.
 CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
 if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
   set +e
 fi
-
-while getopts 'LM:C:V:' OPTION
-do
-  case $OPTION in
-    L)
-      LOGFILE=
-      ;;
-    M)
-      MAX_GRAPH_SIZE=$OPTARG
-      ;;
-    C)
-      GRAPH_CHECK_FREQUENCY=$OPTARG
-      ;;
-    V)
-      VERBOSITY=$OPTARG
-      ;;
-  esac
-done
-shift $(($OPTIND - 1))
 
 export TRIM_GRAPH_SIZE=$MAX_GRAPH_SIZE
 export TRIM_GRAPH_CHECK_FREQUENCY=$GRAPH_CHECK_FREQUENCY

@@ -1,6 +1,48 @@
 #!/bin/bash
 set -exo pipefail
 
+# Parses the commandline flags and sets correponding environment variables.
+function parse_options_to_vars {
+  # Default option values. Can be overridden via commandline flags.
+  LOGFILE=/tmp/pytorch_py_test.log
+  MAX_GRAPH_SIZE=500
+  GRAPH_CHECK_FREQUENCY=100
+  VERBOSITY=2
+
+  # Parse commandline flags:
+  #   -L
+  #      disable writing to the log file at $LOGFILE.
+  #   -M max_graph_size
+  #   -C graph_check_frequency
+  #   -V verbosity
+  #   -h
+  #      print the help string
+  while getopts 'LM:C:V:h' OPTION
+  do
+    case $OPTION in
+      L)
+        LOGFILE=
+        ;;
+      M)
+        MAX_GRAPH_SIZE=$OPTARG
+        ;;
+      C)
+        GRAPH_CHECK_FREQUENCY=$OPTARG
+        ;;
+      V)
+        VERBOSITY=$OPTARG
+        ;;
+      h)
+        echo -e "Usage: $0 TEST_FILTER...\nwhere TEST_FILTERs are globs match .py test files. If no test filter is provided, runs all tests."
+        exit 0
+        ;;
+      \?)  # This catches all invalid options.
+        echo "ERROR: Invalid commandline flag."
+        exit 1
+    esac
+  done
+}
+
 # Run a test with tensor saving enabled, using a specified graph format. The
 # graph dump files are cleaned after the test. In case the test crashes, the
 # file is retained.

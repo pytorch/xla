@@ -7,44 +7,9 @@ CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 # Import utilities.
 source "${CDIR}/utils/run_tests_utils.sh"
 
-# Default option values. Can be overridden via commandline flags.
-LOGFILE=/tmp/pytorch_py_test.log
-MAX_GRAPH_SIZE=500
-GRAPH_CHECK_FREQUENCY=100
-VERBOSITY=2
+parse_options_to_vars $@
 
-# Parse commandline flags:
-#   -L
-#      disable writing to the log file at $LOGFILE.
-#   -M max_graph_size
-#   -C graph_check_frequency
-#   -V verbosity
-#   -h
-#      print the help string
-while getopts 'LM:C:V:h' OPTION
-do
-  case $OPTION in
-    L)
-      LOGFILE=
-      ;;
-    M)
-      MAX_GRAPH_SIZE=$OPTARG
-      ;;
-    C)
-      GRAPH_CHECK_FREQUENCY=$OPTARG
-      ;;
-    V)
-      VERBOSITY=$OPTARG
-      ;;
-    h)
-      echo -e "Usage: $0 TEST_FILTER...\nwhere TEST_FILTERs are globs match .py test files. If no test filter is provided, runs all tests."
-      exit 0
-      ;;
-    \?)  # This catches all invalid options.
-      echo "ERROR: Invalid commandline flag."
-      exit 1
-  esac
-done
+# Consume the parsed commandline arguments.
 shift $(($OPTIND - 1))
 
 # Set the `CONTINUE_ON_ERROR` flag to `1` to make the CI tests continue on error.
