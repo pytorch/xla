@@ -114,12 +114,10 @@ cc_library(
         ":env_vars",
         ":operation_manager",
         ":pjrt_registry",
-        ":profiler",
         ":stablehlo_helper",
         ":tensor_source",
         ":tf_logging",
         ":xla_coordinator",
-        "//torch_xla/csrc:thread_pool",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:span",
@@ -485,15 +483,10 @@ ptxla_cc_test(
     deps = [
         ":computation_client",
         ":pjrt_computation_client",
+        ":operation_manager",
         ":tensor_source",
         "@com_google_absl//absl/status",
-        "@xla//xla/tsl/lib/core:status_test_util",
-        "@tsl//tsl/platform:env",
-        "@tsl//tsl/platform:errors",
-        "@tsl//tsl/platform:logging",
-        "@tsl//tsl/platform:test",
         "@tsl//tsl/platform:test_main",
-        "@tsl//tsl/platform:statusor",
         "@xla//xla:literal",
         "@xla//xla:literal_util",
         "@xla//xla:shape_util",
@@ -502,6 +495,7 @@ ptxla_cc_test(
         "@xla//xla/tests:literal_test_util",
         "@xla//xla/tools:hlo_module_loader",
     ],
+    timeout = "short",
 )
 
 # ptxla_cc_test(
