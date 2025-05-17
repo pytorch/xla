@@ -1,25 +1,27 @@
 #!/bin/bash
 set -exo pipefail
+
+# Absolute path to the directory of this script.
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
+
+# Import utilities.
+source "${CDIR}/utils/run_tests_utils.sh"
+
+# Default option values. Can be overridden via commandline flags.
 LOGFILE=/tmp/pytorch_py_test.log
 MAX_GRAPH_SIZE=500
 GRAPH_CHECK_FREQUENCY=100
 VERBOSITY=2
 
-# Utils file
-source "${CDIR}/utils/run_tests_utils.sh"
-
-# Note [Keep Going]
-#
-# Set the `CONTINUE_ON_ERROR` flag to `true` to make the CI tests continue on error.
-# This will allow you to see all the failures on your PR, not stopping with the first
-# test failure like the default behavior.
-CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
-if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
-  set +e
-fi
-
-while getopts 'LM:C:V:' OPTION
+# Parse commandline flags:
+#   -L
+#      disable writing to the log file at $LOGFILE.
+#   -M max_graph_size
+#   -C graph_check_frequency
+#   -V verbosity
+#   -h
+#      print the help string
+while getopts 'LM:C:V:h' OPTION
 do
   case $OPTION in
     L)
@@ -34,9 +36,24 @@ do
     V)
       VERBOSITY=$OPTARG
       ;;
+    h)
+      echo -e "Usage: $0 TEST_FILTER...\nwhere TEST_FILTERs are globs match .py test files. If no test filter is provided, runs all tests."
+      exit 0
+      ;;
+    \?)  # This catches all invalid options.
+      echo "ERROR: Invalid commandline flag."
+      exit 1
   esac
 done
 shift $(($OPTIND - 1))
+
+# Set the `CONTINUE_ON_ERROR` flag to `1` to make the CI tests continue on error.
+# This will allow you to see all the failures on your PR, not stopping with the first
+# test failure like the default behavior.
+CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
+if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
+  set +e
+fi
 
 export TRIM_GRAPH_SIZE=$MAX_GRAPH_SIZE
 export TRIM_GRAPH_CHECK_FREQUENCY=$GRAPH_CHECK_FREQUENCY
@@ -48,7 +65,36 @@ export CPU_NUM_DEVICES=4
 TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
 COVERAGE_FILE="$CDIR/../.coverage"
 
+# Given $1 as a (possibly not normalized) test filepath, returns successfully
+# if it matches any of the space-separated globs $_TEST_FILTER. If
+# $_TEST_FILTER is empty, returns successfully. 
+function test_is_selected {
+  if [[ -z "$_TEST_FILTER" ]]; then
+    return 0  # success
+  fi
+
+  # _TEST_FILTER is a space-separate list of globs. Loop through the
+  # list elements.
+  for _FILTER in $_TEST_FILTER; do
+    # realpath normalizes the paths (e.g. resolving `..` and relative paths)
+    # so that they can be compared.
+    case `realpath $1` in
+      `realpath $_FILTER`)
+        return 0  # success
+        ;;
+      *)
+        # No match
+        ;;
+    esac
+  done
+
+  return 1  # failure
+}
+
 function run_coverage {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   if [ "${USE_COVERAGE:-0}" != "0" ]; then
     coverage run --source="$TORCH_XLA_DIR" -p "$@"
   else
@@ -57,6 +103,9 @@ function run_coverage {
 }
 
 function run_test {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in PjRt runtime: $@"
   if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     PJRT_DEVICE=CUDA run_coverage "$@"
@@ -67,6 +116,9 @@ function run_test {
 }
 
 function run_device_detection_test {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in PjRt runtime: $@"
   current_device=$PJRT_DEVICE
   current_num_gpu_devices=$GPU_NUM_DEVICES
@@ -81,36 +133,57 @@ function run_device_detection_test {
 }
 
 function run_test_without_functionalization {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running with XLA_DISABLE_FUNCTIONALIZATION: $@"
   XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$@"
 }
 
 function run_use_bf16 {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running with XLA_USE_BF16: $@"
   XLA_USE_BF16=1 run_test "$@"
 }
 
 function run_downcast_bf16 {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running with XLA_DOWNCAST_BF16: $@"
   XLA_DOWNCAST_BF16=1 run_test "$@"
 }
 
 function run_dynamic {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in DynamicShape mode: $@"
   XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter:nms" run_test "$@"
 }
 
 function run_eager_debug {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in Eager Debug mode: $@"
   XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
 function run_pt_xla_debug {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
 function run_pt_xla_debug_level1 {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG_LEVEL=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
@@ -121,6 +194,9 @@ function run_pt_xla_debug_level2 {
 }
 
 function run_torchrun {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     echo "Running torchrun test for GPU $@"
     num_devices=$(nvidia-smi --list-gpus | wc -l)
@@ -411,6 +487,17 @@ function run_tests {
     fi
   fi
 }
+
+if [[ $# -ge 1 ]]; then
+  # There are positional arguments - set $_TEST_FILTER to them.
+  _TEST_FILTER=$@
+  # Sometimes a test may fail even if it doesn't match _TEST_FILTER. Therefore,
+  # we need to set this to be able to get to the test(s) we want to run.
+  CONTINUE_ON_ERROR=1
+else
+  # No positional argument - run all tests.
+  _TEST_FILTER=""
+fi
 
 if [ "$LOGFILE" != "" ]; then
   run_tests 2>&1 | tee $LOGFILE
