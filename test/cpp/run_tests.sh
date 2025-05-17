@@ -49,6 +49,7 @@ shift $(($OPTIND - 1))
 
 # Set XLA_EXPERIMENTAL var to subsequently executed commands.
 export XLA_EXPERIMENTAL
+export XLA_STABLEHLO_COMPILE=1
 
 EXTRA_FLAGS=""
 
