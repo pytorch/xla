@@ -327,6 +327,43 @@ torch_xla::XlaOpVector Cholesky::Lower(LoweringContext* loctx) const {
   return ReturnOp(output, loctx);
 }
 
+torch_xla::XlaOpVector Clamp::Lower(LoweringContext* loctx) const {
+  XLA_CHECK(has_min || has_max)
+      << "At least one of \'min\' or \'max\' must not be None";
+
+  // This is little bit ugly due to min and max tensors being optional,
+  // and operand[1] can be either min or max:
+  // if !has_min and has_max -> operand[1] is max
+  // if has_min and !has_max -> operand[1] is min
+  xla::XlaOp res = loctx->GetOutputOp(operand(0));
+  if (has_min && has_max) {
+    auto promoted_min =
+        XlaHelpers::Promote(res, loctx->GetOutputOp(operand(1)));
+    res = xla::Max(promoted_min.first, promoted_min.second,
+                   XlaHelpers::getBroadcastDimensions(promoted_min.first,
+                                                      promoted_min.second));
+    auto promoted_max =
+        XlaHelpers::Promote(res, loctx->GetOutputOp(operand(2)));
+    res = xla::Min(promoted_max.first, promoted_max.second,
+                   XlaHelpers::getBroadcastDimensions(promoted_max.first,
+                                                      promoted_max.second));
+  } else if (has_min) {
+    auto promoted_min =
+        XlaHelpers::Promote(res, loctx->GetOutputOp(operand(1)));
+    res = xla::Max(promoted_min.first, promoted_min.second,
+                   XlaHelpers::getBroadcastDimensions(promoted_min.first,
+                                                      promoted_min.second));
+  } else if (has_max) {
+    auto promoted_max =
+        XlaHelpers::Promote(res, loctx->GetOutputOp(operand(1)));
+    res = xla::Min(promoted_max.first, promoted_max.second,
+                   XlaHelpers::getBroadcastDimensions(promoted_max.first,
+                                                      promoted_max.second));
+  }
+
+  return ReturnOp(res, loctx);
+}
+
 torch_xla::XlaOpVector ClampTensor::Lower(LoweringContext* loctx) const {
   XLA_CHECK(has_min || has_max)
       << "At least one of \'min\' or \'max\' must not be None";
@@ -364,10 +401,22 @@ torch_xla::XlaOpVector ClampTensor::Lower(LoweringContext* loctx) const {
   return ReturnOp(res, loctx);
 }
 
+torch_xla::XlaOpVector ClampMax::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(xla::Min(xla_input, xla_other), loctx);
+}
+
 torch_xla::XlaOpVector ClampMaxTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
   return ReturnOp(xla::Min(xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector ClampMin::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(xla::Max(xla_input, xla_other), loctx);
 }
 
 torch_xla::XlaOpVector ClampMinTensor::Lower(LoweringContext* loctx) const {

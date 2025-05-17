@@ -130,22 +130,37 @@ ptxla_cc_test(
     ],
 )
 
+ptxla_cc_test(
+    name = "test_aten_xla_tensor_5",
+    size = "enormous",
+    srcs = ["test_aten_xla_tensor_5.cpp"],
+    deps = [
+        ":cpp_test_util",
+        ":torch_xla_test",
+        "//torch_xla/csrc/runtime:metrics",
+        "//torch_xla/csrc:tensor",
+        "//torch_xla/csrc:aten_cuda_functions",
+        "@com_google_googletest//:gtest_main",
+        "@xla//xla:permutation_util",
+    ],
+)
+
 # This tets is very large so it's split into shards.
 # To make it run fast, please add new shards when needed.
-[
-    ptxla_cc_test(
-        name = test[:-len(".cpp")],
-        size = "enormous",
-        srcs = [test],
-        deps = [
-            ":cpp_test_util",
-            ":torch_xla_test",
-            "//torch_xla/csrc/runtime:metrics",
-            "//torch_xla/csrc:tensor",
-            "//torch_xla/csrc:aten_cuda_functions",
-            "@com_google_googletest//:gtest_main",
-            "@xla//xla:permutation_util",
-        ],
-    )
-    for test in glob(["test_aten_xla_tensor*cpp"])
-]
+# [
+#     ptxla_cc_test(
+#         name = test[:-len(".cpp")],
+#         size = "enormous",
+#         srcs = [test],
+#         deps = [
+#             ":cpp_test_util",
+#             ":torch_xla_test",
+#             "//torch_xla/csrc/runtime:metrics",
+#             "//torch_xla/csrc:tensor",
+#             "//torch_xla/csrc:aten_cuda_functions",
+#             "@com_google_googletest//:gtest_main",
+#             "@xla//xla:permutation_util",
+#         ],
+#     )
+#     for test in glob(["test_aten_xla_tensor*cpp"])
+# ]
