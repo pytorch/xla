@@ -93,6 +93,11 @@ def onlyOnCUDA(fn):
   return unittest.skipIf(accelerator != "cuda", "PJRT_DEVICE=CUDA required")(fn)
 
 
+def onlyOnCPU(fn):
+  accelerator = os.environ.get("PJRT_DEVICE").lower()
+  return unittest.skipIf(accelerator != "cpu", "PJRT_DEVICE=CPU required")(fn)
+
+
 def onlyIfXLAExperimentalContains(feat):
   experimental = os.environ.get("XLA_EXPERIMENTAL", "").split(":")
   return unittest.skipIf(feat not in experimental,
@@ -2423,6 +2428,12 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     # Convert to a lower precision data-type so as to get a few infs.
     t = t.to(torch.float16)
     self._test_no_fallback(torch.isneginf, (t,))
+
+  @onlyOnCPU
+  def test_rand_on_xla_cpu(self):
+    t = torch.rand(10, device=xm.xla_device())
+    t_cpu = t.cpu()
+    self.assertEqual(t_cpu, t.cpu())
 
 
 class MNISTComparator(nn.Module):

@@ -231,6 +231,7 @@ function run_xla_op_tests1 {
   run_dynamic "$CDIR/ds/test_dynamic_shapes.py"
   run_dynamic "$CDIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  PJRT_DEVICE=CPU python3 "$CDIR/test_operations.py" -v -k test_rand_on_xla_cpu
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_xla_graph_execution.py" "$@" --verbosity=$VERBOSITY
   run_pt_xla_debug_level2 "$CDIR/test_xla_graph_execution.py" "$@" --verbosity=$VERBOSITY
