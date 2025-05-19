@@ -1,42 +1,24 @@
 #!/bin/bash
 set -exo pipefail
 CDIR="$(cd "$(dirname "$0")"/../ ; pwd -P)"
-LOGFILE=/tmp/pytorch_py_test.log
-MAX_GRAPH_SIZE=500
-GRAPH_CHECK_FREQUENCY=100
-VERBOSITY=2
 
 # Utils file
 source "${CDIR}/utils/run_tests_utils.sh"
 
+parse_options_to_vars $@
+
+# Consume the parsed commandline arguments.
+shift $(($OPTIND - 1))
+
 # Note [Keep Going]
 #
-# Set the `CONTINUE_ON_ERROR` flag to `true` to make the CI tests continue on error.
+# Set the `CONTINUE_ON_ERROR` flag to `1` to make the CI tests continue on error.
 # This will allow you to see all the failures on your PR, not stopping with the first
 # test failure like the default behavior.
 CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
 if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
   set +e
 fi
-
-while getopts 'LM:C:V:' OPTION
-do
-  case $OPTION in
-    L)
-      LOGFILE=
-      ;;
-    M)
-      MAX_GRAPH_SIZE=$OPTARG
-      ;;
-    C)
-      GRAPH_CHECK_FREQUENCY=$OPTARG
-      ;;
-    V)
-      VERBOSITY=$OPTARG
-      ;;
-  esac
-done
-shift $(($OPTIND - 1))
 
 export TRIM_GRAPH_SIZE=$MAX_GRAPH_SIZE
 export TRIM_GRAPH_CHECK_FREQUENCY=$GRAPH_CHECK_FREQUENCY
@@ -49,6 +31,9 @@ TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__
 COVERAGE_FILE="$CDIR/../.coverage"
 
 function run_coverage {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   if [ "${USE_COVERAGE:-0}" != "0" ]; then
     coverage run --source="$TORCH_XLA_DIR" -p "$@"
   else
@@ -57,61 +42,97 @@ function run_coverage {
 }
 
 function run_test {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in PjRt runtime: $@"
   PJRT_DEVICE=NEURON NEURON_NUM_DEVICES=1 run_coverage "$@"
 }
 
 function run_test_without_functionalization {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running with XLA_DISABLE_FUNCTIONALIZATION: $@"
   XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$@"
 }
 
 function run_xla_ir_debug {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running with XLA_IR_DEBUG: $@"
   XLA_IR_DEBUG=1 run_test "$@"
 }
 
 function run_use_bf16 {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running with XLA_USE_BF16: $@"
   XLA_USE_BF16=1 run_test "$@"
 }
 
 function run_downcast_bf16 {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running with XLA_DOWNCAST_BF16: $@"
   XLA_DOWNCAST_BF16=1 run_test "$@"
 }
 
 function run_xla_hlo_debug {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running with XLA_IR_DEBUG: $@"
   XLA_HLO_DEBUG=1 run_test "$@"
 }
 
 function run_dynamic {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in DynamicShape mode: $@"
   XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter:nms" run_test "$@"
 }
 
 function run_eager_debug {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in Eager Debug mode: $@"
   XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
 function run_pt_xla_debug {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
 function run_pt_xla_debug_level1 {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG_LEVEL=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
 function run_pt_xla_debug_level2 {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG_LEVEL=2 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
 function run_torchrun {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   PJRT_DEVICE=NEURON torchrun --nnodes 1 --nproc-per-node 2 $@
 }
 
@@ -324,6 +345,8 @@ function run_tests {
     fi
   fi
 }
+
+set_test_filter $@
 
 if [ "$LOGFILE" != "" ]; then
   run_tests 2>&1 | tee $LOGFILE

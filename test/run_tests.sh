@@ -2,49 +2,17 @@
 set -exo pipefail
 
 # Absolute path to the directory of this script.
-CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
+CDIR="$(
+  cd "$(dirname "$0")"
+  pwd -P
+)"
 
 # Import utilities.
 source "${CDIR}/utils/run_tests_utils.sh"
 
-# Default option values. Can be overridden via commandline flags.
-LOGFILE=/tmp/pytorch_py_test.log
-MAX_GRAPH_SIZE=500
-GRAPH_CHECK_FREQUENCY=100
-VERBOSITY=2
+parse_options_to_vars $@
 
-# Parse commandline flags:
-#   -L
-#      disable writing to the log file at $LOGFILE.
-#   -M max_graph_size
-#   -C graph_check_frequency
-#   -V verbosity
-#   -h
-#      print the help string
-while getopts 'LM:C:V:h' OPTION
-do
-  case $OPTION in
-    L)
-      LOGFILE=
-      ;;
-    M)
-      MAX_GRAPH_SIZE=$OPTARG
-      ;;
-    C)
-      GRAPH_CHECK_FREQUENCY=$OPTARG
-      ;;
-    V)
-      VERBOSITY=$OPTARG
-      ;;
-    h)
-      echo -e "Usage: $0 TEST_FILTER...\nwhere TEST_FILTERs are globs match .py test files. If no test filter is provided, runs all tests."
-      exit 0
-      ;;
-    \?)  # This catches all invalid options.
-      echo "ERROR: Invalid commandline flag."
-      exit 1
-  esac
-done
+# Consume the parsed commandline arguments.
 shift $(($OPTIND - 1))
 
 # Set the `CONTINUE_ON_ERROR` flag to `1` to make the CI tests continue on error.
@@ -62,34 +30,11 @@ export PYTORCH_TEST_WITH_SLOW=1
 export XLA_DUMP_FATAL_STACK=1
 export CPU_NUM_DEVICES=4
 
-TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
+TORCH_XLA_DIR=$(
+  cd ~
+  dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')"
+)
 COVERAGE_FILE="$CDIR/../.coverage"
-
-# Given $1 as a (possibly not normalized) test filepath, returns successfully
-# if it matches any of the space-separated globs $_TEST_FILTER. If
-# $_TEST_FILTER is empty, returns successfully. 
-function test_is_selected {
-  if [[ -z "$_TEST_FILTER" ]]; then
-    return 0  # success
-  fi
-
-  # _TEST_FILTER is a space-separate list of globs. Loop through the
-  # list elements.
-  for _FILTER in $_TEST_FILTER; do
-    # realpath normalizes the paths (e.g. resolving `..` and relative paths)
-    # so that they can be compared.
-    case `realpath $1` in
-      `realpath $_FILTER`)
-        return 0  # success
-        ;;
-      *)
-        # No match
-        ;;
-    esac
-  done
-
-  return 1  # failure
-}
 
 function run_coverage {
   if ! test_is_selected "$1"; then
@@ -230,7 +175,7 @@ function run_xla_op_tests1 {
   run_dynamic "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_dynamic "$CDIR/ds/test_dynamic_shapes.py"
   run_dynamic "$CDIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
-  run_eager_debug  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_eager_debug "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_xla_graph_execution.py" "$@" --verbosity=$VERBOSITY
   run_pt_xla_debug_level2 "$CDIR/test_xla_graph_execution.py" "$@" --verbosity=$VERBOSITY
@@ -263,7 +208,7 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_python_ops.py"
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
-  if [ -f "/tmp/metrics.txt" ] ; then
+  if [ -f "/tmp/metrics.txt" ]; then
     rm /tmp/metrics.txt
   fi
   XLA_METRICS_FILE=/tmp/metrics.txt run_test "$CDIR/test_metrics.py"
@@ -371,7 +316,7 @@ function run_xla_op_tests3 {
     # Please keep PJRT_DEVICE and GPU_NUM_DEVICES explicit in the following test commands.
     echo "single-host-single-process"
     PJRT_DEVICE=CUDA GPU_NUM_DEVICES=1 python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_cores=1 --num_steps=25 --model=resnet18
-    PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1  --num_steps=25 --model=resnet18
+    PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1 --num_steps=25 --model=resnet18
 
     echo "single-host-multi-process"
     num_devices=$(nvidia-smi --list-gpus | wc -l)
@@ -488,16 +433,7 @@ function run_tests {
   fi
 }
 
-if [[ $# -ge 1 ]]; then
-  # There are positional arguments - set $_TEST_FILTER to them.
-  _TEST_FILTER=$@
-  # Sometimes a test may fail even if it doesn't match _TEST_FILTER. Therefore,
-  # we need to set this to be able to get to the test(s) we want to run.
-  CONTINUE_ON_ERROR=1
-else
-  # No positional argument - run all tests.
-  _TEST_FILTER=""
-fi
+set_test_filter $@
 
 if [ "$LOGFILE" != "" ]; then
   run_tests 2>&1 | tee $LOGFILE
