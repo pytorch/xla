@@ -169,7 +169,8 @@ bool TrieNode::MaybeSplitAt(std::size_t matched) {
   }
 
   // This node's common_sequence_ will be whatever the prefix was.
-  common_sequence_.erase(common_sequence_.begin() + matched, common_sequence_.end());
+  common_sequence_.erase(common_sequence_.begin() + matched,
+                         common_sequence_.end());
   return did_split;
 }
 
