@@ -1,4 +1,13 @@
 #!/bin/bash
+
+# This script is used in AWS Neuron's nightly build to verify that PyTorch/XLA
+# works for them. It runs a subset of the tests in test/run_tests.sh.
+# Eventually (after we fix or skip the rest of the tests for Neuron) we will
+# remove this and use test/run_tests.sh for Neuron nightly instead.
+#
+# For question on this script, please contact the AWS folks in
+# https://pytorch.slack.com/archives/C02GNBKM2HM.
+
 set -exo pipefail
 CDIR="$(cd "$(dirname "$0")"/../ ; pwd -P)"
 
