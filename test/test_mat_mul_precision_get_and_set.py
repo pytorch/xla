@@ -1,5 +1,6 @@
 """Tests for get/set_mat_mul_precision from init_python_bindings.cpp"""
 
+import logging
 import sys
 import unittest
 
@@ -11,24 +12,38 @@ import torch_xla.backends
 class TestMatMulPrecisionGetAndSet(unittest.TestCase):
 
   def setUp(self):
-    self._original = torch_xla.backends.get_mat_mul_precision()
+    self.logger_name = torch_xla.backends.logger.name
+    self._original_precision = torch_xla.backends.get_mat_mul_precision()
     torch.set_printoptions(precision=20)
-    torch_xla.sync()
 
   def tearDown(self):
-    torch_xla.backends.set_mat_mul_precision(self._original)
+    with self.assertLogs(self.logger_name, level=logging.WARNING):
+      torch_xla.backends.set_mat_mul_precision(self._original_precision)
     torch.set_printoptions(profile="default")
-    torch_xla.sync()
+
+  def test_set_mat_mul_precision_warning(self):
+    # Arrange
+    expected = [(f"WARNING:{self.logger_name}:"
+                 f"{torch_xla.backends._WARNING_MESSAGE}")]
+
+    # Act
+    with self.assertLogs(self.logger_name, level=logging.WARNING) as cm:
+      torch_xla.backends.set_mat_mul_precision('default')
+
+      # Assert
+      self.assertEqual(expected, cm.output)
 
   def test_set_mat_mul_precision_error(self):
     # Assert
     with self.assertRaises(ValueError):
       # Act
-      torch_xla.backends.set_mat_mul_precision('BAD VALUE')
+      with self.assertLogs(self.logger_name, level=logging.WARNING):
+        torch_xla.backends.set_mat_mul_precision('BAD VALUE')
 
   def test_get_and_set_mat_mul_precision_default(self):
     # Arrange
-    torch_xla.backends.set_mat_mul_precision('default')
+    with self.assertLogs(self.logger_name, level=logging.WARNING):
+      torch_xla.backends.set_mat_mul_precision('default')
 
     # Act
     status = torch_xla.backends.get_mat_mul_precision()
@@ -38,7 +53,8 @@ class TestMatMulPrecisionGetAndSet(unittest.TestCase):
 
   def test_get_and_set_mat_mul_precision_high(self):
     # Arrange
-    torch_xla.backends.set_mat_mul_precision('high')
+    with self.assertLogs(self.logger_name, level=logging.WARNING):
+      torch_xla.backends.set_mat_mul_precision('high')
 
     # Act
     status = torch_xla.backends.get_mat_mul_precision()
@@ -48,7 +64,8 @@ class TestMatMulPrecisionGetAndSet(unittest.TestCase):
 
   def test_get_and_set_mat_mul_precision_highest(self):
     # Arrange
-    torch_xla.backends.set_mat_mul_precision('highest')
+    with self.assertLogs(self.logger_name, level=logging.WARNING):
+      torch_xla.backends.set_mat_mul_precision('highest')
 
     # Act
     status = torch_xla.backends.get_mat_mul_precision()
