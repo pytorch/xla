@@ -766,22 +766,23 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
   XLA_CHECK(sharding.type() != xla::OpSharding::UNKNOWN)
       << "Can't explicilty annotate with UNKNOWN sharding type.";
   XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+
+  // For Non DeviceData IR values, we directly attach the sharding spec to the
+  // xtensor.
+  const DeviceData* device_data_node = nullptr;
+  if (xtensor->CurrentIrValue()) {
+    device_data_node = DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+    if (!device_data_node) {
+      XlaAnnotateCustomSharding(xtensor, sharding);
+      return;
+    }
+  }
+
   XLATensor::ShardingSpecPtr new_sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(
           sharding, MakeShapeWithDeviceLayout(
                         xtensor->shape(), static_cast<XlaDeviceType>(
                                               xtensor->GetDevice().type())));
-
-  // For Non DeviceData IR values, we directly attach the sharding spec
-  // to the xtensor.
-  const DeviceData* device_data_node = nullptr;
-  if (xtensor->CurrentIrValue()) {
-    device_data_node = DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-    if (!device_data_node) {
-      tensor_methods::custom_sharding_(xtensor, new_sharding_spec);
-      return;
-    }
-  }
 
   // For data, we need to deal with the data transfers between
   // host and device.
@@ -820,7 +821,9 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
               device_data_node != nullptr)
         << "Cannot shard tensor. Data does not present on any device.";
     std::vector<XLATensorPtr> xla_tensors{xtensor};
-    cpu_tensor = XLAGraphExecutor::Get()->GetTensors(&xla_tensors)[0];
+    auto tensors = XLAGraphExecutor::Get()->GetTensors(&xla_tensors);
+    XLA_CHECK_EQ(tensors.size(), 1);
+    cpu_tensor = tensors[0];
   }
   auto xla_data = CreateTensorsData(
       std::vector<at::Tensor>{cpu_tensor},
@@ -831,6 +834,23 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
 
   // Register sharded tensor data.
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
+}
+
+void ShardingUtil::XlaAnnotateCustomSharding(const XLATensorPtr& input,
+                                             xla::OpSharding sharding) {
+  TORCH_LAZY_COUNTER("XlaAnnotateCustomSharding", 1);
+
+  XLA_CHECK(UseVirtualDevice())
+      << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
+  XLA_CHECK(sharding.type() != xla::OpSharding::UNKNOWN)
+      << "Can't explicilty annotate with UNKNOWN sharding type.";
+
+  XLATensor::ShardingSpecPtr sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(
+          sharding, MakeShapeWithDeviceLayout(
+                        input->shape(),
+                        static_cast<XlaDeviceType>(input->GetDevice().type())));
+  tensor_methods::custom_sharding_(input, sharding_spec);
 }
 
 void ShardingUtil::SetAutoSharding() {

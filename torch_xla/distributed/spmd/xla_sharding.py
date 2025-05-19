@@ -563,6 +563,40 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   return wrap_as_sharded_tensor(t)
 
 
+def annotate_custom_sharding(t: Union[torch.Tensor,
+                                      XLAShardedTensor], mesh: Mesh,
+                             partition_spec: PartitionSpec) -> XLAShardedTensor:
+  """
+  Annotates an existing tensor with a custom sharding IR node without modifying its data layout.
+
+  Unlike `mark_sharding`, this function only adds a custom sharding annotation to the XLA IR
+  without explicitly setting a sharding spec tied to the DeviceData node or transferring any
+  sharded data to the device. This allows providing explicit XLA sharding annotations of tensors
+  that have already been sharded with `mark_sharding`.
+
+  Args:
+      t: The input tensor to be annotated with custom sharding.
+      mesh: The device mesh that specifies the logical device topology.
+      partition_spec: The partitioning specification for each dimension of the input tensor.
+
+  Returns:
+      XLAShardedTensor: The input tensor wrapped as a sharded tensor with the custom sharding annotation.
+
+  Example:
+      >>> # First shard the tensor with mark_sharding
+      >>> sharded_tensor = xs.mark_sharding(tensor, mesh1, (0, 1, 2, 3))
+      >>> # Later, annotate with a different sharding for the XLA SPMD partitioner
+      >>> custom_sharded = xs.annotate_custom_sharding(sharded_tensor, mesh2, (0, 1, 2, 3))
+  """
+  assert len(t.shape) == len(partition_spec), \
+    f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
+
+  op_sharding = mesh.get_op_sharding(partition_spec)
+  annotate_func = torch_xla._XLAC._xla_annotate_custom_sharding
+  annotate_func(unwrap_sharded_tensor(t), op_sharding)
+  return wrap_as_sharded_tensor(t)
+
+
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
                   partition_spec: PartitionSpec) -> XLAShardedTensor:
   """
