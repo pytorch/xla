@@ -13,7 +13,7 @@ CustomCall::CustomCall(
     xla::Shape output_shape, bool has_side_effect,
     const std::string& backend_config, const int api_version,
     const std::unordered_map<std::string, std::string>& frontend_attributes)
-    : XlaNode(xla_custom_call, inputs, std::move(output_shape),
+    : XlaNode(xla_custom_call, inputs, output_shape,
               /*num_outputs=*/output_shape.tuple_shapes_size(),
               torch::lazy::MHash(call_target)),
       call_target_(call_target),
