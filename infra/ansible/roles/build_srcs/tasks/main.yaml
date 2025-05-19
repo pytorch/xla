@@ -190,7 +190,7 @@
   args:
     executable: bash
     chdir: "{{ src_root }}"
-  environment: "{{ env_vars | combine({'DEBUG': '1', 'USE_CLANG': '1'}) }}"
+  environment: "{{ env_vars | combine({'USE_CLANG': '1'}) }}"
   when: build_cpp_tests
 
 - name: Read Torchvision pin
