@@ -11,8 +11,8 @@ def cov_library(
         linkopts = [],
         **kwargs):
     native.cc_library(
-        copts = copts + ["-fprofile-instr-generate", "-fcoverage-mapping"],
-        linkopts = linkopts + ["-fprofile-instr-generate"],
+        copts = copts + ["-fprofile-instr-generate", "-fcoverage-mapping", "-O0", "-g"],
+        linkopts = linkopts + ["-fprofile-instr-generate", "-O0", "-g"],
         deps = deps,
         **kwargs
     )
