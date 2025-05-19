@@ -306,7 +306,7 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
     device_resnet18.to(device)
     device_resnet18.eval()
     # materalize the fake data for test purpose
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
     dynamo_resnet18 = torch.compile(

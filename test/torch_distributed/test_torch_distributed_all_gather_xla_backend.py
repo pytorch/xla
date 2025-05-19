@@ -22,7 +22,7 @@ def _mp_fn(index):
     xoutputs = [o.to(device) for o in outputs]
     xoutput0 = xoutputs[0]
     dist.all_gather(xoutputs, xinput)
-    xm.mark_step()
+    torch_xla.sync()
     for i, o in enumerate(xoutputs):
       expected = torch.ones((2, 3)) * i
       assert torch.all(o.cpu() == expected), f'{o} != {expected}'

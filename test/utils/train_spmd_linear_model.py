@@ -122,7 +122,7 @@ def train():
           losses.append(loss.clone().detach())
           loss.backward()
         optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
       if step % FLAGS.log_steps == 0:
         print(f"Epoch {epoch} step {step} loss {loss}")
 

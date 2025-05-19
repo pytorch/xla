@@ -349,7 +349,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
                                           _flat_input_args)
 
   num_mutations = len(exported_model.graph_signature.buffers_to_mutate)
-  xm.mark_step()
+  torch_xla.sync()
   xm.wait_device_ops()
   metrics.clear_counters()
   device = xm.xla_device()
