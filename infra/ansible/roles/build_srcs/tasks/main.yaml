@@ -186,11 +186,10 @@
 - name: Collect C++ test files
   ansible.builtin.shell: |
     cd pytorch/xla/build/temp*
-    bazel query 'kind(".*_test", tests(//:cpp_tests))' --output=label | xargs -n 1 bazel cquery --output=files | xargs cp -t /tmp/test/bin
+    bazel query 'kind(".*_test", tests(//:cpp_tests))' --output=label | xargs -n 1 bazel cquery --config=dbg --output=files | xargs cp -t /tmp/test/bin
   args:
     executable: bash
     chdir: "{{ src_root }}"
-  environment: "{{ env_vars | combine({'DEBUG': '1', 'USE_CLANG': '1'}) }}"
   when: build_cpp_tests
 
 - name: Read Torchvision pin
