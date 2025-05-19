@@ -17,7 +17,7 @@ os.environ["PJRT_DEVICE"] = devkind
 
 if not use_torch_xla2():
   import torch_xla.core.xla_model as xm
-  devlist = xm.get_xla_supported_devices(devkind=devkind)
+  devlist = xm.get_xla_supported_devices()
 else:
   # torch_xla2 needs jax to detect the device
   os.environ["JAX_PLATFORMS"] = devkind.lower(
