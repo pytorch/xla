@@ -1484,10 +1484,10 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     """
 
     from torch_xla.distributed.spmd.xla_sharding import XLAPatchedLinear
-    import torch_xla.runtime
+    import torch_xla.core.xla_model as xm
     import torch.nn.functional as F
 
-    with torch_xla.runtime.xla_device():
+    with xm.xla_device():
       torch_xla.manual_seed(42)
       x0 = torch.randn(2, 3, requires_grad=True)
       w0 = torch.randn(4, 3, requires_grad=True)

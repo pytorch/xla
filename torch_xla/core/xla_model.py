@@ -142,12 +142,12 @@ def xla_device(n: Optional[int] = None,
   Args:
     n (int, optional): The specific instance (ordinal) to be returned. If
       specified, the specific XLA device instance will be returned. Otherwise
-      the first device of `devkind` will be returned.
+      the first device (default 0) will be returned.
     devkind (string..., optional): If specified, device type such as `TPU`,
       `CUDA`, `CPU`, or custom PJRT device. Deprecated.
 
   Returns:
-    A `torch.device` with the requested instance.
+    A `torch.device` with the requested instance of an XLA device.
   """
   # When SPMD is enabled, we always return `xla:0` to the user, and
   # under the hood we use virtual device logic for every xla tensor
@@ -156,7 +156,16 @@ def xla_device(n: Optional[int] = None,
     torch_xla._XLAC._xla_set_default_device(device)
     return torch.device(device)
 
-  return runtime.xla_device(n, devkind)
+  if n is None:
+    return torch.device(torch_xla._XLAC._xla_get_default_device())
+
+  devices = xm.get_xla_supported_devices(devkind=devkind)
+  if n > len(devices):
+    raise IndexError('Device index {} out of range in {}'.format(n, devices))
+
+  device = devices[n]
+  torch_xla._XLAC._xla_set_default_device(device)
+  return torch.device(device)
 
 
 def _xla_real_device(device: torch.device) -> Any:
