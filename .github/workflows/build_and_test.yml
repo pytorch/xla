@@ -107,7 +107,7 @@ jobs:
   test-cuda-with-pytorch-cuda-enabled:
     name: "GPU tests requiring torch CUDA"
     uses: ./.github/workflows/_test_requiring_torch_cuda.yml
-    needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin, check_code_changes, get-torch-commit]
+    needs: [build-torch-with-cuda, build-cuda-plugin, check_code_changes, get-torch-commit]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
       runner: linux.8xlarge.nvidia.gpu
