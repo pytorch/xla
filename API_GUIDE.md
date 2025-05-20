@@ -77,13 +77,45 @@ multi-processing.
 The following snippet shows a network training on a single XLA device:
 
 ```python
-import torch_xla
 import torch_xla.core.xla_model as xm
+from torch_xla import runtime as xr
+import torch
+import torch_xla.utils.utils as xu
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
 
-device = xm.xla_device()
-model = MNIST().train().to(device)
+class MNIST(nn.Module):
+  def __init__(self):
+    super(MNIST, self).__init__()
+    self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+    self.bn1 = nn.BatchNorm2d(10)
+    self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+    self.bn2 = nn.BatchNorm2d(20)
+    self.fc1 = nn.Linear(320, 50)
+    self.fc2 = nn.Linear(50, 10)
+
+  def forward(self, x):
+    x = F.relu(F.max_pool2d(self.conv1(x), 2))
+    x = self.bn1(x)
+    x = F.relu(F.max_pool2d(self.conv2(x), 2))
+    x = self.bn2(x)
+    x = torch.flatten(x, 1)
+    x = F.relu(self.fc1(x))
+    x = self.fc2(x)
+    return F.log_softmax(x, dim=1)
+
+# Create a synthetic dataset.
+batch_size = 128
+train_loader = xu.SampleGenerator(
+    data=(torch.zeros(batch_size, 1, 28, 28),
+          torch.zeros(batch_size, dtype=torch.int64)), 
+    sample_count=60000 // batch_size // xr.world_size())
+
+device = xm.xla_device()  # Get the XLA device (TPU).
+model = MNIST().train().to(device)  # Create a model and move it to the device.
 loss_fn = nn.NLLLoss()
-optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
 for data, target in train_loader:
   optimizer.zero_grad()
@@ -92,16 +124,16 @@ for data, target in train_loader:
   output = model(data)
   loss = loss_fn(output, target)
   loss.backward()
-
   optimizer.step()
-  torch_xla.sync()
+  # Mark the end of a training step and trigger the exeuction of the accumulated
+  # operations on the TPU.
+  xm.mark_step()
 ```
 
 This snippet highlights how easy it is to switch your model to run on XLA. The
 model definition, dataloader, optimizer and training loop can work on any device.
 The only XLA-specific code is a couple lines that acquire the XLA device and
-materializing the tensors. Calling
-`torch_xla.sync()` at the end of each training
+materializing the tensors. Calling `xm.mark_step()` at the end of each training
 iteration causes XLA to execute its current graph and update the model's
 parameters. See [XLA Tensor Deep Dive](#xla-tensor-deep-dive) for more on
 how XLA creates graphs and runs operations.
@@ -112,26 +144,50 @@ PyTorch/XLA makes it easy to accelerate training by running on multiple XLA
 devices. The following snippet shows how:
 
 ```python
-import torch_xla
 import torch_xla.core.xla_model as xm
+from torch_xla import runtime as xr
+import torch
+import torch_xla.utils.utils as xu
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import torch_xla
 import torch_xla.distributed.parallel_loader as pl
 
+class MNIST(nn.Module):
+  # The same as in the previous example.
+  ...
+
+batch_size=128
+# The same as in the previous example.
+train_loader = ...
+
 def _mp_fn(index):
-  device = xm.xla_device()
+  """Called on each process/device.
+
+  Args:
+    index: Index of the process.
+  """
+
+  device = xm.xla_device()  # Get the device assigned to this process.
+  # Wrap the loader for multi-device.
   mp_device_loader = pl.MpDeviceLoader(train_loader, device)
 
   model = MNIST().train().to(device)
   loss_fn = nn.NLLLoss()
-  optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+  optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
   for data, target in mp_device_loader:
     optimizer.zero_grad()
     output = model(data)
     loss = loss_fn(output, target)
     loss.backward()
+    # Perform the optimization step and trigger the execution of the
+    # accumulated XLA operations on the device for this process.
     xm.optimizer_step(optimizer)
 
 if __name__ == '__main__':
+  # Launch the multi-device training.
   torch_xla.launch(_mp_fn, args=())
 ```
 
@@ -141,7 +197,7 @@ single device snippet. Let's go over then one by one.
 - `torch_xla.launch()`
   - Creates the processes that each run an XLA device.
   - This function is a wrapper of multithreading spawn to allow user run the script with torchrun command line also. Each process will only be able to access the device assigned to the current process. For example on a TPU v4-8, there will be 4 processes being spawn up and each process will own a TPU device.
-  - Note that if you print the `xm.xla_device()` on each process you will see `xla:0` on all devices. This is because each process can only see one device. This does not mean multi-process is not functioning. The only execution is with PJRT runtime on TPU v2 and TPU v3 since there will be `#devices/2` processes and each process will have 2 threads(check this [doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#tpus-v2v3-vs-v4) for more details).
+  - Note that if you print the `xm.xla_device()` on each process you will see `xla:0` on all devices. This is because each process can only see one device. This does not mean multi-process is not functioning. The only exeption is with PJRT runtime on TPU v2 and TPU v3 since there will be `#devices/2` processes and each process will have 2 threads (check this [doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#tpus-v2v3-vs-v4) for more details).
 - `MpDeviceLoader`
   - Loads the training data onto each device.
   - `MpDeviceLoader` can wrap on a torch dataloader. It can preload the data to the device and overlap the dataloading with device execution to improve the performance.
