@@ -1,3 +1,4 @@
+from typing import Mapping, Any
 import collections
 import copy
 import functools
@@ -125,14 +126,88 @@ class JittableModule(torch.nn.Module):
       return jitted(self.params, self.buffers, *args, **kwargs)
 
     self._jitted[key] = call
-    
+
   def cpu_state_dict(self, *args, **kwargs):
+    """
+    Wrapper for state_dict
+    
+    this function will make sure to transfer all the parameters to CPU
+    making it easier to save the state dict with torch.save
+
+    Returns:
+        Mapping[str, Any]: A mapping of parameter names to their values (in torch CPU)
+    """
     state_dict = super().state_dict(*args, **kwargs)
-    state_dict = pytree.tree_map(
-      lambda t: t.cpu(),
-      state_dict
-    )
+    state_dict = pytree.tree_map(lambda t: t.cpu(), state_dict)
     return state_dict
+
+  def load_state_dict(self,
+                      state_dict: Mapping[str, Any],
+                      strict: bool = True,
+                      assign: bool = False):
+    """
+    Wrapper for load_state_dict
+    
+    This function assumes torch CPU state dict and will transfer the parameters to the correct device
+    and dtype before loading them into the model.
+
+    Args:
+        state_dict (Mapping[str, Any]): A mapping of parameter names to their values (in torch CPU)
+        strict (bool, optional): whether to strictly enforce that the keys
+            in :attr:`state_dict` match the keys returned by this module's
+            :meth:`~torch.nn.Module.state_dict` function. Default: ``True``
+        assign (bool, optional): When set to ``False``, the properties of the tensors
+            in the current module are preserved whereas setting it to ``True`` preserves
+            properties of the Tensors in the state dict. The only
+            exception is the ``requires_grad`` field of :class:`~torch.nn.Parameter`s
+            for which the value from the module is preserved.
+            Default: ``False``
+
+    Returns:
+        ``NamedTuple`` with ``missing_keys`` and ``unexpected_keys`` fields:
+              * **missing_keys** is a list of str containing any keys that are expected
+                  by this module but missing from the provided ``state_dict``.
+              * **unexpected_keys** is a list of str containing the keys that are not
+                  expected by this module but present in the provided ``state_dict``.
+    """
+    # Move tensors to JAX to have easier time extracting sharding information
+    current_state_dict = super().state_dict()
+    current_state_dict = jax_view(current_state_dict)
+
+    # create out shardings that eithe reuses the current state dict sharding or replicates the weights
+    def extract_sharding_or_replicate(name):
+      if name in current_state_dict:
+        return current_state_dict[name].sharding
+      return jax.sharding.PartitionSpec()
+
+    output_shards = {
+        name: extract_sharding_or_replicate(name) for name in state_dict
+    }
+
+    def convert_to_xla_tensor_if_needed(t):
+      is_torch_tensor = isinstance(t, torch.Tensor)
+      is_xla_tensor = isinstance(t, torchax.tensor.Tensor)
+      if is_xla_tensor:
+        t = jax_view(t)
+      elif is_torch_tensor:
+        # convert to jax tensor
+        t = tensor.t2j(t)
+      return t
+
+    # convert the state dict to JAX and shard them
+    state_dict = pytree.tree_map(
+        tensor.t2j,
+        state_dict,
+    )
+    # Convert ordered dict to regular dict, pjit type-safety checks
+    state_dict = dict(state_dict)
+    jitted = jax_jit(
+        lambda t: t, kwargs_for_jax_jit={"out_shardings": output_shards})
+    state_dict = jitted(state_dict)
+    # review it as torch tensors, so we can use torch.assign if we need to
+    state_dict = torch_view(state_dict)
+
+    return super().load_state_dict(state_dict, strict, assign)
 
 
 class CompileMixin:
