@@ -125,6 +125,14 @@ class JittableModule(torch.nn.Module):
       return jitted(self.params, self.buffers, *args, **kwargs)
 
     self._jitted[key] = call
+    
+  def cpu_state_dict(self, *args, **kwargs):
+    state_dict = super().state_dict(*args, **kwargs)
+    state_dict = pytree.tree_map(
+      lambda t: t.cpu(),
+      state_dict
+    )
+    return state_dict
 
 
 class CompileMixin:
