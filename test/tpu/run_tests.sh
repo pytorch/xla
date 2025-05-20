@@ -12,6 +12,31 @@ _TEST_DIR="$(dirname "$_TPU_DIR")"
 
 source "${_TEST_DIR}/utils/run_tests_utils.sh"
 
+while getopts 'h' OPTION
+do
+case $OPTION in
+    h)
+    echo -e "Usage: $0 TEST_FILTER...\nwhere TEST_FILTERs are globs match .py test files. If no test filter is provided, runs all tests."
+    exit 0
+    ;;
+    \?)  # This catches all invalid options.
+    echo "ERROR: Invalid commandline flag."
+    exit 1
+esac
+done
+
+# Consume the parsed commandline arguments.
+shift $(($OPTIND - 1))
+
+set_test_filter $@
+
+function run_test {
+  if ! test_is_selected "$1"; then
+    return
+  fi
+  python3 "$@"
+}
+
 # TODO: merge with other run_tests
 if test_is_selected $_TEST_DIR/test_mat_mul_precision.py; then
   (cd $_TEST_DIR && python3 -m unittest test_mat_mul_precision.TestMatMulPrecision.test_high)
