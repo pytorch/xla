@@ -37,8 +37,8 @@ jobs:
       image: ${{ inputs.dev-image }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
-      # ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
-      BAZEL_REMOTE_CACHE: 1
+      BAZEL_JOBS: 48
+      BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
       BUILD_CPP_TESTS: 1
     steps:
       # Need to check out local composite actions before using them

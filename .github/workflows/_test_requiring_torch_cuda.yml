@@ -48,6 +48,7 @@ jobs:
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
+      BAZEL_JOBS: 48
       BAZEL_REMOTE_CACHE: 1
     steps:
       - name: Checkout actions
