@@ -70,6 +70,13 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /tmp/wheels/
+      # Generate a random 16-character UUID for the docker tag
+      - name: Generate random UUID tag
+        if: inputs.has_code_changes == 'true'
+        id: random_tag
+        shell: bash
+        run: |
+          echo "uuid=$(openssl rand -hex 8)" >> $GITHUB_OUTPUT
       # Then run docker to install them and push a docker
       - name: Build and push docker image
         if: inputs.has_code_changes == 'true'
@@ -78,10 +85,10 @@ jobs:
         run: |
           . ./infra/ansible/build_for_torchprime.sh
         env:
-          XLA_WHEELS_PATH: /tmp/wheels/todo
-          DOCKER_IMAGE_NAME: todo-torch-xla-torchprime-ci
-          DOCKER_IMAGE_TAG: todo
-          DOCKER_PROJECT: pytorch-todo
+          DEFAULT_CONTEXT_PATH: /tmp/wheels
+          DOCKER_IMAGE_NAME: for-torchprime-ci
+          DOCKER_IMAGE_TAG: ${{ steps.random_tag.outputs.uuid }}
+          DOCKER_PROJECT: tpu-pytorch
       # Trigger torchprime E2E test workflow
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         if: inputs.has_code_changes == 'true'
@@ -91,5 +98,6 @@ jobs:
           github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN_FOR_TRIGGERING_TORCHPRIME }}
           workflow_file_name: e2e_test.yml
           wait_interval: 60
+          # TODO(yifeit): change this back to `main` when https://github.com/AI-Hypercomputer/torchprime/tree/yifeit/torchprime-ci is merged.
           ref: yifeit/torchprime-ci
-          client_payload: '{"docker_url": "gcr.io/tpu-pytorch/for-torchprime-ci:test"}'
+          client_payload: '{"docker_url": "gcr.io/tpu-pytorch/for-torchprime-ci:${{ steps.random_tag.outputs.uuid }}"}'
