@@ -3,7 +3,7 @@
 import math
 import collections.abc
 import functools
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple
 import numpy as np
 
 import jax
@@ -13,7 +13,7 @@ from jax.experimental.shard_map import shard_map
 
 import torch
 from torchax.ops.ops_registry import register_torch_function_op
-from torchax.ops import op_base, mappings, jaten
+from torchax.ops import op_base, mappings, jaten, jimage
 import torchax.tensor
 from torchax.view import View, NarrowInfo
 import torch.utils._pytree as pytree
@@ -512,3 +512,51 @@ def functional_linear(self, weights, bias=None):
   if bias is not None:
     res += bias
   return res
+
+
+
+@register_function(torch.nn.functional.interpolate)  
+def functional_interpolate(
+    input,
+    size: Tuple[int, int],
+    scale_factor: Optional[float],
+    mode: str,
+    align_corners: bool,
+    recompute_scale_factor: bool,
+    antialias: bool,
+):
+  supported_methods = (
+      "nearest",
+      "linear",
+      "bilinear",
+      "trilinear",
+      "cubic",
+      "bicubic",
+      "tricubic",
+      "lanczos3",
+      "lanczos5",
+  )
+  is_jax_supported = mode in supported_methods
+  if not is_jax_supported:
+    raise torchax.tensor.OperatorNotFound(
+        f"JAX does not support interpolation mode: {mode}. Supported modes are: {supported_methods}"
+    )
+  # None check
+  antialias = antialias or False
+  align_corners = align_corners or False
+  
+  if mode in ('cubic', 'bicubic', 'tricubic') and not antialias:
+    return jimage.interpolate_bicubic_no_aa(
+      input,
+      size[0],
+      size[1],
+      align_corners,
+    )
+  return jaten._aten_upsample(
+    input,
+    size,
+    align_corners,
+    antialias,
+    mode,
+    scale_factor,
+  )
