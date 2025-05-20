@@ -6,9 +6,9 @@ PyTorch and PyTorch/XLA use CI to lint, build, and test each PR that is submitte
 
 ### Pinning PyTorch PR in PyTorch/XLA PR
 
-Sometimes a PyTorch/XLA PR needs to be pinned to a specific PyTorch PR to test new featurues, fix breaking changes, etc. Since PyTorch/XLA CI pulls from PyTorch master by default, we need to manually provided a PyTorch pin. In a PyTorch/XLA PR, PyTorch an be manually pinned by creating a `.torch_pin` file at the root of the repository. The `.torch_pin` should have the corresponding PyTorch PR number prefixed by "#". Take a look at [example here](https://github.com/pytorch/xla/pull/7313). Before the PyTorch/XLA PR gets merged, the `.torch_pin` must be deleted.
+Sometimes a PyTorch/XLA PR needs to be pinned to a specific PyTorch PR to test new features, fix breaking changes, etc. Since PyTorch/XLA CI pulls from PyTorch master by default, we need to manually provide a PyTorch pin. In a PyTorch/XLA PR, PyTorch can be manually pinned by creating a `.torch_pin` file at the root of the repository. The `.torch_pin` should have the corresponding PyTorch PR number prefixed by "#". Take a look at [example here](https://github.com/pytorch/xla/pull/7313). Before the PyTorch/XLA PR gets merged, the `.torch_pin` must be deleted.
 
-### Coodinating merges for breaking PyTorch PRs
+### Coordinating merges for breaking PyTorch PRs
 
 When PyTorch PR introduces a breaking change, its PyTorch/XLA CI tests will fail. Steps for fixing and merging such breaking PyTorch change is as following:
 1. Create a PyTorch/XLA PR to fix this issue with `.torch_pin` and rebase with master to ensure the PR is up-to-date with the latest commit on PyTorch/XLA. Once this PR is created, it'll create a commit hash that will be used in step 2. If you have multiple commits in the PR, use the last one's hash. **Important note: When you rebase this PR, it'll create a new commit hash and make the old hash obsolete. Be cautious about rebasing, and if you rebase, make sure you inform the PyTorch PR's author.**
@@ -19,22 +19,23 @@ When PyTorch PR introduces a breaking change, its PyTorch/XLA CI tests will fail
 
 ### Running TPU tests on PRs
 
-By default, we only run TPU tests on a postsubmit basis to save capacity. If you are making a sensitive change, add the `tpuci` label to your PR. Note that the label must be present before `build_and_test.yml` triggers. If it has already run, make a new commit or rebase to trigger the CI again.
+The `build_and_test.yml` workflow runs tests on the TPU in addition to CPU and
+GPU. The set of tests run on the TPU is defined in `test/tpu/run_tests.sh`.
 
 ## CI Environment
 
-Before the CI in this repository runs, we build a the base dev image. These are the same images we recommend in our VSCode `.devcontainer` setup and nightly build to ensure consistency between environments. We produce variants with and without CUDA, configured in `infra/ansible` (build config) and `infra/tpu-pytorch-releases/dev_images.tf` (build triggers).
+Before the CI in this repository runs, we build a base dev image. These are the same images we recommend in our VSCode `.devcontainer` setup and nightly build to ensure consistency between environments. We produce variants with and without CUDA, configured in `infra/ansible` (build config) and `infra/tpu-pytorch-releases/dev_images.tf` (build triggers).
 
 The CI runs in two environments:
 
-1. Organization self-hosted runners for CPU and GPU: used for amost every step of the CI. These runners are managed by PyTorch and have access to the shared ECR repository.
-2. TPU self-hosted runners: these are managed by us and are only availabe in the `pytorch/xla` repository. See the [_TPU CI_](#tpu-ci) section for more details.
+1. Organization self-hosted runners for CPU and GPU: used for almost every step of the CI. These runners are managed by PyTorch and have access to the shared ECR repository.
+2. TPU self-hosted runners: these are managed by us and are only available in the `pytorch/xla` repository. See the [_TPU CI_](#tpu-ci) section for more details.
 
 ## Build and test (`build_and_test.yml`)
 
 We have two build paths for each CI run:
 
-- `torch_xla`: we build the main package to support for both TPU and GPU[^1], along with a CPU bild of `torch` from HEAD. This build step exports the `torch-xla-wheels` artifact for downstream use in tests.
+- `torch_xla`: we build the main package to support both TPU and GPU[^1], along with a CPU build of `torch` from HEAD. This build step exports the `torch-xla-wheels` artifact for downstream use in tests.
   - Some CI tests also require `torchvision`. To reduce flakiness, we compile `torchvision` from [`torch`'s CI pin](https://github.com/pytorch/pytorch/blob/main/.github/ci_commit_pins/vision.txt).
   - C++ tests are piggybacked onto the same build and uploaded in the `cpp-test-bin` artifact.
 - `torch_xla_cuda_plugin`: the XLA CUDA runtime can be built independently of either `torch` or `torch_xla` -- it depends only on our pinned OpenXLA. Thus, this build should be almost entirely cached, unless your PR changes the XLA pin or adds a patch.
@@ -43,7 +44,7 @@ Both the main package build and plugin build are configured with ansible at `inf
 
 The CPU and GPU test configs are defined in the same file, `_test.yml`. Since some of the tests come from the upstream PyTorch repository, we check out PyTorch at the same git rev as the `build` step (taken from `torch_xla.version.__torch_gitrev__`). The tests are split up into multiple groups that run in parallel; the `matrix` section of `_test.yml` corresponds to in `.github/scripts/run_tests.sh`.
 
-CPU tests run immediately after then `torch_xla` build completes. This will likely be the first test feedback on your commit. GPU tests will launch when both the `torch_xla` and `torch_xla_cuda_plugin` complete. GPU compilation is much slower due to the number of possible optimizations, and the GPU chips themselves are quite outdated, so these tests will take longer to run than the CPU tests.
+CPU tests run immediately after the `torch_xla` build completes. This will likely be the first test feedback on your commit. GPU tests will launch when both the `torch_xla` and `torch_xla_cuda_plugin` complete. GPU compilation is much slower due to the number of possible optimizations, and the GPU chips themselves are quite outdated, so these tests will take longer to run than the CPU tests.
 
 ![CPU tests launch when `torch_xla` is complete](../docs/assets/ci_test_dependency.png)
 
@@ -55,22 +56,22 @@ For the C++ test groups in either case, the test binaries are pre-built during t
 
 ### TPU CI
 
-The TPU CI runs only a subset of our tests due to capacity constraints, defined in `_tpu_ci.yml` `test/tpu/run_tests.sh`. The runners themselves are containers in GKE managed by [ARC](https://github.com/actions/actions-runner-controller). The container image is also based on our dev images, with some changes for ARC compatibility. The Dockerfile for this image lives in `test/tpu/Dockerfile`.
+The TPU CI workflow is defined in `_tpu_ci.yml`. It runs only a subset of our tests due to capacity constraints, defined in `test/tpu/run_tests.sh`. The runners themselves are containers in GKE managed by [ARC](https://github.com/actions/actions-runner-controller). The container image is also based on our dev images, with some changes for ARC compatibility. The Dockerfile for this image lives in `test/tpu/Dockerfile`.
 
-The actual ARC cluster is defined in Terraform at `infra/tpu-pytorch/tpu_ci.yml`.
+The actual ARC cluster is defined in Terraform at `infra/tpu-pytorch/tpu_ci.tf`.
 
 ### Reproducing test failures
 
 The best way to reproduce failures in the CI is to use the recommended container configuration in `.devcontainer`. These use identical images/environments as the CI.
 
-If you cannot reproduce the failure or need to inspect the package built in a CI run, you can download the `torch-xla-wheels` artifact for that run, [either locally in your web browser or remotely with the `gh` CLI tool](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts). C++ tests in particular can be quite slow to build. If you need to re-run these yourself, download the `cpp-test-bin` artifact. You'll have to set some additional environment variables for these to load the correct `torch` and plugin binaries, so you should copy the variables we set in `_test.yml` before runnign them.
+If you cannot reproduce the failure or need to inspect the package built in a CI run, you can download the `torch-xla-wheels` artifact for that run, [either locally in your web browser or remotely with the `gh` CLI tool](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts). C++ tests in particular can be quite slow to build. If you need to re-run these yourself, download the `cpp-test-bin` artifact. You'll have to set some additional environment variables for these to load the correct `torch` and plugin binaries, so you should copy the variables we set in `_test.yml` before running them.
 
 ### Generating docs
 
 Our API documentation is generated automatically from the `torch_xla` package with `sphinx`. The workflow to update our static site is defined in `_docs.yml`. The workflow is roughly the following:
 
 - Changes to `master` update the docs at `/master` on the `gh-pages` branch.
-- Changes to a release brance update the docs under `/releases/rX.Y`.
+- Changes to a release branch update the docs under `/releases/rX.Y`.
 
 By default, we redirect to the latest stable version, defined in [`index.md`](https://github.com/pytorch/xla/blob/gh-pages/index.md).
 
