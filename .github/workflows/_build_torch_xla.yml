@@ -37,8 +37,8 @@ jobs:
       image: ${{ inputs.dev-image }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
-      BAZEL_JOBS: 48
       BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+      BAZEL_JOBS: 48
       BUILD_CPP_TESTS: 1
     steps:
       # Need to check out local composite actions before using them
@@ -59,12 +59,6 @@ jobs:
         if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
-          lscpu
-          lsmem
-          echo "BAZEL_REMOTE_CACHE=${BAZEL_REMOTE_CACHE}"
-          echo "github.event_name=${{ github.event_name }}"
-          echo "github.event.pull_request.head.repo.full_name=${{ github.event.pull_request.head.repo.full_name }}"
-          echo "github.repository=${{ github.repository }}"
           cd pytorch/xla/infra/ansible
           ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel

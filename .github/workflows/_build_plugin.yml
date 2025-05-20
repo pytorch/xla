@@ -53,12 +53,6 @@ jobs:
         if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
-          lscpu
-          lsmem
-          echo "BAZEL_REMOTE_CACHE=${BAZEL_REMOTE_CACHE}"
-          echo "github.event_name=${{ github.event_name }}"
-          echo "github.event.pull_request.head.repo.full_name=${{ github.event.pull_request.head.repo.full_name }}"
-          echo "github.repository=${{ github.repository }}"
           cd pytorch/xla/infra/ansible
           ansible-playbook playbook.yaml -vvv -e "stage=build_plugin arch=amd64 accelerator=cuda cuda_compute_capabilities=5.2,7.5,8.6 src_root=${GITHUB_WORKSPACE} cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
