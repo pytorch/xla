@@ -33,7 +33,7 @@ jobs:
       image: ${{ inputs.dev-image }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
-      BAZEL_JOBS: 16
+      BAZEL_JOBS: ''  # Let bazel decide the parallelism based on the number of CPUs.
       BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Checkout actions
