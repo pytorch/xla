@@ -78,7 +78,7 @@ jobs:
       RUN_TORCH_MP_OP_TESTS: ${{ matrix.run_torch_mp_op_tests }}
       RUN_CPP_TESTS1: ${{ matrix.run_cpp_tests1 }}
       RUN_CPP_TESTS2: ${{ matrix.run_cpp_tests2 }}
-      BAZEL_JOBS: '' # Let bazel decide the parallelism based on the number of CPUs.
+      BAZEL_JOBS: ''  # Let bazel decide the parallelism based on the number of CPUs.
       BAZEL_REMOTE_CACHE: 1
     steps:
       - name: Checkout actions
