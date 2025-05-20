@@ -5,29 +5,19 @@ set -exo pipefail
 function parse_options_to_vars {
   # Default option values. Can be overridden via commandline flags.
   LOGFILE=/tmp/pytorch_py_test.log
-  MAX_GRAPH_SIZE=500
-  GRAPH_CHECK_FREQUENCY=100
   VERBOSITY=2
 
   # Parse commandline flags:
   #   -L
   #      disable writing to the log file at $LOGFILE.
-  #   -M max_graph_size
-  #   -C graph_check_frequency
   #   -V verbosity
   #   -h
   #      print the help string
-  while getopts 'LM:C:V:h' OPTION
+  while getopts 'LV:h' OPTION
   do
     case $OPTION in
       L)
         LOGFILE=
-        ;;
-      M)
-        MAX_GRAPH_SIZE=$OPTARG
-        ;;
-      C)
-        GRAPH_CHECK_FREQUENCY=$OPTARG
         ;;
       V)
         VERBOSITY=$OPTARG
