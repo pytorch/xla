@@ -33,7 +33,8 @@ jobs:
       image: ${{ inputs.dev-image }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
-      BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+      BAZEL_REMOTE_CACHE: 1
+      # ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Checkout actions
         if: inputs.has_code_changes == 'true'
@@ -52,6 +53,8 @@ jobs:
         if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
+          lscpu
+          lsmem
           echo "BAZEL_REMOTE_CACHE=${BAZEL_REMOTE_CACHE}"
           echo "github.event_name=${{ github.event_name }}"
           echo "github.event.pull_request.head.repo.full_name=${{ github.event.pull_request.head.repo.full_name }}"
