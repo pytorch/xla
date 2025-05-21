@@ -34,7 +34,7 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
 
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU")
   def test_zero1(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     model = nn.Linear(32, 32)
     x = torch.ones((32, 32))
@@ -89,7 +89,7 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     torch_xla.sync()
 
   def test_zero1_load(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     model = nn.Linear(32, 32)
     x = torch.ones((32, 32))
@@ -153,7 +153,7 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
 
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
   if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
     test = unittest.main(exit=False)
     sys.exit(0 if test.result.wasSuccessful() else 1)

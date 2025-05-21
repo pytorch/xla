@@ -70,7 +70,7 @@ class XlaMarkPatternTest(unittest.TestCase):
 
   def run_func_get_stablehlo(self, f, input_args):
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     input_args = pytree.tree_map_only(torch.Tensor,
                                       lambda x: x.to(device=device), input_args)
     exported = torch.export.export(AsModule(f), input_args)

@@ -17,7 +17,7 @@ class TrainResNetXLAAMP(TrainResNetBase):
     for step, (data, target) in enumerate(loader):
       self.optimizer.zero_grad()
       # Enables autocasting for the forward pass
-      with autocast(xm.xla_device()):
+      with autocast(torch_xla.device()):
         output = self.model(data)
         loss = self.loss_fn(output, target)
       # TPU amp uses bf16 hence gradient scaling is not necessary. If runnign with XLA:GPU

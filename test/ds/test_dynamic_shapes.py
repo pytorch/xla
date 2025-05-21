@@ -9,7 +9,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 import test_utils
 
 pd = torch._C._EnablePythonDispatcher()
-dev = xm.xla_device()
+dev = torch_xla.device()
 
 
 class TestDynamicShapes(test_utils.XlaTestCase):
@@ -163,7 +163,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t2_t.shape[1], 7)
 
   def test_nonzero_shape(self):
-    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=torch_xla.device())
     x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
         torch.nonzero(x, as_tuple=False), 0)
     self.assertEqual(x_dim0_shape.item(), 4)
@@ -176,14 +176,14 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t2.cpu(), t2_aten)
 
   def test_masked_select_shape(self):
-    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=torch_xla.device())
     mask = x.ge(2)
     x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
         torch.masked_select(x, mask), 0)
     self.assertEqual(x_dim0_shape.item(), 3)
 
   def test_nonzero_cast(self):
-    t1 = torch.ones(5, 2, device=xm.xla_device())
+    t1 = torch.ones(5, 2, device=torch_xla.device())
     # Result of the nonzero should be the index type. Currently
     # index type is s64 on cpu and gpu, but s32 on TPU. We should be
     # able to cast it to any other type without error.
@@ -191,7 +191,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     torch_xla.sync()
 
   def test_expand_symint_correctness(self):
-    dev = xm.xla_device()
+    dev = torch_xla.device()
     size1 = 5
     size2 = 2
     t1 = torch.ones([size1, size2])

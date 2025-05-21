@@ -139,7 +139,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       module (nn.Module):
           module to be wrapped with FSDP. If the input module's parameters
           and buffers are not already on XLA device, they will be cast to
-          ``xm.xla_device()`` (after sharding) during FSDP initialization.
+          ``torch_xla.device()`` (after sharding) during FSDP initialization.
       reshard_after_forward (bool, Optional):
           if ``True``, reshard parameters after the forward pass. This saves
           memory but slows training. This is only relevant when resharding
@@ -527,7 +527,7 @@ class XlaFullyShardedDataParallel(nn.Module):
         List[Parameter],
         self._fsdp_wrapped_module.flat_params) + non_flatten_params
 
-    self.xla_device = xm.xla_device()
+    self.xla_device = torch_xla.device()
     # Shard module parameters in place
     self._shard_parameters_(params_to_shard)
     # Cast the module buffers to the specified buffer_dtype
@@ -1014,7 +1014,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     A dummy forward pass with minimal computation that sums all inputs and
     full parameters, e.g. to debug parameter memory consumption.
     """
-    outputs = torch.zeros(1, device=xm.xla_device())
+    outputs = torch.zeros(1, device=torch_xla.device())
     for t in chain(args, kwargs.values(), self.full_params):
       if isinstance(t, torch.Tensor) and t.dtype == torch.float32:
         outputs = outputs + t.mean()
@@ -1646,7 +1646,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     if restart:
       self._tstart = time.time()
     if self.rank == 0:
-      memory_info = xm.get_memory_info(xm.xla_device())
+      memory_info = xm.get_memory_info(torch_xla.device())
       gb_free = memory_info["kb_free"] / 1024 / 1024
       gb_total = memory_info["kb_total"] / 1024 / 1024
       logging.info(

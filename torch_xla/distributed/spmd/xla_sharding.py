@@ -334,7 +334,7 @@ class HybridMesh(Mesh):
         A np.ndarray of device logical ordinals with shape [global_x, global_y, global_z]. On
           v2 and v3, global_z is instead cores_per_chip (i.e., 2).
     """
-    assert xm.xla_device_hw(xm.xla_device()) == 'TPU'
+    assert xm.xla_device_hw(torch_xla.device()) == 'TPU'
     # coords is a 3-dims tuple representing the device in physical mesh
     device_coords = [self.device_attributes[d]['coords'] for d in devices]
     dims = tuple(d + 1 for d in max(device_coords))
@@ -595,9 +595,9 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
       >>> num_devices = xr.global_runtime_device_count()
       >>> device_ids = np.array(range(num_devices))
       >>> mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
-      >>> input = torch.randn(8, 32).to(xm.xla_device())
+      >>> input = torch.randn(8, 32).to(torch_xla.device())
       >>> xs.mark_sharding(input, mesh, (0, None)) # 4-way data parallel
-      >>> linear = nn.Linear(32, 10).to(xm.xla_device())
+      >>> linear = nn.Linear(32, 10).to(torch_xla.device())
       >>> xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel
   """
   # We only allow fully specified `partition_spec` to be applicable, as opposed
@@ -793,7 +793,7 @@ class ShardingSpec:
 
   def apply(self, t: torch.Tensor):
     # TODO(yeounoh) use virtual device interface when available.
-    assert (t.device == xm.xla_device())
+    assert (t.device == torch_xla.device())
     mark_sharding(t, self.mesh, self.partition_spec)
 
 

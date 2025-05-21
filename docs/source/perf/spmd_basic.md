@@ -41,7 +41,7 @@ mesh_shape = (num_devices, 1)
 device_ids = np.array(range(num_devices))
 mesh = Mesh(device_ids, mesh_shape, ('data', 'model'))
 
-t = torch.randn(8, 4).to(xm.xla_device())
+t = torch.randn(8, 4).to(torch_xla.device())
 
 # Mesh partitioning, each device holds 1/8-th of the input
 partition_spec = ('data', 'model')

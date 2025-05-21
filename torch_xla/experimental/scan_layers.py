@@ -51,7 +51,7 @@ def scan_layers(layers: Iterable[torch.nn.Module],
     >>> import torch
     >>> import torch.nn as nn
     >>> from torch_xla.experimental.scan_layers import scan_layers
-    >>> with xm.xla_device():
+    >>> with torch_xla.device():
     >>>   layers = [nn.Linear(16, 16) for i in range(10)]
     >>>   input = torch.randn(16)
     >>> output = scan_layers(layers, input)

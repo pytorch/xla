@@ -29,8 +29,8 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
       raise unittest.SkipTest("Dtype {0} is unsupported by XLA".format(
           str(dtype)))
 
-    device = xm.xla_device()
-    real_device_type = xm.xla_device_hw(str(xm.xla_device()))
+    device = torch_xla.device()
+    real_device_type = xm.xla_device_hw(str(torch_xla.device()))
     if real_device_type == "TPU":
       raise unittest.SkipTest("TestPut is too slow on TPU. Skipped")
 
@@ -108,7 +108,7 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
       raise unittest.SkipTest("Dtype {0} is unsupported by XLA".format(
           str(dtype)))
 
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     # We just test for num_copy <= num_dest, as otherwise there are repeated indices
     # and the behavior is undefined

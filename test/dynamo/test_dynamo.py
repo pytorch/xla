@@ -49,7 +49,7 @@ class DynamoInPlaceTest(parameterized.TestCase):
   def test_inplace_update_correctness(self, backend):
     dynamo_inplace = torch.compile(
         self.inplace_update, backend=backend, fullgraph=True)
-    t = torch.tensor([0, 1, 2], device=xm.xla_device())
+    t = torch.tensor([0, 1, 2], device=torch_xla.device())
     for i in range(10):
       t = dynamo_inplace(t)
     self.assertTrue(torch.all(torch.eq(t.cpu(), torch.tensor([10, 11, 12]))))
@@ -66,7 +66,7 @@ class DynamRandomOpTest(parameterized.TestCase):
     met.clear_all()
     dynamo_random_op = torch.compile(
         self.random_op, backend=backend, fullgraph=True)
-    t = torch.randn(5, 5).to(xm.xla_device())
+    t = torch.randn(5, 5).to(torch_xla.device())
     dynamo_res_1 = dynamo_random_op(t)
     dynamo_res_2 = dynamo_random_op(t)
     dynamo_res_3 = dynamo_random_op(t)
@@ -89,7 +89,7 @@ class DynamoLTCInteractionTest(parameterized.TestCase):
     head_dim = 128
     running = 16
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     cache = torch.rand((cache_len, kv_heads, head_dim)).to(device)
     update_indices = torch.randint(
         0, cache_len, (running,), dtype=torch.long).to(device)
@@ -131,7 +131,7 @@ class DynamoProfilerTest(parameterized.TestCase):
   def test_dynamo_with_trace(self):
     dynamo_dummy = torch.compile(
         self.dummy_fn, backend="openxla", fullgraph=True)
-    t = torch.randn(2, 3, 4, device=xm.xla_device())
+    t = torch.randn(2, 3, 4, device=torch_xla.device())
     for i in range(10):
       with xp.Trace('build_graph'):
         t = dynamo_dummy(t)
@@ -150,7 +150,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
 
   def _choose_proper_device(self, initialize_on_cuda):
     if not initialize_on_cuda:
-      return xm.xla_device()
+      return torch_xla.device()
 
     assert initialize_on_cuda
     if xr.device_type() != "CUDA" or not torch.cuda.is_available():
@@ -164,7 +164,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
 
   @skipOnNeuron
   def test_simple_model(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     x = torch.tensor(100.0)
     y = torch.tensor(200.0)
     xla_x = x.to(device)
@@ -448,7 +448,7 @@ class DynamoCpuFallbackTest(parameterized.TestCase):
 
     torch._dynamo.reset()
     met.clear_all()
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     # Initial tracing
     dynamo_fn = torch.compile(fn_fallback, backend="openxla")
@@ -488,7 +488,7 @@ class DynamoCpuFallbackTest(parameterized.TestCase):
 
     torch._dynamo.reset()
     met.clear_all()
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     # Initial tracing
     dynamo_fn = torch.compile(fn_fallback, backend="openxla")
@@ -541,7 +541,7 @@ class DynamoTrainingBasicTest(parameterized.TestCase):
 
   def test_simple_model(self):
     torch._dynamo.reset()
-    device = xm.xla_device()
+    device = torch_xla.device()
     input = torch.randn(3, 5, requires_grad=True)
     xla_input = input.detach().to(device)
     xla_input.requires_grad = True
@@ -577,7 +577,7 @@ class DynamoTrainingBasicTest(parameterized.TestCase):
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
-    device = xm.xla_device()
+    device = torch_xla.device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
@@ -650,7 +650,7 @@ class DynamoTrainingOptimizerTest(parameterized.TestCase):
 
   def test_simple_model(self):
     torch._dynamo.reset()
-    device = xm.xla_device()
+    device = torch_xla.device()
     input = torch.randn(3, 5, requires_grad=True)
     saved_input = input.detach().to(device).cpu()
     xla_input = input.detach().to(device)
@@ -673,7 +673,7 @@ class DynamoTrainingOptimizerTest(parameterized.TestCase):
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
-    device = xm.xla_device()
+    device = torch_xla.device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
@@ -732,7 +732,7 @@ class DynamoTrainingOptimizerTest(parameterized.TestCase):
 class DynamoErrorMessageTest(parameterized.TestCase):
 
   def test_mixed_cpu_tensor(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     input = torch.randn(4, 3, 224, 224)
     input_xla = input.clone().to(device)
     resnet18 = torchvision.models.resnet18()
@@ -783,7 +783,7 @@ class DynamoOperationsTest(test_utils.XlaTestCase, parameterized.TestCase):
     optfoo = torch.compile(backend=backend)(foo)
 
     t = torch.arange(9)
-    Xt = t.to(xm.xla_device())
+    Xt = t.to(torch_xla.device())
 
     expected = foo(t)
     actual = optfoo(Xt).cpu()
@@ -803,7 +803,7 @@ class DynamoOperationsTest(test_utils.XlaTestCase, parameterized.TestCase):
     optfoo = torch.compile(backend=backend)(foo)
 
     t = torch.arange(10)
-    Xt = t.to(xm.xla_device())
+    Xt = t.to(torch_xla.device())
 
     expected = foo(t)
     actual = optfoo(Xt)

@@ -384,7 +384,7 @@ class XlaTestCase(unittest.TestCase):
 
   def runAtenTest(self, tensors, fn, device=None, rel_err=1e-2, abs_err=1e-5):
     if device is None:
-      device = xm.xla_device()
+      device = torch_xla.device()
     tensors = xu.as_list(tensors)
     xla_tensors = [
         x.to(device).detach().requires_grad_(x.requires_grad) for x in tensors

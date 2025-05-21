@@ -35,7 +35,7 @@ def _get_data_str(data):
 
 
 def _mp_fn(index, temp_file):
-  device = xm.xla_device()
+  device = torch_xla.device()
   dd = _create_state_dict(device)
   xm.save(dd, temp_file)
   # User needs to manually rendezvous since only master process

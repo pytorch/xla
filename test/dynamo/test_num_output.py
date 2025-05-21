@@ -59,7 +59,7 @@ class DirectReturnWithDuplicatedInplaceUpdateModule(nn.Module):
 class TestNumOutput(unittest.TestCase):
 
   def do_test(self, model_class, expected_num_output):
-    xla_dev = xm.xla_device()
+    xla_dev = torch_xla.device()
     model = model_class().to(device=xla_dev)
     inputs = tree_map_only(torch.Tensor, lambda x: x.to(device=xla_dev),
                            model.get_example_inputs())

@@ -19,7 +19,7 @@ from torch_xla.utils.stablehlo_test_utils import (
     compare_exported_program_and_saved_model_result, has_tf_package,
     load_save_model_and_inference, wrap_func_as_nn_module)
 
-device = xm.xla_device()
+device = torch_xla.device()
 os.environ['EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM'] = '1'
 
 

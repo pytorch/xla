@@ -48,7 +48,7 @@ scaler = torch.randn((N_OUTPUT_FEATURES,), dtype=torch.bfloat16)
 # Call with torch CPU tensor (For debugging purpose)
 matmul_output = torch.ops.xla.quantized_matmul(x, w_int, scaler)
 
-device = xm.xla_device()
+device = torch_xla.device()
 x_xla = x.to(device)
 w_int_xla = w_int.to(device)
 scaler_xla = scaler.to(device)

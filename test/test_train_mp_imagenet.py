@@ -250,7 +250,7 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  device = xm.xla_device()
+  device = torch_xla.device()
   model = get_model_property('model_fn')().to(device)
 
   # Initialization is nondeterministic with multiple threads in PjRt.

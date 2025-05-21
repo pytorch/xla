@@ -16,7 +16,7 @@ def _mp_fn(index):
     assert False, "This test should be run with PT_XLA_DEBUG_FILE"
   if index == 0:
     open(debug_file_name, 'w').close()
-  device = xm.xla_device()
+  device = torch_xla.device()
   t1 = torch.randn(10, 10, device=device)
   t2 = t1 * 100
   torch_xla.sync()

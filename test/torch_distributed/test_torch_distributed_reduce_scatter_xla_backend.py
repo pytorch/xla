@@ -9,7 +9,7 @@ import torch.distributed as dist
 
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
   if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
     world_size = xr.world_size()
     rank = xr.global_ordinal()

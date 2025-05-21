@@ -67,7 +67,7 @@ class StableHLOInferenceTest(unittest.TestCase):
     output = m(*data)
     exported = export_torch_model(m, data)
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = pytree.tree_map_only(torch.Tensor, lambda x: x.to(device), data)
     output2 = exported(*data).cpu()
 
@@ -91,7 +91,7 @@ class StableHLOInferenceTest(unittest.TestCase):
 
     output = m(*data)
     exported = export_torch_model(m, data)
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = pytree.tree_map_only(torch.Tensor, lambda x: x.to(device), data)
     output2 = exported(*data)
     self.assertEqual(len(output2), 2)

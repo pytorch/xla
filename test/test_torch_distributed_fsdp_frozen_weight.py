@@ -7,7 +7,7 @@ from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP
 
 
 def _mp_fn(index):
-  dev = xm.xla_device()
+  dev = torch_xla.device()
   if xm.xla_device_hw(dev) not in ('TPU', 'CUDA'):
     print(
         'Default device {} is not a TPU or CUDA device'.format(dev),
@@ -19,7 +19,7 @@ def _mp_fn(index):
 
   model = FSDP(model)  # wrapping the linear module with FSDP
 
-  input = torch.rand((2, 1024), device=xm.xla_device())
+  input = torch.rand((2, 1024), device=torch_xla.device())
 
   output = model(input)
   loss = torch.sum(output)

@@ -10,7 +10,7 @@ def all_reduce(tensor):
 
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
   world_size = xr.world_size()
   if world_size > 1:
     ones = torch.ones((2, 3))

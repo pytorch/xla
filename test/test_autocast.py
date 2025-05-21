@@ -282,7 +282,7 @@ class TestAutocastBase(unittest.TestCase):
       add_kwargs = {}
 
     self.assertFalse(self.is_autocast_enabled())
-    with autocast(xm.xla_device(), dtype=autocast_dtype):
+    with autocast(torch_xla.device(), dtype=autocast_dtype):
       self.assertTrue(self.is_autocast_enabled())
 
       out_type = out_type if out_type is not None else run_as_type
@@ -332,7 +332,7 @@ class TestAutocastBase(unittest.TestCase):
       # Compare numerics to Python-side "autocasting" that (we expect) does the same thing
       # as the C++-side autocasting, and should be bitwise accurate.
       output_to_compare = output if output is not None else output_method
-      with autocast(xm.xla_device(), enabled=False):
+      with autocast(torch_xla.device(), enabled=False):
         self.assertFalse(self.is_autocast_enabled())
 
         if module is not None and hasattr(module, op):
@@ -355,9 +355,9 @@ class TestAutocastCuda(TestAutocastBase):
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
-    cls.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
+    cls.autocast_lists = AutocastTestLists(torch.device(torch_xla.device()))
     cls.autocast_lists_extra = AutocastCudaTestExtraLists(
-        torch.device(xm.xla_device()))
+        torch.device(torch_xla.device()))
     cls.autocast_unsupported_lists = AutocastCudaTestUnsupportedLists()
 
   def setUp(self):
@@ -439,7 +439,7 @@ class TestAutocastTPU(TestAutocastBase):
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
-    cls.autocast_lists = AutocastTPUTestLists(torch.device(xm.xla_device()))
+    cls.autocast_lists = AutocastTPUTestLists(torch.device(torch_xla.device()))
 
   def setUp(self):
     super(TestAutocastTPU, self).setUp()
@@ -481,7 +481,7 @@ class TestAutocastTPU(TestAutocastBase):
           op, args, torch.float32, module=None, out_type=out_type)
 
   def test_autocast_tpu_check_dtype(self):
-    with autocast(xm.xla_device(), dtype=torch.float16):
+    with autocast(torch_xla.device(), dtype=torch.float16):
       assert not torch.is_autocast_xla_enabled()
 
 
@@ -491,7 +491,7 @@ class TestOtherOps(unittest.TestCase):
       not xm.get_xla_supported_devices("GPU"),
       "the behavior of batch_norm autocast on GPU is different from others")
   def test_batch_norm_gpu(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = torch.randn(4, 16, 32, 32, device=device, dtype=torch.bfloat16)
     batch_norm = torch.nn.BatchNorm2d(16)
     with autocast(device, dtype=torch.bfloat16):
@@ -504,7 +504,7 @@ class TestOtherOps(unittest.TestCase):
       not xm.get_xla_supported_devices("TPU"),
       "the behavior of batch_norm autocast on TPU is different from others")
   def test_batch_norm_tpu(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = torch.randn(4, 16, 32, 32, device=device, dtype=torch.bfloat16)
     batch_norm = torch.nn.BatchNorm2d(16)
     with autocast(device, dtype=torch.bfloat16):

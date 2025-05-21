@@ -20,7 +20,7 @@ dummy_model = torch.nn.Sequential(
 class PybindTest(unittest.TestCase):
 
   def test_get_tensors_xla_device_data_node(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.randn(20, 5).to(xla_device)
     t2 = torch.randn(20, 5).to(xla_device)
     t3 = t2 + t1
@@ -42,7 +42,7 @@ class PybindTest(unittest.TestCase):
     assert (expected_tensor_ids == sorted(res_pair[0]))
 
   def test_get_base_seed_as_tensor(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     xm.set_rng_state(23, str(device))
     base_seed = torch_xla._XLAC._get_base_seed_as_tensor(str(device)).item()
     self.assertEqual(23, base_seed)
@@ -51,7 +51,7 @@ class PybindTest(unittest.TestCase):
     self.assertEqual(torch_xla._XLAC._get_seed_info_id(), -127389)
 
   def test_check_tensor_need_materialization(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.randn(20, 5)
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
     t1 = t1.to(xla_device)
@@ -67,7 +67,7 @@ class PybindTest(unittest.TestCase):
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [True])
 
   def test_get_graph_hash(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_input = torch.randn(64, 256, 14, 14).to(xla_device)
     xla_dummy_model = dummy_model.to(xla_device)
     xla_out = xla_dummy_model(xla_input)
@@ -85,7 +85,7 @@ class PybindTest(unittest.TestCase):
     assert (hash == torch_xla._XLAC._get_graph_hash([xla_out_2]))
 
   def test_clear_pending_irs(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     torch_xla.sync()
     t1 = torch.randn(20, 5).to(xla_device)
     t2 = torch.randn(20, 5).to(xla_device)
@@ -104,7 +104,7 @@ class PybindTest(unittest.TestCase):
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
   def test_run_cached_graph(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_input = torch.randn(64, 256, 14, 14).to(xla_device)
     xla_dummy_model = dummy_model.to(xla_device)
     xla_out = xla_dummy_model(xla_input)

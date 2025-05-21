@@ -21,7 +21,7 @@ class StableHloCompileTest(unittest.TestCase):
     torch_input = torch.tensor(np_input).float()
     cpu_output = resnet18(torch_input)
     # Run ResNet on XLA device.
-    device = xm.xla_device()
+    device = torch_xla.device()
     # materalize the fake data for test purpose
     torch_xla.sync()
     xm.wait_device_ops()

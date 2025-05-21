@@ -6,7 +6,7 @@ import unittest
 
 import torch_xla.distributed.spmd.xla_sharding as xs
 
-device = xm.xla_device()
+device = torch_xla.device()
 
 
 class TestAutocastXla(unittest.TestCase):

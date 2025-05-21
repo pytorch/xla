@@ -179,7 +179,7 @@ def onlyIfPJRTDeviceIsCUDA(fn):
 class TestToXlaTensorArena(test_utils.XlaTestCase):
 
   def test(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
 
     kdata = [_gen_tensor(2, 3), _gen_tensor(3, 4)]
     kdata.append([_gen_tensor(2, 5), _gen_tensor(3, 6)])
@@ -307,7 +307,7 @@ class TestParallelTensorMNIST(test_utils.XlaTestCase):
 class TestLongGraphChain(test_utils.XlaTestCase):
 
   def test(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     orig_x = torch.Tensor([[1, 2], [3, 4]])
     orig_y = torch.Tensor([[0.1, 0.2], [0.3, 0.4]])
     x = orig_x
@@ -328,7 +328,7 @@ class TestLongGraphChain(test_utils.XlaTestCase):
 class TestSelect(test_utils.XlaTestCase):
 
   def test_get_xla_tensor(self):
-    x = _gen_tensor(14, 24, 8, device=xm.xla_device())
+    x = _gen_tensor(14, 24, 8, device=torch_xla.device())
     t = x.data.cpu()
     sx = x.select(1, 12)
     tx = t.select(1, 12)
@@ -343,7 +343,7 @@ class TestSelect(test_utils.XlaTestCase):
       # Call masked_fill.
       return tensor.masked_fill(mask, 10)
 
-    x = _gen_tensor(2, 2, device=xm.xla_device())
+    x = _gen_tensor(2, 2, device=torch_xla.device())
     x_cpu = x.cpu()
     self.assertEqual(fn(x_cpu), fn(x))
 
@@ -352,7 +352,7 @@ class TestRandom(test_utils.XlaTestCase):
 
   def test_random_from_to_bool(self):
     for from_val, to_val in [[0, 1], [0, 2], [1, 2]]:
-      x = _gen_tensor(10, device=xm.xla_device())
+      x = _gen_tensor(10, device=torch_xla.device())
       x.random_(from_val, to_val)
       delta = 1
       self.assertTrue(from_val <= x.to(torch.int).min() < (from_val + delta))
@@ -416,20 +416,20 @@ class TestInterOpSyncTensors(test_utils.XlaTestCase):
 class TestDynamicShape(test_utils.XlaTestCase):
 
   def test_nonzero_shape(self):
-    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=torch_xla.device())
     x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
         torch.nonzero(x, as_tuple=False), 0)
     self.assertEqual(x_dim0_shape.item(), 4)
 
   def test_masked_select_shape(self):
-    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=torch_xla.device())
     mask = x.ge(2)
     x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
         torch.masked_select(x, mask), 0)
     self.assertEqual(x_dim0_shape.item(), 3)
 
   def test_nonzero_cast(self):
-    t1 = torch.ones(5, 2, device=xm.xla_device())
+    t1 = torch.ones(5, 2, device=torch_xla.device())
     # Result of the nonzero should be the index type. Currently
     # index type is s64 on cpu and gpu, but s32 on TPU. We should be
     # able to cast it to any other type without error.
@@ -440,7 +440,7 @@ class TestDynamicShape(test_utils.XlaTestCase):
 class TestOptimizationBarrier(test_utils.XlaTestCase):
 
   def test_optimization_barrier_correctness(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     # only test optimization_barrier on TPU
     if xm.xla_device_hw(device) != 'TPU':
       return
@@ -459,7 +459,7 @@ class TestDataType(test_utils.XlaTestCase):
       return xb.Op.tuple((a, a.cast(xb.Type.BF16)))
 
     op = xor.register('test_mixed_dtype_tuple', op_fn)
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a_tensor = torch.randn([2, 3]).to(xla_device)
     a_result, a_cast = op(a_tensor)
     self.assertEqual(a_result.dtype, torch.float)
@@ -476,14 +476,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_negative_slice(self):
     t = _gen_tensor(32, 24, 32)
-    x = t.to(xm.xla_device())
+    x = t.to(torch_xla.device())
     t_slice = t[:, :, -1]
     x_slice = x[:, :, -1]
     self.assertEqual(t_slice.data, x_slice.data.cpu())
 
   def test_negative_cat(self):
     t = _gen_tensor(2, 5, 3)
-    x = t.to(xm.xla_device())
+    x = t.to(torch_xla.device())
     t_cat = torch.cat([t, t], -1)
     x_cat = torch.cat([x, x], -1)
     self.assertEqual(t_cat.data, x_cat.data.cpu())
@@ -491,8 +491,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_cat_empty_tensor(self):
     t = _gen_tensor(2, 5, 3)
     empty_tensor = torch.Tensor()
-    x = t.to(xm.xla_device())
-    empty_tensor_xla = empty_tensor.to(xm.xla_device())
+    x = t.to(torch_xla.device())
+    empty_tensor_xla = empty_tensor.to(torch_xla.device())
     t_cat = torch.cat([t, empty_tensor], 0)
     x_cat = torch.cat([x, empty_tensor_xla], 0)
     self.assertEqual(t_cat.data, x_cat.data.cpu())
@@ -530,7 +530,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     found_inf_output0 = torch.tensor(0, dtype=torch.float32)
     found_inf_output1 = torch.tensor(1, dtype=torch.float32)
 
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_grads0 = grads0.to(xla_device)
     xla_inv_scale = inv_scale.to(xla_device)
     xla_found_inf = found_inf.to(xla_device)
@@ -550,9 +550,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     input = _gen_tensor(2, 5, 4, 3)
     mask = _gen_mask(input.size())
     value = torch.tensor(42)
-    xla_input = input.to(xm.xla_device())
-    xla_mask = mask.to(xm.xla_device())
-    xla_value = value.to(xm.xla_device())
+    xla_input = input.to(torch_xla.device())
+    xla_mask = mask.to(torch_xla.device())
+    xla_value = value.to(torch_xla.device())
     result = torch.masked_fill(input, mask, value)
     xla_result = torch.masked_fill(xla_input, xla_mask, xla_value)
     self.assertEqual(input.data, xla_input.data.cpu())
@@ -571,63 +571,63 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_add_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
-    xla_input = input.to(xm.xla_device())
+    xla_input = input.to(torch_xla.device())
     output = input + 2
     xla_output = xla_input + 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
   def test_mul_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
-    xla_input = input.to(xm.xla_device())
+    xla_input = input.to(torch_xla.device())
     output = input * 2
     xla_output = xla_input * 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
   def test_sub_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
-    xla_input = input.to(xm.xla_device())
+    xla_input = input.to(torch_xla.device())
     output = input - 2
     xla_output = xla_input - 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
   def test_div_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
-    xla_input = input.to(xm.xla_device())
+    xla_input = input.to(torch_xla.device())
     output = input / 2
     xla_output = xla_input / 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
   def test_rand(self):
-    x = torch.rand(3, 5, device=xm.xla_device())
+    x = torch.rand(3, 5, device=torch_xla.device())
     self.assertEqual(x.device.type, 'xla')
 
   def test_randperm(self):
-    x = torch.randperm(3, device=xm.xla_device(), dtype=torch.int32)
+    x = torch.randperm(3, device=torch_xla.device(), dtype=torch.int32)
     self.assertEqual(x.device.type, 'xla')
 
   def test_randn_like(self):
     shape = (5, 1, 1)
-    x = torch.randn_like(torch.zeros(shape, device=xm.xla_device()))
+    x = torch.randn_like(torch.zeros(shape, device=torch_xla.device()))
     self.assertEqual(x.device.type, 'xla')
 
   def test_rand_like(self):
     shape = (5, 1, 1)
-    x = torch.rand_like(torch.zeros(shape, device=xm.xla_device()))
+    x = torch.rand_like(torch.zeros(shape, device=torch_xla.device()))
     self.assertEqual(x.device.type, 'xla')
 
   def test_randint_like(self):
     shape = (5, 1, 1)
     x = torch.randint_like(
-        torch.zeros(shape, device=xm.xla_device(), dtype=torch.uint8), 6, 10)
+        torch.zeros(shape, device=torch_xla.device(), dtype=torch.uint8), 6, 10)
     self.assertEqual(x.device.type, 'xla')
 
   def test_no_storage(self):
-    x = torch.randn(5, device=xm.xla_device())
+    x = torch.randn(5, device=torch_xla.device())
     self.assertRaises(Exception, x.device)
 
   def test_slice_copy(self):
     a = torch.rand(3, 3, 3)
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_a = a.to(xla_device)
     shape = (4, 4, 4)
     b = a.new(*shape).zero_()
@@ -638,7 +638,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_slice_assign(self):
     a = torch.rand(3, 3, 3)
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_a = a.to(xla_device)
     shape = (4, 4, 4)
     b = a.new(*shape).zero_()
@@ -649,7 +649,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_slice_stepped_assign(self):
     a = torch.ones((10, 4))
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_a = a.to(xla_device)
     a[:, 0::2] = 2
     xla_a[:, 0::2] = 2
@@ -657,14 +657,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_slice_stepped_other_assign(self):
     a = torch.ones((10, 4))
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_a = a.to(xla_device)
     a[:, 1::4] = 2
     xla_a[:, 1::4] = 2
     self.assertEqual(a.data, xla_a.data.cpu())
 
   def test_ailing_slice(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.ones((1000, 324)).to(xla_device)
     xla_a = a.to(xla_device)
     w = a[:, 2::4]
@@ -674,7 +674,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(w.data, xla_w.data.cpu())
 
   def test_slice_rnd_stepped_assign(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     size = 10
     for s in range(0, size - 1):
       for e in range(1, size - s):
@@ -686,12 +686,12 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_arange_nan(self):
     with self.assertRaisesRegex(RuntimeError, r'unsupported range'):
-      a = torch.arange(-5, float('nan'), device=xm.xla_device())
+      a = torch.arange(-5, float('nan'), device=torch_xla.device())
     with self.assertRaisesRegex(RuntimeError, r'unsupported range'):
-      a = torch.arange(float('nan'), 5, device=xm.xla_device())
+      a = torch.arange(float('nan'), 5, device=torch_xla.device())
 
   def test_empty_advanced_indexing(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     base = torch.randn(2, 3, 4, 5)
     xla_base = base.to(device=xla_device)
     result = base[:, torch.empty(0, 6, dtype=torch.int64)]
@@ -702,7 +702,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       "grad_input produces wrong results after functionalization. pytorch/pytorch#91199"
   )
   def test_empty_strided(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     m = nn.Conv1d(4, 6, kernel_size=3, groups=2)
     a = torch.rand(2, 4, 6, requires_grad=True)
     xla_m = copy.deepcopy(m).to(xla_device)
@@ -730,13 +730,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_clamp(self):
     a = torch.randn(3, 3)
-    xla_a = a.to(xm.xla_device())
+    xla_a = a.to(torch_xla.device())
     b = torch.clamp(a, max=3.4)
     xla_b = torch.clamp(xla_a, max=3.4)
     self.assertEqual(b.data, xla_b.data.cpu())
 
   def test_rrelu_module(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.rand(1, 2, 2, requires_grad=True)
     xla_a = a.to(xla_device).detach()
     xla_a.requires_grad = True
@@ -753,7 +753,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(a.grad, xla_a.grad.cpu())
 
   def test_max_broadcast(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.rand(3, 1, 2)
     b = torch.rand(4, 2)
     c = torch.max(a, b)
@@ -763,7 +763,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(c.data, xla_c.data.cpu())
 
   def test_sgn(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t = torch.randn(2, 3, dtype=torch.cfloat)
     # Generate inf+infj
     t[0][0].real.div_(0)
@@ -847,7 +847,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         torch_xla._XLAC._get_xla_tensors_text([complex]).split('\n')[-3])
 
   def test_index_put(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.tensor([1, 1, 1, 1]).to(xla_device).to(dtype=torch.float32)
     b = torch.rand(4) > 0.1
     a[b] = 10
@@ -891,7 +891,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_view_empty(self):
     # These used to throw floating point exception.
-    empty = torch.empty(0, device=xm.xla_device())
+    empty = torch.empty(0, device=torch_xla.device())
     with self.assertRaisesRegex(
         RuntimeError, r'unspecified dimension size -1 can be any value'):
       empty.view(-1, 0)
@@ -912,12 +912,12 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       return loss, linear.weight.grad
 
     cpu_loss, cpu_weight_grad = test_fn('cpu')
-    xla_loss, xla_weight_grad = test_fn(xm.xla_device())
+    xla_loss, xla_weight_grad = test_fn(torch_xla.device())
     self.assertEqual(cpu_loss, xla_loss)
     self.assertEqual(cpu_weight_grad, xla_weight_grad)
 
   def test_inplace_view_backprop_base(self):
-    root = torch.randn(2, 2, device=xm.xla_device(), requires_grad=True)
+    root = torch.randn(2, 2, device=torch_xla.device(), requires_grad=True)
     x = root.clone()
     v1 = x.narrow(0, 0, 1)
     v1.mul_(2)
@@ -925,7 +925,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(root.grad.tolist(), [[2, 2], [1, 1]])
 
   def test_inplace_view_backprop_view_of_view(self):
-    root = torch.randn(2, 2, device=xm.xla_device(), requires_grad=True)
+    root = torch.randn(2, 2, device=torch_xla.device(), requires_grad=True)
     x = root.clone()
     v1 = x.narrow(0, 0, 1)
     v2 = x.narrow(0, 0, 1)
@@ -935,7 +935,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_inplace_view_of_view(self):
     # modify view-of-view and backprop through base
-    root = torch.randn(2, 2, device=xm.xla_device(), requires_grad=True)
+    root = torch.randn(2, 2, device=torch_xla.device(), requires_grad=True)
     x = root.clone()
     v1 = x.narrow(0, 0, 1)
     v2 = v1.narrow(1, 1, 1)
@@ -945,7 +945,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_inplace_view_multiple_outputs(self):
     root = torch.arange(
-        9., device=xm.xla_device()).reshape(3, 3).requires_grad_()
+        9., device=torch_xla.device()).reshape(3, 3).requires_grad_()
     x = root.clone()
     v1 = x.unbind()
     with self.assertRaises(RuntimeError):
@@ -986,7 +986,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_inplace_view_backprop_view(self):
     # modify view and backprop through view
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.tensor([2., 5.], device=xla_device, requires_grad=False)
     b = torch.tensor([3.], device=xla_device, requires_grad=True)
     res = a.narrow(0, 1, 1).mul_(b)
@@ -1040,7 +1040,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_inplace_view_non_contig(self):
     root = torch.ones(
-        2, 3, 2, device=xm.xla_device()).select(2, 1).t().requires_grad_(True)
+        2, 3, 2, device=torch_xla.device()).select(2,
+                                                   1).t().requires_grad_(True)
     x = root.clone()
     v1 = x.narrow(0, 0, 1)
     v2 = v1.narrow(1, 1, 1)
@@ -1079,12 +1080,12 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_set(self):
     met.clear_all()
 
-    t1 = torch.zeros(50, device=xm.xla_device())
+    t1 = torch.zeros(50, device=torch_xla.device())
     t1 += 1
     torch_xla.sync()
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
 
-    t2 = torch.zeros(10, device=xm.xla_device())
+    t2 = torch.zeros(10, device=torch_xla.device())
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
 
     t1.set_(t2)
@@ -1097,12 +1098,12 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_replace_xla_tensor(self):
     met.clear_all()
 
-    t1 = torch.zeros(50, device=xm.xla_device())
+    t1 = torch.zeros(50, device=torch_xla.device())
     t1 += 1
     torch_xla.sync()
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
 
-    t2 = torch.zeros(10, device=xm.xla_device())
+    t2 = torch.zeros(10, device=torch_xla.device())
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
     torch_xla._XLAC._replace_xla_tensor(t1, t2)
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 5)
@@ -1111,7 +1112,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
 
   def test_pred_type(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.rand(4)
     b = torch.rand(4)
     xla_a = a.to(xla_device)
@@ -1133,7 +1134,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest(c, lambda x: x ^ x.byte())
 
   def test_bitwise_and_not(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.randint(255, (4,), dtype=torch.long)
     xla_a = a.to(xla_device)
 
@@ -1143,27 +1144,27 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest(a, test_fn)
 
   def test_s_copy_dtype(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.rand(10).to(xla_device).to(dtype=torch.uint8)
     b = torch.tensor([0, 1, 2, 3]).to(xla_device)
     self.assertEqual(a[b].dtype, torch.uint8)
 
   def test_slice_zero_sized_dim(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     v = torch.randn(2, 3, 4, 5).to(xla_device)
     y = v[:, :, :, 1]
     z = y[:, 1:1, :]
     self.assertEqual(z.size()[1], 0)
 
   def test_byte_dtype(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     x = torch.ByteTensor([0, 1]).to(xla_device)
     y = torch.ByteTensor([0, 1]).to(xla_device)
     z = x + y
     self.assertEqual(z.dtype, torch.uint8)
 
   def test_frac_negative(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.tensor(-3.2)
     b = a.frac()
     xla_a = a.to(xla_device)
@@ -1171,7 +1172,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(b, xla_b)
 
   def test_flip(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
     self.assertEqual(
         torch.tensor([5, 6, 7, 8, 1, 2, 3, 4]).view(2, 2, 2), data.flip(0))
@@ -1194,7 +1195,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         torch.tensor([6, 5, 8, 7, 2, 1, 4, 3]).view(2, 2, 2), data.flip(2, 0))
 
   def test_flip_check_throws(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
     # not allow flip on the same dim more than once
     self.assertRaises(RuntimeError, lambda: data.flip(0, 1, 1))
@@ -1206,7 +1207,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertRaises(RuntimeError, lambda: data.flip(3))
 
   def test_flip_expand(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
     expanded_data = torch.arange(1, 4, device=device).view(3, 1).expand(3, 2)
     transposed_data = torch.arange(
@@ -1218,7 +1219,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         transposed_data.flip(0, 1, 2))
 
   def test_flip_shape(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = torch.randn(2, 3, 4, device=device)
     size = [2, 3, 4]
     test_dims = []
@@ -1228,7 +1229,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       self.assertEqual(size, list(data.flip(ds).size()))
 
   def test_flip_rectangular(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = torch.tensor([1, 2, 3, 4, 5, 6]).view(2, 3).to(device)
     flip0_result = torch.tensor([[4, 5, 6], [1, 2, 3]]).to(device)
     flip1_result = torch.tensor([[3, 2, 1], [6, 5, 4]]).to(device)
@@ -1237,13 +1238,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(flip1_result, data.flip(1))
 
   def test_flip_empty_tensor(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = torch.tensor([])
     self.assertEqual(data, data.flip(0))
 
   def test_norm_p0(self):
     # p = 0 is equivalent to nonzero
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.randn(3, 2)
     xla_a = a.to(xla_device)
     norm = a.norm(p=0)
@@ -1289,7 +1290,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest([torch.zeros(3, 3), torch.ones(3)], test_fn)
 
   def test_scatter_add_bool(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.tensor([[True, True, True, True, True],
                       [True, True, True, True, True]])
     b = torch.zeros(3, 5, dtype=torch.bool)
@@ -1334,7 +1335,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest(torch.rand(2, 0, 4), lambda x: torch.mean(x))
     self.runAtenTest(torch.rand(2, 0, 4), lambda x: torch.prod(x))
     # min & max throws
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     a = torch.rand(2, 0, 4)
     xla_a = a.to(xla_device)
     self.assertRaises(IndexError, lambda: torch.max(a, dim=1))
@@ -1470,11 +1471,11 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       d = a
       xm.check_view_sharing([a, d])
 
-    check(xm.xla_device())
+    check(torch_xla.device())
     check(torch.device('cpu'))
 
   def test_save(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     x = torch.randn(5, device=xla_device)
     with tempfile.NamedTemporaryFile() as tf:
       torch.save(x, tf)
@@ -1482,7 +1483,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       self.assertEqual(x, x_loaded)
 
   def test_save_bf16(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     x = torch.randn(5, dtype=torch.bfloat16, device=xla_device)
     with tempfile.NamedTemporaryFile() as tf:
       torch.save(x, tf)
@@ -1490,7 +1491,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       self.assertEqual(x, x_loaded)
 
   def test_save_tuple(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     x = torch.randn(5, device=xla_device)
     number = 3
     with tempfile.NamedTemporaryFile() as tf:
@@ -1500,7 +1501,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       self.assertEqual(number, number_loaded)
 
   def test_save_api(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     model = XlaMNIST().to(xla_device)
     with tempfile.NamedTemporaryFile() as tf:
       xm.save(model.state_dict(), tf)
@@ -1513,7 +1514,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_serialization_api(self):
     with tempfile.TemporaryDirectory() as tmpdir:
       path = os.path.join(tmpdir, 'data.pt')
-      xla_device = xm.xla_device()
+      xla_device = torch_xla.device()
       model = XlaMNIST().to(xla_device)
       xser.save(model.state_dict(), path)
       state_dict = xser.load(path)
@@ -1523,7 +1524,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       self.assertEqual(model.state_dict(), loaded_model.state_dict())
 
   def test_deepcopy(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     x = torch.rand(5, device=xla_device)
     x0 = x[0]
     y = copy.deepcopy(x)
@@ -1533,7 +1534,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(x[0], x0)
 
   def test_print(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     x = torch.tensor([5], device=xla_device)
     expected_str = 'tensor([5], device=\'' + str(xla_device) + '\')'
     self.assertEqual(str(x), expected_str)
@@ -1728,14 +1729,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest([torch.tensor(20.0)], test_fn)
 
   def test_view_and_copy_(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     x = torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5], device='cpu')
     y = torch.tensor([0, 0, 0, 0, 0, 0], device=xla_device)
     y[::2].copy_(x[::2])
     self.assertEqual(y, [1, 0, 3, 0, 5, 0])
 
   def test_view_and_multi_sync(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.zeros(100, device=xla_device)
     t1[10] = 113
     torch_xla.sync()
@@ -1745,7 +1746,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
                      torch_xla._XLAC._get_xla_tensors_text([t1]))
 
   def test_binaryop_order(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     x = torch.rand(5, device=xla_device)
     y = torch.rand(5)
     self.assertEqual(x + y, y + x)
@@ -1753,14 +1754,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   # Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.
   @skipOnEagerDebug
   def test_pow_constant(self):
-    t1 = torch.pow(torch.tensor([2.0, 3.0], device=xm.xla_device()), 5)
+    t1 = torch.pow(torch.tensor([2.0, 3.0], device=torch_xla.device()), 5)
     hlo_text = torch_xla._XLAC._get_xla_tensors_text([t1])
     const_hlo = hlo_text.split('\n')[1]
     assert 'prim::Constant' in const_hlo
     assert 'xla::device_data' not in const_hlo
 
   def test_emb_bf16(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     index = torch.ones(1, dtype=torch.long, device=xla_device)
     emb = torch.nn.Embedding(1024, 128, device=xla_device)
     emb = emb.to(torch.bfloat16)
@@ -1780,7 +1781,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         return m(index)
 
       out = test_on_device("cpu")
-      out_x = test_on_device(xm.xla_device())
+      out_x = test_on_device(torch_xla.device())
       self.assertEqual(out, out_x.cpu())
 
   def test_transpose_1d(self):
@@ -1799,7 +1800,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_sigmoid_bounds(self):
     torch.manual_seed(0)
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     for _ in range(100):
       x = torch.rand(1000).to(xla_device)
       lower_bound = torch.sigmoid(x * (-100.0))
@@ -1816,7 +1817,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertTrue(torch.allclose(t1.cpu(), t2.cpu()))
 
   def test_cached_addcdiv(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     met.clear_all()
 
     t1 = torch.randn(1, 3).to(xla_device)
@@ -1834,7 +1835,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   @skipOnEagerDebug
   def test_print_execution(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
@@ -1888,7 +1889,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       return dropped[1].cpu(), input.grad.cpu()
 
     met.clear_all()
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     input_cpu = torch.randn(7, 7, requires_grad=True)
     input_xla = torch.randn(7, 7, device=xla_device, requires_grad=True)
     mask_cpu, grad_cpu = test_fn(input_cpu)
@@ -2046,7 +2047,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       x = torch.arange(10).to(dtype)
       r = foo(x)
 
-      device = xm.xla_device()
+      device = torch_xla.device()
       Xx = x.to(device)
       Xr = foo(Xx)
 
@@ -2089,8 +2090,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     grad = torch.rand(10, 10, dtype=torch.bfloat16)
     inp = torch.rand(10, 10)
 
-    Xgrad = grad.to(xm.xla_device())
-    Xinp = inp.to(xm.xla_device())
+    Xgrad = grad.to(torch_xla.device())
+    Xinp = inp.to(torch_xla.device())
 
     r = foo(grad, inp)
     Xr = foo(Xgrad, Xinp)
@@ -2105,8 +2106,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t = torch.rand(10, 10, requires_grad=True, dtype=torch.bfloat16)
     t.retain_grad()
     t.grad = torch.rand(10, 10, dtype=torch.bfloat16)
-    xt = t.to(xm.xla_device())
-    xt.grad = t.grad.to(xm.xla_device(), dtype=torch.bfloat16)
+    xt = t.to(torch_xla.device())
+    xt.grad = t.grad.to(torch_xla.device(), dtype=torch.bfloat16)
 
     foo(t)
     foo(xt)
@@ -2116,7 +2117,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_clip_grad_norm_zero(self):
     t = torch.rand(10, 10, dtype=torch.bfloat16)
-    xt = t.to(xm.xla_device())
+    xt = t.to(torch_xla.device())
     result = torch.nn.utils.clip_grad_norm_(xt, 1.0)
     self.assertEqual(result.device.type, 'xla')
     self.assertTrue(torch.allclose(result.cpu(), torch.tensor(0.)))
@@ -2129,8 +2130,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t0 = torch.rand(10, 10, dtype=torch.bfloat16)
     t1 = torch.rand(10, 10)
 
-    Xt0 = t0.to(xm.xla_device())
-    Xt1 = t1.to(xm.xla_device())
+    Xt0 = t0.to(torch_xla.device())
+    Xt1 = t1.to(torch_xla.device())
 
     r = foo(t0, t1)
     Xr = foo(Xt0, Xt1)
@@ -2171,8 +2172,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       x = make_tensor(xshape)
       ilist = [make_index(s) for s in ishapes]
 
-      Xx = x.to(xm.xla_device())
-      Xilist = [i.to(xm.xla_device()) for i in ilist]
+      Xx = x.to(torch_xla.device())
+      Xilist = [i.to(torch_xla.device()) for i in ilist]
 
       out = f(x, *ilist)
       Xout = f(Xx, *Xilist)
@@ -2212,8 +2213,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     inp = torch.rand(10, dtype=torch.half)
     s = torch.tensor(7, dtype=torch.double)
 
-    Xinp = inp.to(xm.xla_device())
-    Xs = s.to(xm.xla_device())
+    Xinp = inp.to(torch_xla.device())
+    Xs = s.to(torch_xla.device())
 
     out = fn(inp, s)
     Xout = fn(Xinp, Xs)
@@ -2267,7 +2268,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       return r + 5
 
     inp = torch.rand(1, 3, 10, 10, dtype=torch.double)
-    Xinp = inp.to(xm.xla_device())
+    Xinp = inp.to(torch_xla.device())
 
     out = foo(inp)
     Xout = foo(Xinp, is_xla=True)
@@ -2332,7 +2333,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       with self.subTest(sparse=sparse, mode=mode):
         kwargs_ = {k: clone_and_maybe_move(v) for k, v in kwargs.items()}
         xla_kwargs = {
-            k: clone_and_maybe_move(v, device=xm.xla_device())
+            k: clone_and_maybe_move(v, device=torch_xla.device())
             for k, v in kwargs.items()
         }
 
@@ -2365,7 +2366,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     input = torch.rand((10, 10), dtype=torch.float16)
     out = foo(input)
 
-    in_xla = input.to(xm.xla_device())
+    in_xla = input.to(torch_xla.device())
     out_xla = foo(in_xla)
 
     self.assertEqual(out.dtype, out_xla.dtype)
@@ -2381,7 +2382,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     a = torch.rand(5, 5, 0, 5)
 
     expected = torch.cummax(a, dim)
-    actual = torch.cummax(a.to(xm.xla_device()), dim)
+    actual = torch.cummax(a.to(torch_xla.device()), dim)
 
     self.assertEqual(actual, expected)
 
@@ -2395,7 +2396,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       return runf(*args_)
 
     actual = run("cpu")
-    expected = run(xm.xla_device())
+    expected = run(torch_xla.device())
 
     self.assertFalse(
         met.executed_fallback_ops(), msg="expected no fallback operations.")
@@ -2454,7 +2455,7 @@ class TestModelComparator(test_utils.XlaTestCase):
   def test(self):
     SEED = 42
 
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     x = _gen_tensor(8, 1, 28, 28)
     xla_x = x.to(xla_device)
 
@@ -2479,13 +2480,13 @@ class TestModelComparator(test_utils.XlaTestCase):
 class TestWaitDeviceOps(test_utils.XlaTestCase):
 
   def test_wait_device_ops(self):
-    xm.xla_device()
-    value = torch.randn(10000, 10000, device=xm.xla_device())
+    torch_xla.device()
+    value = torch.randn(10000, 10000, device=torch_xla.device())
     val_list = []
     val_mean_list = []
     met.clear_all()
     for _ in range(5):
-      new_val = value * torch.randn(10000, 10000, device=xm.xla_device())
+      new_val = value * torch.randn(10000, 10000, device=torch_xla.device())
       val_list.append(new_val)
       val_mean_list.append(new_val.mean())
     torch_xla.sync()
@@ -2498,7 +2499,7 @@ class TestDebuggingUtil(test_utils.XlaTestCase):
 
   @skipOnEagerDebug
   def test_get_xla_tensor_debug_info(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     # test non xla tensor
     cpu_t1 = torch.randn(5)
     cpu_t1_info = torch_xla._XLAC._get_xla_tensor_debug_info(cpu_t1)
@@ -2533,7 +2534,7 @@ class TestOpBuilder(test_utils.XlaTestCase):
                        kwargs=dict()):
     op = xor.register(name, opfn)
     if device is None:
-      device = xm.xla_device()
+      device = torch_xla.device()
     if aten_fn is None:
       aten_fn = opfn
     tensors = xu.as_list(tensors)
@@ -2655,7 +2656,7 @@ class MpDecoratorTest(test_utils.XlaTestCase):
 
   @xtu.mp_test
   def test_mp_decorator(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     self.assertTrue(xla_device.type == 'xla')
 
 
@@ -2694,7 +2695,7 @@ class TestLoweringContext(test_utils.XlaTestCase):
 
   def test_api(self):
     met.clear_all()
-    device = xm.xla_device()
+    device = torch_xla.device()
     a = torch.tensor([1.0, 2.0, 3.0], device=device)
     b = torch.tensor([4.0, 5.0, 6.0], device=device)
 
@@ -2755,13 +2756,13 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertTrue('torch' in revs)
 
   def test_send_to_device_grad(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t = _gen_tensor(2, 2, requires_grad=True)
     dt = xm.send_cpu_data_to_device([t], xla_device)
     self.assertTrue(dt[0].requires_grad)
 
   def test_send_to_device_single(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t = _gen_tensor(2, 2)
     dt = xm.send_cpu_data_to_device(t, xla_device)
     self.assertEqual(dt[0].device, xla_device)
@@ -2861,7 +2862,7 @@ class TestGeneric(test_utils.XlaTestCase):
 
     wpack = PackWrapper(pack)
 
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xdata = xm.send_cpu_data_to_device(wpack, xla_device)
     self.assertTrue(isinstance(xdata, nn.utils.rnn.PackedSequence))
     self.assertEqual(xdata.batch_sizes.device, torch.device('cpu'))
@@ -2871,7 +2872,7 @@ class TestGeneric(test_utils.XlaTestCase):
       "https://github.com/pytorch/xla/pull/7864#issuecomment-2294034008")
   def test_as_strided_input_larger(self):
     size = (5, 5)
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     a = torch.ones(size, device=device)
     small_a = a[:, ::2]
@@ -2883,7 +2884,7 @@ class TestGeneric(test_utils.XlaTestCase):
     # Assumes CPU-XLA data movement works.
     cuda_tensor = cpu_tensor.to("cuda")
     # Move tensor CUDA -> XLA.
-    xla_tensor = cuda_tensor.to(xm.xla_device())
+    xla_tensor = cuda_tensor.to(torch_xla.device())
     # Move the XLA tensor back to CPU, and check that it is the same as
     # the original CPU tensor.
     self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu()))
@@ -2901,7 +2902,7 @@ class TestGeneric(test_utils.XlaTestCase):
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
 
   def test_unsafe_buffer_pointer(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_tensor_0 = torch.tensor(42).to(xla_device)
     # `torch_xla.sync()` ensures xtensor->CurrentDataHandle() != nullptr
     torch_xla.sync()
@@ -2909,7 +2910,7 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertGreaterEqual(buf_ptr_0, 0)
 
     # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
-    xla_tensor_1 = torch.tensor(42, device=xm.xla_device())
+    xla_tensor_1 = torch.tensor(42, device=torch_xla.device())
     buf_ptr_1 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_1)
     self.assertGreaterEqual(buf_ptr_1, 0)
 
@@ -2918,7 +2919,7 @@ class TestGeneric(test_utils.XlaTestCase):
     buf_ptr_2 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_2)
     self.assertGreaterEqual(buf_ptr_2, 0)
 
-    xla_tensor_3 = torch.arange(5, device=xm.xla_device())
+    xla_tensor_3 = torch.arange(5, device=torch_xla.device())
     torch_xla.sync()
     # Without the `wait_device_ops()`, the pjrt buffer (pjrt_data->buffer) at https://github.com/pytorch/xla/blob/e3fc03314dab5f44e3ed9ccbba6c15fbca3285cd/torch_xla/csrc/runtime/pjrt_computation_client.cc#L467 will be nullptr.
     xm.wait_device_ops()
@@ -2946,14 +2947,14 @@ class TestDLPack(parameterized.TestCase):
   @onlyIfPJRTDeviceIsCUDA
   @parameterized.parameters(*all_types_and(torch.half, torch.bfloat16))
   def test_dlpack_roundtrip_tensor(self, dtype):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
     # xla_tensor_2 uses XLANativeFunctions::_to_copy
     xla_tensor_2 = torch.arange(5, dtype=dtype).to(xla_device)
     self._test_dlpack_capsule_conversion_helper(xla_tensor_2)
 
     # xla_tensor_3 uses arange_out IR node.
-    xla_tensor_3 = torch.arange(5, dtype=dtype, device=xm.xla_device())
+    xla_tensor_3 = torch.arange(5, dtype=dtype, device=torch_xla.device())
     torch_xla.sync()
     self._test_dlpack_capsule_conversion_helper(xla_tensor_3)
 
@@ -2963,7 +2964,7 @@ class TestDLPack(parameterized.TestCase):
       *all_types_and_complex_and(torch.half, torch.bfloat16, torch.bool,
                                  torch.uint16, torch.uint32, torch.uint64))
   def test_dlpack_roundtrip_scalar(self, dtype):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)
     # `torch_xla.sync()` ensures xtensor->CurrentDataHandle() != nullptr
     torch_xla.sync()
@@ -2976,7 +2977,7 @@ class TestDLPack(parameterized.TestCase):
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_roundtrip_bool(self):
-    xla_tensor = torch.ones(1, dtype=torch.bool).to(xm.xla_device())
+    xla_tensor = torch.ones(1, dtype=torch.bool).to(torch_xla.device())
     self._test_dlpack_capsule_conversion_helper(xla_tensor)
 
   @onlyIfTorchSupportsCUDA
@@ -3044,7 +3045,7 @@ class TestDLPack(parameterized.TestCase):
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_xla_to_pytorch_cuda(self):
-    xla_t1 = torch.arange(5).to(xm.xla_device())
+    xla_t1 = torch.arange(5).to(torch_xla.device())
     dlt1 = xdlpack.to_dlpack(xla_t1)
     cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
     self.assertEqual(cuda_t1.device.type, 'cuda')
@@ -3055,7 +3056,7 @@ class TestDLPack(parameterized.TestCase):
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_xla_to_pytorch_cuda_protocol_conversion(self):
-    xla_t1 = torch.arange(5).to(xm.xla_device())
+    xla_t1 = torch.arange(5).to(torch_xla.device())
     cuda_t1 = torch.utils.dlpack.from_dlpack(xla_t1)
     self.assertEqual(cuda_t1.device.type, 'cuda')
     self.assertEqual(cuda_t1.device.index, xla_t1.device.index)
@@ -3120,7 +3121,7 @@ class SimpleModelWithDropout(torch.nn.Module):
 class TestActivationCheckpoint(test_utils.XlaTestCase):
 
   def test_dropout(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     model = SimpleModelWithDropout().to(device)
     model = checkpoint_module(model)
     _input = torch.randn(128, 128, requires_grad=True)
@@ -3134,7 +3135,7 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
                     f"in fwd {model.to_save[0]}, in bwd {model.to_save[1]}")
 
   def test_opt_barrier(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     model = SimpleModelWithDropout().to(device)
     model = checkpoint_module(model)
     _input = torch.randn(128, 128, requires_grad=True)
@@ -3169,7 +3170,7 @@ class TestNMS(test_utils.XlaTestCase):
 
   def _nms(self, boxes, scores, iou_threshold):
     import torchvision
-    device = xm.xla_device()
+    device = torch_xla.device()
     return torchvision.ops.nms(
         boxes.to(device), scores.to(device), iou_threshold).cpu()
 
