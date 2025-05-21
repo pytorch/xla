@@ -135,6 +135,7 @@ def master_print(*args: Any,
     print(*args, file=fd, flush=flush)
 
 
+@deprecated("Use torch_xla.device instead")
 def xla_device(n: Optional[int] = None,
                devkind: Optional[str] = None) -> torch.device:
   """Returns a given instance of an XLA device.
@@ -149,23 +150,8 @@ def xla_device(n: Optional[int] = None,
   Returns:
     A `torch.device` with the requested instance of an XLA device.
   """
-  # When SPMD is enabled, we always return `xla:0` to the user, and
-  # under the hood we use virtual device logic for every xla tensor
-  if xu.check_env_flag('XLA_USE_SPMD'):
-    device = 'xla:0'
-    torch_xla._XLAC._xla_set_default_device(device)
-    return torch.device(device)
-
-  if n is None:
-    return torch.device(torch_xla._XLAC._xla_get_default_device())
-
-  devices = xm.get_xla_supported_devices(devkind=devkind)
-  if n > len(devices):
-    raise IndexError('Device index {} out of range in {}'.format(n, devices))
-
-  device = devices[n]
-  torch_xla._XLAC._xla_set_default_device(device)
-  return torch.device(device)
+  del devkind
+  return torch_xla.device(n)
 
 
 def _xla_real_device(device: torch.device) -> Any:
