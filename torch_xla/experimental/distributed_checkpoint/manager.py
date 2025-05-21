@@ -207,7 +207,7 @@ class CheckpointManager:
         self._delete_chkpt_at_step(oldest_chkpt.step)
 
   def _wait_for_data(self):
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
 
   def _save(self, step, state_dict):

@@ -247,7 +247,7 @@ def benchmark(args):
         assert False, f"Invalid kernel name {args.kernel}"
 
     if _run_with_torch_xla(args.kernel):
-      xm.mark_step()
+      torch_xla.sync()
       xm.wait_device_ops()
     else:
       jax.block_until_ready(actual_output)

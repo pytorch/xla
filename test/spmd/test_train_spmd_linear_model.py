@@ -5,6 +5,7 @@ import sys
 import unittest
 
 import torch
+from torch_xla import runtime as xr
 
 import test_xla_sharding_base
 
@@ -18,6 +19,9 @@ from utils.train_spmd_linear_model_grad_acc import train_and_evaluate_grad_acc
 # CPU does not support optimization barriers, and hence we use this to disable
 # the gradient checkpointing A/B test run for it.
 SKIP_GRADIENT_CHECKPOINTING: bool = False
+
+skipOnGpu = unittest.skipIf(xr.device_type() == 'CUDA',
+                            'https://github.com/pytorch/xla/issues/9128')
 
 
 @contextmanager
@@ -33,7 +37,7 @@ def extended_argv(args):
 class TestSPMDLinearModel(test_xla_sharding_base.XlaShardingTest):
 
   def test_basic(self):
-    print('Training loop with baseline')
+    print('Training loop with baseline', flush=True)
     with extended_argv([]):
       baseline_losses, baseline_result = train_and_evaluate()
     # Verify that the model losses are not zero.
@@ -42,7 +46,7 @@ class TestSPMDLinearModel(test_xla_sharding_base.XlaShardingTest):
     assert not torch.any(baseline_result == 0)
 
     if not SKIP_GRADIENT_CHECKPOINTING:
-      print('Training loop with gradient checkpointing')
+      print('Training loop with gradient checkpointing', flush=True)
       with extended_argv(['--use_gradient_checkpointing']):
         checkpointing_losses, checkpointing_result = train_and_evaluate()
         # Verify that the runs match with and without checkpointing.
@@ -62,11 +66,11 @@ class TestSPMDLinearModelGradientAccumulation(
     """
 
     COMMON_GRAD_ACC_ARGS = ["--gradient_accumulation_steps", "8"]
-    print('Training loop with traditional gradient accumulation')
+    print('Training loop with traditional gradient accumulation', flush=True)
     with extended_argv(COMMON_GRAD_ACC_ARGS):
       baseline_grad_acc_losses = train_and_evaluate_grad_acc()
 
-    print('Training loop with XLA\'s `While` gradient accumulation')
+    print('Training loop with XLA\'s `While` gradient accumulation', flush=True)
     with extended_argv(COMMON_GRAD_ACC_ARGS +
                        ["--use_gradient_accumulation_loop"]):
       loop_grad_acc_losses = train_and_evaluate_grad_acc()
@@ -79,8 +83,10 @@ class TestSPMDLinearModelGradientAccumulation(
                                                      loop_grad_acc_losses))
 
     if not SKIP_GRADIENT_CHECKPOINTING:
-      print('Training loop with XLA\'s `While` gradient accumulation and '
-            'gradient checkpointing.')
+      print(
+          'Training loop with XLA\'s `While` gradient accumulation and '
+          'gradient checkpointing.',
+          flush=True)
       with extended_argv(
           COMMON_GRAD_ACC_ARGS +
           ["--use_gradient_accumulation_loop", "--use_gradient_checkpointing"]):

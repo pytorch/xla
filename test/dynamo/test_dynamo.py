@@ -83,7 +83,7 @@ class DynamoLTCInteractionTest(parameterized.TestCase):
   def index_copy_inplace(self, cache, update_indices, xk):
     cache.index_copy_(0, update_indices, xk)
 
-  def test_mark_step_after_dynamo(self):
+  def test_sync_after_dynamo(self):
     cache_len = 512
     kv_heads = 8
     head_dim = 128
@@ -102,8 +102,9 @@ class DynamoLTCInteractionTest(parameterized.TestCase):
       dynamo_index_copy_inplace(cache, update_indices, xk)
       xm.wait_device_ops()
       current_execute_time = met.metric_data('ExecuteTime')[0]
-      # This mark_step should be a no-op and don't trigger additional execution.
-      xm.mark_step()
+      # This `torch_xla.sync()` should be a no-op and don't trigger additional
+      # execution.
+      torch_xla.sync()
       xm.wait_device_ops()
       self.assertEqual(current_execute_time, met.metric_data('ExecuteTime')[0])
 
@@ -325,7 +326,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     device = self._choose_proper_device(initialize_on_cuda)
     a = torch.randn(4, 4, 4, 4).to(device)
     b = torch.randn(4, 4, 4, 4).to(device)
-    xm.mark_step()
+    torch_xla.sync()
 
     dynamo_einsum_mm = torch.compile(einsum_mm, backend=backend)
     res_device_dynamo = dynamo_einsum_mm(a, b)
@@ -390,7 +391,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     device_resnet18.to(device)
     device_resnet18.eval()
     # materalize the fake data for test purpose
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
     dynamo_resnet18 = torch.compile(device_resnet18, backend=backend)
@@ -422,7 +423,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     xla_resnet18.eval()
     resnet18_base.to(device)
     # materalize the fake data for test purpose
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
     dynamo_resnet18 = torch.compile(xla_resnet18, backend='openxla')
@@ -591,7 +592,7 @@ class DynamoTrainingBasicTest(parameterized.TestCase):
     xla_resnet18.to(device)
     xla_resnet18.train()
     # materalize the fake data
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
 
@@ -691,7 +692,7 @@ class DynamoTrainingOptimizerTest(parameterized.TestCase):
     optimizer = optim.SGD(resnet18.parameters(), lr=0.1, weight_decay=1e-2)
 
     # materalize the fake data
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
 
@@ -763,7 +764,8 @@ class DynamoErrorMessageTest(parameterized.TestCase):
       res = dynamo_resnet18_cpu(input)
       # there should be 18 paramters + 1 input
       self.assertGreater(len(w), 15)
-      self.assertIn('Found tensor with shape torch.Size', str(w[0].message))
+      # TODO(gunhyun): revert back when mark_step deprecation is complete
+      self.assertIn('Found tensor with shape torch.Size', str(w[1].message))
     self.assertLessEqual(len(met.counter_names()), 1)
 
 

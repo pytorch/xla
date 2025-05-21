@@ -44,6 +44,21 @@ jobs:
           else
             echo "No ${TORCH_PIN} found, safe to land..."
           fi
+      - name: Check .cc file extension
+        shell: bash
+        run: |
+          # Find *.cc files recursively in the current directory, limiting to files only.
+          found_files=$(find . -type f -name "*.cc")
+
+          # Check if any files were found.
+          if [ -n "$found_files" ]; then
+            echo "Found *.cc files:"
+            echo "$found_files"
+            echo "Please rename them to *.cpp for consistency."
+            exit 1
+          else
+            echo "PASSED *.cc file extension check"
+          fi
       - name: Run clang-format
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
         shell: bash

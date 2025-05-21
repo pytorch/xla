@@ -20,7 +20,7 @@ def _mp_fn(index):
     xla_rank_tensor = rank_tensor.to(device)
     dist.all_reduce(xla_rank_tensor)
     expected = torch.tensor([(world_size - 1) * world_size / 2])
-    xm.mark_step()
+    torch_xla.sync()
     assert torch.all(
         xla_rank_tensor.cpu() == expected), f'{xla_rank_tensor} != {expected}'
   else:

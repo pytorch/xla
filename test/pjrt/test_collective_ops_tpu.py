@@ -22,7 +22,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
     if sync:
       xm.broadcast_master_param(model)
 
-    xm.mark_step()
+    torch_xla.sync()
     return next(model.parameters()).detach().cpu().numpy()
 
   @absltest.skipUnless(tpu.num_tpu_workers() == 1,
@@ -49,7 +49,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
         device=device)
     out = xm.all_reduce(xm.REDUCE_SUM, ordinal, pin_layout=pin_layout)[0]
     assert out.requires_grad
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().detach().numpy()
 
@@ -66,7 +66,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
     device = xm.xla_device()
     ordinal = torch.tensor([xr.global_ordinal()], device=device)
     out = xm.all_gather(ordinal, pin_layout=pin_layout)
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().numpy()
 
@@ -92,7 +92,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
         shard_count=world_size,
         pin_layout=pin_layout,
     )
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().numpy()
 
@@ -115,7 +115,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
         ],
         dim=1,
     ).to(device)
-    xm.mark_step()
+    torch_xla.sync()
 
     out = xm.all_to_all(
         tensor,

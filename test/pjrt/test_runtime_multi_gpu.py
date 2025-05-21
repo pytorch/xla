@@ -128,7 +128,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
     x = torch.ones(1, requires_grad=True, device=xm.xla_device())
     y = _CustomBackwards.apply(x)
     y.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     return results
 
@@ -171,7 +171,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
     if sync:
       xm.broadcast_master_param(model)
 
-    xm.mark_step()
+    torch_xla.sync()
     return next(model.parameters()).detach().cpu().numpy()
 
   @parameterized.named_parameters(('synchronized_parameters', True),
@@ -191,7 +191,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
     device = xm.xla_device()
     ordinal = torch.tensor([xr.global_ordinal()], device=device)
     out = xm.all_gather(ordinal, pin_layout=pin_layout)
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().numpy()
 
@@ -217,7 +217,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
         shard_count=world_size,
         pin_layout=pin_layout,
     )
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().numpy()
 
@@ -241,7 +241,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
         ],
         dim=1,
     ).to(device)
-    xm.mark_step()
+    torch_xla.sync()
 
     out = xm.all_to_all(
         tensor,

@@ -10,6 +10,7 @@ import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
+import torch_xla._internal.neuron as neuron
 import torch_xla._internal.utils as _utils
 import torch_xla._internal.tpu as tpu
 from torch_xla.experimental import plugins
@@ -277,6 +278,8 @@ def get_master_ip() -> str:
     master worker's IP address as a string."""
   if device_type() == 'TPU':
     return tpu.discover_master_worker_ip()
+  elif device_type() == "NEURON":
+    return neuron.get_master_worker_ip()
   raise RuntimeError(f'IP discovery not supported for device: {device_type()}')
 
 

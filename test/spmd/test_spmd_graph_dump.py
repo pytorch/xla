@@ -34,7 +34,7 @@ class SpmdGraphDumpTest(test_xla_sharding_base.XlaShardingTest):
     xla_sharded_x = xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)),
                                      partition_spec)
     xla_res = xla_x + xla_y
-    xm.mark_step()
+    torch_xla.sync()
     with open(save_file, 'rb') as f:
       lines = f.readlines()
     self.assertGreater(len(lines), 0)

@@ -85,7 +85,7 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
     input = torch.randn(5, 5).to(device)
     input_cloned = input.cpu().to(device)
     dummy_inplace_add_compiled = torch.compile(dummy_inplace, backend='openxla')
-    xm.mark_step()
+    torch_xla.sync()
     met.clear_all()
 
     for _ in range(100):
@@ -156,7 +156,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
     input = torch.randn(5, 5).to(device)
     input_cloned = input.cpu().to(device)
     dummy_inplace_add_compiled = torch.compile(dummy_inplace, backend='openxla')
-    xm.mark_step()
+    torch_xla.sync()
     met.clear_all()
     # input is a device_data, we should be able to set the buffer donation field.
     self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))

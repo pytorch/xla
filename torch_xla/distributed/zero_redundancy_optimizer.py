@@ -519,15 +519,17 @@ class ZeroRedundancyOptimizer(Optimizer):
 
     tmp = self.base_optimizer.state_dict()
     tmp['state'] = base_state
+    tmp['param_groups'] = state_dict['param_groups']
     self.base_optimizer.load_state_dict(tmp)
     if 'sharded_master_weights' in state_dict:
       master_weights = state_dict['sharded_master_weights']
-      index = 0
-      for param_group, sharded_param_group in zip(
-          self.param_groups, self.base_optimizer.param_groups):
-        for param, shard in zip(param_group['params'],
-                                sharded_param_group['params']):
-          shard.data.copy_(master_weights[index])
+      for param_group, sharded_param_group, loaded_param_groups in zip(
+          self.param_groups, self.base_optimizer.param_groups,
+          state_dict['param_groups']):
+        for param, shard, loaded_param_idx in zip(
+            param_group['params'], sharded_param_group['params'],
+            loaded_param_groups['params']):
+          shard.data.copy_(master_weights[loaded_param_idx])
           # set dummy gradient for allgather to be triggered.
           if self.use_grad_acc_hook:
             # Create main gradients
@@ -539,11 +541,11 @@ class ZeroRedundancyOptimizer(Optimizer):
             param.main_grad = shard.main_grad
           else:
             param.grad = torch.zeros_like(param.data)
-          index += 1
-      xm.mark_step()
-      # add mark_step around allgather to avoid large number of compilation
+      torch_xla.sync()
+      # add `torch_xla.sync()` around allgather to avoid large number of
+      # compilation
       self.allgather_weights_and_update_full_parameter()
-      xm.mark_step()
+      torch_xla.sync()
 
   def get_shape_info(self):
     shape_info = {}

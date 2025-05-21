@@ -1,6 +1,7 @@
 import copy
 
 import torch
+import torch_xla
 
 import torch._dynamo.test_case
 import torch._dynamo.testing
@@ -129,7 +130,7 @@ def make_reuse_graph_test(module_class, niter=100):
 
       expected = xla_module(*xla_inputs)
       # make sure above lazy computation is executed.
-      xm.mark_step()
+      torch_xla.sync()
 
       actual = optimized_mod(*xla_inputs_copy)
 
@@ -224,11 +225,11 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
 
   def _compile_and_check(self, fn, args, backend="openxla"):
     r = fn(*args)
-    xm.mark_step()
+    torch_xla.sync()
 
     compiled_fn = torch.compile(backend=backend)(fn)
     compiled_r = compiled_fn(*args)
-    xm.mark_step()
+    torch_xla.sync()
 
     self.assertEqual(r, compiled_r)
 

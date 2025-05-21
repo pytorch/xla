@@ -233,7 +233,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
         torch.randn(10000, 10000, device=xm.xla_device()) *
         torch.randn(10000, 10000, device=xm.xla_device()))
     value_mean = value.mean()
-    xm.mark_step()
+    torch_xla.sync()
     cpu_value = value_mean.cpu()
     wall_time_ns = time.perf_counter_ns() - begin
     _, execute_time_ns, _ = met.metric_data('ExecuteTime')

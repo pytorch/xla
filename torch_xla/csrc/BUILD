@@ -322,7 +322,7 @@ cc_library(
 
 cc_library(
     name = "thread_pool",
-    srcs = ["thread_pool.cc"],
+    srcs = ["thread_pool.cpp"],
     hdrs = ["thread_pool.h"],
     deps = [
         "//torch_xla/csrc/runtime:sys_util",
