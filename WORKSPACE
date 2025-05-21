@@ -46,7 +46,7 @@ new_local_repository(
 
 # To build PyTorch/XLA with a new revison of OpenXLA, update the xla_hash to
 # the openxla git commit hash and note the date of the commit.
-xla_hash = '37b580d0dd7b52e611430d33424159719e363ffc'  # Committed on 2025/5/13.
+xla_hash = '30ebb24dd16a31b613623d9f2f513d31914cb6f7'  # Committed on 2025/5/19.
 
 http_archive(
     name = "xla",
