@@ -26,7 +26,8 @@ export DOCKERFILE_PATH="infra/ansible/build_for_torchprime.Dockerfile"
 echo "Building and pushing image: ${IMAGE_NAME}"
 
 # Define ansible vars used in the docker file
-read -r -d '' ANSIBLE_VARS_JSON << EOM
+# TODO(yifeit): read versions from git
+read -r -d '' ANSIBLE_VARS_JSON << EOM || { exit_code=$?; [[ $exit_code -eq 1 ]]; }
 {
   "arch": "amd64",
   "accelerator": "tpu",
