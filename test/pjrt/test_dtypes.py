@@ -10,7 +10,7 @@ class TestDtypes(parameterized.TestCase):
                             torch.bfloat16, torch.complex64)
   def test_float_round_trip(self, dtype: torch.dtype):
     t = torch.randn((3, 3), dtype=dtype)
-    xt = t.to(xm.xla_device())
+    xt = t.to(torch_xla.device())
     torch.testing.assert_close(xt.cpu(), t)
 
   @parameterized.parameters(
@@ -22,12 +22,12 @@ class TestDtypes(parameterized.TestCase):
   )
   def test_int_round_trip(self, dtype: torch.dtype):
     t = torch.randint(0, 128, (3, 3), dtype=dtype)
-    xt = t.to(xm.xla_device())
+    xt = t.to(torch_xla.device())
     torch.testing.assert_close(xt.cpu(), t)
 
   def test_bool_round_trip(self):
     t = torch.randint(0, 2, (3, 3), dtype=torch.bool)
-    xt = t.to(xm.xla_device())
+    xt = t.to(torch_xla.device())
     torch.testing.assert_close(xt.cpu(), t)
 
 

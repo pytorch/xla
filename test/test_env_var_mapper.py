@@ -15,7 +15,7 @@ def check_env_flag(name, default=''):
 class EnvVarMapperTest(unittest.TestCase):
 
   def test_xla_ir_debug_(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
 
     with xp.Trace('test_xla_ir_debug'):
       t = torch.tensor([2.0, 3.0], dtype=torch.float, device=xla_device)

@@ -9,8 +9,8 @@ import unittest
 class NeuronXlaDataTypeTest(unittest.TestCase):
 
   def _test_datatypes(self, dtype, op_xla_dtype, op):
-    t1 = torch.tensor([2, 3], dtype=dtype, device=xm.xla_device())
-    t2 = torch.tensor([2, 3], dtype=dtype, device=xm.xla_device())
+    t1 = torch.tensor([2, 3], dtype=dtype, device=torch_xla.device())
+    t2 = torch.tensor([2, 3], dtype=dtype, device=torch_xla.device())
 
     t3 = op(t1, t2)
 

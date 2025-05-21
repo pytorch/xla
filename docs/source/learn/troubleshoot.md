@@ -32,8 +32,8 @@ vm:~$ export PJRT_DEVICE=TPU
 vm:~$ python3
 >>> import torch
 >>> import torch_xla.core.xla_model as xm
->>> t1 = torch.tensor(100, device=xm.xla_device())
->>> t2 = torch.tensor(200, device=xm.xla_device())
+>>> t1 = torch.tensor(100, device=torch_xla.device())
+>>> t2 = torch.tensor(200, device=torch_xla.device())
 >>> print(t1 + t2)
 tensor(300, device='xla:0')
 ```

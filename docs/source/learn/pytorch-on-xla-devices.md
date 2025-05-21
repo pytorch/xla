@@ -14,14 +14,14 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-t = torch.randn(2, 2, device=xm.xla_device())
+t = torch.randn(2, 2, device=torch_xla.device())
 print(t.device)
 print(t)
 ```
 
 This code should look familiar. PyTorch/XLA uses the same interface as
 regular PyTorch with a few additions. Importing `torch_xla` initializes
-PyTorch/XLA, and `xm.xla_device()` returns the current XLA device. This
+PyTorch/XLA, and `torch_xla.device()` returns the current XLA device. This
 may be a CPU or TPU depending on your environment.
 
 ## XLA Tensors are PyTorch Tensors
@@ -32,8 +32,8 @@ tensors.
 For example, XLA tensors can be added together:
 
 ``` python
-t0 = torch.randn(2, 2, device=xm.xla_device())
-t1 = torch.randn(2, 2, device=xm.xla_device())
+t0 = torch.randn(2, 2, device=torch_xla.device())
+t1 = torch.randn(2, 2, device=torch_xla.device())
 print(t0 + t1)
 ```
 
@@ -46,8 +46,8 @@ print(t0.mm(t1))
 Or used with neural network modules:
 
 ``` python
-l_in = torch.randn(10, device=xm.xla_device())
-linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+l_in = torch.randn(10, device=torch_xla.device())
+linear = torch.nn.Linear(10, 20).to(torch_xla.device())
 l_out = linear(l_in)
 print(l_out)
 ```
@@ -56,7 +56,7 @@ Like other device types, XLA tensors only work with other XLA tensors on
 the same device. So code like
 
 ``` python
-l_in = torch.randn(10, device=xm.xla_device())
+l_in = torch.randn(10, device=torch_xla.device())
 linear = torch.nn.Linear(10, 20)
 l_out = linear(l_in)
 print(l_out)
@@ -81,7 +81,7 @@ The following snippet shows a network training on a single XLA device:
 ``` python
 import torch_xla.core.xla_model as xm
 
-device = xm.xla_device()
+device = torch_xla.device()
 model = MNIST().train().to(device)
 loss_fn = nn.NLLLoss()
 optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
@@ -120,7 +120,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
   mp_device_loader = pl.MpDeviceLoader(train_loader, device)
 
   model = MNIST().train().to(device)
@@ -148,7 +148,7 @@ previous single device snippet. Let's go over then one by one.
         will only be able to access the device assigned to the current
         process. For example on a TPU v4-8, there will be 4 processes
         being spawn up and each process will own a TPU device.
-    -   Note that if you print the `xm.xla_device()` on each process you
+    -   Note that if you print the `torch_xla.device()` on each process you
         will see `xla:0` on all devices. This is because each process
         can only see one device. This does not mean multi-process is not
         functioning. The only execution is with PJRT runtime on TPU v2
@@ -283,7 +283,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-device = xm.xla_device()
+device = torch_xla.device()
 
 t0 = torch.randn(2, 2, device=device)
 t1 = torch.randn(2, 2, device=device)

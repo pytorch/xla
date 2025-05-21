@@ -196,7 +196,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 +  # Rank and world size are inferred from the XLA device runtime
 +  dist.init_process_group("xla", init_method='xla://')
 +
-+  model.to(xm.xla_device())
++  model.to(torch_xla.device())
 +  ddp_model = DDP(model, gradient_as_bucket_view=True)
 
 -  model = model.to(rank)

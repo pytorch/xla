@@ -129,7 +129,7 @@ def scan(
     >>>   y = new_carry
     >>>   return new_carry, y
     >>>
-    >>> with xm.xla_device():
+    >>> with torch_xla.device():
     >>>   init = torch.tensor([0.0, 0.0], requires_grad=True)
     >>>   xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
     >>>                     requires_grad=True)

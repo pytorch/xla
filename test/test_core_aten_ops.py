@@ -46,7 +46,7 @@ def run_export_and_compare(testcase,
                            atol=1e-3,
                            rtol=1e-5,
                            equal_nan=True):
-  device = xm.xla_device()
+  device = torch_xla.device()
   with testcase.subTest('torch_eval'):
     res = func(*args, **kwargs)
     with testcase.subTest('torch_xla_eval'):
@@ -2932,7 +2932,7 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     pytorch = torch.randperm(20)
 
-    xla = torch.randperm(20, device=xm.xla_device())
+    xla = torch.randperm(20, device=torch_xla.device())
     xla_detached = xla.detach().cpu()
 
     # Check equal lengths and that the sorted sets are equal. Since these numbers are randomly
