@@ -1,7 +1,7 @@
 import torch
 import torchax
 import torchax.export
-from . import test_base
+from . import base_test_util
 
 
 class AddOne(torch.nn.Module):
@@ -23,7 +23,7 @@ class ConcatAddModel(torch.nn.Module):
     return a + b
 
 
-class SymbolicShapeTest(test_base.TestCase):
+class SymbolicShapeTest(base_test_util.TestCase):
   """Test possible symbolic shape computations that upstream torch export can
   emit. Seems to be currently limited to a few binary math operations where one
   operand is a symbolic variable/expr and the other is a constant integer.
@@ -99,4 +99,4 @@ class SymbolicShapeTest(test_base.TestCase):
 
 
 if __name__ == "__main__":
-  test_base.main()
+  base_test_util.main()

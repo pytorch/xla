@@ -13,8 +13,8 @@ package(
 )
 
 py_library(
-    name = "test_base",
-    srcs = ["test_base.py"],
+    name = "base_test_util",
+    srcs = ["base_test_util.py"],
     deps = [
         "//testing/pybase",
     ],
@@ -24,7 +24,7 @@ py_test(
     name = "test_core_aten_ops",
     srcs = ["test_core_aten_ops.py"],
     deps = [
-        ":test_base",
+        ":base_test_util",
         "//third_party/py/absl:app",
         "//third_party/py/torch/google/_torx",
     ],
