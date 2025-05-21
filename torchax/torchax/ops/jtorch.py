@@ -514,8 +514,7 @@ def functional_linear(self, weights, bias=None):
   return res
 
 
-
-@register_function(torch.nn.functional.interpolate)  
+@register_function(torch.nn.functional.interpolate)
 def functional_interpolate(
     input,
     size: Tuple[int, int],
@@ -544,19 +543,17 @@ def functional_interpolate(
   # None check
   antialias = antialias or False
   align_corners = align_corners or False
-  
-  if mode in ('cubic', 'bicubic', 'tricubic') and not antialias:
+
+  if mode in ('cubic', 'bicubic',
+              'tricubic') and not antialias and size is not None:
     return jimage.interpolate_bicubic_no_aa(
-      input,
-      size[0],
-      size[1],
-      align_corners,
+        input,
+        size[0],
+        size[1],
+        align_corners,
     )
-  return jaten._aten_upsample(
-    input,
-    size,
-    align_corners,
-    antialias,
-    mode,
-    scale_factor,
-  )
+  else:
+    # fallback
+    raise torchax.tensor.OperatorNotFound(
+        f"JAX does not support interpolation mode: {mode}. Supported modes are: {supported_methods}"
+    )

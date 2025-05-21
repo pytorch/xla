@@ -5263,12 +5263,30 @@ def _aten_upsample_billinear_aa(input,
       input,
       output_size,
       align_corners,
-      True, # antialias
-      "bilinear", # method
+      True,  # antialias
+      "bilinear",  # method
       scale_factors,
       scales_h,
-      scales_w
-  )
+      scales_w)
+
+
+@op(torch.ops.aten._upsample_bicubic2d_aa)
+def _aten_upsample_bicubic2d_aa(input,
+                                output_size,
+                                align_corners,
+                                scale_factors=None,
+                                scales_h=None,
+                                scales_w=None):
+  return _aten_upsample(
+      input,
+      output_size,
+      align_corners,
+      True,  # antialias
+      "bicubic",  # method
+      scale_factors,
+      scales_h,
+      scales_w)
+
 
 @op(torch.ops.aten.polar)
 def _aten_polar(abs, angle, *, out=None):
