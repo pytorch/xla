@@ -93,14 +93,14 @@ for data, target in train_loader:
   loss.backward()
 
   optimizer.step()
-  xm.mark_step()
+  torch_xla.sync()
 ```
 
 This snippet highlights how easy it is to switch your model to run on
 XLA. The model definition, dataloader, optimizer and training loop can
 work on any device. The only XLA-specific code is a couple lines that
-acquire the XLA device and mark the step. Calling `xm.mark_step()` at
-the end of each training iteration causes XLA to execute its current
+acquire the XLA device and materializing the tensors. Calling `torch_xla.sync()`
+at the end of each training iteration causes XLA to execute its current
 graph and update the model's parameters. See [XLA Tensor Deep
 Dive](#xla-tensor-deep-dive) for more on how XLA creates graphs and runs
 operations.
@@ -157,13 +157,13 @@ previous single device snippet. Let's go over then one by one.
     -   `MpDeviceLoader` can wrap on a torch dataloader. It can preload
         the data to the device and overlap the dataloading with device
         execution to improve the performance.
-    -   `MpDeviceLoader` also call `xm.mark_step` for you every
+    -   `MpDeviceLoader` also call `torch_xla.sync()` for you every
         `batches_per_execution`(default to 1) batch being yield.
 -   `xm.optimizer_step(optimizer)`
     -   Consolidates the gradients between devices and issues the XLA
         device step computation.
     -   It is pretty much a `all_reduce_gradients` +
-        `optimizer.step()` + `mark_step` and returns the loss being
+        `optimizer.step()` + `torch_xla.sync()` and returns the loss being
         reduced.
 
 The model definition, optimizer definition and training loop remain the

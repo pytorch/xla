@@ -17,7 +17,7 @@ class InplaceUpdateTest(unittest.TestCase):
     t.zero_()
     y = torch.matmul(t, w)
     expected = torch.zeros(2, 2, device=device)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(torch.all(torch.eq(y, expected)))
 
   def test_aten_op_after_partial_update(self):
@@ -27,7 +27,7 @@ class InplaceUpdateTest(unittest.TestCase):
     t[0][0] = 0
     y = torch.matmul(t, w)
     expected = torch.tensor([[0, 0], [1, 1]], device=device)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(torch.all(torch.eq(y, expected)))
 
   def test_non_aten_op_after_full_update(self):
@@ -37,7 +37,7 @@ class InplaceUpdateTest(unittest.TestCase):
     t.zero_()
     y = torch_xla._XLAC._xla_dot_general(t, w, (([1], [0]), ()))
     expected = torch.zeros(2, 2, device=device)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(torch.all(torch.eq(y, expected)))
 
   def test_non_aten_op_after_partial_update(self):
@@ -47,7 +47,7 @@ class InplaceUpdateTest(unittest.TestCase):
     t[0][0] = 0
     y = torch_xla._XLAC._xla_dot_general(t, w, (([1], [0]), ()))
     expected = torch.tensor([[0, 0], [1, 1]], device=device)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(torch.all(torch.eq(y, expected)))
 
   def test_xm_save(self):
@@ -56,12 +56,12 @@ class InplaceUpdateTest(unittest.TestCase):
       xla_device = xm.xla_device()
       t1 = torch.tensor([1], device=xla_device)
       t2 = t1.detach()
-      xm.mark_step()
+      torch_xla.sync()
 
       t2.add_(t2)
-      xm.mark_step()
+      torch_xla.sync()
 
-      # mark_step() causes t1 and t2 to be out of sync on the XLA side.
+      # `torch_xla.sync()` causes t1 and t2 to be out of sync on the XLA side.
 
       fobj = io.BytesIO()
       xm.save({'t1': t1}, fobj)

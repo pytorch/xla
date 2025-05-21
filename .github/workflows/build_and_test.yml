@@ -129,6 +129,7 @@ jobs:
     name: "Build docs"
     uses: ./.github/workflows/_docs.yml
     needs: build-torch-xla
+    if: github.event_name == 'push'
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
     secrets:

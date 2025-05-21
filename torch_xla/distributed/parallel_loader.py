@@ -24,7 +24,7 @@ class PerDeviceLoader(object):
   def __init__(self, loader, device):
     self._loader = loader
     self._device = device
-    self._mark_step_batch_count = loader.batches_per_execution - 1
+    self._sync_batch_count = loader.batches_per_execution - 1
     self._batches_yielded = 0
 
   def __iter__(self):
@@ -41,9 +41,9 @@ class PerDeviceLoader(object):
       xp.set_tracer_marked_step(False)
       self._batches_yielded += 1
     else:
-      if self._mark_step_batch_count <= self._batches_yielded:
+      if self._sync_batch_count <= self._batches_yielded:
         self._batches_yielded = 0
-        xm.mark_step()
+        torch_xla.sync()
       else:
         self._batches_yielded += 1
 
@@ -51,7 +51,7 @@ class PerDeviceLoader(object):
     if item is None:
       if not self._loader._exception_queue.empty():
         raise self._loader._exception_queue.get()
-      xm.mark_step()
+      torch_xla.sync()
       raise StopIteration
     return item
 

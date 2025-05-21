@@ -43,11 +43,11 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     x = x.to(device)
     y = model(x).sum()
     y.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     opt1 = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     opt1.step()
-    xm.mark_step()
+    torch_xla.sync()
 
     opt2 = ZeroRedundancyOptimizer(
         model.parameters(),
@@ -56,7 +56,7 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
         momentum=0.9,
         grad_clipping=False)
     opt2.step()
-    xm.mark_step()
+    torch_xla.sync()
 
     s1 = opt1.state_dict()
     s2 = opt2.state_dict()
@@ -74,11 +74,11 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     # step still runnable
     opt1.step()
     opt2.step()
-    xm.mark_step()
+    torch_xla.sync()
 
     opt1.load_state_dict(s1_clone)
     opt2.load_state_dict(s2_clone)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(
         _get_partial_states(opt1.state_dict()['state']),
         opt2.state_dict()['base_state'])
@@ -86,7 +86,55 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     # step still runnable
     opt1.step()
     opt2.step()
+    torch_xla.sync()
+
+  def test_zero1_load(self):
+    device = xm.xla_device()
+
+    model = nn.Linear(32, 32)
+    x = torch.ones((32, 32))
+    x.requires_grad = True
+    model = model.to(device)
+    x = x.to(device)
+    y = model(x).sum()
+    y.backward()
     xm.mark_step()
+
+    #original optimizer
+    opt = ZeroRedundancyOptimizer(
+        model.parameters(),
+        torch.optim.SGD,
+        lr=0.5,
+        momentum=0.5,
+        grad_clipping=True)
+
+    opt.step()
+
+    #creating a dummy to confirm reload is correct
+    dummy_model = nn.Linear(32, 32)
+    dummy_model = dummy_model.to(device)
+    reloaded_opt = ZeroRedundancyOptimizer(
+        dummy_model.parameters(),
+        torch.optim.SGD,
+        lr=0.1,
+        momentum=0.1,
+        grad_clipping=True)
+
+    orig_opt_state = opt.state_dict()
+
+    #reloading the state dict, not performing torch.save
+    # as it is unnecessary here, the output of torch.load
+    # is same as what is directly used here.
+    reloaded_opt.load_state_dict(orig_opt_state)
+
+    self.assertEqual(reloaded_opt['param_groups'],
+                     orig_opt_state['param_groups'])
+
+    self.assertEqual(reloaded_opt['state'], orig_opt_state['state'])
+
+    self.assertEqual(reloaded_opt['base_state'], orig_opt_state['base_state'])
+
+    self.assertEqual(reloaded_opt['shape_info'], orig_opt_state['shape_info'])
 
 
 def _mp_fn(index):

@@ -95,13 +95,13 @@ model. Some example output would be:
 ``` sh
 Compilation Analysis: ================================================================================
 Compilation Analysis: Compilation Cause
-Compilation Analysis:   mark_step in parallel loader at step end
+Compilation Analysis:   `torch_xla.sync()` in parallel loader at step end
 Compilation Analysis: Graph Info:
 Compilation Analysis:   Graph Hash: c74c3b91b855b2b123f833b0d5f86943
 Compilation Analysis:   Number of Graph Inputs: 35
 Compilation Analysis:   Number of Graph Outputs: 107
 Compilation Analysis: Python Frame Triggered Execution:
-Compilation Analysis:   mark_step (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
+Compilation Analysis:   sync (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
 Compilation Analysis:   next (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44)
 Compilation Analysis:   __next__ (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32)
 Compilation Analysis:   train_loop_fn (/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:48)
@@ -121,13 +121,13 @@ Post Compilation Analysis: =====================================================
 
 Execution Analysis: ================================================================================
 Execution Analysis: Execution Cause
-Execution Analysis:   mark_step in parallel loader at step end
+Execution Analysis:   `torch_xla.sync()` in parallel loader at step end
 Execution Analysis: Graph Info:
 Execution Analysis:   Graph Hash: c74c3b91b855b2b123f833b0d5f86943
 Execution Analysis:   Number of Graph Inputs: 35
 Execution Analysis:   Number of Graph Outputs: 107
 Execution Analysis: Python Frame Triggered Execution:
-Execution Analysis:   mark_step (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
+Execution Analysis:   sync (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
 Execution Analysis:   next (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44)
 Execution Analysis:   __next__ (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32)
 Execution Analysis:   train_loop_fn (/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:48)
@@ -138,18 +138,18 @@ Execution Analysis: ============================================================
 ```
 
 Some common causes of Compilation/Executation are 1. User manually call
-`mark_step`. 2. [Parallel
+`torch_xla.sync()`. 2. [Parallel
 loader](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51)
-call `mark_step` for every x (configurable) batch. 3. Exiting a
+call `torch_xla.sync()` for every x (configurable) batch. 3. Exiting a
 [profiler StepTrace
 region](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/debug/profiler.py#L165-L171).
 4. Dynamo decide to compile/execute the graph. 5. User trying to
 access(often due to logging) the value of a tensor before the
-`mark_step`.
+`torch_xla.sync()`.
 
 The execution caused by 1-4 are expected, and we want to avoid 5 by
 either reduce the frequency of accessing tensor values or manually add a
-`mark_step` before accessing.
+`torch_xla.sync()` before accessing.
 
 Users should expect to see this `Compilation Cause` +
 `Executation Cause` pairs for first couple steps. After the model
@@ -390,7 +390,7 @@ of lowered operations.
 -   `print(torch_xla._XLAC._get_xla_tensors_hlo([res]))` where `res` is
     the result tensor prints out the generated XLA HLO.
 
-Note these functions must be called prior to `mark_step()`, otherwise
+Note these functions must be called prior to `torch_xla.sync()`, otherwise
 the tensor will already be materialized.
 
 ### Environment Variables
@@ -443,7 +443,7 @@ degradation, so they should only be enabled for debugging.
     set `TF_CPP_MIN_LOG_LEVEL=0`.
 -   `XLA_DUMP_HLO_GRAPH`: If set to `=1` in case of a compilation or
     execution error the offending HLO graph will be dumped as part of
-    the runtime error raised by `xla_util.cc`.
+    the runtime error raised by `xla_util.cpp`.
 
 ### Common Debugging Environment Variables Combinations
 

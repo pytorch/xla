@@ -326,29 +326,43 @@ void DebugUtil::analyze_graph_execution_python_frame(
   } else if (frames[0].function == "mark_step" ||
              (frames[0].function == "sync" &&
               endsWith(frames[0].file, "torch_xla.py"))) {
-    if (frames[1].function == "next" &&
-        endsWith(frames[1].file, "parallel_loader.py")) {
-      ss << debug_output_prefix
-         << "  mark_step in parallel loader at step end\n";
-    } else if (frames[1].function == "__exit__" &&
-               endsWith(frames[1].file, "profiler.py")) {
-      ss << debug_output_prefix
-         << "  mark_step when exiting a profiler StepTrace region\n";
-    } else if ((frames[1].function == "extract_compiled_graph_helper" ||
-                frames[1].function == "extract_internal") &&
-               endsWith(frames[1].file, "dynamo_bridge.py")) {
-      ss << debug_output_prefix
-         << "  mark_step when dynamo processing input graphs\n";
-    } else if (frames[1].function == "_compile" &&
-               endsWith(frames[1].file, "torch_xla.py")) {
-      ss << debug_output_prefix << "  torch_xla.compile\n";
-    } else if (frames[1].function == "_clear_pending_ops_before_compile" &&
-               endsWith(frames[1].file, "torch_xla.py")) {
-      ss << debug_output_prefix
-         << "  torch_xla.compile clear the pending graph prior calling the "
-            "target function\n";
-    } else {
-      ss << debug_output_prefix << "  user mark_step\n";
+    // TODO: the deprecation warning of mark_step adds extra call stack,
+    // shifting the frames by a certain amount. To mitigate this, we look for
+    // the function from top of stack until we find one. Once mark_step is fully
+    // deprecated, we should revert this change back.
+    int idx = 1;
+    for (; idx < frames.size(); ++idx) {
+      if (frames[idx].function == "next" &&
+          endsWith(frames[idx].file, "parallel_loader.py")) {
+        ss << debug_output_prefix
+           << "  torch_xla.sync in parallel loader at step end\n";
+        break;
+      } else if (frames[idx].function == "__exit__" &&
+                 endsWith(frames[idx].file, "profiler.py")) {
+        ss << debug_output_prefix
+           << "  torch_xla.sync when exiting a profiler StepTrace region\n";
+        break;
+      } else if ((frames[idx].function == "extract_compiled_graph_helper" ||
+                  frames[idx].function == "extract_internal") &&
+                 endsWith(frames[idx].file, "dynamo_bridge.py")) {
+        ss << debug_output_prefix
+           << "  torch_xla.sync when dynamo processing input graphs\n";
+        break;
+      } else if (frames[idx].function == "_compile" &&
+                 endsWith(frames[idx].file, "torch_xla.py")) {
+        ss << debug_output_prefix << "  torch_xla.compile\n";
+        break;
+      } else if (frames[idx].function == "_clear_pending_ops_before_compile" &&
+                 endsWith(frames[idx].file, "torch_xla.py")) {
+        ss << debug_output_prefix
+           << "  torch_xla.compile clear the pending graph prior calling the "
+              "target function\n";
+        break;
+      }
+    }
+    // function not found in frame
+    if (idx == frames.size()) {
+      ss << debug_output_prefix << "  user torch_xla.sync\n";
     }
   } else if (frames[0].function == "extract_graph_helper" &&
              endsWith(frames[0].file, "dynamo_bridge.py")) {
@@ -358,7 +372,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
     // tensor or fallback or some weird indexing.
     ss << debug_output_prefix
        << "  most likely user code trying to access tensor value before "
-          "mark_step\n";
+          "torch_xla.sync\n";
   }
 
   ss << debug_output_prefix << "Graph Info: \n";

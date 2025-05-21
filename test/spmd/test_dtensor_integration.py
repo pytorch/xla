@@ -69,9 +69,9 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
-      xm.mark_step()
-      # Sharding is persisted across mark_step calls, and test if the sharded computation
-      # can repeat more than once without crashing.
+      torch_xla.sync()
+      # Sharding is persisted across `torch_xla.sync()` calls, and test if the
+      # sharded computation can repeat more than once without crashing.
       self.assertEqual(sharding_spec,
                        torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
@@ -105,7 +105,7 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
     # Should run with SPMD mode, ExecuteReplicated.
     self.assertTrue(met.counter_value("ExecuteReplicated") > 0)
     self.assertTrue(met.counter_value("ExecuteComputation") is None)

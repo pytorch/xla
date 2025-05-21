@@ -20,7 +20,7 @@ def _mp_fn(index):
     res = xm.reduce_scatter(xm.REDUCE_SUM, xrand, scale, scatter_dim,
                             world_size)
     expected_world = xm.all_reduce(xm.REDUCE_SUM, xrand, scale)
-    xm.mark_step()
+    torch_xla.sync()
 
     slice_idx = torch.tensor(
         list(range(index * shard_size, (index + 1) * shard_size)))
@@ -47,7 +47,7 @@ def _mp_fn(index):
 
     for i, res in enumerate(res_list):
       expected_world = xm.all_reduce(xm.REDUCE_SUM, xrand_list[i], scale)
-      xm.mark_step()
+      torch_xla.sync()
 
       slice_idx = torch.tensor(
           list(range(index * shard_size, (index + 1) * shard_size)))
@@ -74,7 +74,7 @@ def _mp_fn(index):
 
     for i, res in enumerate(res_list):
       expected_world = xm.all_reduce(xm.REDUCE_SUM, xrand_list[i], scale)
-      xm.mark_step()
+      torch_xla.sync()
 
       slice_idx = torch.tensor(
           list(range(index * shard_size, (index + 1) * shard_size)))
@@ -103,7 +103,7 @@ def _mp_fn(index):
     assert (xoutput_list == res_list)
     for i, res in enumerate(xoutput_list):
       expected_world = xm.all_reduce(xm.REDUCE_SUM, xrand_list[i], scale)
-      xm.mark_step()
+      torch_xla.sync()
 
       slice_idx = torch.tensor(
           list(range(index * shard_size, (index + 1) * shard_size)))
@@ -132,7 +132,7 @@ def _mp_fn(index):
     assert (xoutput_list == res_list)
     for i, res in enumerate(xoutput_list):
       expected_world = xm.all_reduce(xm.REDUCE_SUM, xrand_list[i], scale)
-      xm.mark_step()
+      torch_xla.sync()
 
       slice_idx = torch.tensor(
           list(range(index * shard_size, (index + 1) * shard_size)))
@@ -162,7 +162,7 @@ def _mp_fn(index):
     assert (xoutput_list == res_list)
     for i, res in enumerate(xoutput_list):
       expected_world = xm.all_reduce(xm.REDUCE_SUM, xrand_list[i], scale)
-      xm.mark_step()
+      torch_xla.sync()
 
       slice_idx = torch.tensor(
           list(range(index * shard_size, (index + 1) * shard_size)))
