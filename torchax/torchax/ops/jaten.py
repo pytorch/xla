@@ -5462,8 +5462,12 @@ def kthvalue(input, k, dim=None, keepdim=False, *, out=None):
     dimension = dim
   if dimension < 0:
     dimension = dimension + input.ndim
-  values = jax.lax.index_in_dim(jnp.partition(input, k-1, dimension), k-1, dimension, keepdim)
-  b = jnp.argpartition(input, k-1, dimension).astype('int64')
-  indices = jax.lax.index_in_dim(b, k-1, dimension, keepdim)
+  values = jax.lax.index_in_dim(
+    jnp.partition(input, k-1, dimension), k-1, dimension, keepdim
+  )
+  indices = jax.lax.index_in_dim(
+    jnp.argpartition(input, k-1, dimension).astype('int64'),
+    k-1, dimension, keepdim
+  )
   return values, indices
 
