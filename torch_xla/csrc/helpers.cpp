@@ -6,6 +6,7 @@
 #include <iterator>
 #include <limits>
 
+#include "absl/status/status.h"
 #include "absl/strings/str_join.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/dtype.h"
@@ -1042,9 +1043,11 @@ absl::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   xla::XlaOp orig_result = xla::Call(&builder, computation, inner_params);
 
   // Rebuild aliasing.
-  for (const int64_t i : buffer_donor_indices) {
-    builder.AddBufferDonor(/*param_number=*/0,
-                           /*param_index=*/xla::ShapeIndex({i}));
+  if (buffer_donor_indices.size() > 0) {
+    for (size_t i : buffer_donor_indices) {
+      builder.AddBufferDonor(/*param_number=*/0,
+                             /*param_index=*/xla::ShapeIndex({i}));
+    }
   }
 
   return builder.Build(orig_result);
