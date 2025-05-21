@@ -4,6 +4,27 @@ The two main benchmarking scripts are
   - `experiment_runner.py` to run benchmark experiments, and
   - `result_analyzer.py` to aggregate the benchmark result in CSV form.
 
+## Prerequisites
+
+Follow the [contributing
+guide](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md) to set up
+the repo for development. Using the devcontainer is recommended.
+
+Clone the [`pytorch/benchmark`](https://github.com/pytorch/benchmark) repo into
+your workspace directory, which is mounted to the devcontainer at
+`/workspaces/torch`.
+
+```shell
+cd $WORKSPACE  # cd to the workspace directory containing `pytorch` and `vision`
+git clone git@github.com:pytorch/benchmark.git
+```
+
+Install the required libraries by the models. The following LibGL library is
+required by the Llava model.
+
+```shell
+apt install libgl1-mesa-glx
+```
 
 ## Patching mismatched batch sizes
 
