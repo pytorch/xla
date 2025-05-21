@@ -1251,7 +1251,9 @@ def _aten_cat(tensors, dims=0):
   # handle empty tensors as a special case.
   # torch.cat will ignore the empty tensor, while jnp.concatenate
   # will error if the dims > 0.
-  filtered_tensors = list(filter(lambda x: not(x.ndim == 1 and x.shape[0] == 0), tensors))
+  filtered_tensors = [
+    t for t in tensors if not(t.ndim == 1 and t.shape[0] == 0)
+  ]
   if filtered_tensors:
     return jnp.concatenate(filtered_tensors, dims)
   return tensors[0]
