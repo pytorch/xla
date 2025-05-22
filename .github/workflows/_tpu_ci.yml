@@ -19,10 +19,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test_script:
-          - test/tpu/run_tests.sh
-          - test/tpu/run_expensive_test_1.sh
-          - test/tpu/run_expensive_test_2.sh
+        include:
+          - name: 'run_tests'
+            test_script: 'test/tpu/run_tests.sh'
+          - name: 'run_expensive_test_1'
+            test_script: 'test/tpu/run_expensive_test_1.sh'
+          - name: 'run_expensive_test_2'
+            test_script: 'test/tpu/run_expensive_test_2.sh'
     env:
       USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
       COVERAGE_DIR: '/tmp/lcov'
@@ -70,6 +73,6 @@ jobs:
       - name: Upload coverage results
         uses: actions/upload-artifact@v4
         with:
-          name: "coverage-tpu"
+          name: "coverage-tpu-${{ matrix.name }}"
           path: "${{ env.COVERAGE_DIR }}"
         if: ${{ inputs.collect-coverage }}
