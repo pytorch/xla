@@ -63,11 +63,10 @@ jobs:
         run: |
           cd pytorch/xla
           ${{ matrix.test_script }}
-      - name: Report no code changes
-        # Only report the first instance
-        if: inputs.has_code_changes == 'false' && strategy.job-index == 0
-        run: |
-          echo "No code changes were detected that require running the full test suite."
+          # Merge the profraw files, so that they take less space.
+          llvm-profdata-17 merge $COVERAGE_DIR/cpp-coverage/*.profraw -o $COVERAGE_DIR/cpp-coverage.profdata
+          # Remove the collected raw coverage files.
+          rm -r $COVERAGE_DIR/cpp-coverage
       - name: Upload coverage results
         uses: actions/upload-artifact@v4
         with:

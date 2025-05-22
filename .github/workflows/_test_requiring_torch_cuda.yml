@@ -129,8 +129,13 @@ jobs:
           run_coverage pytorch/xla/test/test_operations.py -v
           run_coverage pytorch/xla/test/dynamo/test_dynamo.py -v
 
+          # Combine all Python coverage files.
           coverage combine
           coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
+          # Merge the profraw files, so that they take less space.
+          llvm-profdata-17 merge $COVERAGE_DIR/cpp-coverage/*.profraw -o $COVERAGE_DIR/cpp-coverage.profdata
+          # Remove the collected raw coverage files.
+          rm -r $COVERAGE_DIR/cpp-coverage
         if: ${{ matrix.run_python_tests }}
       - name: Triton Tests
         shell: bash
@@ -153,8 +158,13 @@ jobs:
 
           run_coverage pytorch/xla/test/test_triton.py
 
+          # Combine all Python coverage files.
           coverage combine
           coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
+          # Merge the profraw files, so that they take less space.
+          llvm-profdata-17 merge $COVERAGE_DIR/cpp-coverage/*.profraw -o $COVERAGE_DIR/cpp-coverage.profdata
+          # Remove the collected raw coverage files.
+          rm -r $COVERAGE_DIR/cpp-coverage
         if: ${{ matrix.run_triton_tests }}
       - name: Upload coverage results
         uses: actions/upload-artifact@v4

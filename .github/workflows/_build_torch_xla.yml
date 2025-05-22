@@ -35,7 +35,6 @@ jobs:
       BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
       BAZEL_JOBS: ''  # Let bazel decide the parallelism based on the number of CPUs.
       BUILD_CPP_TESTS: 1
-      GCNO_OUTPUT_DIR: "/tmp/torch-xla-gcno"
     steps:
       # Need to check out local composite actions before using them
       # https://github.com/orgs/community/discussions/11771

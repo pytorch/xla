@@ -155,7 +155,12 @@ jobs:
         env:
           COVERAGE_FILE: "${{ env.COVERAGE_DIR }}/py-coverage"
           LLVM_PROFILE_FILE: "${{ env.COVERAGE_DIR }}/cpp-coverage/data-%p.profraw"
-        run: pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
+        run: |
+          pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
+          # Merge the profraw files, so that they take less space.
+          llvm-profdata-17 merge $COVERAGE_DIR/cpp-coverage/*.profraw -o $COVERAGE_DIR/cpp-coverage.profdata
+          # Remove the collected raw coverage files.
+          rm -r $COVERAGE_DIR/cpp-coverage
       - name: Upload coverage results
         uses: actions/upload-artifact@v4
         with:
