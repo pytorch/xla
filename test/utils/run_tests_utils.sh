@@ -3,6 +3,7 @@ set -exo pipefail
 
 # Parses the commandline flags and sets correponding environment variables.
 function parse_options_to_vars {
+  set +x  # echo off
   # Default option values. Can be overridden via commandline flags.
   LOGFILE=/tmp/pytorch_py_test.log
   VERBOSITY=2
@@ -31,12 +32,14 @@ function parse_options_to_vars {
         exit 1
     esac
   done
+  set -x  # echo on
 }
 
 # Given $1 as a (possibly not normalized) test filepath, returns successfully
 # if it matches any of the space-separated globs $_TEST_FILTER. If
 # $_TEST_FILTER is empty, returns successfully.
 function test_is_selected {
+  set +x  # echo off
   if [[ -z "$_TEST_FILTER" ]]; then
     return 0 # success
   fi
@@ -48,6 +51,8 @@ function test_is_selected {
     # so that they can be compared.
     case $(realpath $1) in
     $(realpath $_FILTER))
+      echo "RUNNING: $@"
+      set -x  # echo on
       return 0 # success
       ;;
     *)
@@ -56,6 +61,7 @@ function test_is_selected {
     esac
   done
 
+  set -x  # echo on
   return 1 # failure
 }
 

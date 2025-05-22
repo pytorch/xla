@@ -132,6 +132,9 @@ function run_pt_xla_debug_level1 {
 }
 
 function run_pt_xla_debug_level2 {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG_LEVEL=2 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
