@@ -9,10 +9,12 @@
 #include <memory>
 #include <numeric>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <vector>
 
+#include "absl/status/statusor.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/types.h"
@@ -126,6 +128,53 @@ template <typename T, typename S>
 T Multiply(const S& input) {
   return std::accumulate(input.begin(), input.end(), T(1),
                          std::multiplies<T>());
+}
+
+namespace internal {
+
+// ExtractStatusOrValue<U>::type is T if U is absl::StatusOr<T>, and is
+// undefined otherwise.
+template <typename U>
+struct ExtractStatusOrValue;
+template <typename T>
+struct ExtractStatusOrValue<absl::StatusOr<T>> {
+  using type = T;
+};
+
+}  // namespace internal
+
+// RaisePythonValueErrorOnFailure(func) requires `func` to be a functor that
+// takes no argument and returns an absl::StatusOr<T>. It's a wrapper of
+// `func()` that translates any failure in `func()` to a Python ValueError
+// exception. In particular:
+//
+//   - if `func()` returns an error, throws an std::invalid_argument,
+//     which is translated to a Python ValueError exception;
+//     (https://pybind11.readthedocs.io/en/stable/advanced/exceptions.html).
+//   - if `func()` throws any exception, rethrows it as an
+//     std::invalid_argument so that we get a Python ValueError;
+//   - if `func()` successfully returns a value of type T, returns the value;
+//   - however, if `func()` crashes (e.g. due to a CHECK), we cannot
+//     catch it; therefore we should ensure that `func()` never
+//     crashes (and fix any crash as a bug).
+template <typename Func>
+typename internal::ExtractStatusOrValue<decltype(std::declval<Func>()())>::type
+RaisePythonValueErrorOnFailure(const Func& func) {
+  decltype(std::declval<Func>()()) result;
+  try {
+    result = func();
+  } catch (const std::exception& e) {
+    throw std::invalid_argument(e.what());
+  } catch (...) {
+    throw std::invalid_argument(
+        "Function threw an unknown exception. Please file a bug at "
+        "https://github.com/pytorch/xla/issues with details on how to "
+        "reproduce the error.");
+  }
+  if (result.ok()) {
+    return *std::move(result);
+  }
+  throw std::invalid_argument(std::string(result.status().message()));
 }
 
 }  // namespace util
