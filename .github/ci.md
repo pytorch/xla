@@ -16,18 +16,19 @@ new features, fix breaking changes, etc. Since PyTorch/XLA CI pulls from PyTorch
 master by default, we need to manually provide a PyTorch pin. In a PyTorch/XLA
 PR, PyTorch can be manually pinned by creating a `.torch_pin` file at the root
 of the repository. The `.torch_pin` should have the corresponding PyTorch PR
-number prefixed by "#". Take a look at [example
-here](https://github.com/pytorch/xla/pull/7313). Before the PyTorch/XLA PR gets
-merged, the `.torch_pin` must be deleted.
+number prefixed by "#". Take a look at
+[example here](https://github.com/pytorch/xla/pull/7313). Before the PyTorch/XLA
+PR gets merged, the `.torch_pin` must be deleted.
 
 ### Coordinating merges for breaking PyTorch PRs
 
 When PyTorch PR introduces a breaking change, its PyTorch/XLA CI tests will
 fail. Steps for fixing and merging such breaking PyTorch change is as following:
+
 1. Create a PyTorch/XLA PR to fix this issue with `.torch_pin` and rebase with
    master to ensure the PR is up-to-date with the latest commit on PyTorch/XLA.
    Once this PR is created, it'll create a commit hash that will be used in step
-   2. If you have multiple commits in the PR, use the last one's hash.
+   2\. If you have multiple commits in the PR, use the last one's hash.
    **Important note: When you rebase this PR, it'll create a new commit hash and
    make the old hash obsolete. Be cautious about rebasing, and if you rebase,
    make sure you inform the PyTorch PR's author.**
@@ -35,10 +36,10 @@ fail. Steps for fixing and merging such breaking PyTorch change is as following:
    PyTorch PR to pin the PyTorch/XLA to the commit hash created in step 1 by
    updating `pytorch/.github/ci_commit_pins/xla.txt`.
 1. Once CI tests are green on both ends, merge PyTorch PR.
-1. Remove the `.torch_pin` in PyTorch/XLA PR and merge. To be noted, `git commit
-   --amend` should be avoided in this step as PyTorch CI will keep using the
-   commit hash created in step 1 until other PRs update that manually or the
-   nightly buildbot updates that automatically.
+1. Remove the `.torch_pin` in PyTorch/XLA PR and merge. To be noted,
+   `git commit --amend` should be avoided in this step as PyTorch CI will keep
+   using the commit hash created in step 1 until other PRs update that manually
+   or the nightly buildbot updates that automatically.
 1. Finally, don't delete your branch until 2 days later. See step 4 for
    explanations.
 
@@ -99,18 +100,16 @@ much slower due to the number of possible optimizations, and the GPU chips
 themselves are quite outdated, so these tests will take longer to run than the
 CPU tests.
 
-![CPU tests launch when `torch_xla` is
-complete](../docs/assets/ci_test_dependency.png)
+![CPU tests launch when  is complete](../docs/assets/ci_test_dependency.png)
 
-![GPU tests also depend on CUDA
-plugin](../docs/assets/ci_test_dependency_gpu.png)
+![GPU tests also depend on CUDA plugin](../docs/assets/ci_test_dependency_gpu.png)
 
 For the C++ test groups in either case, the test binaries are pre-built during
 the build phase and packaged in `cpp-test-bin`. This will only be downloaded if
 necessary.
 
-[^1]: Note: both GPU and TPU support require their respective plugins to be
-    installed. This package will _not_ work on either out of the box.
+\[^1\]: Note: both GPU and TPU support require their respective plugins to be
+installed. This package will _not_ work on either out of the box.
 
 ### TPU CI
 
@@ -130,9 +129,9 @@ configuration in `.devcontainer`. These use identical images/environments as the
 CI.
 
 If you cannot reproduce the failure or need to inspect the package built in a CI
-run, you can download the `torch-xla-wheels` artifact for that run, [either
-locally in your web browser or remotely with the `gh` CLI tool][artifacts]. C++
-tests in particular can be quite slow to build. If you need to re-run these
+run, you can download the `torch-xla-wheels` artifact for that run,
+[either locally in your web browser or remotely with the `gh` CLI tool][artifacts].
+C++ tests in particular can be quite slow to build. If you need to re-run these
 yourself, download the `cpp-test-bin` artifact. You'll have to set some
 additional environment variables for these to load the correct `torch` and
 plugin binaries, so you should copy the variables we set in `_test.yml` before
@@ -202,7 +201,7 @@ find the controller pod name:
 kubectl get pods -n arc-systems
 ```
 
-The name should match actions-runner-controller-gha-rs-controller-*. You can
+The name should match actions-runner-controller-gha-rs-controller-\*. You can
 then check the logs by running the following:
 
 ```
@@ -233,7 +232,6 @@ update the tag on their side
 Note: the upstream CI still relies on some legacy scripts in `.circleci` rather
 than our Ansible config. Don't update these without checking if they break the
 upstream CI first! TODO: finally delete these.
-
 
 <!-- xrefs -->
 

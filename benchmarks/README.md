@@ -1,16 +1,16 @@
 # Benchmarking
 
 The two main benchmarking scripts are
-  - `experiment_runner.py` to run benchmark experiments, and
-  - `result_analyzer.py` to aggregate the benchmark result in CSV form.
 
+- `experiment_runner.py` to run benchmark experiments, and
+- `result_analyzer.py` to aggregate the benchmark result in CSV form.
 
 ## Patching mismatched batch sizes
 
-Sometimes batch sizes for inference might differ between Inductor, and XLA.
-This stems from the fact that we pass in an XLA device string to the TorchBench
-modelling code, instead of a raw CUDA string, and the path to correctly
-fetch the accelerator underneath is not covered. To fix this apply a patch:
+Sometimes batch sizes for inference might differ between Inductor, and XLA. This
+stems from the fact that we pass in an XLA device string to the TorchBench
+modelling code, instead of a raw CUDA string, and the path to correctly fetch
+the accelerator underneath is not covered. To fix this apply a patch:
 
 ```
 git apply benchmarks/patches/mismatched_batch_size.patch
@@ -20,24 +20,24 @@ And replace the `current_device_name` with your actual accelerator name.
 
 ## Reducing benchmark noise
 
-It is important to keep the benchmark runs safe from external effects
-to reduce noise. Do the following:
+It is important to keep the benchmark runs safe from external effects to reduce
+noise. Do the following:
 
-Sets the CPU statically to the highest tuneable frequency.
-Prevent energy saving features to kick in.
+Sets the CPU statically to the highest tuneable frequency. Prevent energy saving
+features to kick in.
 
-```sudo cpupower frequency-set --governor performance```
+`sudo cpupower frequency-set --governor performance`
 
-Lock GPU clocks to lower frequency to reduce the chance of thermal throttling. Choose
-FREQ based on your GPU info. To find out clock frequency on your device run:
-`nvidia-smi -q -d CLOCK`, and look for Graphics/SM in Max Clocks section.
-Setting the clock a couple hundrend MHz below, or ~80% of max
-will most likely prevent thermal throttling effects.
+Lock GPU clocks to lower frequency to reduce the chance of thermal throttling.
+Choose FREQ based on your GPU info. To find out clock frequency on your device
+run: `nvidia-smi -q -d CLOCK`, and look for Graphics/SM in Max Clocks section.
+Setting the clock a couple hundrend MHz below, or ~80% of max will most likely
+prevent thermal throttling effects.
 
-```FREQ=... nvidia-smi --lock-gpu-clocks=$FREQ,$FREQ```
+`FREQ=... nvidia-smi --lock-gpu-clocks=$FREQ,$FREQ`
 
-Disable autoboost selecting clock rate based on thermal, and power budget effects.
-```CUDA_AUTO_BOOST=0```
+Disable autoboost selecting clock rate based on thermal, and power budget
+effects. `CUDA_AUTO_BOOST=0`
 
 ## Experiment runner
 
@@ -46,7 +46,8 @@ parent of the `xla` directory.
 
 The following example runs the alexnet benchmark on GPU through the
 Pytorch/XLA-dynamo path and through the Inductor-dynamo with 5 repetitions each.
-The results will be stored in a json file (eg results.jsonl) in `experiment_results`.
+The results will be stored in a json file (eg results.jsonl) in
+`experiment_results`.
 
 ```
 cd pytorch
@@ -68,16 +69,17 @@ You can change the flags to add the configurations you are interested in. The
 For example, in the case above, it will consider all the possible combinations
 among the flags `--dynamo`, `--xla`, and `--test`, 4 of which are supported:
 
-  - `dynamo=openxla`, `xla=PJRT`, `test=eval`
-  - `dynamo=openxla`, `xla=PJRT`, `test=train`
-  - `dynamo=inductor`, `xla=None`, `test=eval`
-  - `dynamo=inductor`, `xla=None`, `test=train`
-
+- `dynamo=openxla`, `xla=PJRT`, `test=eval`
+- `dynamo=openxla`, `xla=PJRT`, `test=train`
+- `dynamo=inductor`, `xla=None`, `test=eval`
+- `dynamo=inductor`, `xla=None`, `test=train`
 
 ## Run benchmarking for a single configuration
 
-The section `Experiment runner` above shows how to run the benchmarking script for a combination of configurations. For each configuration,
-the script starts a process and run the benchmarking. This section shows how to run the benchmarking for a single configuration without spawning new processes.
+The section `Experiment runner` above shows how to run the benchmarking script
+for a combination of configurations. For each configuration, the script starts a
+process and run the benchmarking. This section shows how to run the benchmarking
+for a single configuration without spawning new processes.
 
 ```
 cd pytorch
@@ -89,16 +91,15 @@ python xla/benchmarks/experiment_runner.py \
     --repeat 1
 ```
 
-
 ## Verification module
 
-Verification flag, enabled by running the experiment runner script with `--verify`
-calculates the mean relative error of the model's output against the eager run
-of the very same model. If the difference is greater than predefined threshold (e.g. 2%)
-it will report the `FAIL` status code in the output file of the benchmarking one, and `PASS`
-if it is not. Additional verification codes can be present if the verification fails
-due to various issues (e.g. unsupported output shape, failed eager run). The verification
-works only for inference now.
+Verification flag, enabled by running the experiment runner script with
+`--verify` calculates the mean relative error of the model's output against the
+eager run of the very same model. If the difference is greater than predefined
+threshold (e.g. 2%) it will report the `FAIL` status code in the output file of
+the benchmarking one, and `PASS` if it is not. Additional verification codes can
+be present if the verification fails due to various issues (e.g. unsupported
+output shape, failed eager run). The verification works only for inference now.
 
 ```
 cd pytorch
@@ -122,9 +123,9 @@ cat /tmp/output/results.jsonl
 
 ## Microbenchmarks
 
-In `bench.py` there is a common infrastructure to measure things without
-CPU, and CUDA synchronisation overhead. `matmul_benchmark.py` is the microbenchmark
-which utilizes this  infra to perform a simple squared matrix multiplication for
+In `bench.py` there is a common infrastructure to measure things without CPU,
+and CUDA synchronisation overhead. `matmul_benchmark.py` is the microbenchmark
+which utilizes this infra to perform a simple squared matrix multiplication for
 PT/XLA, and compare it against some basline.
 
 ## Result analyzer
@@ -132,8 +133,9 @@ PT/XLA, and compare it against some basline.
 Run the `result_analyzer.py` from the `pytorch` directory, which should be the
 parent of the `xla` directory.
 
-The following example analyzes the results (eg results.jsonl) generated by the above invocation of
-`experiment_runner.py`. So make sure to use consistent `--output-dirname` parameter. The aggregates are saved in CSV format in
+The following example analyzes the results (eg results.jsonl) generated by the
+above invocation of `experiment_runner.py`. So make sure to use consistent
+`--output-dirname` parameter. The aggregates are saved in CSV format in
 `experiment_results/metric_report.csv`.
 
 ```
@@ -143,12 +145,12 @@ python xla/benchmarks/result_analyzer.py --output-dirname=experiment_results
 
 ## Aggregating results
 
-Aggregate reports can be generated directly from the output JSONL files
-(i.e., skipping `result_analyzer.py` altogether) with the `aggregate.py` script.
-The script compares Pytorch/XLA performance numbers against Inductor numbers.
-Because Inductor's performance also changes over time, the script takes
-the oldest Inductor performance numbers present in the JSONL files (as
-determined by the records' timestamp) as the baseline for each benchmark.
+Aggregate reports can be generated directly from the output JSONL files (i.e.,
+skipping `result_analyzer.py` altogether) with the `aggregate.py` script. The
+script compares Pytorch/XLA performance numbers against Inductor numbers.
+Because Inductor's performance also changes over time, the script takes the
+oldest Inductor performance numbers present in the JSONL files (as determined by
+the records' timestamp) as the baseline for each benchmark.
 
 Sample runs and sample output:
 
@@ -228,5 +230,5 @@ run on Inductor but not on Pytorch/XLA.
 
 ## Continuous Integration Tests
 
-Benchmark-related tests run by CI are located at `xla/test/benchmarks`.
-To run the tests locally, do `$ make -C xla/test/benchmarks`.
+Benchmark-related tests run by CI are located at `xla/test/benchmarks`. To run
+the tests locally, do `$ make -C xla/test/benchmarks`.

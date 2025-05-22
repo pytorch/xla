@@ -6,14 +6,14 @@ This document describes how to use torch export + torch xla to export to
 There are 2 ways to accomplish this:
 
 1. First do torch.export to create a ExportedProgram, which contains the program
-   in torch.fx graph. Then use `exported_program_to_stablehlo` to convert it into an object that contains
-   stablehlo MLIR code.
-2. First convert pytorch model to a jax function, then use jax utilities to convert it
-   to stablehlo
+   in torch.fx graph. Then use `exported_program_to_stablehlo` to convert it
+   into an object that contains stablehlo MLIR code.
+1. First convert pytorch model to a jax function, then use jax utilities to
+   convert it to stablehlo
 
 ## Using `torch.export`
 
-``` python
+```python
 from torch.export import export
 import torchvision
 import torch
@@ -31,9 +31,9 @@ print(stablehlo.mlir_module())
 # Can store weights and/or stablehlo object however you like
 ```
 
-The stablehlo object is of type `jax.export.Exported`.
-Feel free to explore: https://openxla.org/stablehlo/tutorials/jax-export
-for more details on how to use the MLIR code generated from it.
+The stablehlo object is of type `jax.export.Exported`. Feel free to explore:
+https://openxla.org/stablehlo/tutorials/jax-export for more details on how to
+use the MLIR code generated from it.
 
 ## Using `extract_jax`
 
@@ -61,29 +61,28 @@ print(stablehlo.mlir_module())
 # Can store weights and/or stablehlo object however you like
 ```
 
-The second to last line we used `jax.ShapedDtypeStruct` to specify the input shape.
-You can also pass a numpy array here.
-
+The second to last line we used `jax.ShapedDtypeStruct` to specify the input
+shape. You can also pass a numpy array here.
 
 ## Preserving High-Level PyTorch Operations in StableHLO by generating `stablehlo.composite`
 
 High level PyTorch ops (e.g. `F.scaled_dot_product_attention`) will be
-decomposed into low level ops during PyTorch -\> StableHLO lowering.
-Capturing the high level op in downstream ML compilers can be crucial
-for genearting a performant, efficient specialized kernels. While
-pattern matching a bunch of low level ops in the ML compiler can be
-challenging and error-prone, we offer a more robust method to outline
-the high-level PyTorch op in StableHLO program - by generating
+decomposed into low level ops during PyTorch -> StableHLO lowering. Capturing
+the high level op in downstream ML compilers can be crucial for genearting a
+performant, efficient specialized kernels. While pattern matching a bunch of low
+level ops in the ML compiler can be challenging and error-prone, we offer a more
+robust method to outline the high-level PyTorch op in StableHLO program - by
+generating
 [stablehlo.composite](https://github.com/openxla/stablehlo/blob/main/docs/spec.md#composite)
 for the high level PyTorch ops.
 
 The following example shows a pratical use case - capturing
 `scaled_product_attention`
 
-For using `composite` we need to use the jax-centric export now. (i.e. no torch.export)
-We are working in adding support for torch.export now.
+For using `composite` we need to use the jax-centric export now. (i.e. no
+torch.export) We are working in adding support for torch.export now.
 
-``` python
+```python
 import unittest
 import torch
 import torch.nn.functional as F
@@ -169,8 +168,8 @@ if __name__ == '__main__':
   unittest.main()
 ```
 
-As we see, to emit a stablehlo function into composite, first we make a python function
-representing the region of code that we want to call, then, we register it
-so that pytorch and jlibrary understands it's a custom region. Then, th
-emitted Stablehlo will have `mylib.scaled_dot_product_attention` and `mylib.softmax`
-outlined stablehlo functions.
+As we see, to emit a stablehlo function into composite, first we make a python
+function representing the region of code that we want to call, then, we register
+it so that pytorch and jlibrary understands it's a custom region. Then, th
+emitted Stablehlo will have `mylib.scaled_dot_product_attention` and
+`mylib.softmax` outlined stablehlo functions.

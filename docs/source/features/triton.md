@@ -1,14 +1,14 @@
 # Custom GPU Kernels via Triton
 
-PyTorch/XLA now supports [Triton](https://openai.com/research/triton)
-kernels, enabling high-performance deep learning model execution on
-GPUs. Triton, a specialized language and compiler for GPU programming,
-empowers developers to write custom kernels that leverage the full
-potential of GPUs for various operations in deep learning models.
+PyTorch/XLA now supports [Triton](https://openai.com/research/triton) kernels,
+enabling high-performance deep learning model execution on GPUs. Triton, a
+specialized language and compiler for GPU programming, empowers developers to
+write custom kernels that leverage the full potential of GPUs for various
+operations in deep learning models.
 
 Given a Triton kernel defined as follows:
 
-``` python3
+```python3
 @triton.jit
 def add_kernel(
     x_ptr,  # *Pointer* to first input vector.
@@ -32,7 +32,7 @@ def add_kernel(
 We can run make this kernel a part of the PyTorch/XLA execution graph as
 follows:
 
-``` python3
+```python3
 import torch
 
 import torch_xla.experimental.triton as xla_triton
@@ -62,14 +62,14 @@ output = torch_xla._XLAC._xla_gpu_custom_call([x, y], payload,
                                                 [output.shape], [torch.int64])
 ```
 
-For more complex kernels, you can also refer to the Triton Flash
-Attention kernel test in PyTorch/XLA.
+For more complex kernels, you can also refer to the Triton Flash Attention
+kernel test in PyTorch/XLA.
 
 ## Dependencies
 
-The Triton integration depends on the `triton` package to function. This
-code is tested with `triton==2.3.0`. To install:
+The Triton integration depends on the `triton` package to function. This code is
+tested with `triton==2.3.0`. To install:
 
-``` bash
+```bash
 pip install --no-deps triton==2.3.0
 ```

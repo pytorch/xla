@@ -1,21 +1,23 @@
 # torchax: Running PyTorch on TPU
 
-**torchax** is a backend for PyTorch, allowing users to run
-PyTorch on Google CloudTPUs. **torchax** is also a library for providing
-graph-level interoperability between PyTorch and Jax.
+**torchax** is a backend for PyTorch, allowing users to run PyTorch on Google
+CloudTPUs. **torchax** is also a library for providing graph-level
+interoperability between PyTorch and Jax.
 
 This means, with **torchax** you can:
-* Run PyTorch code on TPU with as little as 2 lines of code change.
-* Call a jax function from a pytorch function, passing in `jax.Array`s
-* Call a pytorch function from a jax function, passing in a `torch.Tensor` subclass.
-* Use jax features such as `jax.grad`, `optax` and `GSMPD` to train a Pytorch model.
-* Use a Pytorch model as feature extractor and use it with a Jax model.
-etc etc.
+
+- Run PyTorch code on TPU with as little as 2 lines of code change.
+- Call a jax function from a pytorch function, passing in `jax.Array`s
+- Call a pytorch function from a jax function, passing in a `torch.Tensor`
+  subclass.
+- Use jax features such as `jax.grad`, `optax` and `GSMPD` to train a Pytorch
+  model.
+- Use a Pytorch model as feature extractor and use it with a Jax model. etc etc.
 
 ## Install
 
-
 ### On Google Cloud TPU:
+
 First install torch CPU:
 
 ```bash
@@ -35,6 +37,7 @@ pip install torchax
 ```
 
 ### On GPU machines:
+
 First install torch CPU:
 
 ```bash
@@ -54,6 +57,7 @@ pip install torchax
 ```
 
 ### On CPU machines (mac included)
+
 First install torch CPU:
 
 ```bash
@@ -76,12 +80,13 @@ Finally install torchax
 pip install torchax
 ```
 
-NOTE: if you like metal support for Apple devices then install the
-metal version of jax: https://developer.apple.com/metal/jax/
+NOTE: if you like metal support for Apple devices then install the metal version
+of jax: https://developer.apple.com/metal/jax/
 
 ### Installing `torchax` from source
 
-Still need to install `torch` CPU and `Jax` of your accelerator (GPU, TPU or None).
+Still need to install `torch` CPU and `Jax` of your accelerator (GPU, TPU or
+None).
 
 ```bash
 pip install git+https://github.com/pytorch/xla.git#subdirectory=torchax
@@ -122,13 +127,14 @@ print(m(inputs))
 This model `m` contains 2 parts: the weights that is stored inside of the model
 and it's submodules (`nn.Linear`).
 
-To execute this model with `torchax`; we need to enable torchax to capture pytorch ops.
-To enable this, use:
+To execute this model with `torchax`; we need to enable torchax to capture
+pytorch ops. To enable this, use:
 
 ```python
 import torchax
 torchax.enable_globally()
 ```
+
 Then, a `jax` device will be available to use
 
 ```python
@@ -138,26 +144,28 @@ res = m(inputs)
 print(type(res))  # outputs torchax.tensor.Tensor
 ```
 
-`torchax.tensor.Tensor` is a `torch.Tensor` subclass that holds
-a `jax.Array`. You can inspect that jax array with `res.jax()`
-
+`torchax.tensor.Tensor` is a `torch.Tensor` subclass that holds a `jax.Array`.
+You can inspect that jax array with `res.jax()`
 
 ## What is happening behind the scene:
 
-We took the approach detailed in [new device](https://github.com/albanD/subclass_zoo/blob/main/new_device.py) recipe by Alban (@albanD); using `jax.Array` for the `raw_data`.
+We took the approach detailed in
+[new device](https://github.com/albanD/subclass_zoo/blob/main/new_device.py)
+recipe by Alban (@albanD); using `jax.Array` for the `raw_data`.
 
-In other words, When a torch op is executed inside of `env` context manager (which is enabled with `torchax.enable_globally()`), we can swap out the
+In other words, When a torch op is executed inside of `env` context manager
+(which is enabled with `torchax.enable_globally()`), we can swap out the
 implementation of that op written in Jax.
 
 When a model's constructor runs, it will call some tensor constructor, such as
-`torch.rand`, `torch.ones` or `torch.zeros` etc to create its weights. The constructor
-will create an `torch.Tensor` subclass that contains a `jax.Array`.
+`torch.rand`, `torch.ones` or `torch.zeros` etc to create its weights. The
+constructor will create an `torch.Tensor` subclass that contains a `jax.Array`.
 
 Then, each subsequent op can unpack the `jax.Array`, call the op implementation,
 and wraps it back into `torch.Tensor` subclass.
 
-See more at [how_it_works](docs/how_it_works.md) and [ops registry](docs/ops_registry.md).
-
+See more at [how_it_works](docs/how_it_works.md) and
+[ops registry](docs/ops_registry.md).
 
 ### Executing with jax.jit
 
@@ -165,14 +173,13 @@ The above script will execute the model using eager mode Jax as backend. This
 does allow executing torch models on TPU, but is often slower than what we can
 achieve with `jax.jit`.
 
-`jax.jit` is a function that takes a Jax function (i.e. a function that takes jax array
-and returns jax array) into the same function, but faster.
+`jax.jit` is a function that takes a Jax function (i.e. a function that takes
+jax array and returns jax array) into the same function, but faster.
 
-We have made the `jax_jit` decorator that would accomplish the same with functions
-that takes and returns `torch.Tensor`. To use this, the first step is to create
-a functional version of this model: this means the parameters should be passed in
-as input instead of being attributes on class:
-
+We have made the `jax_jit` decorator that would accomplish the same with
+functions that takes and returns `torch.Tensor`. To use this, the first step is
+to create a functional version of this model: this means the parameters should
+be passed in as input instead of being attributes on class:
 
 ```python
 
@@ -180,9 +187,11 @@ def model_func(param, inputs):
   return torch.func.functional_call(m, param, inputs)
 
 ```
-Here we use [torch.func.functional_call](https://pytorch.org/docs/stable/generated/torch.func.functional_call.html)
-from PyTorch to replace the model
-weights with `param`, then call the model. This is roughly equivalent to:
+
+Here we use
+[torch.func.functional_call](https://pytorch.org/docs/stable/generated/torch.func.functional_call.html)
+from PyTorch to replace the model weights with `param`, then call the model.
+This is roughly equivalent to:
 
 ```python
 def model_func(param, inputs):
@@ -198,10 +207,11 @@ model_func_jitted = jax_jit(model_func)
 print(model_func_jitted(new_state_dict, inputs))
 ```
 
-See more examples at [eager_mode.py](examples/eager_mode.py) and the (examples folder)[examples/]
+See more examples at [eager_mode.py](examples/eager_mode.py) and the (examples
+folder)[examples/]
 
-However, to ease the idiom of creating functional model and calling it with parameters,
-we also created the `JittableModule` helper class.
+However, to ease the idiom of creating functional model and calling it with
+parameters, we also created the `JittableModule` helper class.
 
 So the above can be written as:
 
@@ -213,10 +223,8 @@ m_jitted = JittableModule(m)
 res = m_jitted(...)
 ```
 
-The first time that `m_jitted` is called , it will trigger `jax.jit`
-then the subsequent computation with inputs of same shape will be fast.
-
-
+The first time that `m_jitted` is called , it will trigger `jax.jit` then the
+subsequent computation with inputs of same shape will be fast.
 
 # Citation:
 
@@ -234,9 +242,10 @@ then the subsequent computation with inputs of same shape will be fast.
 
 This library is created and maintained by the PyTorch/XLA team at Google Cloud.
 
-However, it benefitted from many direct and indirect
-contributions outside of the team. Many of them done by
-fellow Googlers using [Google's 20% project policy](https://ebsedu.org/blog/google-tapping-workplace-actualization-20-time-rule), others by partner teams.
+However, it benefitted from many direct and indirect contributions outside of
+the team. Many of them done by fellow Googlers using
+[Google's 20% project policy](https://ebsedu.org/blog/google-tapping-workplace-actualization-20-time-rule),
+others by partner teams.
 
 Here is the full list of contributors by 2025-02-25.
 

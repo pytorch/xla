@@ -64,8 +64,9 @@ for i in range(10):
 ### Using `@assume_pure` with a `nn.Module`
 
 If you have a pure `nn.Module` i.e. its `forward` behavior only depends on the
-input arguments and the model parameters, we can use `torch.func.functional_call`
-to convert the module into a pure function and pass that to `assume_pure`:
+input arguments and the model parameters, we can use
+`torch.func.functional_call` to convert the module into a pure function and pass
+that to `assume_pure`:
 
 ```python
 import torch
@@ -117,15 +118,17 @@ The version with `@assume_pure` is much faster.
 
 Importantly, the `@assume_pure` running time does not scale with increasing
 complexity inside the model. That's because we only trace the model once, paying
-a fixed up-front cost, and then later runs will reuse the cached XLA computation.
+a fixed up-front cost, and then later runs will reuse the cached XLA
+computation.
 
 ## Limitations
 
 Currently, all operations in a function wrapped with `@assume_pure` must be
 PyTorch upstream operations (e.g. `torch.einsum`, `torch.sin`, ...), or these
 PyTorch/XLA operations:
-  * `torch_xla.experimental.assume_pure` (recursive `assume_pure`)
-  * `torch_xla.distributed.spmd.mark_sharding`
+
+- `torch_xla.experimental.assume_pure` (recursive `assume_pure`)
+- `torch_xla.distributed.spmd.mark_sharding`
 
 More PyTorch/XLA operations (e.g. `flash_attention`) will be supported in the
 future.

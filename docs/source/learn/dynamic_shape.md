@@ -1,31 +1,47 @@
 # Dynamic Shapes
 
-Dynamic shapes means a tensor's shape depends on the value of another tensor. For example:
+Dynamic shapes means a tensor's shape depends on the value of another tensor.
+For example:
+
 ```python
 >>> import torch, torch_xla
 >>> in_tensor  = torch.randint(low=0, high=2, size=(5,5), device='xla:0')
 >>> out_tensor = torch.nonzero(in_tensor)
 ```
 
-The shape of `out_tensor` depends on the value of `in_tensor` and is bounded by the shape of `in_tensor`. In other words, if you do
+The shape of `out_tensor` depends on the value of `in_tensor` and is bounded by
+the shape of `in_tensor`. In other words, if you do
 
 ```python
 >>> print(out_tensor.shape)
 torch.Size([<=25, 2])
 ```
-the first dimension depends on the value of `in_tensor` and its maximum value is 25. We call the first dimension the dynamic dimension. The second dimension does not depend on any upstream tensors so we call it the static dimension.
 
-Dynamic shape can be further categorized into bounded dynamic shape and unbounded dynamic shape.
-- Bounded dynamic shape: refers to a shape whose dynamic dimensions are bounded by static values. It works for accelerators that require static memory allocation (e.g. TPU).
-- Unbounded dynamic shape: refers to a shape whose dynamic dimensions can be infinitely large. It works for accelerators that don’t require static memory allocation (e.g. GPU).
+the first dimension depends on the value of `in_tensor` and its maximum value is
+25\. We call the first dimension the dynamic dimension. The second dimension does
+not depend on any upstream tensors so we call it the static dimension.
 
-Today, only the bounded dynamic shape is supported and it is in the experimental phase.
+Dynamic shape can be further categorized into bounded dynamic shape and
+unbounded dynamic shape.
+
+- Bounded dynamic shape: refers to a shape whose dynamic dimensions are bounded
+  by static values. It works for accelerators that require static memory
+  allocation (e.g. TPU).
+- Unbounded dynamic shape: refers to a shape whose dynamic dimensions can be
+  infinitely large. It works for accelerators that don’t require static memory
+  allocation (e.g. GPU).
+
+Today, only the bounded dynamic shape is supported and it is in the experimental
+phase.
 
 ## Bounded dynamic shape
 
-Currently, we support multi-layer perceptron models (MLP) with dynamic size input on TPU.
+Currently, we support multi-layer perceptron models (MLP) with dynamic size
+input on TPU.
 
-This feature is controlled by a flag `XLA_EXPERIMENTAL="nonzero:masked_select"`. To run a model with the feature enabled, launch Python with the following environment variable:
+This feature is controlled by a flag `XLA_EXPERIMENTAL="nonzero:masked_select"`.
+To run a model with the feature enabled, launch Python with the following
+environment variable:
 
 ```sh
 XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" python your_scripts.py
@@ -33,15 +49,16 @@ XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" python your_scripts.py
 
 Here are some numbers we get when we run the MLP model for 100 iterations:
 
-|             | No dynamic shape  | With dynamic shape     |
-| :---        |    :----:         |          ---: |
-| End-to-end training time | 29.49             | 20.03   |
-| Number of compilations   | 102               | 49      |
-| Compilation cache hit    | 198               | 1953      |
+| | No dynamic shape | With dynamic shape | | :--- | :----: | ---: | |
+End-to-end training time | 29.49 | 20.03 | | Number of compilations | 102 | 49 |
+| Compilation cache hit | 198 | 1953 |
 
 ![Performance comparison (a) without dynamic shape  (b) with dynamic shape](../_static/img/dynamic_shape_mlp_perf.png)
 
-One of the motivations of the dynamic shape is to reduce the number of excessive recompilation when the shape keeps changing between iterations. From the figure above, you can see the number of compilations reduced by half which results in the drop of the training time.
+One of the motivations of the dynamic shape is to reduce the number of excessive
+recompilation when the shape keeps changing between iterations. From the figure
+above, you can see the number of compilations reduced by half which results in
+the drop of the training time.
 
 To try it:
 

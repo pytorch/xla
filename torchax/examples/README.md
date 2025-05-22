@@ -1,6 +1,6 @@
 ## Intro
 
-This readme will have a subsection for every example *.py file.
+This readme will have a subsection for every example \*.py file.
 
 Please follow the instructions in [README.md](../README.md) to install torchax,
 then install requirements for all of the examples with
@@ -9,15 +9,14 @@ then install requirements for all of the examples with
 pip install -r requirements.txt
 ```
 
-
-
 ## basic_training.py
 
-This file constructed by first copy & paste code fragments from this pytorch training tutorial:
+This file constructed by first copy & paste code fragments from this pytorch
+training tutorial:
 https://pytorch.org/tutorials/beginner/introyt/trainingyt.html
 
-Then adding few lines of code that serves the purpose of moving `torch.Tensor` into
-`XLA devices`.
+Then adding few lines of code that serves the purpose of moving `torch.Tensor`
+into `XLA devices`.
 
 Example:
 
@@ -29,11 +28,12 @@ state_dict = pytree.tree_map_only(torch.Tensor,
 This fragment moves the state_dict to XLA devices; then the state_dict is passed
 back to model via `load_state_dict`.
 
-Then, you can train the model. This shows what is minimum to train a model on XLA
-devices. The perf is not as good because we didn't use `jax.jit`, this is intentional
-as it is meant to showcase the minimum code change.
+Then, you can train the model. This shows what is minimum to train a model on
+XLA devices. The perf is not as good because we didn't use `jax.jit`, this is
+intentional as it is meant to showcase the minimum code change.
 
 Example run:
+
 ```bash
 (xla2) hanq-macbookpro:examples hanq$ python basic_training.py
 Training set has 60000 instances
@@ -70,16 +70,18 @@ LOSS train 0.4094535468676477 valid XLA
 
 ## basic_training_jax.py
 
-This file constructed by first copy & paste code fragments from this pytorch training tutorial:
+This file constructed by first copy & paste code fragments from this pytorch
+training tutorial:
 https://pytorch.org/tutorials/beginner/introyt/trainingyt.html
 
 Then replacing torch optimizer with `optax` optimizer; and use `jax.grad` for
 gradient instead of `torch.Tensor.backward()`.
 
-Then, you can train the model using jax ecosystem's training loop. This is meant to
-showcase how easy is to integrate with Jax.
+Then, you can train the model using jax ecosystem's training loop. This is meant
+to showcase how easy is to integrate with Jax.
 
 Example run:
+
 ```bash
 (xla2) hanq-macbookpro:examples hanq$ python basic_training_jax.py
 Training set has 60000 instances

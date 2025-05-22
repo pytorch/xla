@@ -1,11 +1,9 @@
-How it works
-============
-
+# How it works
 
 ## Tensor subclass and eager mode
 
-The class `Tensor` is a `torch.Tensor` subclass
-that overrides `__torch_dispatch__`.
+The class `Tensor` is a `torch.Tensor` subclass that overrides
+`__torch_dispatch__`.
 
 It roughly looks like this (with some details removed):
 
@@ -50,13 +48,12 @@ def unwrap(tree):
         Tensor, lambda x: x._elem, tree)
 ```
 
-In other words, assuming that we have a function
-that takes `jax.Array` as input and returns `jax.Array`
-but otherwise implement the same semantics
-as a `ATen` op; then, using this tensor we would
-be able to route the call to this jax function.
+In other words, assuming that we have a function that takes `jax.Array` as input
+and returns `jax.Array` but otherwise implement the same semantics as a `ATen`
+op; then, using this tensor we would be able to route the call to this jax
+function.
 
-[_ops.py](../torchax/_ops.py) files defines some of those ops.
+[\_ops.py](../torchax/_ops.py) files defines some of those ops.
 
 Let's take `aten::add` as example:
 
@@ -77,13 +74,11 @@ input.
 
 ![](dispatch.png)
 
-
 ## fx Interpreter and dynamo mode
 
-Now, assuming we have this `some_registry` dict with key core Aten ops,
-and value the equivalent python Jax functions. We can also build a `fx.Interpreter`
+Now, assuming we have this `some_registry` dict with key core Aten ops, and
+value the equivalent python Jax functions. We can also build a `fx.Interpreter`
 subclass that executes the jax function given a `fx.GraphModule`.
-
 
 ```python
 class JaxInterpreter(torch.fx.Interpreter):
@@ -117,18 +112,16 @@ def backend(fxgraph):
    return f
 ```
 
-The inner function `tojit` is a function that takes and returns
-`jax.Array`'s. So it's suitable to be jitted with `jax.jit`.
+The inner function `tojit` is a function that takes and returns `jax.Array`'s.
+So it's suitable to be jitted with `jax.jit`.
 
-`f` is returned callable that takes `Tensor`; so can interop with
-other torch codes.
+`f` is returned callable that takes `Tensor`; so can interop with other torch
+codes.
 
 ## nn.Modules and state management
 
-See [README.md](../README.md) for using `torch.func.functional_call` to
-make `nn.Module`s interact well with `jax.jit`.
+See [README.md](../README.md) for using `torch.func.functional_call` to make
+`nn.Module`s interact well with `jax.jit`.
 
-See [Examples](../examples/README.md) for training using torch's optimizers or jax's
-optimizers.
-
-[def]: dispatch.png
+See [Examples](../examples/README.md) for training using torch's optimizers or
+jax's optimizers.

@@ -1,30 +1,28 @@
 # Run a model under torchax
 
-Supporting a new model in torchax means
-having this model run using torchax and succeeds.
+Supporting a new model in torchax means having this model run using torchax and
+succeeds.
 
-A model usually consists of executing a list of torch ops
-on a set of tensors (i.e. the parameters and inputs) and
-produce a new tensor(s). These ops should just work.
+A model usually consists of executing a list of torch ops on a set of tensors
+(i.e. the parameters and inputs) and produce a new tensor(s). These ops should
+just work.
 
-However, there are cases that the model doesn't run on
-torchax, because:
+However, there are cases that the model doesn't run on torchax, because:
 
 1. Some op it needs is not implemented.
-2. Some op it needs is implemented incorrectly
-3. There are some non-torch-op code that interacts with torchax in a non-friendly matter.
+1. Some op it needs is implemented incorrectly
+1. There are some non-torch-op code that interacts with torchax in a
+   non-friendly matter.
 
-Here we present few steps to attempt to fix the related issues. Using dlrm model as
-example.
+Here we present few steps to attempt to fix the related issues. Using dlrm model
+as example.
 
 This assumes that you already installed torchax with `pip install -e .` locally.
 Following the instructions in [README](../README.md)
 
-
 ### Get torchbench scripts
 
 Following the instructions in https://github.com/pytorch-tpu/run_torchbench
-
 
 ### Run script from run_torchbench:
 
@@ -46,12 +44,13 @@ Traceback (most recent call last):
 ModuleNotFoundError: No module named 'torchbenchmark.models.dlrm.tricks'
 ```
 
-Turns out I forgot to run `python install.py dlrm` in the benchmarks folder (cloned from pytorch/benchmark)
-
+Turns out I forgot to run `python install.py dlrm` in the benchmarks folder
+(cloned from pytorch/benchmark)
 
 ### Fixing missing ops:
 
 Rerunning:
+
 ```bash
 (xla2) hanq-macbookpro:run_torchbench hanq$ python models/dlrm.py
 Traceback (most recent call last):
@@ -93,15 +92,15 @@ Now let's implement this op.
 Few tricks while implementing the ops:
 
 1. Feel free to edit the script `models/dlrm.py` while debugging.
-2. Useful options to set `env.config.debug_print_each_op = True` will print out each
-   op that goes through the dispatcher.
-3. Set `env.config.debug_accuracy_for_each_op = True` will in addition of running Jax
-   op, it also runs it again in Torch CPU. Then it diffs the result. If the diff is too
-   large, then it drops you into pdb for inspection.
-4. After inspecting input / output / shapes of the op, maybe it's enough hint for
-   you to fix this op. Or, if it's not, then it's adviced to save the inputs / outputs
-   and write a unit test for it and iterate on that. Usually a unit test is faster
-   to iterate than running a whole model.
+1. Useful options to set `env.config.debug_print_each_op = True` will print out
+   each op that goes through the dispatcher.
+1. Set `env.config.debug_accuracy_for_each_op = True` will in addition of
+   running Jax op, it also runs it again in Torch CPU. Then it diffs the result.
+   If the diff is too large, then it drops you into pdb for inspection.
+1. After inspecting input / output / shapes of the op, maybe it's enough hint
+   for you to fix this op. Or, if it's not, then it's adviced to save the inputs
+   / outputs and write a unit test for it and iterate on that. Usually a unit
+   test is faster to iterate than running a whole model.
 
 After finishing `embedding_bag` badly, I reached the next op
 
@@ -125,13 +124,12 @@ After finishing `embedding_bag` badly, I reached the next op
 torchax.tensor.OperatorNotFound: Operator with name aten::_embedding_bag_forward_only has no lowering
 ```
 
-Turns out, that is the same operator. so adding the @op(torch.ops.aten._embedding_bag_forward_only)
-on top of the same op works.
+Turns out, that is the same operator. so adding the
+@op(torch.ops.aten.\_embedding_bag_forward_only) on top of the same op works.
 
 Now the resulting PR is: https://github.com/pytorch/xla/pull/7583
 
 After this `python models/dlrm.py` runs.
 
-NOTE:
-The _embedding_bag implementation is actually very crude, just sufficient to make
-the model pass.
+NOTE: The \_embedding_bag implementation is actually very crude, just sufficient
+to make the model pass.

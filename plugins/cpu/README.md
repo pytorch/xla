@@ -4,8 +4,8 @@ This directory contains an experimental implementation of the PJRT CPU client as
 a plugin. This plugin is for testing only and is not officially supported. Use
 `PJRT_DEVICE=CPU` with any PyTorch/XLA installation to use built-in CPU support.
 
-The actual implementation of the PJRT C API lives in the main OpenXLA
-repository (see `bazel build` command below).
+The actual implementation of the PJRT C API lives in the main OpenXLA repository
+(see `bazel build` command below).
 
 ## Building
 

@@ -4,18 +4,18 @@ This is a guide for using `scan` and `scan_layers` in PyTorch/XLA.
 
 ## When should you use this
 
-Consider using [`scan_layers`][scan_layers] if you have a model with
-many homogenous (same shape, same logic) layers, for example LLMs. These models
-can be slow to compile. `scan_layers` is a drop-in replacement for a for loop over
+Consider using [`scan_layers`][scan_layers] if you have a model with many
+homogenous (same shape, same logic) layers, for example LLMs. These models can
+be slow to compile. `scan_layers` is a drop-in replacement for a for loop over
 homogenous layers, such as a bunch of decoder layers. `scan_layers` traces the
-first layer and reuses the compiled result for all subsequent layers, significantly
-reducing the model compile time.
+first layer and reuses the compiled result for all subsequent layers,
+significantly reducing the model compile time.
 
 [`scan`][scan] on the other hand is a lower level higher-order-op modeled after
 [`jax.lax.scan`][jax-lax-scan]. Its primary purpose is to implement
-`scan_layers` under the hood. However, you may find it useful
-to program loop logic where the loop itself has a first-class
-representation in the compiler (specifically, the XLA `while` op).
+`scan_layers` under the hood. However, you may find it useful to program loop
+logic where the loop itself has a first-class representation in the compiler
+(specifically, the XLA `while` op).
 
 ## `scan_layers` example
 
@@ -49,8 +49,8 @@ python3 examples/train_decoder_only_base.py scan.decoder_with_scan.DecoderWithSc
 
 ## `scan` example
 
-[`scan`][scan] takes a combine function and applies that function over the leading
-dimension of tensors while carrying along state:
+[`scan`][scan] takes a combine function and applies that function over the
+leading dimension of tensors while carrying along state:
 
 ```python
 def scan(
@@ -61,8 +61,8 @@ def scan(
   ...
 ```
 
-Use it to loop over the leading dimension of tensors efficiently. If `xs`
-is a single tensor, this function is roughly equal to the following Python code:
+Use it to loop over the leading dimension of tensors efficiently. If `xs` is a
+single tensor, this function is roughly equal to the following Python code:
 
 ```python
 def scan(fn, init, xs):
@@ -74,13 +74,14 @@ def scan(fn, init, xs):
   return carry, torch.stack(ys, dim=0)
 ```
 
-Under the hood, `scan` is implemented efficiently by lowering the loop
-into an XLA `while` operation. This ensures that only one iteration of the loop
-is compiled by XLA.
+Under the hood, `scan` is implemented efficiently by lowering the loop into an
+XLA `while` operation. This ensures that only one iteration of the loop is
+compiled by XLA.
 
-[`scan_examples.py`][scan_examples] contains some example code showing how to use
-`scan`. In that file, `scan_example_cumsum` uses `scan` to implement a cumulative
-sum. `scan_example_pytree` demonstrates how to pass PyTrees to `scan`.
+[`scan_examples.py`][scan_examples] contains some example code showing how to
+use `scan`. In that file, `scan_example_cumsum` uses `scan` to implement a
+cumulative sum. `scan_example_pytree` demonstrates how to pass PyTrees to
+`scan`.
 
 You can run the examples with:
 
@@ -113,19 +114,19 @@ Means over time: tensor([[1.0000],
 
 The functions/modules passed to `scan` and `scan_layers` must be AOTAutograd
 traceable. In particular, as of PyTorch/XLA 2.6, `scan` and `scan_layers` cannot
-trace functions with custom Pallas kernels. That means if your decoder uses,
-for example flash attention, then it is incompatible with `scan`. We are working on
+trace functions with custom Pallas kernels. That means if your decoder uses, for
+example flash attention, then it is incompatible with `scan`. We are working on
 [supporting this important use case][flash-attn-issue].
 
 ### AOTAutograd overhead
 
 Because `scan` uses AOTAutograd to figure out the backward pass of the input
-function/module on every iteration, it is easy to become tracing-bound compared to
-a for loop implementation. In fact, the  `train_decoder_only_base.py` example runs
-slower under `scan` than with for loop as of PyTorch/XLA 2.6 due to this overhead.
-We are working on [improving tracing speed][retracing-issue]. This is less of a
-problem when your model is very large or has many layers, which are the situations
-you would want to use `scan`.
+function/module on every iteration, it is easy to become tracing-bound compared
+to a for loop implementation. In fact, the `train_decoder_only_base.py` example
+runs slower under `scan` than with for loop as of PyTorch/XLA 2.6 due to this
+overhead. We are working on [improving tracing speed][retracing-issue]. This is
+less of a problem when your model is very large or has many layers, which are
+the situations you would want to use `scan`.
 
 ## Compile time experiments
 
@@ -179,8 +180,8 @@ Metric: CompileTime
   99%=18s995ms301.667us
 ```
 
-The maximum compile time dropped from `1m03s` to `19s` by
-switching to `scan_layers`.
+The maximum compile time dropped from `1m03s` to `19s` by switching to
+`scan_layers`.
 
 ## References
 
@@ -192,10 +193,10 @@ for details on how to use them.
 
 <!-- xrefs -->
 
-[scan]: https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py
-[scan_layers]: https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py
-[flash-attn-issue]: https://github.com/pytorch/xla/issues/8633
-[retracing-issue]: https://github.com/pytorch/xla/issues/8632
-[jax-lax-scan]: https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html
 [decoder_with_scan]: /examples/scan/decoder_with_scan.py
+[flash-attn-issue]: https://github.com/pytorch/xla/issues/8633
+[jax-lax-scan]: https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html
+[retracing-issue]: https://github.com/pytorch/xla/issues/8632
+[scan]: https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py
 [scan_examples]: /examples/scan/scan_examples.py
+[scan_layers]: https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py

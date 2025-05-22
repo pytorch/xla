@@ -1,13 +1,13 @@
 # Fully Sharded Data Parallel (FSDP) using SPMD
 
-FSDP in PyTorch/XLA is a utility for
-sharding Module parameters across data-parallel workers.
+FSDP in PyTorch/XLA is a utility for sharding Module parameters across
+data-parallel workers.
 
-This differs from the [other](./fsdp_spmd.md) implementation of FSDP in PyTorch/XLA
-in that this implementation uses SPMD.
+This differs from the [other](./fsdp_spmd.md) implementation of FSDP in
+PyTorch/XLA in that this implementation uses SPMD.
 
-Please review the [SPMD user guide](./spmd_basic.html) before
-proceeding. You can also find a minimum runnable example
+Please review the [SPMD user guide](./spmd_basic.html) before proceeding. You
+can also find a minimum runnable example
 [here](https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py).
 
 Example usage:
@@ -37,9 +37,9 @@ loss.backward()
 optim.step()
 ```
 
-It is also possible to shard individual layers separately and have an
-outer wrapper handle any leftover parameters. Here is an example to
-autowrap each `DecoderLayer`.
+It is also possible to shard individual layers separately and have an outer
+wrapper handle any leftover parameters. Here is an example to autowrap each
+`DecoderLayer`.
 
 ```python
 from torch_xla.distributed.fsdp.wrap import transformer_auto_wrap_policy
@@ -57,12 +57,12 @@ model = FSDPv2(
 
 ## Sharding output
 
-To ensure the XLA compiler correctly implements the FSDP algorithm, we
-need to shard both weights and activations. This means sharding the
-output of the forward method. Since the forward function output can
-vary, we offer shard_output to shard activations in cases where your
-module output doesn't fall into one of these categories: 1. A single
-tensor 2. A tuple of tensors where the 0th element is the activation.
+To ensure the XLA compiler correctly implements the FSDP algorithm, we need to
+shard both weights and activations. This means sharding the output of the
+forward method. Since the forward function output can vary, we offer
+shard_output to shard activations in cases where your module output doesn't fall
+into one of these categories: 1. A single tensor 2. A tuple of tensors where the
+0th element is the activation.
 
 Example usage:
 
@@ -75,10 +75,9 @@ model = FSDPv2(my_module, mesh, shard_output)
 
 ## Gradient checkpointing
 
-Currently, gradient checkpointing needs to be applied to the module
-before the FSDP wrapper. Otherwise, recursively loop into children
-modules will end up with infinite loop. We will fix this issue in the
-future releases.
+Currently, gradient checkpointing needs to be applied to the module before the
+FSDP wrapper. Otherwise, recursively loop into children modules will end up with
+infinite loop. We will fix this issue in the future releases.
 
 Example usage:
 
