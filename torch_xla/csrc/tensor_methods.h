@@ -574,8 +574,6 @@ XLATensorPtr logit(const XLATensorPtr& input, std::optional<double> eps);
 XLATensorPtr log_base(const XLATensorPtr& input, torch::lazy::OpKind op,
                       double base);
 
-XLATensorPtr log_sigmoid(const XLATensorPtr& input);
-
 XLATensorPtr log_softmax(const XLATensorPtr& input, int64_t dim,
                          std::optional<at::ScalarType> dtype,
                          std::vector<torch::lazy::Shape>&& shapes);
@@ -864,11 +862,8 @@ XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
 
 XLATensorPtr select(const XLATensorPtr& input, int64_t dim, int64_t index);
 
-void selu_(XLATensorPtr& input);
-
 XLATensorPtr silu(const XLATensorPtr& input);
 XLATensorPtr silu_backward(XLATensorPtr& grad_output, XLATensorPtr& input);
-XLATensorPtr sigmoid(const XLATensorPtr& input);
 XLATensorPtr sigmoid_backward(const XLATensorPtr& grad_output,
                               const XLATensorPtr& output);
 

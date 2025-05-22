@@ -2000,11 +2000,6 @@ XLATensorPtr log_base(const XLATensorPtr& input, torch::lazy::OpKind op,
       std::nullopt);
 }
 
-XLATensorPtr log_sigmoid(const XLATensorPtr& input) {
-  torch::lazy::NodePtr node = LogSigmoid(input->GetIrValue());
-  return input->CreateFrom(torch::lazy::Value(node, 0));
-}
-
 XLATensorPtr log_softmax(const XLATensorPtr& input, int64_t dim,
                          std::optional<at::ScalarType> dtype,
                          std::vector<torch::lazy::Shape>&& shapes) {
@@ -3069,14 +3064,6 @@ XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
 
 XLATensorPtr select(const XLATensorPtr& input, int64_t dim, int64_t index) {
   return tensor_ops::Select(input, dim, index);
-}
-
-void selu_(XLATensorPtr& input) {
-  input->SetInPlaceIrValue(Selu(input->GetIrValue()));
-}
-
-XLATensorPtr sigmoid(const XLATensorPtr& input) {
-  return input->CreateFrom(Sigmoid(input->GetIrValue()));
 }
 
 XLATensorPtr sigmoid_backward(const XLATensorPtr& grad_output,
