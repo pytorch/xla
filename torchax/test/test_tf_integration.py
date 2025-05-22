@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torchax
 
 from torchax import tf_integration
-from . import test_base
+from . import base_test_util
 
 
 class Interpolate(torch.nn.Module):
@@ -22,7 +22,7 @@ class Interpolate(torch.nn.Module):
     return masks
 
 
-class TfIntegrationTest(test_base.TestCase):
+class TfIntegrationTest(base_test_util.TestCase):
 
   def setUp(self):
     torch.manual_seed(0)
@@ -48,4 +48,4 @@ class TfIntegrationTest(test_base.TestCase):
 
 
 if __name__ == "__main__":
-  test_base.main()
+  base_test_util.main()
