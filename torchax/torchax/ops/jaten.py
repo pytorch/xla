@@ -125,8 +125,14 @@ def _aten_add(x, y, *, alpha=1):
   return res
 
 
-@op(torch.ops.aten.copy_, is_jax_function=False, is_view_op=True)
-def _aten_copy(x, y, memory_format=None):
+@op(torch.ops.aten.copy_,
+    is_jax_function=False,
+    is_view_op=True,
+    needs_env=True)
+def _aten_copy(x, y, memory_format=None, env=None):
+
+  if y.device.type == 'cpu':
+    y = env.to_xla(y)
 
   if isinstance(x, View):
     x.update(y)
