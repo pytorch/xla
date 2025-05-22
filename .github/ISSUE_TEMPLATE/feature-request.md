@@ -1,12 +1,13 @@
-______________________________________________________________________
+---
+name: "\U0001F680Feature Request"
+about: Submit a proposal/request for a new feature for PyTorch/XLA integration
+title: ''
+labels: ''
+assignees: ''
 
-name: "\\U0001F680Feature Request" about: Submit a proposal/request for a new
-feature for PyTorch/XLA integration title: '' labels: '' assignees: ''
-
-______________________________________________________________________
+---
 
 ## 🚀 Feature
-
 <!-- A clear and concise description of the feature proposal -->
 
 ## Motivation

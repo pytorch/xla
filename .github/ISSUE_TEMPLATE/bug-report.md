@@ -1,9 +1,11 @@
-______________________________________________________________________
+---
+name: "\U0001F41B Bug Report"
+about: Submit a bug report to help us improve PyTorch/XLA integration
+title: ''
+labels: ''
+assignees: ''
 
-name: "\\U0001F41B Bug Report" about: Submit a bug report to help us improve
-PyTorch/XLA integration title: '' labels: '' assignees: ''
-
-______________________________________________________________________
+---
 
 ## 🐛 Bug
 
@@ -33,8 +35,8 @@ https://github.com/pytorch/xla/blob/784b4d4f21751a54be0029a95f47d3896561c2a9/tes
 Steps to reproduce the behavior:
 
 1.
-1.
-1.
+2.
+3.
 
 <!-- If you have a code sample, error messages, stack traces, please provide it here as well. Or better use the Colab template: https://github.com/pytorch/xla/blob/master/contrib/colab/issue-report.ipynb -->
 
@@ -44,8 +46,9 @@ Steps to reproduce the behavior:
 
 ## Environment
 
-- Reproducible on XLA backend \[CPU/TPU/CUDA\]:
-- torch_xla version:
+ - Reproducible on XLA backend [CPU/TPU/CUDA]:
+ - torch_xla version:
+
 
 ## Additional context
 
