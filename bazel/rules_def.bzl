@@ -5,11 +5,23 @@ load(
     "xla_cc_test",
 )
 
+def cov_library(
+        deps = [],
+        copts = [],
+        linkopts = [],
+        **kwargs):
+    native.cc_library(
+        copts = copts + ["-fprofile-instr-generate", "-fcoverage-mapping", "-O0", "-g"],
+        linkopts = linkopts + ["-fprofile-instr-generate", "-O0", "-g"],
+        deps = deps,
+        **kwargs
+    )
+
 def ptxla_cc_library(
         deps = [],
         copts = [],
         **kwargs):
-    native.cc_library(
+    cov_library(
         copts = copts + ["-isystemexternal/torch"],  # Required for system includes.
         deps = deps + [
             "@torch//:headers",
@@ -26,6 +38,7 @@ def ptxla_cc_test(
         linkstatic = True,
         copts = copts + [
             "-isystemexternal/torch",  # Required for system includes.
+            "-fexceptions",  # Required for testing crashes.
         ],
         deps = deps + [
             "@pybind11//:pybind11_embed",  # libpython

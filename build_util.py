@@ -15,6 +15,11 @@ def bazel_options_from_env() -> Iterable[str]:
   if check_env_flag('DEBUG'):
     bazel_flags.append('--config=dbg')
 
+  if check_env_flag('USE_CLANG'):
+    bazel_flags.append('--config=clang')
+  else:
+    bazel_flags.append('--config=gcc')
+
   if check_env_flag('TPUVM_MODE'):
     bazel_flags.append('--config=tpu')
 

@@ -27,11 +27,7 @@ on:
         required: true
         type: string
         description: torch-commit
-      has_code_changes:
-        required: false
-        type: string
-        description: Whether to run full workflow or not
-        default: 'true'
+
 jobs:
   test:
     container:
@@ -40,26 +36,28 @@ jobs:
     strategy:
       matrix:
         include:
-          - run_python_tests: 'python_tests'
+          - name: 'torch_with_cuda_python_tests'
+            run_python_tests: 'python_tests'
             runner: ${{ inputs.runner }}
-          - run_triton_tests: 'triton_tests'
+          - name: 'torch_with_cuda_triton_tests'
+            run_triton_tests: 'triton_tests'
             runner: 'linux.g5.4xlarge.nvidia.gpu'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
+      COVERAGE_DIR: '/tmp/lcov'
       BAZEL_JOBS: ''  # Let bazel decide the parallelism based on the number of CPUs.
       BAZEL_REMOTE_CACHE: 1
+      PJRT_DEVICE: 'CUDA'
     steps:
       - name: Checkout actions
-        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
-        if: inputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
@@ -68,10 +66,8 @@ jobs:
           cuda-plugin-artifact: cuda-plugin
           cuda-torch-artifact: torch-with-cuda
       - name: Check GPU
-        if: inputs.has_code_changes == 'true'
         run: nvidia-smi
       - name: Install wheels
-        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           pip install /tmp/wheels/*.whl
@@ -86,42 +82,93 @@ jobs:
           python -c "import torch; assert torch.cuda.is_available()"
           echo "CUDA is available for PyTorch."
       - name: Checkout PyTorch Repo
-        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           repository: pytorch/pytorch
           path: pytorch
           ref: ${{ inputs.torch-commit }}
       - name: Checkout PyTorch/XLA Repo
-        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
       - name: Extra CI deps
-        if: inputs.has_code_changes == 'true' && matrix.run_triton_tests
         shell: bash
         run: |
           set -x
           pip install -U --pre jax jaxlib "jax-cuda12-plugin[with_cuda]" jax-cuda12-pjrt -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
+        if: ${{ matrix.run_triton_tests }}
+      - name: Extra Coverage deps
+        shell: bash
+        run: |
+          set -x
+          pip install -U coverage
+        if: ${{ inputs.collect-coverage }}
       - name: Install Triton
-        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           cd pytorch
           make triton
       - name: Python Tests
-        if: inputs.has_code_changes == 'true' && matrix.run_python_tests
         shell: bash
+        env:
+          COVERAGE_FILE: "${{ env.COVERAGE_DIR }}/py-coverage"
+          LLVM_PROFILE_FILE: "${{ env.COVERAGE_DIR }}/cpp-coverage/data-%p.profraw"
         run: |
           set -xue
-          PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
-          PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
+
+          TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
+
+          function run_coverage {
+            if [ "$USE_COVERAGE" != "0" ]; then
+              coverage run --source="$TORCH_XLA_DIR" -p "$@"
+            else
+              python3 "$@"
+            fi
+          }
+
+          run_coverage pytorch/xla/test/test_operations.py -v
+          run_coverage pytorch/xla/test/dynamo/test_dynamo.py -v
+
+          # Combine all Python coverage files.
+          coverage combine
+          coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
+          # Merge the profraw files, so that they take less space.
+          llvm-profdata-17 merge $COVERAGE_DIR/cpp-coverage/*.profraw -o $COVERAGE_DIR/cpp-coverage.profdata
+          # Remove the collected raw coverage files.
+          rm -r $COVERAGE_DIR/cpp-coverage
+        if: ${{ matrix.run_python_tests }}
       - name: Triton Tests
-        if: inputs.has_code_changes == 'true' && matrix.run_triton_tests
         shell: bash
+        env:
+          COVERAGE_FILE: "${{ env.COVERAGE_DIR }}/py-coverage"
+          LLVM_PROFILE_FILE: "${{ env.COVERAGE_DIR }}/cpp-coverage/data-%p.profraw"
+          TRITON_PTXAS_PATH: "/usr/local/cuda-12.3/bin/ptxas"
         run: |
-          PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.3/bin/ptxas python pytorch/xla/test/test_triton.py
-      - name: Report no code changes
-        if: inputs.has_code_changes == 'false'
-        run: |
-          echo "No code changes were detected that require running the full test suite."
+          set -x
+
+          TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
+
+          function run_coverage {
+            if [ "$USE_COVERAGE" != "0" ]; then
+              coverage run --source="$TORCH_XLA_DIR" -p "$@"
+            else
+              python3 "$@"
+            fi
+          }
+
+          run_coverage pytorch/xla/test/test_triton.py
+
+          # Combine all Python coverage files.
+          coverage combine
+          coverage lcov --omit="/tmp/*" --ignore-errors -o $COVERAGE_FILE.info
+          # Merge the profraw files, so that they take less space.
+          llvm-profdata-17 merge $COVERAGE_DIR/cpp-coverage/*.profraw -o $COVERAGE_DIR/cpp-coverage.profdata
+          # Remove the collected raw coverage files.
+          rm -r $COVERAGE_DIR/cpp-coverage
+        if: ${{ matrix.run_triton_tests }}
+      - name: Upload coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: "coverage-${{ matrix.name }}"
+          path: "${{ env.COVERAGE_DIR }}"
+        if: ${{ inputs.collect-coverage }}

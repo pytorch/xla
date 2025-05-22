@@ -29,14 +29,14 @@ on:
         default: false
         description: Whether to install CUDA plugin package
       torch-commit:
-          required: true
-          type: string
-          description: torch-commit
-      has_code_changes:
-        required: false
+        required: true
         type: string
-        description: Whether to run full workflow or not
-        default: 'true'
+        description: torch-commit
+      device-type:
+        required: true
+        type: string
+        description: Device type for naming the coverage results.
+
     secrets:
       gcloud-service-key:
         required: true
@@ -46,30 +46,38 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.dev-image }}
-      options: "${{ inputs.install-cuda-plugin == true && '--gpus all' || '' }} --shm-size 16g"
+      options: "${{ inputs.install-cuda-plugin && '--gpus all' || '' }} --shm-size 16g"
     strategy:
       fail-fast: false
       matrix:
         include:
           # Use readable strings as they define the workflow titles.
-          - run_benchmark_tests: 'benchmark_tests'
-          - run_python_tests: 'python_tests'
+          - name: 'benchmark_tests'
+            run_benchmark_tests: 'benchmark_tests'
+          - name: 'python_tests-xla_op1'
+            run_python_tests: 'python_tests'
             run_xla_op_tests1: 'xla_op1'
-          - run_python_tests: 'python_tests'
+          - name: 'python_tests-xla_op2'
+            run_python_tests: 'python_tests'
             run_xla_op_tests2: 'xla_op2'
-          - run_python_tests: 'python_tests'
+          - name: 'python_tests-xla_op3'
+            run_python_tests: 'python_tests'
             run_xla_op_tests3: 'xla_op3'
-          - run_python_tests: 'python_tests'
+          - name: 'python_tests-torch_mp_op'
+            run_python_tests: 'python_tests'
             run_torch_mp_op_tests: 'torch_mp_op'
-          - run_cpp_tests: 'cpp_tests'
+          - name: 'cpp_tests-1'
+            run_cpp_tests: 'cpp_tests'
             run_cpp_tests1: 'cpp_tests1'
-          - run_cpp_tests: 'cpp_tests'
+          - name: 'cpp_tests-2'
+            run_cpp_tests: 'cpp_tests'
             run_cpp_tests2: 'cpp_tests2'
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
       USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
+      COVERAGE_DIR: '/tmp/lcov'
       RUN_BENCHMARK_TESTS: ${{ matrix.run_benchmark_tests }}
       RUN_PYTHON_TESTS: ${{ matrix.run_python_tests }}
       RUN_XLA_OP_TESTS1: ${{ matrix.run_xla_op_tests1 }}
@@ -82,14 +90,12 @@ jobs:
       BAZEL_REMOTE_CACHE: 1
     steps:
       - name: Checkout actions
-        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
       - name: Setup
-        if: inputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
@@ -97,42 +103,38 @@ jobs:
           wheels-artifact: torch-xla-wheels
           cuda-plugin-artifact: ${{ inputs.install-cuda-plugin && 'cuda-plugin' || null }}
       - name: Fetch CPP test binaries
-        if: inputs.has_code_changes == 'true' && matrix.run_cpp_tests
         uses: actions/download-artifact@v4
         with:
           name: cpp-test-bin
           path: /tmp/test/bin
+        if: ${{ matrix.run_cpp_tests }}
       # GitHub Actions doesn't preserve executable permissions
       # https://github.com/actions/download-artifact?tab=readme-ov-file#permission-loss
       - name: Set CPP test permissions
-        if: inputs.has_code_changes == 'true' && matrix.run_cpp_tests
         run: |
           chmod +x /tmp/test/bin/*
           ls -l /tmp/test/bin
+        if: ${{ matrix.run_cpp_tests }}
       - name: Check GPU
-        if: inputs.has_code_changes == 'true' && inputs.install-cuda-plugin
         run: nvidia-smi
+        if: ${{ inputs.install-cuda-plugin }}
       - name: Install test deps
-        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           # TODO: Add these in setup.py
           pip install fsspec
           pip install rich
       - name: Checkout PyTorch Repo
-        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           repository: pytorch/pytorch
           path: pytorch
           ref: ${{ inputs.torch-commit }}
       - name: Checkout PyTorch/XLA Repo
-        if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
       - name: Extra CI deps
-        if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
           set -x
@@ -142,56 +144,27 @@ jobs:
           if [[ ! -z "$RUN_BENCHMARK_TESTS" ]]; then
             pip install -r pytorch/xla/benchmarks/requirements.txt
           fi
-      - name: Test
-        if: inputs.has_code_changes == 'true'
+      - name: Extra Coverage deps
         shell: bash
-        run: pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
-      - name: Upload coverage results
-        if: inputs.has_code_changes == 'true' && inputs.collect-coverage
+        run: |
+          set -x
+          pip install -U coverage
+        if: ${{ inputs.collect-coverage }}
+      - name: Test
         shell: bash
         env:
-          CIRCLE_WORKFLOW_ID: ${{ github.run_id }}
-          CIRCLE_BUILD_NUM: ${{ github.run_number }}
-          BENCHMARK_TEST_NAME: ${{ env.RUN_BENCHMARK_TESTS }}
-          PYTHON_TEST_NAME: ${{ env.RUN_PYTHON_TESTS }}${{ env.RUN_XLA_OP_TESTS1 }}${{ env.RUN_XLA_OP_TESTS2 }}${{ env.RUN_XLA_OP_TESTS3 }}${{ env.RUN_TORCH_MP_OP_TESTS }}
-          CPP_TEST_NAME: ${{ env.RUN_CPP_TESTS1 }}${{ env.RUN_CPP_TESTS2 }}
+          COVERAGE_FILE: "${{ env.COVERAGE_DIR }}/py-coverage"
+          LLVM_PROFILE_FILE: "${{ env.COVERAGE_DIR }}/cpp-coverage/data-%p.profraw"
         run: |
-            # TODO(yeounoh) collect coverage report as needed.
-            if [ -n "${BENCHMARK_TEST_NAME}" ]; then
-                exit 0
-            fi
-            docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
-            if [ -n "${GPU_FLAG:-}" ]; then
-              if [ -n "${PYTHON_TEST_NAME}" ]; then
-                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage_${PYTHON_TEST_NAME}.out
-                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage_${PYTHON_TEST_NAME}.out
-              fi
-              if [ -n "${CPP_TEST_NAME}" ]; then
-                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage_${CPP_TEST_NAME}.out
-                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage_${CPP_TEST_NAME}.out
-              fi
-            else
-              if [ -n "${PYTHON_TEST_NAME}" ]; then
-                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage_${PYTHON_TEST_NAME}.out
-                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage_${PYTHON_TEST_NAME}.out
-              fi
+          pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
+          # Merge the profraw files, so that they take less space.
+          llvm-profdata-17 merge $COVERAGE_DIR/cpp-coverage/*.profraw -o $COVERAGE_DIR/cpp-coverage.profdata
+          # Remove the collected raw coverage files.
+          rm -r $COVERAGE_DIR/cpp-coverage
+      - name: Upload coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: "coverage-${{ inputs.device-type }}-${{ matrix.name }}"
+          path: "${{ env.COVERAGE_DIR }}"
+        if: ${{ inputs.collect-coverage }}
 
-              if [ -n "${CPP_TEST_NAME}" ]; then
-                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage_${CPP_TEST_NAME}.out
-                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage_${CPP_TEST_NAME}.out
-              fi
-
-              if [ "${CPP_TEST_NAME}" == "cpp_tests1" ]; then
-                ABS_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "commit_id": '\"${GITHUB_SHA}\"', "ref": "HEAD", "source": "https://github.com/pytorch/xla", "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
-                echo $ABS_METADATA > abs_metadata.json
-                gsutil cp abs_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
-
-                INC_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "patchset_num": 1, "change_id": '${CIRCLE_BUILD_NUM}', "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
-                echo $INC_METADATA > inc_metadata.json
-                gsutil cp inc_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
-              fi
-            fi
-      - name: Report no code changes
-        if: inputs.has_code_changes == 'false'
-        run: |
-          echo "No code changes were detected that require running the full test suite."

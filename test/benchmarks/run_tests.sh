@@ -4,8 +4,11 @@ CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 LOGFILE=/tmp/pytorch_benchmarks_test.log
 VERBOSITY=0
 
+BENCHMARKS_DIR="$CDIR/../../benchmarks/"
+TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
+
 # Make benchmark module available as it is not part of torch_xla.
-export PYTHONPATH=$PYTHONPATH:$CDIR/../../benchmarks/
+export PYTHONPATH=$PYTHONPATH:$BENCHMARKS_DIR
 
 # Note [Keep Going]
 #
@@ -30,6 +33,14 @@ do
 done
 shift $(($OPTIND - 1))
 
+function run_coverage {
+  if [ "${USE_COVERAGE:-0}" != "0" ]; then
+    coverage run --source="$TORCH_XLA_DIR,$BENCHMARKS_DIR" -p "$@"
+  else
+    python3 "$@"
+  fi
+}
+
 function run_make_tests {
   MAKE_V=""
   if [ "$VERBOSITY" != "0" ]; then
@@ -42,10 +53,10 @@ function run_python_tests {
   # HACK: don't confuse local `torch_xla` folder with installed package
   # Python 3.11 has the permanent fix: https://stackoverflow.com/a/73636559
   pushd $CDIR
-  python3 "test_experiment_runner.py"
-  python3 "test_benchmark_experiment.py"
-  python3 "test_benchmark_model.py"
-  python3 "test_result_analyzer.py"
+  run_coverage "test_experiment_runner.py"
+  run_coverage "test_benchmark_experiment.py"
+  run_coverage "test_benchmark_model.py"
+  run_coverage "test_result_analyzer.py"
   popd
 }
 

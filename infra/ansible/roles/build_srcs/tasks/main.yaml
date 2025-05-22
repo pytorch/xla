@@ -46,7 +46,7 @@
   ansible.builtin.command:
     cmd: python setup.py bdist_wheel
     chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
-  environment: "{{ env_vars }}"
+  environment: "{{ env_vars | combine({'USE_CLANG': '1'}) }}"
 
 - name: Find XLA *.whl files in pytorch/xla/dist
   ansible.builtin.find:
@@ -190,6 +190,7 @@
   args:
     executable: bash
     chdir: "{{ src_root }}"
+  environment: "{{ env_vars | combine({'USE_CLANG': '1'}) }}"
   when: build_cpp_tests
 
 - name: Read Torchvision pin
