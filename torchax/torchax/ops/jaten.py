@@ -5181,17 +5181,16 @@ def _aten_max_unpoolxd(input, indices, output_size, stride=None, padding=0):
   return output
 
 
-@op(torch.ops.aten._upsample_bilinear2d_aa)
-def _aten_upsample_bilinear2d_aa(input,
-                                 output_size,
-                                 align_corners,
-                                 scale_factors=None,
-                                 scales_h=None,
-                                 scales_w=None):
+def _aten_upsample(input,
+                   output_size,
+                   align_corners,
+                   antialias,
+                   method,
+                   scale_factors=None,
+                   scales_h=None,
+                   scales_w=None):
   # input: is of type jaxlib.xla_extension.ArrayImpl
   image = input
-  method = "bilinear"
-  antialias = True  # ignored for upsampling
 
   # https://jax.readthedocs.io/en/latest/_autosummary/jax.image.resize.html
   # Resize does not distinguish batch, channel size.
@@ -5252,6 +5251,24 @@ def _aten_upsample_bilinear2d_aa(input,
       antialias=antialias,
   )
 
+
+@op(torch.ops.aten._upsample_bilinear2d_aa)
+def _aten_upsample_billinear_aa(input,
+                                output_size,
+                                align_corners,
+                                scale_factors=None,
+                                scales_h=None,
+                                scales_w=None):
+  return _aten_upsample(
+      input,
+      output_size,
+      align_corners,
+      True, # antialias
+      "bilinear", # method
+      scale_factors,
+      scales_h,
+      scales_w
+  )
 
 @op(torch.ops.aten.polar)
 def _aten_polar(abs, angle, *, out=None):
