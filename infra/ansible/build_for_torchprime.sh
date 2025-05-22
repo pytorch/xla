@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# This script builds and pushes a docker image to be used for torchprime E2E tests.
+#
+# torchprime is a reference implementation of models using PyTorch/XLA:
+# https://github.com/AI-Hypercomputer/torchprime.
+#
+# The purpose of building a docker image here is to trigger torchprime E2E tests
+# from PyTorch/XLA PRs and post-submits. The reason for running torchprime tests
+# on PyTorch/XLA changes is to ensure that torchprime models are not broken.
+# See https://github.com/AI-Hypercomputer/torchprime/issues/161 for the detailed
+# motivation.
+
 set -ex
 
 # Check required environment variables
@@ -25,16 +36,16 @@ export DOCKERFILE_PATH="infra/ansible/build_for_torchprime.Dockerfile"
 
 echo "Building and pushing image: ${IMAGE_NAME}"
 
-# Define ansible vars used in the docker file
-# TODO(yifeit): read versions from git
+# Define ansible vars used in the docker file by `ansible-playbook`.
+#
+# See `infra/ansible/playbook.yaml` and `infra/ansible/config/vars.yaml`
+# for definition of the variables.
 read -r -d '' ANSIBLE_VARS_JSON << EOM || { exit_code=$?; [[ $exit_code -eq 1 ]]; }
 {
   "arch": "amd64",
   "accelerator": "tpu",
-  "pytorch_git_rev": "main",
-  "xla_git_rev": "foobar",
   "bundle_libtpu": "0",
-  "package_version": "2.8",
+  "git_versioned_xla_build": true,
   "nightly_release": true
 }
 EOM
