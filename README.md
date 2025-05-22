@@ -25,11 +25,13 @@ started:
 
 To install PyTorch/XLA stable build in a new TPU VM:
 
+Note: As of 05/22/2025, we have build for Python 3.8 to 3.11, if you are on a newer version, please follow https://cloud.google.com/python/docs/setup and change the Python version
+
 ```sh
 pip install torch==2.7.0 'torch_xla[tpu]==2.7.0'
 ```
 
-Note: As of 05/22/2025, we have build for Python 3.8 to 3.11, if you are on a newer version, please follow https://cloud.google.com/python/docs/setup and change the Python version
+
 
 To install PyTorch/XLA nightly build in a new TPU VM:
 
