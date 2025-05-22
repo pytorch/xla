@@ -10,21 +10,33 @@ Follow the [contributing
 guide](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md) to set up
 the repo for development. Using the devcontainer is recommended.
 
-Clone the [`pytorch/benchmark`](https://github.com/pytorch/benchmark) repo into
-your workspace directory, which is mounted to the devcontainer at
-`/workspaces/torch`.
+Install the required libraries by the models.  Depending on the specific
+models, you may need to install `torchvision`, `torchaudio`, `torchtext`.
+
+Follow [this guide](https://pytorch.org/get-started/locally/) to install the
+`torchvision` and `torchaudio` version you need. Use the following command to
+install `torchtext`.
+
+```shell
+pip install torchtext
+```
+
+The following LibGL library is
+required by the Llava model.
+
+```shell
+apt install libgl1-mesa-glx
+```
+
+For the scripts to find the models to benchmark, clone the
+[`pytorch/benchmark`](https://github.com/pytorch/benchmark) repo into your
+workspace directory, which also contains the `pytorch` and the `vision` repo.
 
 ```shell
 cd $WORKSPACE  # cd to the workspace directory containing `pytorch` and `vision`
 git clone git@github.com:pytorch/benchmark.git
 ```
 
-Install the required libraries by the models. The following LibGL library is
-required by the Llava model.
-
-```shell
-apt install libgl1-mesa-glx
-```
 
 ## Patching mismatched batch sizes
 
