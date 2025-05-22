@@ -1,4 +1,4 @@
-name: torchprime tests
+name: torchprime E2E tests
 on:
   workflow_call:
     inputs:
@@ -13,6 +13,10 @@ on:
         description: Whether to run full workflow or not
         default: 'true'
     secrets:
+      # This is a token for a GitHub user with access to the torchprime repo.
+      # It is used to trigger the torchprime E2E test workflow.
+      # The token should be managed in the "Settings > Secrets and variables > Actions"
+      # section of the repo.
       PERSONAL_ACCESS_TOKEN_FOR_TRIGGERING_TORCHPRIME:
         required: true
       GCLOUD_SERVICE_KEY:
