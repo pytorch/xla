@@ -17,7 +17,7 @@ import torch_xla.debug.metrics as met
 # It enables us to run python implementations of CompositeAutogradImplicit ops.
 # CompositeAutogradImplicit means we don't have an explicit backward formula for an op instead an op is composed of a bunch of ops that do have backward formulas and combines this formulas is equivalent to differentiating the op explicitly.
 pd = torch._C._EnablePythonDispatcher()
-xla_dev = torch_xla.device()
+xla_dev = torch.device('xla')
 
 
 class Feedforward(torch.nn.Module):

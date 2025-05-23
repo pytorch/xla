@@ -46,7 +46,7 @@ def run_export_and_compare(testcase,
                            atol=1e-3,
                            rtol=1e-5,
                            equal_nan=True):
-  device = torch_xla.device()
+  device = torch.device('xla')
   with testcase.subTest('torch_eval'):
     res = func(*args, **kwargs)
     with testcase.subTest('torch_xla_eval'):

@@ -6,7 +6,7 @@ import torch_xla.core.xla_model as xm
 
 
 def _mp_fn(index):
-  device = torch_xla.device()
+  device = torch.device('xla')
   if xm.xla_device_hw(device) in ('TPU', 'NEURON'):
     slots_per_device = 4
     size = slots_per_device * xr.world_size()

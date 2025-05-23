@@ -29,7 +29,7 @@ class EagerWithXLACompileTest(unittest.TestCase):
   def test_eager_with_compile_basic(self):
     met.clear_all()
     self.assertTrue(torch_xla.experimental.is_eager_mode())
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     # this part happens eagerly
     t1 = torch.randn(5, 5, device=device)
@@ -54,7 +54,7 @@ class EagerWithXLACompileTest(unittest.TestCase):
   def test_eager_execute_compiled_multiple_times(self):
     met.clear_all()
     self.assertTrue(torch_xla.experimental.is_eager_mode())
-    device = torch_xla.device()
+    device = torch.device('xla')
     # this part happens eagerly
     t1 = torch.randn(10, 5, device=device)
     t1.add_(0.5)
@@ -69,7 +69,7 @@ class EagerWithXLACompileTest(unittest.TestCase):
   def test_eager_with_compile_graph_break(self):
     met.clear_all()
     self.assertTrue(torch_xla.experimental.is_eager_mode())
-    device = torch_xla.device()
+    device = torch.device('xla')
     t1 = torch.randn(5, 5, device=device)
 
     with self.assertRaisesRegex(

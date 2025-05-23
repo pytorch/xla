@@ -206,7 +206,7 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  device = torch_xla.device()
+  device = torch.device('xla')
   model = get_model_property('model_fn')().to(device)
 
   if FLAGS.use_gradient_checkpointing:

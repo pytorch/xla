@@ -104,7 +104,7 @@ def initialize_singleprocess():
     plugins.default().configure_single_process()
   elif runtime.device_type() == 'TPU':
     tpu.configure_one_chip_topology()
-  xm.set_replication(torch_xla.device(), [])
+  xm.set_replication(torch.device('xla'), [])
 
 
 def initialize_multiprocess(local_rank: int, local_world_size: int):
@@ -119,7 +119,7 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
     neuron.initialize_env(local_rank, local_world_size)
 
   devices = xm.get_xla_supported_devices()
-  xm.set_replication(torch_xla.device(), devices)
+  xm.set_replication(torch.device('xla'), devices)
 
 
 def run_multiprocess(fn: Callable[..., R],

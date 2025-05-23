@@ -65,7 +65,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
       def backward(ctx, grad_output):
         results['forward_ordinal'] = ctx.forward_ordinal
         results['backward_ordinal'] = xr.global_ordinal()
-        results['device'] = str(torch_xla.device())
+        results['device'] = str(torch.device('xla'))
         return grad_output
 
     x = torch.ones(1, requires_grad=True, device='xla')

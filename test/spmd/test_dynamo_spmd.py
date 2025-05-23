@@ -42,7 +42,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     super().setUpClass()
 
   def test_dynamo_spmd_basic(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     linear = SimpleLinear().to(device)
     linear.eval()
     xla_x = torch.randn(1, 128, device=device)
@@ -58,7 +58,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     # a ExecuteMetric.
 
   def test_dynamo_spmd_output_sharding_spec(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     linear = SimpleLinear().to(device)
     linear.eval()
     xla_x = torch.randn(1, 128, device=device)
@@ -74,7 +74,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
   )
   def test_dynamo_spmd_output_sharding_cache(self):
     met.clear_all()
-    device = torch_xla.device()
+    device = torch.device('xla')
     linear = SimpleLinear().to(device)
     linear.eval()
     xla_x = torch.randn(1, 128, device=device)
@@ -90,7 +90,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(met.counter_value('UncachedOutputSharding'), 1)
 
   def test_dynamo_sharded_input(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     linear = SimpleLinear().to(device)
     linear.eval()
     xla_x = torch.randn(8, 128, device=device)
@@ -103,7 +103,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     torch.allclose(xla_res.cpu(), dynamo_res.cpu())
 
   def test_dynamo_input_sharding_changed(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     linear = SimpleLinear().to(device)
     linear.eval()
     xla_x = torch.randn(8, 128, device=device)
@@ -142,7 +142,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
   @unittest.skipIf(xr.global_runtime_device_count() == 1,
                    "Multiple devices needed to test the mesh change")
   def test_dynamo_input_sharding_threashold(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     linear = SimpleLinear().to(device)
     linear.eval()
     xla_x = torch.randn(8, 128, device=device)
@@ -183,7 +183,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
       del os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD']
 
   def test_dynamo_spmd_basic_with_dynamo_mark_sharding(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     linear = SimpleLinear().to(device)
     linear.eval()
     xla_x = torch.randn(1, 128, device=device)
@@ -202,7 +202,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     torch.allclose(xla_res.cpu(), dynamo_res.cpu())
 
   def test_dynamo_spmd_activation_sharding_with_dynamo_mark_sharding(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     mesh = self._get_mesh((1, self.n_devices))
     device_ids = mesh.device_ids.tolist()
     mesh_shape = list(mesh.mesh_shape)

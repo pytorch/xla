@@ -88,7 +88,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
     # tensor will have device as `SPMD:0` in c++
     xt1 = xm.send_cpu_data_to_device([torch.randn(3, 3)],
-                                     torch_xla.device(),
+                                     torch.device('xla'),
                                      input_sharding=sharding_spec)[0]
     # we will transfer 0.5 as a device_data to the 'SPMD:0' device, need to make sure
     # that virtual device can handle this case.
@@ -101,7 +101,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
     # tensor will have device as `SPMD:0` in c++
     xt1 = xm.send_cpu_data_to_device([torch.randn(3, 3)],
-                                     torch_xla.device(),
+                                     torch.device('xla'),
                                      input_sharding=sharding_spec)[0]
     xt2 = xt1 / 0.5
     torch_xla.sync(wait=True)
@@ -111,7 +111,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_virtual_device_no_upload(self):
     met.clear_all()
-    device = torch_xla.device()
+    device = torch.device('xla')
     t1 = torch.randn(5, 5).to(device)
     t1_debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
     # t1's upload to device should be deferred
@@ -125,7 +125,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
   def test_virtual_device_upload_after_mark_sharding(self):
     met.clear_all()
     partition_spec = (0, 1)
-    device = torch_xla.device()
+    device = torch.device('xla')
     t1 = torch.randn(8, 8).to(device)
     t1_debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
     self.assertIn("Tensor on host: with size [8, 8]", t1_debug_info)
@@ -139,7 +139,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_virtual_device_upload_after_tracing(self):
     met.clear_all()
-    device = torch_xla.device()
+    device = torch.device('xla')
     t1 = torch.randn(8, 8).to(device)
     t1_debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
     self.assertIn("Tensor on host: with size [8, 8]", t1_debug_info)
@@ -152,7 +152,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_virtual_device_upload_for_sharded_dataloader(self):
     met.clear_counters()
-    device = torch_xla.device()
+    device = torch.device('xla')
     sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
     # tensor will have device as `SPMD:0` in c++
     t1 = xm.send_cpu_data_to_device([torch.randn(8, 8)],

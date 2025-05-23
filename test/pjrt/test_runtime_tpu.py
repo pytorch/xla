@@ -172,7 +172,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   @staticmethod
   def _spawn_threads() -> Dict[int, torch.device]:
     results = {}
-    pjrt.spawn_threads(lambda i: results.setdefault(i, torch_xla.device()))
+    pjrt.spawn_threads(lambda i: results.setdefault(i, torch.device('xla')))
 
     return results
 
@@ -187,7 +187,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   @staticmethod
   def _spawn_error():
     # Initialize the client in the parent process
-    torch_xla.device()
+    torch.device('xla')
 
     torch_xla.launch(xm.xla_device)
 
@@ -199,7 +199,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @staticmethod
   def _runtime_device_attributes():
-    return xr.runtime_device_attributes(str(torch_xla.device()))
+    return xr.runtime_device_attributes(str(torch.device('xla')))
 
   def test_runtime_device_attributes(self):
     result = pjrt.run_multiprocess(self._runtime_device_attributes)
@@ -226,7 +226,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   @staticmethod
   def _execute_time_metric():
     # Initialize the client before starting the timer.
-    torch_xla.device()
+    torch.device('xla')
 
     begin = time.perf_counter_ns()
     value = (

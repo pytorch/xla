@@ -194,7 +194,7 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  device = torch_xla.device()
+  device = torch.device('xla')
   device_hw = xm.xla_device_hw(device)
   model = get_model_property('model_fn')().to(device)
   writer = None
@@ -229,7 +229,7 @@ def train_imagenet():
     for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
       if FLAGS.amp:
-        with autocast(torch_xla.device()):
+        with autocast(torch.device('xla')):
           output = model(data)
           loss = loss_fn(output, target)
         if scaler:

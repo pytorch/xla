@@ -265,7 +265,7 @@ class MpDeviceLoader(object):
 
   Example:
 
-    >>> device = torch_xla.device()
+    >>> device = torch.device('xla')
     >>> train_device_loader = MpDeviceLoader(train_loader, device)
   """
 

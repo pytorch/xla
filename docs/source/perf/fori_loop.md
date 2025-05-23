@@ -30,7 +30,7 @@ result = while_loop(cond_fn, body_fn, init)
 >>> from torch._higher_order_ops.while_loop import while_loop
 >>> import torch_xla.core.xla_model as xm
 >>>
->>> device = torch_xla.device()
+>>> device = torch.device('xla')
 >>>
 >>> def cond_fn(iteri, x):
 ...   return iteri > 0
@@ -60,7 +60,7 @@ with similar logic: cumulative plus 1 for ten times:
 >>> import torch_xla
 >>> import torch_xla.core.xla_model as xm
 >>>
->>> device = torch_xla.device()
+>>> device = torch.device('xla')
 >>>
 >>> init_val = torch.tensor(1, device=device)
 >>> iteri = torch.tensor(50, device=device)

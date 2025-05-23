@@ -40,7 +40,7 @@ class TestUserComputationDebugCache(unittest.TestCase):
     def input_scope_1(tensor):
       return [torch.sin(tensor), torch.cos(tensor)]
 
-    device = torch_xla.device()
+    device = torch.device('xla')
     init_tensor = torch.tensor(10).to(device)
 
     def create_user_computation(fn):

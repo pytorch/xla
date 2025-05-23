@@ -10,7 +10,7 @@ from typing import Tuple, Type, Callable, Union, List
 # The following tests cover the implcit-broadcasting for static and bounded
 # dynamic shapes.
 
-device = torch_xla.device()
+device = torch.device('xla')
 
 
 class ImplicitBroadcasting(unittest.TestCase):
