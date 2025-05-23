@@ -85,6 +85,9 @@ jobs:
           echo "Check if CUDA is available for PyTorch..."
           python -c "import torch; assert torch.cuda.is_available()"
           echo "CUDA is available for PyTorch."
+          echo "Check if CUDA is available for PyTorch/XLA..."
+          PJRT_DEVICE=CUDA python -c "import torch; import torch_xla; print(torch.tensor([1,2,3], device='xla')); assert torch_xla.runtime.device_type() == 'CUDA'"
+          echo "CUDA is available for PyTorch/XLA."
       - name: Checkout PyTorch Repo
         if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
@@ -97,12 +100,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
-      - name: Extra CI deps
-        if: inputs.has_code_changes == 'true' && matrix.run_triton_tests
-        shell: bash
-        run: |
-          set -x
-          pip install -U --pre jax jaxlib "jax-cuda12-plugin[with_cuda]" jax-cuda12-pjrt -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
       - name: Install Triton
         if: inputs.has_code_changes == 'true'
         shell: bash
