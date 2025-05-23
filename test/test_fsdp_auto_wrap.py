@@ -35,7 +35,7 @@ class TestNoBackwardModule(test_utils.XlaTestCase):
       "This test fails only on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)"
   )
   def test(self):
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     input = torch.zeros([16, 16], device=dev)
     model = self.MyModel(input_size=16, hidden_size=4)
     model = XlaFullyShardedDataParallel(
@@ -48,7 +48,7 @@ class TestNoBackwardModule(test_utils.XlaTestCase):
 
 
 def _mp_fn(index):
-  device = torch_xla.device()
+  device = torch.device('xla')
   if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
     test = unittest.main(exit=False)
     sys.exit(0 if test.result.wasSuccessful() else 1)

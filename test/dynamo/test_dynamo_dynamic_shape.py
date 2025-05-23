@@ -45,7 +45,7 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
 
   def test_dynamic_shape_basic(self):
     torch_xla.manual_seed(100)
-    device = torch_xla.device()
+    device = torch.device('xla')
     # model setup
     dummy_linear, dummy_linear_xla, input, input_xla = self._get_linear_and_input(
         10, 20, 20, device)
@@ -78,7 +78,7 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
 
   def test_dynamic_shape_basic_with_mark_dynamic(self):
     torch_xla.manual_seed(100)
-    device = torch_xla.device()
+    device = torch.device('xla')
     # model setup
     dummy_linear, dummy_linear_xla, input, input_xla = self._get_linear_and_input(
         10, 40, 40, device)
@@ -123,7 +123,7 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
 
   def test_dynamic_shape_multiple_batchs(self):
     torch_xla.manual_seed(100)
-    device = torch_xla.device()
+    device = torch.device('xla')
     # model setup
     in_dim = 16
     out_dum = 32
@@ -180,7 +180,7 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
 
   def test_dynamic_shape_mix_with_non_dynamic(self):
     torch_xla.manual_seed(100)
-    device = torch_xla.device()
+    device = torch.device('xla')
     # model setup
     in_dim = 15
     out_dum = 31
@@ -238,7 +238,7 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
   def test_dynamic_decoder(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     config = DecoderOnlyConfig()
     config.num_hidden_layers = 2
     config.hidden_size = 512
@@ -257,7 +257,7 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
     self.assertEqual(met.counter_value('DynamoExtractCompiledGraph'), 2)
 
   def test_dynamic_shape_decoder_mark_dynamic(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     config = DecoderOnlyConfig()
     config.num_hidden_layers = 2
     config.hidden_size = 512
@@ -276,7 +276,7 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
     self.assertEqual(met.counter_value('DynamoExtractCompiledGraph'), 2)
 
   def test_dynamic_shape_no_retracing(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     # model setup
     _, dummy_linear_xla, _, input_xla = self._get_linear_and_input(
         8, 10, 20, device)
@@ -295,7 +295,7 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
       "Skip right now because with torch._dynamo.config.inline_inbuilt_nn_modules = True, dynamic compiles takes minutes for resnet18."
   )
   def test_dynamic_shape_resnet18(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = self._get_loader(device, sample_count, batch_size=4)

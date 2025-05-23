@@ -156,7 +156,7 @@ def local_ordinal() -> int:
   Local ordinal is in range [0, local_device_count)."""
   local_rank = xu.getenv_as(xenv.PJRT_LOCAL_PROCESS_RANK, int, 0)
   devices_per_process = addressable_device_count()
-  return local_rank * devices_per_process + torch_xla.device().index
+  return local_rank * devices_per_process + torch.device('xla').index
 
 
 def process_index() -> int:

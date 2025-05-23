@@ -38,5 +38,5 @@ plugins.use_dynamic_plugins()
 plugins.register_plugin('CPU', torch_xla_cpu_plugin.CpuPlugin())
 xr.set_device_type('CPU')
 
-print(torch_xla.device())
+print(torch.device('xla'))
 ```

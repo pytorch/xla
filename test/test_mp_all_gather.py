@@ -11,7 +11,7 @@ def all_gather(tensor, dim):
 
 
 def _mp_fn(index):
-  device = torch_xla.device()
+  device = torch.device('xla')
   world_size = xr.world_size()
   input_list_size = 5
   if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):

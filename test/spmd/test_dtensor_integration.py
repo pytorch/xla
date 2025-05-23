@@ -46,7 +46,7 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_optimizer_step_with_sharding(self):
     # Use simple linear model to test model parameter sharding
-    model = self.SimpleLinear().to(torch_xla.device())
+    model = self.SimpleLinear().to(torch.device('xla'))
 
     # Running the same mark_sharding test with xla_distribute_tensor instead
     device_count = xr.global_runtime_device_count()
@@ -57,8 +57,8 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
 
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
-    data = torch.randn(128, 128).to(torch_xla.device())
-    target = torch.zeros(128).to(torch_xla.device())
+    data = torch.randn(128, 128).to(torch.device('xla'))
+    target = torch.zeros(128).to(torch.device('xla'))
     loss_fn = nn.CrossEntropyLoss()
     for _ in range(3):
       optimizer.zero_grad()
@@ -73,7 +73,7 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
                        torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
   def test_xla_distribute_module(self):
-    model = self.SimpleLinear().to(torch_xla.device())
+    model = self.SimpleLinear().to(torch.device('xla'))
 
     device_count = xr.global_runtime_device_count()
     device_mesh = init_device_mesh("xla", mesh_shape=(device_count,))
@@ -93,8 +93,8 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
 
     sharded_model.train()
     optimizer = optim.SGD(sharded_model.parameters(), lr=0.1)
-    data = torch.randn(128, 128).to(torch_xla.device())
-    target = torch.zeros(128).to(torch_xla.device())
+    data = torch.randn(128, 128).to(torch.device('xla'))
+    target = torch.zeros(128).to(torch.device('xla'))
     loss_fn = nn.CrossEntropyLoss()
     for _ in range(3):
       optimizer.zero_grad()

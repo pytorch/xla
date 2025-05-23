@@ -10,7 +10,7 @@ def _mp_fn(index):
   import torch_xla
   torch_xla.experimental.eager_mode(True)
 
-  device = torch_xla.device()
+  device = torch.device('xla')
 
   if xm.xla_device_hw(device) not in ('TPU', 'CUDA', 'NEURON'):
     return

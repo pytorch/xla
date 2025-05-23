@@ -11,7 +11,7 @@ FLAGS, leftovers = parser.parse_known_args()
 
 
 def run():
-  device = torch_xla.device()
+  device = torch.device('xla')
   model = torch.nn.ModuleList([
       torch.nn.Sequential(
           torch.nn.Conv2d(1024, 1024, 1),

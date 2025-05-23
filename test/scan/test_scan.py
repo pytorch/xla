@@ -45,7 +45,7 @@ class TestBase(XlaTestCase):
 
   def setUp(self):
     super().setUp()
-    self.device = torch_xla.device()
+    self.device = torch.device('xla')
     # Clear the scan computation cache before each test to avoid cross-test contamination.
     scan_module._SCAN_COMPUTATION_CACHE.clear()
 
@@ -288,7 +288,7 @@ class ScanTest(TestBase, parameterized.TestCase):
     giving wrong results.
     """
     # TODO(yifeit): Modify this test when external in-place mutation is eventually supported.
-    weird_global = torch.tensor([0.0, 0.0], device=torch_xla.device())
+    weird_global = torch.tensor([0.0, 0.0], device='xla')
 
     def step_fn(carry, x):
       new_carry = carry + x
@@ -296,9 +296,8 @@ class ScanTest(TestBase, parameterized.TestCase):
       y = new_carry + weird_global
       return new_carry, y
 
-    init = torch.tensor([0.0, 0.0], device=torch_xla.device())
-    xs = torch.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
-                      device=torch_xla.device())
+    init = torch.tensor([0.0, 0.0], device='xla')
+    xs = torch.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], device='xla')
 
     with self.assertRaisesRegex(AssertionError, "FakeTensor"):
       scan(step_fn, init, xs)
@@ -371,9 +370,8 @@ class ScanTest(TestBase, parameterized.TestCase):
       y = new_carry + torch.rand(2, device=torch_xla.device())
       return new_carry, y
 
-    init = torch.tensor([0.0, 0.0], device=torch_xla.device())
-    xs = torch.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
-                      device=torch_xla.device())
+    init = torch.tensor([0.0, 0.0], device='xla')
+    xs = torch.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], device='xla')
     _, ys = scan(step_fn, init, xs)
     # ys should be a 2D tensor with this shape.
     self.assertEqual(ys.shape, (3, 2))
