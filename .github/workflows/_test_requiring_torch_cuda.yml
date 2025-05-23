@@ -85,6 +85,9 @@ jobs:
           echo "Check if CUDA is available for PyTorch..."
           python -c "import torch; assert torch.cuda.is_available()"
           echo "CUDA is available for PyTorch."
+          echo "Check if CUDA is available for PyTorch/XLA..."
+          PJRT_DEVICE=CUDA python -c "import torch; import torch_xla; print(torch.tensor([1,2,3], device='xla')); assert torch_xla.runtime.device_type() == 'CUDA'"
+          echo "CUDA is available for PyTorch/XLA."
       - name: Checkout PyTorch Repo
         if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4
