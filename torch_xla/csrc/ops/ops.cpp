@@ -887,6 +887,16 @@ torch::lazy::NodePtr Softplus(const torch::lazy::Value& input,
                    std::move(lower_fn));
 }
 
+torch::lazy::NodePtr Selu(const torch::lazy::Value& input) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildSelu(xla_input), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::selu), {input},
+                   GetXlaShape(input), std::move(lower_fn));
+}
+
 torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
