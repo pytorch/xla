@@ -1014,7 +1014,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     A dummy forward pass with minimal computation that sums all inputs and
     full parameters, e.g. to debug parameter memory consumption.
     """
-    outputs = torch.zeros(1, device=torch_xla.device())
+    outputs = torch.zeros(1, device='xla')
     for t in chain(args, kwargs.values(), self.full_params):
       if isinstance(t, torch.Tensor) and t.dtype == torch.float32:
         outputs = outputs + t.mean()

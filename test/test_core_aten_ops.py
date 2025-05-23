@@ -2932,7 +2932,7 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     pytorch = torch.randperm(20)
 
-    xla = torch.randperm(20, device=torch_xla.device())
+    xla = torch.randperm(20, device='xla')
     xla_detached = xla.detach().cpu()
 
     # Check equal lengths and that the sorted sets are equal. Since these numbers are randomly

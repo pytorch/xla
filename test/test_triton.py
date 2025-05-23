@@ -267,9 +267,9 @@ class TritonTest(unittest.TestCase):
     causal = False
     stage = 3 if causal else 1
     dtype = torch.float16
-    q = torch.empty((Z, H, N_CTX, HEAD_DIM), dtype=dtype, device="xla")
-    k = torch.empty((Z, H, N_CTX, HEAD_DIM), dtype=dtype, device="xla")
-    v = torch.empty((Z, H, N_CTX, HEAD_DIM), dtype=dtype, device="xla")
+    q = torch.empty((Z, H, N_CTX, HEAD_DIM), dtype=dtype, device='xla')
+    k = torch.empty((Z, H, N_CTX, HEAD_DIM), dtype=dtype, device='xla')
+    v = torch.empty((Z, H, N_CTX, HEAD_DIM), dtype=dtype, device='xla')
     sm_scale = 0.5
     # reference implementation
     triangle = torch.tril(torch.ones((N_CTX, N_CTX), device="cuda"))

@@ -14,7 +14,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-t = torch.randn(2, 2, device=torch_xla.device())
+t = torch.randn(2, 2, device='xla')
 print(t.device)
 print(t)
 ```
@@ -32,8 +32,8 @@ tensors.
 For example, XLA tensors can be added together:
 
 ``` python
-t0 = torch.randn(2, 2, device=torch_xla.device())
-t1 = torch.randn(2, 2, device=torch_xla.device())
+t0 = torch.randn(2, 2, device='xla')
+t1 = torch.randn(2, 2, device='xla')
 print(t0 + t1)
 ```
 
@@ -46,7 +46,7 @@ print(t0.mm(t1))
 Or used with neural network modules:
 
 ``` python
-l_in = torch.randn(10, device=torch_xla.device())
+l_in = torch.randn(10, device='xla')
 linear = torch.nn.Linear(10, 20).to(torch_xla.device())
 l_out = linear(l_in)
 print(l_out)
@@ -56,7 +56,7 @@ Like other device types, XLA tensors only work with other XLA tensors on
 the same device. So code like
 
 ``` python
-l_in = torch.randn(10, device=torch_xla.device())
+l_in = torch.randn(10, device='xla')
 linear = torch.nn.Linear(10, 20)
 l_out = linear(l_in)
 print(l_out)

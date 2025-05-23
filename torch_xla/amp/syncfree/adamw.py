@@ -92,7 +92,7 @@ class AdamW(torch.optim.AdamW):
                   p, memory_format=torch.preserve_format)
             else:
               state['max_exp_avg_sq'] = torch.empty(
-                  0, dtype=torch.float, device=torch_xla.device())
+                  0, dtype=torch.float, device='xla')
 
           exp_avgs.append(state['exp_avg'])
           exp_avg_sqs.append(state['exp_avg_sq'])

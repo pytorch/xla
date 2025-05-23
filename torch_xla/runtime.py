@@ -97,7 +97,7 @@ def is_bf16_supported():
   """Returns whether torch.bfloat16 is supported on this environment.
   """
   try:
-    torch.tensor([1.], dtype=torch.bfloat16, device=torch_xla.device())
+    torch.tensor([1.], dtype=torch.bfloat16, device='xla')
     return True
   except Exception as e:
     return False

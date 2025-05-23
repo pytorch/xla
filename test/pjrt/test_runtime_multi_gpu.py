@@ -125,7 +125,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
         results['device'] = str(torch_xla.device())
         return grad_output
 
-    x = torch.ones(1, requires_grad=True, device=torch_xla.device())
+    x = torch.ones(1, requires_grad=True, device='xla')
     y = _CustomBackwards.apply(x)
     y.backward()
     torch_xla.sync()

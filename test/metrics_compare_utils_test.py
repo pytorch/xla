@@ -275,7 +275,7 @@ class MetricsCompareUtilsTest(unittest.TestCase):
   def test_parse_real_metrics(self):
     print(
         'Testing against TPU. If this hangs, check that $XRT_TPU_CONFIG is set')
-    x = torch.rand(3, 5, device=torch_xla.device())
+    x = torch.rand(3, 5, device='xla')
     x = torch.flatten(x, 1)
     x = torch.roll(x, 1, 0)
     x = torch.flip(x, [0, 1])

@@ -36,7 +36,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                        dtype=torch.float,
-                       device=torch_xla.device())
+                       device='xla')
     xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
                             partition_spec)
     self.assertTrue(isinstance(xst1, XLAShardedTensor))
@@ -59,7 +59,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                        dtype=torch.float,
-                       device=torch_xla.device())
+                       device='xla')
     xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
                             partition_spec)
 
@@ -229,7 +229,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       self.assertEqual(xt.sharding_type, xs.ShardingType.REPLICATED)
 
   def test_custom_tile_assignment(self):
-    xt = torch.randn(10, 20).to(device=torch_xla.device())
+    xt = torch.randn(10, 20).to(device='xla')
     mesh_shape = (1, self.n_devices)
     device_ids = np.flip(self.device_ids)
     mesh = self._get_mesh(mesh_shape, device_ids)
@@ -696,10 +696,10 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     partition_spec = (0, 1)
     t1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                       dtype=torch.float,
-                      device=torch_xla.device())
+                      device='xla')
     t2 = torch.tensor([[8, 7, 6, 5, 4, 3, 2, 1]],
                       dtype=torch.float,
-                      device=torch_xla.device())
+                      device='xla')
     t3 = t1 + t2
     t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
     self.assertEqual(t3.tolist()[0], t3_expected)
@@ -708,7 +708,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                        dtype=torch.float,
-                       device=torch_xla.device())
+                       device='xla')
     xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
                             partition_spec)
     xst2 = xst1 + 5
@@ -912,7 +912,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                        dtype=torch.float,
-                       device=torch_xla.device())
+                       device='xla')
     xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
                             partition_spec)
     xst1 += 1
@@ -1536,7 +1536,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                        dtype=torch.float,
-                       device=torch_xla.device(),
+                       device='xla',
                        requires_grad=True)
     mesh = self._get_mesh((1, self.n_devices))
     xst1 = xs.mark_sharding_with_gradients(xt1, mesh, partition_spec)
@@ -1550,7 +1550,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     partition_spec = (0,)
     x = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
                      dtype=torch.float,
-                     device=torch_xla.device(),
+                     device='xla',
                      requires_grad=True)
     # Notice that the function does not modify in-place.
     y = xs.mark_sharding_with_gradients(x, mesh, partition_spec)
@@ -1669,13 +1669,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
   def test_shard_as(self):
     mesh = self._get_mesh((self.n_devices,))
     partition_spec = (0,)
-    x = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
-                     dtype=torch.float,
-                     device=torch_xla.device())
+    x = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], dtype=torch.float, device='xla')
     x = xs.mark_sharding_with_gradients(x, mesh, partition_spec)
-    y = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
-                     dtype=torch.float,
-                     device=torch_xla.device())
+    y = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], dtype=torch.float, device='xla')
 
     x, y = xs.shard_as(x, y)
     torch_xla.sync()

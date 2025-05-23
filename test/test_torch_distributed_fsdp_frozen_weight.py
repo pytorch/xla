@@ -19,7 +19,7 @@ def _mp_fn(index):
 
   model = FSDP(model)  # wrapping the linear module with FSDP
 
-  input = torch.rand((2, 1024), device=torch_xla.device())
+  input = torch.rand((2, 1024), device='xla')
 
   output = model(input)
   loss = torch.sum(output)

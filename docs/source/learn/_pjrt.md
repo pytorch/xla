@@ -377,7 +377,7 @@ def _all_gather(index: int):
   # No need to pass in `rank` or `world_size`
   dist.init_process_group('xla', init_method='xla://')
 
-  t = torch.tensor([index], dtype=torch.int32, device=torch_xla.device())
+  t = torch.tensor([index], dtype=torch.int32, device='xla')
   output = [torch.zeros_like(t) for _ in range(dist.get_world_size())]
   dist.all_gather(output, t)
 

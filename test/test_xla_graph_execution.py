@@ -21,7 +21,7 @@ class TestXlaGraphExecution(test_utils.XlaTestCase):
 
   def test_graph_execution_allowed(self):
     torch_xla._XLAC._set_allow_execution(True)
-    x = torch.ones(2, device=torch_xla.device())
+    x = torch.ones(2, device='xla')
     self.assertEqual(x[0], 1.0)  # This should trigger the checking
     del x
 
@@ -30,7 +30,7 @@ class TestXlaGraphExecution(test_utils.XlaTestCase):
     # Trigger runtime error for unexpected graph execution
     torch_xla._XLAC._set_allow_execution(
         False)  # this flag disallows graph execution
-    x = torch.ones(2, device=torch_xla.device())
+    x = torch.ones(2, device='xla')
     with self.assertRaises(RuntimeError) as e:
       self.assertEqual(x[0], 1.0)  # This should trigger the checking
     self.assertIn(

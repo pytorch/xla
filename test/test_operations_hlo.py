@@ -30,7 +30,7 @@ class TestOperationsHlo(unittest.TestCase):
     super(TestOperationsHlo, self).tearDown()
 
   def test_expand(self):
-    a = torch.rand(1, 5, device=torch_xla.device())
+    a = torch.rand(1, 5, device='xla')
     b = a.expand(5, 5)
     hlo_text = torch_xla._XLAC._get_xla_tensors_text([b])
     assert 'aten::expand' in hlo_text
