@@ -862,6 +862,7 @@ XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
 
 XLATensorPtr select(const XLATensorPtr& input, int64_t dim, int64_t index);
 
+void selu_(XLATensorPtr& input);
 XLATensorPtr silu(const XLATensorPtr& input);
 XLATensorPtr silu_backward(XLATensorPtr& grad_output, XLATensorPtr& input);
 XLATensorPtr sigmoid_backward(const XLATensorPtr& grad_output,

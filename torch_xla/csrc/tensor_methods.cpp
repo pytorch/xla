@@ -3066,6 +3066,10 @@ XLATensorPtr select(const XLATensorPtr& input, int64_t dim, int64_t index) {
   return tensor_ops::Select(input, dim, index);
 }
 
+void selu_(XLATensorPtr& input) {
+  input->SetInPlaceIrValue(Selu(input->GetIrValue()));
+}
+
 XLATensorPtr sigmoid_backward(const XLATensorPtr& grad_output,
                               const XLATensorPtr& output) {
   return grad_output->CreateFrom(
