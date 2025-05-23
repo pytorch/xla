@@ -282,7 +282,7 @@ class TestAutocastBase(unittest.TestCase):
       add_kwargs = {}
 
     self.assertFalse(self.is_autocast_enabled())
-    with autocast(torch_xla.device(), dtype=autocast_dtype):
+    with autocast(torch.device('xla'), dtype=autocast_dtype):
       self.assertTrue(self.is_autocast_enabled())
 
       out_type = out_type if out_type is not None else run_as_type
@@ -332,7 +332,7 @@ class TestAutocastBase(unittest.TestCase):
       # Compare numerics to Python-side "autocasting" that (we expect) does the same thing
       # as the C++-side autocasting, and should be bitwise accurate.
       output_to_compare = output if output is not None else output_method
-      with autocast(torch_xla.device(), enabled=False):
+      with autocast(torch.device('xla'), enabled=False):
         self.assertFalse(self.is_autocast_enabled())
 
         if module is not None and hasattr(module, op):
@@ -355,7 +355,7 @@ class TestAutocastTPU(TestAutocastBase):
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
-    cls.autocast_lists = AutocastTPUTestLists(torch.device(torch_xla.device()))
+    cls.autocast_lists = AutocastTPUTestLists(torch.device(torch.device('xla')))
 
   def setUp(self):
     super(TestAutocastTPU, self).setUp()
@@ -397,7 +397,7 @@ class TestAutocastTPU(TestAutocastBase):
           op, args, torch.float32, module=None, out_type=out_type)
 
   def test_autocast_tpu_check_dtype(self):
-    with autocast(torch_xla.device(), dtype=torch.float16):
+    with autocast(torch.device('xla'), dtype=torch.float16):
       assert not torch.is_autocast_xla_enabled()
 
 
@@ -408,7 +408,7 @@ class TestOtherOps(unittest.TestCase):
       xm.xla_device_hw(torch_xla.device()) != 'TPU',
       "the behavior of batch_norm autocast on TPU is different from others")
   def test_batch_norm_tpu(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     data = torch.randn(4, 16, 32, 32, device=device, dtype=torch.bfloat16)
     batch_norm = torch.nn.BatchNorm2d(16)
     with autocast(device, dtype=torch.bfloat16):

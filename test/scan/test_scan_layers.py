@@ -26,7 +26,7 @@ class ScanLayersTest(XlaTestCase):
   def setUp(self):
     super().setUp()
 
-    self.device = torch_xla.device()
+    self.device = torch.device('xla')
 
   def assert_different_tensor(self, a: torch.Tensor, b: torch.Tensor):
     assert a is not b, f"Expected {a} and {b} to be different tensors"

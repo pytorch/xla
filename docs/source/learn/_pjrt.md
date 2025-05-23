@@ -73,7 +73,7 @@ import torch_xla.distributed.xla_backend
 
 
 def _mp_fn(index):
-  device = torch_xla.device()
+  device = torch.device('xla')
 -  dist.init_process_group('xla', rank=xr.global_ordinal(), world_size=xr.world_size())
 +  dist.init_process_group('xla', init_method='xla://')
 

@@ -38,7 +38,7 @@ alias_with_buffer_donor_config_context = create_xla_config_context(
 class InputOutputAliasesTest(parameterized.TestCase):
 
   def test_non_view(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t1 = torch.randn(4, 2, 2).to(xla_device)
     t2 = torch.randn(4, 2, 2).to(xla_device)
     torch_xla.sync()
@@ -53,7 +53,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
 
   def test_aliasing_with_cloned(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     met.clear_all()
     t1 = torch.randn(4, 2, 2).to(xla_device)
     # t1_cloned share the same storage as t1
@@ -66,7 +66,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
 
   def test_aliasing_across_custom_inplace(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     met.clear_all()
     t1 = torch.randn(4, 5).to(xla_device)
     t1 *= t1
@@ -78,7 +78,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
 
   def test_aliasing_across_sync(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     met.clear_all()
     t1 = torch.randn(4, 5).to(xla_device)
     t1 += 1
@@ -96,7 +96,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     BLOCK_SIZE = 16
     DTYPE = torch.bfloat16
     num_blocks = 1024
-    device = torch_xla.device()
+    device = torch.device('xla')
     key = torch.randn(
         BATCH_SIZE * SEQ_LEN,
         NUM_KV_HEADS,
@@ -145,7 +145,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
         torch_xla.sync()
       return [p.grad.to('cpu').numpy() for p in model.parameters()]
 
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     train_x_sample = torch.rand((1, 28 * 28))
     train_label_sample = torch.tensor([5])
     c_model = MLP().to('cpu')
@@ -171,7 +171,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     """
     Test that paramater aliasing differences should produce different graphs.
     """
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t0 = torch.tensor([1], device=xla_device)
     t1 = torch.tensor([2], device=xla_device)
     torch_xla.sync()
@@ -190,7 +190,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     """
     Test that xm.save() does not perform aliasing.
     """
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t0 = torch.tensor([1], device=xla_device)
     t1 = torch.tensor([2], device=xla_device)
     torch_xla.sync()
@@ -212,7 +212,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
     """
     Test that device data in DataCache are not aliased.
     """
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
 
     t0 = torch.tensor(42, device=xla_device)
     # drops the read-only bit on t0's device_data
@@ -235,7 +235,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
 
   def test_user_config_donation_with_ltc_donation(self):
     met.clear_all()
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t0 = torch.randn(4, 2, 2).to(xla_device)
     t1 = torch.randn(4, 2, 2).to(xla_device)
     self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
@@ -255,7 +255,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
       self, enable_buffer_donor_config):
     with alias_with_buffer_donor_config_context(enable_buffer_donor_config):
       met.clear_all()
-      xla_device = torch_xla.device()
+      xla_device = torch.device('xla')
       t0 = torch.randn(4, 2, 2).to(xla_device)
       t1 = torch.randn(4, 2, 2).to(xla_device)
       self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
@@ -279,7 +279,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
 
   def test_user_config_donation_with_ltc_donation_overlap(self):
     met.clear_all()
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t0 = torch.randn(4, 2, 2).to(xla_device)
     self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
     self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
@@ -291,7 +291,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
   def test_user_config_donation(self):
     with alias_with_buffer_donor_config_context(True):
       met.clear_all()
-      xla_device = torch_xla.device()
+      xla_device = torch.device('xla')
       t0 = torch.randn(4, 2, 2).to(xla_device)
       self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
       self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
@@ -308,7 +308,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
   def test_user_config_donation_inplace_aliasing(self):
     with alias_with_buffer_donor_config_context(True):
       met.clear_all()
-      xla_device = torch_xla.device()
+      xla_device = torch.device('xla')
       t0 = torch.randn(4, 2, 2).to(xla_device)
       self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
       self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
@@ -322,7 +322,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
 
   def test_user_config_donation_no_op_sync(self):
     with alias_with_buffer_donor_config_context(True):
-      xla_device = torch_xla.device()
+      xla_device = torch.device('xla')
       t0 = torch.randn(4, 2, 2).to(xla_device)
       self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
       torch_xla.sync()
@@ -331,7 +331,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
       self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
 
   def test_no_op_sync_keep_buffer_donation(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     input = torch.randn(5, 5).to(xla_device)
     self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
     torch_xla.sync()
@@ -346,7 +346,7 @@ def test_device_data_node_tracing_aliasing(self):
     for a given set of unmutated input tensor during its tracing. This helps ensure that
     aliasings can be retained if using the binding for tracing purposes.
     """
-  xla_device = torch_xla.device()
+  xla_device = torch.device('xla')
   t0 = torch.tensor(10).to(xla_device)
 
   t1 = t0 + 5

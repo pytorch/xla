@@ -76,7 +76,7 @@ class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
 
     if isinstance(sd1, torch.Tensor):
       assert sd1.device == sd2.device, f"Tensors on different devices at {keypath}: {sd1} vs {sd2}"
-      if sd1.device == torch_xla.device():
+      if sd1.device == torch.device('xla'):
         sharding1 = torch_xla._XLAC._get_xla_sharding_spec(sd1)
         sharding2 = torch_xla._XLAC._get_xla_sharding_spec(sd2)
         assert sharding1 == sharding2, f"Different sharding on tensors at {keypath}: {sharding1} vs {sharding2}"

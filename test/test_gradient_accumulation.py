@@ -23,7 +23,7 @@ class SimpleModel(torch.nn.Module):
 class GradAccumulationTest(XlaTestCase):
 
   def setUp(self):
-    self.device = torch_xla.device()
+    self.device = torch.device('xla')
     torch.manual_seed(123)
 
   def test_basic(self):
