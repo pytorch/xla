@@ -146,7 +146,7 @@ def training_step(data):
 
 torch.manual_seed(42)
 tries = 5
-device = xm.xla_device()
+device = torch_xla.device()
 if args.profile:
   print("Profiler server started at port 9012")
   server = xp.start_server(9012)

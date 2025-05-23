@@ -38,7 +38,7 @@ class TestSPMDLoweringContext(test_xla_sharding_base.XlaShardingTest):
     mesh_shape = (data_axis, model_axis)
     spmd_mesh = self._get_mesh(mesh_shape, axis_names=('x', 'y'))
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     a = torch.zeros(2048, device=device, requires_grad=True)
     xs.mark_sharding(a, spmd_mesh, ('x',))
     b = torch.randn([32, 2048], device=device, requires_grad=True)
@@ -108,7 +108,7 @@ class TestSPMDLoweringContext(test_xla_sharding_base.XlaShardingTest):
     mesh_shape = (data_axis, model_axis)
     spmd_mesh = self._get_mesh(mesh_shape, axis_names=('x', 'y'))
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     a = torch.randn([32, 2048]).to(device)
     xs.mark_sharding(a, spmd_mesh, ('x', 'y'))
     b = torch.ones(2048).to(device)

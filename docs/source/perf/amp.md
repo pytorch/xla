@@ -16,7 +16,7 @@ example is below:
 
 ``` python
 # Creates model and optimizer in default precision
-model = Net().to(xm.xla_device())
+model = Net().to(torch_xla.device())
 # Pytorch/XLA provides sync-free optimizers for improved performance
 optimizer = syncfree.SGD(model.parameters(), ...)
 
@@ -24,7 +24,7 @@ for input, target in data:
     optimizer.zero_grad()
 
     # Enables autocasting for the forward pass
-    with autocast(xm.xla_device()):
+    with autocast(torch_xla.device()):
         output = model(input)
         loss = loss_fn(output, target)
 
@@ -33,7 +33,7 @@ for input, target in data:
     xm.optimizer_step.(optimizer)
 ```
 
-`autocast(xm.xla_device())` aliases `torch.autocast('xla')` when the XLA
+`autocast(torch_xla.device())` aliases `torch.autocast('xla')` when the XLA
 Device is a TPU. Alternatively, if a script is only used with TPUs, then
 `torch.autocast('xla', dtype=torch.bfloat16)` can be directly used.
 
@@ -100,7 +100,7 @@ specific behavior. A simple CUDA AMP example is below:
 
 ``` python
 # Creates model and optimizer in default precision
-model = Net().to(xm.xla_device())
+model = Net().to(torch_xla.device())
 # Pytorch/XLA provides sync-free optimizers for improved performance
 optimizer = syncfree.SGD(model.parameters(), ...)
 scaler = GradScaler()
@@ -109,7 +109,7 @@ for input, target in data:
     optimizer.zero_grad()
 
     # Enables autocasting for the forward pass
-    with autocast(xm.xla_device()):
+    with autocast(torch_xla.device()):
         output = model(input)
         loss = loss_fn(output, target)
 
@@ -121,12 +121,12 @@ for input, target in data:
     scaler.update()
 ```
 
-`autocast(xm.xla_device())` aliases `torch.cuda.amp.autocast()` when the
+`autocast(torch_xla.device())` aliases `torch.cuda.amp.autocast()` when the
 XLA Device is a CUDA device (XLA:GPU). Alternatively, if a script is
 only used with CUDA devices, then `torch.cuda.amp.autocast` can be
 directly used, but requires `torch` is compiled with `cuda` support for
 datatype of `torch.bfloat16`. We recommend using
-`autocast(xm.xla_device())` on XLA:GPU as it does not require
+`autocast(torch_xla.device())` on XLA:GPU as it does not require
 `torch.cuda` support for any datatypes, including `torch.bfloat16`.
 
 ### AMP for XLA:GPU Best Practices

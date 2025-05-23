@@ -24,7 +24,7 @@ class TestXrtDistributedDataParallel(parameterized.TestCase):
                        gradient_as_bucket_view: bool = False):
     # We cannot run this guard before XMP,
     # see API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing.
-    device = xm.xla_device()
+    device = torch_xla.device()
     if xm.xla_device_hw(device) not in ('TPU', 'CUDA'):
       print(
           'Default device {} is not a TPU device'.format(device),

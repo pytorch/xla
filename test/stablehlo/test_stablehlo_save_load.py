@@ -17,7 +17,7 @@ Tensor = torch.Tensor
 class StableHloDumpTest(unittest.TestCase):
 
   def test_simple(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     x = torch.tensor([3], device=device)
     y = torch.tensor([3], device=device)
     z = x + y
@@ -26,7 +26,7 @@ class StableHloDumpTest(unittest.TestCase):
     self.assertEqual(stablehlo.count("stablehlo.add"), 1)
 
   def test_resnet18(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     xla_resnet18 = torchvision.models.resnet18()
     xla_resnet18.eval()
     xla_resnet18 = xla_resnet18.to(device)
@@ -66,7 +66,7 @@ class SimpleExportTest(unittest.TestCase):
   def export_stable_hlo(self, model, args, kwargs=None):
     if kwargs is None:
       kwargs = {}
-    device = xm.xla_device()
+    device = torch_xla.device()
     model.eval()
     model = model.to(device)
     args = tuple(i.to(device) for i in args if hasattr(i, 'to'))

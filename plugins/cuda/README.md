@@ -35,5 +35,5 @@ plugins.use_dynamic_plugins()
 plugins.register_plugin('CUDA', torch_xla_cuda_plugin.CudaPlugin())
 xr.set_device_type('CUDA')
 
-print(xm.xla_device())
+print(torch_xla.device())
 ```
