@@ -123,6 +123,12 @@ class ShardingUtil {
   static void XlaMarkSharding(const at::Tensor& input,
                               xla::OpSharding sharding);
 
+  // Add a custom sharding node IR to an XLATensor. Note that unlike
+  // XlaMarkSharding, this will not explicitly set a sharding spec tied to the
+  // DeviceData node, nor transfer any sharded data to the device. This serves
+  // merely as an XLA custom sharding annotation IR.
+  static void XlaAnnotateCustomSharding(const XLATensorPtr& input,
+                                        xla::OpSharding sharding);
   //////////////////////////// Auto-Sharding ////////////////////////////
 
   // Construct a device mesh for auto-sharding pass. Returns a tuple of mesh
