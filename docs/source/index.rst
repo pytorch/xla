@@ -74,8 +74,9 @@ Tutorials
    :maxdepth: 1
    :caption: Troubleshooting
 
-   learn/troubleshoot
    learn/eager
+   learn/trace-vs-execution-time
+   learn/troubleshoot
    notes/source_of_recompilation
    perf/recompilation
 
