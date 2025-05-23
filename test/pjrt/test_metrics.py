@@ -27,7 +27,7 @@ class TestPjRtRuntimeMetrics(absltest.TestCase):
     self.assertEmpty(met.metrics_report())
 
     # Move a tensor to the XLA device and back
-    torch.rand(3, 3, device=torch_xla.device()).cpu()
+    torch.rand(3, 3, device='xla').cpu()
 
     metrics = met.metrics_report()
     self.assertNotEmpty(metrics)

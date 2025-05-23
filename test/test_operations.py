@@ -328,7 +328,7 @@ class TestLongGraphChain(test_utils.XlaTestCase):
 class TestSelect(test_utils.XlaTestCase):
 
   def test_get_xla_tensor(self):
-    x = _gen_tensor(14, 24, 8, device=torch_xla.device())
+    x = _gen_tensor(14, 24, 8, device='xla')
     t = x.data.cpu()
     sx = x.select(1, 12)
     tx = t.select(1, 12)
@@ -343,7 +343,7 @@ class TestSelect(test_utils.XlaTestCase):
       # Call masked_fill.
       return tensor.masked_fill(mask, 10)
 
-    x = _gen_tensor(2, 2, device=torch_xla.device())
+    x = _gen_tensor(2, 2, device='xla')
     x_cpu = x.cpu()
     self.assertEqual(fn(x_cpu), fn(x))
 
@@ -352,7 +352,7 @@ class TestRandom(test_utils.XlaTestCase):
 
   def test_random_from_to_bool(self):
     for from_val, to_val in [[0, 1], [0, 2], [1, 2]]:
-      x = _gen_tensor(10, device=torch_xla.device())
+      x = _gen_tensor(10, device='xla')
       x.random_(from_val, to_val)
       delta = 1
       self.assertTrue(from_val <= x.to(torch.int).min() < (from_val + delta))
@@ -416,20 +416,20 @@ class TestInterOpSyncTensors(test_utils.XlaTestCase):
 class TestDynamicShape(test_utils.XlaTestCase):
 
   def test_nonzero_shape(self):
-    x = torch.tensor((0, 1, 2, 0, 3, 4), device=torch_xla.device())
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device='xla')
     x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
         torch.nonzero(x, as_tuple=False), 0)
     self.assertEqual(x_dim0_shape.item(), 4)
 
   def test_masked_select_shape(self):
-    x = torch.tensor((0, 1, 2, 0, 3, 4), device=torch_xla.device())
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device='xla')
     mask = x.ge(2)
     x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
         torch.masked_select(x, mask), 0)
     self.assertEqual(x_dim0_shape.item(), 3)
 
   def test_nonzero_cast(self):
-    t1 = torch.ones(5, 2, device=torch_xla.device())
+    t1 = torch.ones(5, 2, device='xla')
     # Result of the nonzero should be the index type. Currently
     # index type is s64 on cpu and gpu, but s32 on TPU. We should be
     # able to cast it to any other type without error.
@@ -598,31 +598,31 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(output.data, xla_output.data.cpu())
 
   def test_rand(self):
-    x = torch.rand(3, 5, device=torch_xla.device())
+    x = torch.rand(3, 5, device='xla')
     self.assertEqual(x.device.type, 'xla')
 
   def test_randperm(self):
-    x = torch.randperm(3, device=torch_xla.device(), dtype=torch.int32)
+    x = torch.randperm(3, device='xla', dtype=torch.int32)
     self.assertEqual(x.device.type, 'xla')
 
   def test_randn_like(self):
     shape = (5, 1, 1)
-    x = torch.randn_like(torch.zeros(shape, device=torch_xla.device()))
+    x = torch.randn_like(torch.zeros(shape, device='xla'))
     self.assertEqual(x.device.type, 'xla')
 
   def test_rand_like(self):
     shape = (5, 1, 1)
-    x = torch.rand_like(torch.zeros(shape, device=torch_xla.device()))
+    x = torch.rand_like(torch.zeros(shape, device='xla'))
     self.assertEqual(x.device.type, 'xla')
 
   def test_randint_like(self):
     shape = (5, 1, 1)
     x = torch.randint_like(
-        torch.zeros(shape, device=torch_xla.device(), dtype=torch.uint8), 6, 10)
+        torch.zeros(shape, device='xla', dtype=torch.uint8), 6, 10)
     self.assertEqual(x.device.type, 'xla')
 
   def test_no_storage(self):
-    x = torch.randn(5, device=torch_xla.device())
+    x = torch.randn(5, device='xla')
     self.assertRaises(Exception, x.device)
 
   def test_slice_copy(self):
@@ -686,9 +686,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_arange_nan(self):
     with self.assertRaisesRegex(RuntimeError, r'unsupported range'):
-      a = torch.arange(-5, float('nan'), device=torch_xla.device())
+      a = torch.arange(-5, float('nan'), device='xla')
     with self.assertRaisesRegex(RuntimeError, r'unsupported range'):
-      a = torch.arange(float('nan'), 5, device=torch_xla.device())
+      a = torch.arange(float('nan'), 5, device='xla')
 
   def test_empty_advanced_indexing(self):
     xla_device = torch_xla.device()
@@ -891,7 +891,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_view_empty(self):
     # These used to throw floating point exception.
-    empty = torch.empty(0, device=torch_xla.device())
+    empty = torch.empty(0, device='xla')
     with self.assertRaisesRegex(
         RuntimeError, r'unspecified dimension size -1 can be any value'):
       empty.view(-1, 0)
@@ -917,7 +917,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(cpu_weight_grad, xla_weight_grad)
 
   def test_inplace_view_backprop_base(self):
-    root = torch.randn(2, 2, device=torch_xla.device(), requires_grad=True)
+    root = torch.randn(2, 2, device='xla', requires_grad=True)
     x = root.clone()
     v1 = x.narrow(0, 0, 1)
     v1.mul_(2)
@@ -925,7 +925,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(root.grad.tolist(), [[2, 2], [1, 1]])
 
   def test_inplace_view_backprop_view_of_view(self):
-    root = torch.randn(2, 2, device=torch_xla.device(), requires_grad=True)
+    root = torch.randn(2, 2, device='xla', requires_grad=True)
     x = root.clone()
     v1 = x.narrow(0, 0, 1)
     v2 = x.narrow(0, 0, 1)
@@ -935,7 +935,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_inplace_view_of_view(self):
     # modify view-of-view and backprop through base
-    root = torch.randn(2, 2, device=torch_xla.device(), requires_grad=True)
+    root = torch.randn(2, 2, device='xla', requires_grad=True)
     x = root.clone()
     v1 = x.narrow(0, 0, 1)
     v2 = v1.narrow(1, 1, 1)
@@ -944,8 +944,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1]])
 
   def test_inplace_view_multiple_outputs(self):
-    root = torch.arange(
-        9., device=torch_xla.device()).reshape(3, 3).requires_grad_()
+    root = torch.arange(9., device='xla').reshape(3, 3).requires_grad_()
     x = root.clone()
     v1 = x.unbind()
     with self.assertRaises(RuntimeError):
@@ -1040,8 +1039,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_inplace_view_non_contig(self):
     root = torch.ones(
-        2, 3, 2, device=torch_xla.device()).select(2,
-                                                   1).t().requires_grad_(True)
+        2, 3, 2, device='xla').select(2, 1).t().requires_grad_(True)
     x = root.clone()
     v1 = x.narrow(0, 0, 1)
     v2 = v1.narrow(1, 1, 1)
@@ -1080,12 +1078,12 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_set(self):
     met.clear_all()
 
-    t1 = torch.zeros(50, device=torch_xla.device())
+    t1 = torch.zeros(50, device='xla')
     t1 += 1
     torch_xla.sync()
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
 
-    t2 = torch.zeros(10, device=torch_xla.device())
+    t2 = torch.zeros(10, device='xla')
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
 
     t1.set_(t2)
@@ -1098,12 +1096,12 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_replace_xla_tensor(self):
     met.clear_all()
 
-    t1 = torch.zeros(50, device=torch_xla.device())
+    t1 = torch.zeros(50, device='xla')
     t1 += 1
     torch_xla.sync()
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
 
-    t2 = torch.zeros(10, device=torch_xla.device())
+    t2 = torch.zeros(10, device='xla')
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
     torch_xla._XLAC._replace_xla_tensor(t1, t2)
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 5)
@@ -1754,7 +1752,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   # Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.
   @skipOnEagerDebug
   def test_pow_constant(self):
-    t1 = torch.pow(torch.tensor([2.0, 3.0], device=torch_xla.device()), 5)
+    t1 = torch.pow(torch.tensor([2.0, 3.0], device='xla'), 5)
     hlo_text = torch_xla._XLAC._get_xla_tensors_text([t1])
     const_hlo = hlo_text.split('\n')[1]
     assert 'prim::Constant' in const_hlo
@@ -2333,8 +2331,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       with self.subTest(sparse=sparse, mode=mode):
         kwargs_ = {k: clone_and_maybe_move(v) for k, v in kwargs.items()}
         xla_kwargs = {
-            k: clone_and_maybe_move(v, device=torch_xla.device())
-            for k, v in kwargs.items()
+            k: clone_and_maybe_move(v, device='xla') for k, v in kwargs.items()
         }
 
         expected_out, expected_grad = fn(**kwargs_, **extra_kwargs)
@@ -2481,12 +2478,12 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
 
   def test_wait_device_ops(self):
     torch_xla.device()
-    value = torch.randn(10000, 10000, device=torch_xla.device())
+    value = torch.randn(10000, 10000, device='xla')
     val_list = []
     val_mean_list = []
     met.clear_all()
     for _ in range(5):
-      new_val = value * torch.randn(10000, 10000, device=torch_xla.device())
+      new_val = value * torch.randn(10000, 10000, device='xla')
       val_list.append(new_val)
       val_mean_list.append(new_val.mean())
     torch_xla.sync()
@@ -2910,7 +2907,7 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertGreaterEqual(buf_ptr_0, 0)
 
     # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
-    xla_tensor_1 = torch.tensor(42, device=torch_xla.device())
+    xla_tensor_1 = torch.tensor(42, device='xla')
     buf_ptr_1 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_1)
     self.assertGreaterEqual(buf_ptr_1, 0)
 
@@ -2919,7 +2916,7 @@ class TestGeneric(test_utils.XlaTestCase):
     buf_ptr_2 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_2)
     self.assertGreaterEqual(buf_ptr_2, 0)
 
-    xla_tensor_3 = torch.arange(5, device=torch_xla.device())
+    xla_tensor_3 = torch.arange(5, device='xla')
     torch_xla.sync()
     # Without the `wait_device_ops()`, the pjrt buffer (pjrt_data->buffer) at https://github.com/pytorch/xla/blob/e3fc03314dab5f44e3ed9ccbba6c15fbca3285cd/torch_xla/csrc/runtime/pjrt_computation_client.cc#L467 will be nullptr.
     xm.wait_device_ops()
@@ -2954,7 +2951,7 @@ class TestDLPack(parameterized.TestCase):
     self._test_dlpack_capsule_conversion_helper(xla_tensor_2)
 
     # xla_tensor_3 uses arange_out IR node.
-    xla_tensor_3 = torch.arange(5, dtype=dtype, device=torch_xla.device())
+    xla_tensor_3 = torch.arange(5, dtype=dtype, device='xla')
     torch_xla.sync()
     self._test_dlpack_capsule_conversion_helper(xla_tensor_3)
 

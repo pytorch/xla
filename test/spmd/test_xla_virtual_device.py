@@ -23,21 +23,21 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                        dtype=torch.float,
-                       device=torch_xla.device())
+                       device='xla')
     xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
     self.assertTrue(
         torch.allclose(
             xt1 + 0,
             torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
                          dtype=torch.float,
-                         device=torch_xla.device())))
+                         device='xla')))
 
   def test_metrics_recorded(self):
     met.clear_counters()
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                        dtype=torch.float,
-                       device=torch_xla.device())
+                       device='xla')
     xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
     self.assertIn("VirtualDeviceUsage", met.counter_names())
     self.assertNotEqual(met.counter_value("VirtualDeviceUsage"), 0)
@@ -54,17 +54,17 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
   def test_no_sharding(self):
     t1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                       dtype=torch.float,
-                      device=torch_xla.device())
+                      device='xla')
     t2 = torch.tensor([[8, 7, 6, 5, 4, 3, 2, 1]],
                       dtype=torch.float,
-                      device=torch_xla.device())
+                      device='xla')
     t3 = t1 + t2
     t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
     self.assertEqual(t3.tolist()[0], t3_expected)
 
   def test_no_sharding_1d(self):
-    t1 = torch.arange(9, dtype=torch.float, device=torch_xla.device())
-    t2 = torch.arange(9, dtype=torch.float, device=torch_xla.device())
+    t1 = torch.arange(9, dtype=torch.float, device='xla')
+    t2 = torch.arange(9, dtype=torch.float, device='xla')
     t3 = t1 + t2
     t3_expected = list(range(0, 18, 2))
     self.assertEqual(t3.tolist(), t3_expected)
@@ -75,7 +75,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     met.clear_all()
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                        dtype=torch.float,
-                       device=torch_xla.device())
+                       device='xla')
     xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
     outbound_with_virtual_device = met.metric_data("OutboundData")[1]
 

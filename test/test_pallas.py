@@ -369,7 +369,7 @@ class PallasTest(parameterized.TestCase):
     pt_kernel = make_kernel_from_pallas(
         add_minus_vectors, lambda x, y: [(x.shape, x.dtype),
                                          (x.shape, x.dtype)])
-    x = torch.arange(8, device="xla", dtype=torch.float)
+    x = torch.arange(8, device='xla', dtype=torch.float)
     o = pt_kernel(x, x)
     self.assertEqual(len(o), 2)
 

@@ -78,10 +78,10 @@ class TestHloMetaData(unittest.TestCase):
     model = torch.nn.Sequential(layer1, nl1, layer2, nl2)
 
     with CustomOpNameLowering() as c:
-      model = model.to(device=torch_xla.device())
-      inp = torch.rand(4, 4, device=torch_xla.device())
+      model = model.to(device='xla')
+      inp = torch.rand(4, 4, device='xla')
       #inp = torch.rand(4, 4)
-      #inp = inp.to(device=torch_xla.device())
+      #inp = inp.to(device='xla')
       out = model(inp)
 
       # Get outer frames

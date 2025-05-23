@@ -211,8 +211,8 @@ class MetricsTest(unittest.TestCase):
 
     begin = time.perf_counter_ns()
     value = torch.randn(
-        10000, 10000, device=torch_xla.device()) * torch.randn(
-            10000, 10000, device=torch_xla.device())
+        10000, 10000, device='xla') * torch.randn(
+            10000, 10000, device='xla')
     value_mean = value.mean()
     torch_xla.sync()
     cpu_value = value_mean.cpu()

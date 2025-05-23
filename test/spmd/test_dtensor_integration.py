@@ -30,10 +30,7 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
 
     for requires_grad in [True, False]:
       tensor_to_shard = torch.randn(
-          3 * device_count,
-          3,
-          requires_grad=requires_grad,
-          device=torch_xla.device())
+          3 * device_count, 3, requires_grad=requires_grad, device='xla')
       dist_tensor = distribute_tensor(tensor_to_shard, device_mesh, shard_spec)
       # TODO(yeounoh) switch to DTensor API when XLAShardedTensor inherits DTensor
       assert type(dist_tensor).__name__ == "XLAShardedTensor"

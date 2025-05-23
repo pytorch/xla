@@ -49,7 +49,7 @@ class DynamoInPlaceTest(parameterized.TestCase):
   def test_inplace_update_correctness(self, backend):
     dynamo_inplace = torch.compile(
         self.inplace_update, backend=backend, fullgraph=True)
-    t = torch.tensor([0, 1, 2], device=torch_xla.device())
+    t = torch.tensor([0, 1, 2], device='xla')
     for i in range(10):
       t = dynamo_inplace(t)
     self.assertTrue(torch.all(torch.eq(t.cpu(), torch.tensor([10, 11, 12]))))
@@ -131,7 +131,7 @@ class DynamoProfilerTest(parameterized.TestCase):
   def test_dynamo_with_trace(self):
     dynamo_dummy = torch.compile(
         self.dummy_fn, backend="openxla", fullgraph=True)
-    t = torch.randn(2, 3, 4, device=torch_xla.device())
+    t = torch.randn(2, 3, 4, device='xla')
     for i in range(10):
       with xp.Trace('build_graph'):
         t = dynamo_dummy(t)

@@ -727,7 +727,7 @@ def _scan_impl_flat(fn,
     seed_tensor = hoisted_vars[seed_parameter_id]
     assert seed_tensor.dtype == torch.int64
     hoisted_vars[seed_parameter_id] = torch.randint(
-        0, 2**62, (num_iters,), dtype=torch.int64, device=torch_xla.device())
+        0, 2**62, (num_iters,), dtype=torch.int64, device='xla')
 
   # Add hoisted variables as While computation params as well,
   # including the potentially updated seed tensor.
