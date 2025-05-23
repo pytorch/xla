@@ -258,6 +258,7 @@ function run_xla_op_tests2 {
   run_test "$_TEST_DIR/test_assume_pure.py"
   run_test "$_TEST_DIR/test_assume_pure_spmd.py"
   run_test "$_TEST_DIR/test_assume_pure_torch.py"
+  run_test "$_TEST_DIR/test_dynamic_shapes_detector.py"
 }
 
 # All the new xla op tests should go to run_xla_op_tests3
