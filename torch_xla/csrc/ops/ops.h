@@ -80,10 +80,6 @@ torch::lazy::NodePtr Tan(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Neg(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr SgnOp(const torch::lazy::Value& input);
-
-torch::lazy::NodePtr SignOp(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr Min(const torch::lazy::Value& input,
                          const torch::lazy::Value& other);
 
@@ -113,15 +109,6 @@ torch::lazy::NodePtr Pow(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr Fmod(const torch::lazy::Value& dividend,
                           const torch::lazy::Value& divisor);
-
-torch::lazy::NodePtr LogSigmoid(const torch::lazy::Value& input);
-
-torch::lazy::NodePtr Sigmoid(const torch::lazy::Value& input);
-
-torch::lazy::NodePtr SiLU(const torch::lazy::Value& input);
-
-torch::lazy::NodePtr SiLUBackward(const torch::lazy::Value& grad_output,
-                                  const torch::lazy::Value& input);
 
 torch::lazy::NodePtr SigmoidBackward(const torch::lazy::Value& grad_output,
                                      const torch::lazy::Value& output);
