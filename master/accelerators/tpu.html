@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Learn about TPUs &mdash; PyTorch/XLA master documentation</title>
@@ -29,9 +30,14 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="SPMD User Guide" href="../perf/spmd_basic.html" />
+    <link rel="next" title="Control MXU Floating Point Precision" href="../tutorials/precision_tutorial.html" />
     <link rel="prev" title="Pytorch/XLA Overview" href="../learn/xla-overview.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="learn-about-tpus">
+  <section id="learn-about-tpus">
 <h1>Learn about TPUs<a class="headerlink" href="#learn-about-tpus" title="Permalink to this heading">¶</a></h1>
 <p>Google Cloud TPUs are custom-designed AI accelerators, which are
 optimized for training and inference of large AI models. They are ideal
@@ -464,7 +471,7 @@ platform.</p>
 <li><p><a class="reference external" href="https://cloud.google.com/tpu/docs/setup-gcp-account">Set up a Cloud TPU environment</a></p></li>
 <li><p><a class="reference external" href="https://cloud.google.com/tpu/docs/managing-tpus-tpu-vm">Manage Cloud TPU resources</a></p></li>
 </ul>
-</div>
+</section>
 
 
              </article>
@@ -474,7 +481,7 @@ platform.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../perf/spmd_basic.html" class="btn btn-neutral float-right" title="SPMD User Guide" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="../tutorials/precision_tutorial.html" class="btn btn-neutral float-right" title="Control MXU Floating Point Precision" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
         <a href="../learn/xla-overview.html" class="btn btn-neutral" title="Pytorch/XLA Overview" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
@@ -530,7 +537,13 @@ platform.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

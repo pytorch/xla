@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Custom Hardware Plugins &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="PyTorch/XLA API" href="../learn/api-guide.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,13 +448,13 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="custom-hardware-plugins">
+  <section id="custom-hardware-plugins">
 <h1>Custom Hardware Plugins<a class="headerlink" href="#custom-hardware-plugins" title="Permalink to this heading">¶</a></h1>
 <p>PyTorch/XLA supports custom hardware through OpenXLA’s PJRT C API. The
 PyTorch/XLA team directly supports plugins for Cloud TPU (<code class="docutils literal notranslate"><span class="pre">libtpu</span></code>) and
 GPU (<a class="reference external" href="https://github.com/openxla/xla/tree/main/xla/pjrt/gpu">OpenXLA</a>).
 The same plugins may also be used by JAX and TF.</p>
-<div class="section" id="implementing-a-pjrt-plugin">
+<section id="implementing-a-pjrt-plugin">
 <h2>Implementing a PJRT Plugin<a class="headerlink" href="#implementing-a-pjrt-plugin" title="Permalink to this heading">¶</a></h2>
 <p>PJRT C API plugins may be closed-source or open-source. They contain two
 parts:</p>
@@ -458,7 +465,7 @@ with JAX and TensorFlow.</p></li>
 implementation of our <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code> Python interface, which handles
 additional setup.</p></li>
 </ol>
-<div class="section" id="pjrt-c-api-implementation">
+<section id="pjrt-c-api-implementation">
 <h3>PJRT C API Implementation<a class="headerlink" href="#pjrt-c-api-implementation" title="Permalink to this heading">¶</a></h3>
 <p>In short, you must implement a
 <a class="reference external" href="https://github.com/openxla/xla/blob/main/xla/pjrt/pjrt_client.h">PjRtClient</a>
@@ -473,12 +480,12 @@ as a C API implementation. This process is explained in detail in
 documentation</a>.</p>
 <p>For a concrete example, see the <a class="reference external" href="https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_cpu_internal.cpp">example
 implementation</a>.</p>
-</div>
-<div class="section" id="pytorch-xla-plugin-package">
+</section>
+<section id="pytorch-xla-plugin-package">
 <h3>PyTorch/XLA Plugin Package<a class="headerlink" href="#pytorch-xla-plugin-package" title="Permalink to this heading">¶</a></h3>
 <p>At this point, you should have a functional PJRT plugin binary, which
 you can test with the placeholder <code class="docutils literal notranslate"><span class="pre">LIBRARY</span></code> device type. For example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ PJRT_DEVICE=LIBRARY PJRT_LIBRARY_PATH=/path/to/your/plugin.so python
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ PJRT_DEVICE=LIBRARY PJRT_LIBRARY_PATH=/path/to/your/plugin.so python
 &gt;&gt;&gt; import torch_xla
 &gt;&gt;&gt; torch_xla.devices()
 # Assuming there are 4 devices. Your hardware may differ.
@@ -500,22 +507,19 @@ provides the path to your plugin binary. For example:</p></li>
         <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;lib&#39;</span><span class="p">,</span> <span class="s1">&#39;pjrt_c_api_cpu_plugin.so&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<ol class="arabic simple">
+<ol class="arabic simple" start="2">
 <li><p>A <code class="docutils literal notranslate"><span class="pre">torch_xla.plugins</span></code> <a class="reference external" href="https://setuptools.pypa.io/en/latest/userguide/entry_point.html">entry
 point</a>
 that identifies your <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code>. For exmaple, to register the
 <code class="docutils literal notranslate"><span class="pre">EXAMPLE</span></code> device type in a <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>:</p></li>
 </ol>
-<div class="highlight-{=html} notranslate"><div class="highlight"><pre><span></span>&lt;!-- --&gt;
-</pre></div>
-</div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">entry</span><span class="o">-</span><span class="n">points</span><span class="o">.</span><span class="s2">&quot;torch_xla.plugins&quot;</span><span class="p">]</span>
-<span class="n">example</span> <span class="o">=</span> <span class="s2">&quot;torch_xla_cpu_plugin:CpuPlugin&quot;</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[project.entry-points.&quot;torch_xla.plugins&quot;]
+example = &quot;torch_xla_cpu_plugin:CpuPlugin&quot;
 </pre></div>
 </div>
 <p>With your package installed, you may then use your <code class="docutils literal notranslate"><span class="pre">EXAMPLE</span></code> device
 directly:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ PJRT_DEVICE=EXAMPLE python
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ PJRT_DEVICE=EXAMPLE python
 &gt;&gt;&gt; import torch_xla
 &gt;&gt;&gt; torch_xla.devices()
 [device(type=&#39;xla&#39;, index=0), device(type=&#39;xla&#39;, index=1), device(type=&#39;xla&#39;, index=2), device(type=&#39;xla&#39;, index=3)]
@@ -525,9 +529,9 @@ directly:</p>
 provides additional extension points for multiprocess initialization and
 client options. The API is currently in an experimental state, but it is
 expected to become stable in a future release.</p>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
              </article>
@@ -600,7 +604,13 @@ expected to become stable in a future release.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

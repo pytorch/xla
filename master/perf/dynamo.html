@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>TorchDynamo Integration &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Quantized Operations" href="quantized_ops.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="torchdynamo-integration">
+  <section id="torchdynamo-integration">
 <h1>TorchDynamo Integration<a class="headerlink" href="#torchdynamo-integration" title="Permalink to this heading">¶</a></h1>
 <p><a class="reference external" href="https://pytorch.org/docs/stable/torch.compiler.html">TorchDynamo</a> is a
 Python-level JIT compiler designed to make unmodified PyTorch programs
@@ -454,7 +461,7 @@ training.</p>
 graph when it recognizes a model pattern and PyTorch/XLA will use
 existing Lazy Tensor technology to compile the FX graph and return the
 compiled function.</p>
-<div class="section" id="integration">
+<section id="integration">
 <h2>Integration<a class="headerlink" href="#integration" title="Permalink to this heading">¶</a></h2>
 <p>Support for PyTorch/XLA and Dynamo currently exists by adding the
 <code class="docutils literal notranslate"><span class="pre">backend='openxla'</span></code> argument to <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code>. For example:</p>
@@ -470,8 +477,8 @@ compiled function.</p>
 <span class="nb">print</span><span class="p">(</span><span class="n">compiled_code</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">)))</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="inference">
+</section>
+<section id="inference">
 <h2>Inference<a class="headerlink" href="#inference" title="Permalink to this heading">¶</a></h2>
 <p>Here is a small code example of running resnet18 with <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
@@ -543,8 +550,9 @@ and Lazy using torch bench on Cloud TPU v4-8</p>
     <td>geomean</td>
     <td>3.04</td>
   </tr>
-</table></div>
-<div class="section" id="training">
+</table>
+</section>
+<section id="training">
 <h2>Training<a class="headerlink" href="#training" title="Permalink to this heading">¶</a></h2>
 <p>PyTorch/XLA also supports Dynamo for training, but it is experimental
 and we are working with the PyTorch Compiler team to iterate on the
@@ -626,15 +634,16 @@ TPU v4-8.</p>
     <td>geomean</td>
     <td>1.41</td>
   </tr>
-</table><blockquote>
+</table>
+<blockquote>
 <div><p><strong>NOTE:</strong> We run each model’s fwd and bwd for a single step and then
 collect the e2e time. In the real world we will run multiple steps at
 each training job which can easily hide the tracing cost from
 execution(since it is async). Lazy Tensor will have much better
 performance in that scenario.</p>
 </div></blockquote>
-</div>
-<div class="section" id="feature-gaps">
+</section>
+<section id="feature-gaps">
 <h2>Feature gaps<a class="headerlink" href="#feature-gaps" title="Permalink to this heading">¶</a></h2>
 <p>There is one gap we want to call out that are preventing us from using the
 TorchDynamo on larger scale models.</p>
@@ -646,8 +655,8 @@ ideal.</p>
 <p>This gap compared to Lazy Tensor makes it less efficient in real world training
 use cases, especially the tracing cost can be overlapped wit the execution in
 training.</p>
-</div>
-<div class="section" id="take-away">
+</section>
+<section id="take-away">
 <h2>Take away<a class="headerlink" href="#take-away" title="Permalink to this heading">¶</a></h2>
 <p>TorchDynamo provides a promising way for the compiler backend to
 hide the complexity from the user and easily retrieve the modeling code
@@ -660,8 +669,8 @@ working hard to expand the set of supported models. Regarding the
 training feature gaps mentioned above, the PyTorch/XLA community is
 excited to improve the training gap in our upcoming development
 work. The team continues to invest in TorchDynamo.</p>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -734,7 +743,13 @@ work. The team continues to invest in TorchDynamo.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

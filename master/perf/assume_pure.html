@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Speed Up Tracing with @assume_pure &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Troubleshooting Basics" href="../learn/troubleshoot.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,12 +448,12 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="speed-up-tracing-with-assume-pure">
+  <section id="speed-up-tracing-with-assume-pure">
 <h1>Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code><a class="headerlink" href="#speed-up-tracing-with-assume-pure" title="Permalink to this heading">¶</a></h1>
 <p>This document explains how to use <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.assume_pure</span></code> to
 eliminate lazy tensor tracing overhead. See <a class="reference external" href="https://pytorch.org/blog/understanding-lazytensor-system-performance-with-pytorch-xla-on-cloud-tpu/">this blog post</a> for a
 primer on how lazy tensor tracing (operation recording) works.</p>
-<div class="section" id="background-and-motivation">
+<section id="background-and-motivation">
 <h2>Background and motivation<a class="headerlink" href="#background-and-motivation" title="Permalink to this heading">¶</a></h2>
 <p>PyTorch/XLA’s lazy tensor tracing ensures correct execution by recording an
 operation graph (lazy tensor IR) when running PyTorch operations. For complex
@@ -461,14 +468,14 @@ model will do exactly the same thing when given the same input tensor shapes. In
 other words, given the same input, the function return the same output. Often,
 the layers also will not will not perform side-effects such as saving the tensor
 to a file or adding it to a global list. Such functions are called
-“<a class="reference external" href="https://en.wikipedia.org/wiki/Pure_function">pure functions</a>“.</p>
+“<a class="reference external" href="https://en.wikipedia.org/wiki/Pure_function">pure functions</a>”.</p>
 <p>Any PyTorch/XLA function decorated with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> will only be traced once
 for each unique input tensor shape and dtype combination. PyTorch/XLA will cache
 the traced computation instead of repeatedly tracing the same operations.</p>
-</div>
-<div class="section" id="how-to-use-assume-pure">
+</section>
+<section id="how-to-use-assume-pure">
 <h2>How to use <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code><a class="headerlink" href="#how-to-use-assume-pure" title="Permalink to this heading">¶</a></h2>
-<div class="section" id="using-assume-pure-with-a-function">
+<section id="using-assume-pure-with-a-function">
 <h3>Using <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> with a function<a class="headerlink" href="#using-assume-pure-with-a-function" title="Permalink to this heading">¶</a></h3>
 <p>If you know your function is pure, decorate your function with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code>:</p>
 <div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
@@ -499,8 +506,8 @@ the traced computation instead of repeatedly tracing the same operations.</p>
     <span class="nb">print</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="using-assume-pure-with-a-nn-module">
+</section>
+<section id="using-assume-pure-with-a-nn-module">
 <h3>Using <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> with a <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code><a class="headerlink" href="#using-assume-pure-with-a-nn-module" title="Permalink to this heading">¶</a></h3>
 <p>If you have a pure <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> i.e. its <code class="docutils literal notranslate"><span class="pre">forward</span></code> behavior only depends on the
 input arguments and the model parameters, we can use <code class="docutils literal notranslate"><span class="pre">torch.func.functional_call</span></code>
@@ -537,9 +544,9 @@ to convert the module into a pure function and pass that to <code class="docutil
     <span class="nb">print</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="benchmarks">
+</section>
+</section>
+<section id="benchmarks">
 <h2>Benchmarks<a class="headerlink" href="#benchmarks" title="Permalink to this heading">¶</a></h2>
 <p>The unit tests contain a benchmark that traces an example 100 layer decoder-only
 language model:</p>
@@ -554,8 +561,8 @@ No<span class="w"> </span><span class="sb">`</span>@assume_pure<span class="sb">
 <p>Importantly, the <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> running time does not scale with increasing
 complexity inside the model. That’s because we only trace the model once, paying
 a fixed up-front cost, and then later runs will reuse the cached XLA computation.</p>
-</div>
-<div class="section" id="limitations">
+</section>
+<section id="limitations">
 <h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this heading">¶</a></h2>
 <p>Currently, all operations in a function wrapped with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code> must be
 PyTorch upstream operations (e.g. <code class="docutils literal notranslate"><span class="pre">torch.einsum</span></code>, <code class="docutils literal notranslate"><span class="pre">torch.sin</span></code>, …), or these
@@ -566,8 +573,9 @@ PyTorch/XLA operations:</p>
 </ul>
 <p>More PyTorch/XLA operations (e.g. <code class="docutils literal notranslate"><span class="pre">flash_attention</span></code>) will be supported in the
 future.</p>
-<!-- xrefs --></div>
-</div>
+<!-- xrefs -->
+</section>
+</section>
 
 
              </article>
@@ -643,7 +651,13 @@ future.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

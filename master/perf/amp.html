@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Automatic Mixed Precision &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Dynamic Shapes" href="../learn/dynamic_shape.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="automatic-mixed-precision">
+  <section id="automatic-mixed-precision">
 <h1>Automatic Mixed Precision<a class="headerlink" href="#automatic-mixed-precision" title="Permalink to this heading">¶</a></h1>
 <p>Pytorch/XLA’s AMP extends <a class="reference external" href="https://pytorch.org/docs/stable/amp.html">Pytorch’s AMP
 package</a> with support for
@@ -450,7 +457,7 @@ used to accelerate training and inference by executing certain
 operations in <code class="docutils literal notranslate"><span class="pre">float32</span></code> and other operations in a lower precision
 datatype (<code class="docutils literal notranslate"><span class="pre">float16</span></code> or <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code> depending on hardware support). This
 document describes how to use AMP on XLA devices and best practices.</p>
-<div class="section" id="amp-for-xla-tpu">
+<section id="amp-for-xla-tpu">
 <h2>AMP for XLA:TPU<a class="headerlink" href="#amp-for-xla-tpu" title="Permalink to this heading">¶</a></h2>
 <p>AMP on TPUs automatically casts operations to run in either <code class="docutils literal notranslate"><span class="pre">float32</span></code> or
 <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code> because TPUs natively support bfloat16. A simple TPU AMP
@@ -478,7 +485,7 @@ Device is a TPU. Alternatively, if a script is only used with TPUs, then
 <code class="docutils literal notranslate"><span class="pre">torch.autocast('xla',</span> <span class="pre">dtype=torch.bfloat16)</span></code> can be directly used.</p>
 <p>Please file an issue or submit a pull request if there is an operator
 that should be autocasted that is not included.</p>
-<div class="section" id="amp-for-xla-tpu-best-practices">
+<section id="amp-for-xla-tpu-best-practices">
 <h3>AMP for XLA:TPU Best Practices<a class="headerlink" href="#amp-for-xla-tpu-best-practices" title="Permalink to this heading">¶</a></h3>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">autocast</span></code> should wrap only the forward pass(es) and loss
@@ -490,8 +497,8 @@ necessary.</p></li>
 <a class="reference external" href="https://github.com/pytorch/xla/tree/master/torch_xla/amp/syncfree">optimizers</a>
 that avoid the additional sync between device and host.</p></li>
 </ol>
-</div>
-<div class="section" id="supported-operators">
+</section>
+<section id="supported-operators">
 <h3>Supported Operators<a class="headerlink" href="#supported-operators" title="Permalink to this heading">¶</a></h3>
 <p>AMP on TPUs operates like Pytorch’s AMP. Rules for how autocasting is
 applied is summarized below:</p>
@@ -509,12 +516,12 @@ eligible, and will produce output that respects the dtype argument.</p>
 <p>Ops not listed below do not go through autocasting. They run in the type
 defined by their inputs. Autocasting may still change the type in which
 unlisted ops run if they’re downstream from autocasted ops.</p>
-<p><strong>Ops that autocast to ``bfloat16``:</strong></p>
+<p><strong>Ops that autocast to <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code>:</strong></p>
 <p><code class="docutils literal notranslate"><span class="pre">__matmul__</span></code>, <code class="docutils literal notranslate"><span class="pre">addbmm</span></code>, <code class="docutils literal notranslate"><span class="pre">addmm</span></code>, <code class="docutils literal notranslate"><span class="pre">addmv</span></code>, <code class="docutils literal notranslate"><span class="pre">addr</span></code>, <code class="docutils literal notranslate"><span class="pre">baddbmm</span></code>,<code class="docutils literal notranslate"><span class="pre">bmm</span></code>,
 <code class="docutils literal notranslate"><span class="pre">conv1d</span></code>, <code class="docutils literal notranslate"><span class="pre">conv2d</span></code>, <code class="docutils literal notranslate"><span class="pre">conv3d</span></code>, <code class="docutils literal notranslate"><span class="pre">conv_transpose1d</span></code>, <code class="docutils literal notranslate"><span class="pre">conv_transpose2d</span></code>,
 <code class="docutils literal notranslate"><span class="pre">conv_transpose3d</span></code>, <code class="docutils literal notranslate"><span class="pre">linear</span></code>, <code class="docutils literal notranslate"><span class="pre">matmul</span></code>, <code class="docutils literal notranslate"><span class="pre">mm</span></code>, <code class="docutils literal notranslate"><span class="pre">relu</span></code>, <code class="docutils literal notranslate"><span class="pre">prelu</span></code>,
 <code class="docutils literal notranslate"><span class="pre">max_pool2d</span></code></p>
-<p><strong>Ops that autocast to ``float32``:</strong></p>
+<p><strong>Ops that autocast to <code class="docutils literal notranslate"><span class="pre">float32</span></code>:</strong></p>
 <p><code class="docutils literal notranslate"><span class="pre">batch_norm</span></code>, <code class="docutils literal notranslate"><span class="pre">log_softmax</span></code>, <code class="docutils literal notranslate"><span class="pre">binary_cross_entropy</span></code>,
 <code class="docutils literal notranslate"><span class="pre">binary_cross_entropy_with_logits</span></code>, <code class="docutils literal notranslate"><span class="pre">prod</span></code>, <code class="docutils literal notranslate"><span class="pre">cdist</span></code>, <code class="docutils literal notranslate"><span class="pre">trace</span></code>, <code class="docutils literal notranslate"><span class="pre">chloesky</span></code>
 ,<code class="docutils literal notranslate"><span class="pre">inverse</span></code>, <code class="docutils literal notranslate"><span class="pre">reflection_pad</span></code>, <code class="docutils literal notranslate"><span class="pre">replication_pad</span></code>, <code class="docutils literal notranslate"><span class="pre">mse_loss</span></code>,
@@ -522,9 +529,9 @@ unlisted ops run if they’re downstream from autocasted ops.</p>
 <code class="docutils literal notranslate"><span class="pre">svd</span></code>, <code class="docutils literal notranslate"><span class="pre">triangular_solve</span></code>, <code class="docutils literal notranslate"><span class="pre">linalg_svd</span></code>, <code class="docutils literal notranslate"><span class="pre">linalg_inv_ex</span></code></p>
 <p><strong>Ops that autocast to widest input type:</strong></p>
 <p><code class="docutils literal notranslate"><span class="pre">stack</span></code>, <code class="docutils literal notranslate"><span class="pre">cat</span></code>, <code class="docutils literal notranslate"><span class="pre">index_copy</span></code></p>
-</div>
-</div>
-<div class="section" id="amp-for-xla-gpu">
+</section>
+</section>
+<section id="amp-for-xla-gpu">
 <h2>AMP for XLA:GPU<a class="headerlink" href="#amp-for-xla-gpu" title="Permalink to this heading">¶</a></h2>
 <p>AMP on XLA:GPU devices reuse Pytorch’s AMP rules. See <a class="reference external" href="https://pytorch.org/docs/stable/amp.html">Pytorch’s AMP
 documentation</a> for CUDA
@@ -558,7 +565,7 @@ directly used, but requires <code class="docutils literal notranslate"><span cla
 datatype of <code class="docutils literal notranslate"><span class="pre">torch.bfloat16</span></code>. We recommend using
 <code class="docutils literal notranslate"><span class="pre">autocast(xm.xla_device())</span></code> on XLA:GPU as it does not require
 <code class="docutils literal notranslate"><span class="pre">torch.cuda</span></code> support for any datatypes, including <code class="docutils literal notranslate"><span class="pre">torch.bfloat16</span></code>.</p>
-<div class="section" id="amp-for-xla-gpu-best-practices">
+<section id="amp-for-xla-gpu-best-practices">
 <h3>AMP for XLA:GPU Best Practices<a class="headerlink" href="#amp-for-xla-gpu-best-practices" title="Permalink to this heading">¶</a></h3>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">autocast</span></code> should wrap only the forward pass(es) and loss
@@ -572,15 +579,15 @@ and cause all operators to execute in float16.</p></li>
 <a class="reference external" href="https://github.com/pytorch/xla/tree/master/torch_xla/amp/syncfree">optimizers</a>
 that avoid the additional sync between device and host.</p></li>
 </ol>
-</div>
-</div>
-<div class="section" id="examples">
+</section>
+</section>
+<section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">¶</a></h2>
 <p>Our <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_amp.py">mnist training script</a>
 and <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_amp.py">imagenet training script</a>
 demonstrate how AMP is used on both TPUs and GPUs.</p>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -658,7 +665,13 @@ demonstrate how AMP is used on both TPUs and GPUs.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

@@ -72,6 +72,8 @@ XLA devices requires only a few lines of XLA-specific code. The
 following snippets highlight these lines when running on a single device
 and multiple devices with XLA multi-processing.
 
+(running-on-a-single-xla-device)=
+
 ### Running on a Single XLA Device
 
 The following snippet shows a network training on a single XLA device:
@@ -101,9 +103,11 @@ XLA. The model definition, dataloader, optimizer and training loop can
 work on any device. The only XLA-specific code is a couple lines that
 acquire the XLA device and materializing the tensors. Calling `torch_xla.sync()`
 at the end of each training iteration causes XLA to execute its current
-graph and update the model's parameters. See [XLA Tensor Deep
-Dive](#xla-tensor-deep-dive) for more on how XLA creates graphs and runs
+graph and update the model's parameters. See {ref}`XLA Tensor Deep Dive`
+for more on how XLA creates graphs and runs
 operations.
+
+(running-on-multiple-xla-devices-with-multi-processing)=
 
 ### Running on Multiple XLA Devices with Multi-processing
 

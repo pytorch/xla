@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>PyTorch/XLA API &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="prev" title="Custom Hardware Plugins" href="../contribute/plugins.html" />
@@ -284,7 +290,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -320,6 +326,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -440,9 +447,9 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="pytorch-xla-api">
+  <section id="pytorch-xla-api">
 <h1>PyTorch/XLA API<a class="headerlink" href="#pytorch-xla-api" title="Permalink to this heading">¶</a></h1>
-<div class="section" id="module-torch_xla">
+<section id="module-torch_xla">
 <span id="torch-xla"></span><h2>torch_xla<a class="headerlink" href="#module-torch_xla" title="Permalink to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.device">
@@ -451,11 +458,11 @@
 <p>If SPMD enables, returns a virtual device that wraps all devices available
 to this process.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>index</strong> – index of the XLA device to be returned. Corresponds to index in
 <cite>torch_xla.devices()</cite>.</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>An XLA <cite>torch.device</cite>.</p>
 </dd>
 </dl>
@@ -466,7 +473,7 @@ to this process.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">devices</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">device</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/torch_xla/torch_xla.html#devices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.devices" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns all devices available in the current process.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>A list of XLA <cite>torch.devices</cite>.</p>
 </dd>
 </dl>
@@ -483,7 +490,7 @@ to this process.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wait</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset_scope</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/torch_xla.html#sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.sync" title="Permalink to this definition">¶</a></dt>
 <dd><p>Launches all pending graph operations.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>wait</strong> (<em>bool</em>) – whether to block the current process until the execution finished.</p></li>
 <li><p><strong>reset_scope</strong> (<em>bool</em>) – whether to reset the torch::lazy::ScopeContext of the IR Nodes.</p></li>
@@ -494,14 +501,14 @@ to this process.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.compile">
-<span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">full_graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_different_graphs_allowed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/torch_xla.html#compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.compile" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">full_graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_different_graphs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/torch_xla.html#compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.compile" title="Permalink to this definition">¶</a></dt>
 <dd><p>Optimizes given model/function using torch_xla’s LazyTensor tracing mode.
 PyTorch/XLA will trace the given function with given inputs and then generate
 graphs to represent the pytorch operations happens within this function. This
 graph will be compiled by the XLA and executed on the accelerator(decided by the
 tensor’s device). Eager mode will be disabled for the compiled region of the funciton.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model</strong> (<em>Callable</em>) – Module/function to optimize, if not passed this function will
 act as a context manager.</p></li>
@@ -511,7 +518,7 @@ and exit.</p></li>
 <li><p><strong>name</strong> (<em>Optional</em><em>[</em><em>name</em><em>]</em>) – Name of the compiled program. The name of the function <cite>f</cite> will be used
 if not specified. This name will be used in the <cite>PT_XLA_DEBUG</cite> messages as well as HLO/IR dump
 file.</p></li>
-<li><p><strong>num_different_graphs_allowed</strong> (<em>Optional</em><em>[</em><em>python:int</em><em>]</em>) – number of different traced graphs of the given
+<li><p><strong>max_different_graphs</strong> (<em>Optional</em><em>[</em><em>python:int</em><em>]</em>) – number of different traced graphs of the given
 model/function that we are allowed to have. An error will be raised in case this limit
 is exceeded.</p></li>
 </ul>
@@ -540,7 +547,7 @@ is exceeded.</p></li>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">manual_seed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/torch_xla.html#manual_seed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.manual_seed" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set the seed for generating random numbers for the current XLA device.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>seed</strong> (<em>python:integer</em>) – The state to be set.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – The device where the RNG state needs to be set.
@@ -550,8 +557,69 @@ If missing the default device seed will be set.</p></li>
 </dl>
 </dd></dl>
 
-</div>
-<div class="section" id="module-torch_xla.runtime">
+</section>
+<section id="module-torch_xla.backends">
+<span id="backends"></span><h2>backends<a class="headerlink" href="#module-torch_xla.backends" title="Permalink to this heading">¶</a></h2>
+<p>torch_xla.backends controls the behavior of the XLA backend.</p>
+<p>This subpackage parallels the torch.backends.{cuda, cpu, mps, etc}
+subpackages in PyTorch.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.backends.set_mat_mul_precision">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.backends.</span></span><span class="sig-name descname"><span class="pre">set_mat_mul_precision</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">precision</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'default'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'high'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'highest'</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/torch_xla/backends.html#set_mat_mul_precision"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.backends.set_mat_mul_precision" title="Permalink to this definition">¶</a></dt>
+<dd><p>Control the default mat mul and conv precision for 32bit inputs.</p>
+<p>Some platforms, like TPU, offer configurable precision levels for
+matrix multiplication and convolution computations,
+trading off accuracy for speed.</p>
+<p>This option controls the default precision level for
+computations involved in matrix multiplication and convolutions on
+32bit inputs. The levels describe the precision at
+which scalar products are computed.</p>
+<dl>
+<dt>On a TPU:</dt><dd><p><cite>default</cite> is the fastest and least precise,
+downcasting an FP32 to BF16 before multiplying.</p>
+<p><cite>high</cite> takes three passes and generates approximately 14 bits of
+precision.</p>
+<p><cite>highest</cite> is the most precise, and the slowest. It takes six
+passes and generates approximately 22 bits of precision.</p>
+</dd>
+</dl>
+<p>See the [precision tutorial](../../tutorials/precision_tutorial.html)
+for more information about the precision levels.</p>
+<dl class="simple">
+<dt>Note: Setting mat mul precision multiple times is not recommended.</dt><dd><p>If you need to do so, please empirically verify that the precision
+setting is behaving as expected.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>precision</strong> (<em>str</em>) – The precision to set for matrix multiplication.
+Must be one of ‘default’, ‘high’, or ‘highest’.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.backends.get_mat_mul_precision">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.backends.</span></span><span class="sig-name descname"><span class="pre">get_mat_mul_precision</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'default'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'high'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'highest'</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/torch_xla/backends.html#get_mat_mul_precision"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.backends.get_mat_mul_precision" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the current mat mul precision for 32bit inputs.</p>
+<p>See the [precision tutorial](../../tutorials/precision_tutorial.html)
+for more information about the precision levels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>The current precision setting for matrix multiplication,</dt><dd><p>one of ‘default’, ‘high’, or ‘highest’.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-torch_xla.runtime">
 <span id="runtime"></span><h2>runtime<a class="headerlink" href="#module-torch_xla.runtime" title="Permalink to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.runtime.device_type">
@@ -559,7 +627,7 @@ If missing the default device seed will be set.</p></li>
 <dd><p>Returns the current PjRt device type.</p>
 <p>Selects a default device if none has been configured</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>A string representation of the device.</p>
 </dd>
 </dl>
@@ -624,7 +692,7 @@ they guaranteed to be contiguous on each host.</p>
 <dd><p>Retrieve the master worker IP for the runtime. This calls into
 backend-specific discovery APIs.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>master worker’s IP address as a string.</p>
 </dd>
 </dl>
@@ -637,7 +705,7 @@ backend-specific discovery APIs.</p>
 <p>This forces SPMD mode if some tensors are already initialized on non-SPMD
 devices. This means that those tensors would be replicated across the devices.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>auto</strong> (<em>bool</em>) – Whether to enable the auto-sharding. Read
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/spmd_advanced.md#auto-sharding">https://github.com/pytorch/xla/blob/master/docs/spmd_advanced.md#auto-sharding</a>
 for more detail</p>
@@ -657,7 +725,7 @@ for more detail</p>
 <dd><p>Initializes the persistent compilation cache. This API must be called
 before any computations have been performed.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>path</strong> (<em>str</em>) – The path at which to store the persistent cache.</p></li>
 <li><p><strong>readonly</strong> (<em>bool</em>) – Whether or not this worker should have write access to the cache.</p></li>
@@ -666,15 +734,15 @@ before any computations have been performed.</p>
 </dl>
 </dd></dl>
 
-</div>
-<div class="section" id="module-torch_xla.core.xla_model">
+</section>
+<section id="module-torch_xla.core.xla_model">
 <span id="xla-model"></span><h2>xla_model<a class="headerlink" href="#module-torch_xla.core.xla_model" title="Permalink to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.core.xla_model.xla_device">
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">xla_device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">devkind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">device</span></span></span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#xla_device"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.xla_device" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a given instance of an XLA device.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The specific instance (ordinal) to be returned. If
 specified, the specific XLA device instance will be returned. Otherwise
@@ -683,7 +751,7 @@ the first device of <cite>devkind</cite> will be returned.</p></li>
 <cite>CUDA</cite>, <cite>CPU</cite>, or custom PJRT device. Deprecated.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A <cite>torch.device</cite> with the requested instance.</p>
 </dd>
 </dl>
@@ -694,11 +762,11 @@ the first device of <cite>devkind</cite> will be returned.</p></li>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">xla_device_hw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">device</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#xla_device_hw"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.xla_device_hw" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the hardware type of the given device.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>device</strong> (<em>string</em><em> or </em><em>torch.device</em>) – The xla device that will be mapped to the
 real device.</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A string representation of the hardware type of the given device.</p>
 </dd>
 </dl>
@@ -709,13 +777,13 @@ real device.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">is_master_ordinal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#is_master_ordinal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.is_master_ordinal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Checks whether the current process is the master ordinal (0).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>local</strong> (<em>bool</em>) – Whether the local or global master ordinal should be checked.
 In case of multi-host replication, there is only one global master ordinal
 (host 0, device 0), while there are NUM_HOSTS local master ordinals.
 Default: True</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A boolean indicating whether the current process is the master ordinal.</p>
 </dd>
 </dl>
@@ -726,7 +794,7 @@ Default: True</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">all_reduce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reduce_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_layout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an inplace reduce operation on the input tensor(s).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>reduce_type</strong> (<em>string</em>) – One of <code class="docutils literal notranslate"><span class="pre">xm.REDUCE_SUM</span></code>, <code class="docutils literal notranslate"><span class="pre">xm.REDUCE_MUL</span></code>,
 <code class="docutils literal notranslate"><span class="pre">xm.REDUCE_AND</span></code>, <code class="docutils literal notranslate"><span class="pre">xm.REDUCE_OR</span></code>, <code class="docutils literal notranslate"><span class="pre">xm.REDUCE_MIN</span></code> and
@@ -735,14 +803,11 @@ Default: True</p>
 perform the all reduce op to.</p></li>
 <li><p><strong>scale</strong> (<em>python:float</em>) – A default scaling value to be applied after the reduce.
 Default: 1.0</p></li>
-<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
-the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
-<blockquote>
-<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – A list of list, representing the replica groups for
+the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite>
+defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
 the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
-all the replicas in it.</p>
-</div></blockquote>
-</p></li>
+all the replicas in it.</p></li>
 <li><p><strong>pin_layout</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to pin the layout for this communication op.
 Layout pining can prevent potential data corruption when each process that
 participate in the communication has slightly different program, but it might
@@ -750,7 +815,7 @@ cause some xla compilation to fail. Unpin the layout when you see error message
 like “HloModule has a mix of layout constrained”.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>If a single <cite>torch.Tensor</cite> is passed, the return value is a <cite>torch.Tensor</cite>
 holding the reduced value (across the replicas). If a list/tuple is passed,
 this function performs an inplace all-reduce op on the input tensors, and
@@ -764,19 +829,16 @@ returns the list/tuple itself.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">all_gather</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_layout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_global_device_ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#all_gather"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_gather" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an all-gather operation along a given dimension.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>value</strong> (<em>torch.Tensor</em>) – The input tensor.</p></li>
 <li><p><strong>dim</strong> (<em>python:int</em>) – The gather dimension.
 Default: 0</p></li>
-<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
-the <cite>all_gather()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
-<blockquote>
-<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – A list of list, representing the replica groups for
+the <cite>all_gather()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite>
+defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
 the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
-all the replicas in it.</p>
-</div></blockquote>
-</p></li>
+all the replicas in it.</p></li>
 <li><p><strong>output</strong> (<em>torch.Tensor</em>) – Optional output tensor.</p></li>
 <li><p><strong>pin_layout</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to pin the layout for this communication op.
 Layout pining can prevent potential data corruption when each process that
@@ -787,7 +849,7 @@ like “HloModule has a mix of layout constrained”.</p></li>
 <li><p><strong>use_global_device_ids</strong> (<em>bool</em><em>, </em><em>optional</em>) – If true, interprets ids in ReplicaGroup as global device ids</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A tensor which has, in the <code class="docutils literal notranslate"><span class="pre">dim</span></code> dimension, all the values from the
 participating replicas.</p>
 </dd>
@@ -800,20 +862,17 @@ participating replicas.</p>
 <dd><p>Performs an XLA <cite>AllToAll()</cite> operation on the input tensor.</p>
 <p>See: <a class="reference external" href="https://www.tensorflow.org/xla/operation_semantics#alltoall">https://www.tensorflow.org/xla/operation_semantics#alltoall</a></p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>value</strong> (<em>torch.Tensor</em>) – The input tensor.</p></li>
 <li><p><strong>split_dimension</strong> (<em>python:int</em>) – The dimension upon which the split should happen.</p></li>
 <li><p><strong>concat_dimension</strong> (<em>python:int</em>) – The dimension upon which the concat should happen.</p></li>
 <li><p><strong>split_count</strong> (<em>python:int</em>) – The split count.</p></li>
-<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
-the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
-<blockquote>
-<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – A list of list, representing the replica groups for
+the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite>
+defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
 the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
-all the replicas in it.</p>
-</div></blockquote>
-</p></li>
+all the replicas in it.</p></li>
 <li><p><strong>pin_layout</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to pin the layout for this communication op.
 Layout pining can prevent potential data corruption when each process that
 participate in the communication has slightly different program, but it might
@@ -821,7 +880,7 @@ cause some xla compilation to fail. Unpin the layout when you see error message
 like “HloModule has a mix of layout constrained”.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The result <cite>torch.Tensor</cite> of the <cite>all_to_all()</cite> operation.</p>
 </dd>
 </dl>
@@ -846,7 +905,7 @@ Step closures will be run sequentially in the order they have been queued.
 Note that even though using this API the execution will be optimized, it is
 advised to throttle the printing/reporting events once every N steps.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>closure</strong> (<em>callable</em>) – The function to be called.</p></li>
 <li><p><strong>args</strong> (<em>tuple</em>) – The arguments to be passed to the closure.</p></li>
@@ -861,7 +920,7 @@ advised to throttle the printing/reporting events once every N steps.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">wait_device_ops</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">devices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#wait_device_ops"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.wait_device_ops" title="Permalink to this definition">¶</a></dt>
 <dd><p>Waits for all the async operations on the given devices to complete.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>devices</strong> (<em>string</em><em>...</em><em>, </em><em>optional</em>) – The devices whose async ops need to be waited
 for. If empty, all the local devices will be waited for.</p>
 </dd>
@@ -873,7 +932,7 @@ for. If empty, all the local devices will be waited for.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">optimizer_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optimizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">barrier</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_layout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#optimizer_step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.optimizer_step" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run the provided optimizer step and sync gradidents across all devices.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>optimizer</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Optimizer</span></code>) – The <cite>torch.Optimizer</cite> instance whose
 <cite>step()</cite> function needs to be called. The <cite>step()</cite> function will be called
@@ -885,19 +944,16 @@ data loader iterator <cite>next()</cite> call.
 Default: False</p></li>
 <li><p><strong>optimizer_args</strong> (<em>dict</em><em>, </em><em>optional</em>) – Named arguments dictionary for the
 <cite>optimizer.step()</cite> call.</p></li>
-<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
-the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
-<blockquote>
-<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – A list of list, representing the replica groups for
+the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite>
+defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
 the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
-all the replicas in it.</p>
-</div></blockquote>
-</p></li>
+all the replicas in it.</p></li>
 <li><p><strong>pin_layout</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to pin the layout when reducing gradients.
 See <cite>xm.all_reduce</cite> for details.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The same value returned by the <cite>optimizer.step()</cite> call.</p>
 </dd>
 </dl>
@@ -918,7 +974,7 @@ Care must be taken when working with views. Instead of saving views it’s
 recommended that you recreate them after the tensors have been loaded and
 moved to their destination device(s).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> – The input data to be saved. Any nested combination of Python objects
 (list, tuples, sets, dicts, …).</p></li>
@@ -954,7 +1010,7 @@ Default: False</p></li>
 <p>Note: PJRT does not support the XRT mesh server, so this is effectively an
 alias to <cite>xla_rendezvous</cite>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tag</strong> (<em>string</em>) – The name of the rendezvous to join.</p></li>
 <li><p><strong>payload</strong> (<em>bytes</em><em>, </em><em>optional</em>) – The payload to be sent to the rendezvous.</p></li>
@@ -963,7 +1019,7 @@ Empty means all replicas in the mesh.
 Default: []</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The payloads exchanged by all the other cores, with the payload of core
 ordinal <cite>i</cite> at position <cite>i</cite> in the returned tuple.</p>
 </dd>
@@ -980,7 +1036,7 @@ ordinal <cite>i</cite> at position <cite>i</cite> in the returned tuple.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">mesh_reduce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduce_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ToXlaTensorArena</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#mesh_reduce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.mesh_reduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an out-of-graph client mesh reduction.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tag</strong> (<em>string</em>) – The name of the rendezvous to join.</p></li>
 <li><p><strong>data</strong> – The data to be reduced. The <cite>reduce_fn</cite> callable will receive a list
@@ -990,7 +1046,7 @@ with the copies of the same data coming from all the mesh client processes
 objects and returns the reduced result.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The reduced value.</p>
 </dd>
 </dl>
@@ -1007,7 +1063,7 @@ objects and returns the reduced result.</p></li>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">set_rng_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#set_rng_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.set_rng_state" title="Permalink to this definition">¶</a></dt>
 <dd><p>Sets the random number generator state.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>seed</strong> (<em>python:integer</em>) – The state to be set.</p></li>
 <li><p><strong>device</strong> (<em>string</em><em>, </em><em>optional</em>) – The device where the RNG state needs to be set.
@@ -1022,11 +1078,11 @@ If missing the default device seed will be set.</p></li>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_rng_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#get_rng_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_rng_state" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets the current running random number generator state.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>device</strong> (<em>string</em><em>, </em><em>optional</em>) – The device whose RNG state needs to be retrieved.
 If missing the default device seed will be set.</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The RNG state, as integer.</p>
 </dd>
 </dl>
@@ -1037,13 +1093,13 @@ If missing the default device seed will be set.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_memory_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">device</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">MemoryInfo</span></span></span><a class="reference internal" href="../_modules/torch_xla/core/xla_model.html#get_memory_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_memory_info" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieves the device memory usage.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>device</strong> – Optional[torch.device] The device whose memory information are requested.</p></li>
 <li><p><strong>device.</strong> (<em>If not passed will use the default</em>) – </p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>MemoryInfo dict with memory usage for the given device.</p>
 </dd>
 </dl>
@@ -1064,10 +1120,10 @@ If <cite>tensors</cite> is empty, the whole computation graph will be dump.</p>
 For training graph, it is not straightforward to identify the “outputs”. Using empty <cite>tensors</cite> is recommended.</p>
 <p>To enable source line info in StableHLO, please set env var XLA_HLO_DEBUG=1.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Tensors that represent the output/root of the StableHLO graph.</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>StableHLO Module in string format.</p>
 </dd>
 </dl>
@@ -1082,17 +1138,17 @@ If <cite>tensors</cite> is empty, the whole computation graph will be dump.</p>
 <p>For inference graph, it is recommended to pass the model outputs to <cite>tensors</cite>.
 For training graph, it is not straightforward to identify the “outputs”. Using empty <cite>tensors</cite> is recommended.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Tensors that represent the output/root of the StableHLO graph.</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>StableHLO Module in bytecode format.</p>
 </dd>
 </dl>
 </dd></dl>
 
-</div>
-<div class="section" id="module-torch_xla.distributed.parallel_loader">
+</section>
+<section id="module-torch_xla.distributed.parallel_loader">
 <span id="distributed"></span><h2>distributed<a class="headerlink" href="#module-torch_xla.distributed.parallel_loader" title="Permalink to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="torch_xla.distributed.parallel_loader.MpDeviceLoader">
@@ -1102,7 +1158,7 @@ For training graph, it is not straightforward to identify the “outputs”. Usi
 the dataloader passed in with ParallelLoader and return the per_device_loader for the
 current device.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>loader</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code>) – The PyTorch DataLoader to be
 wrapped.</p></li>
@@ -1123,7 +1179,7 @@ wrapped.</p></li>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.xla_multiprocessing.</span></span><span class="sig-name descname"><span class="pre">spawn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nprocs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">join</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">daemon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'spawn'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/distributed/xla_multiprocessing.html#spawn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.spawn" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enables multi processing based replication.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>fn</strong> (<em>callable</em>) – The function to be called for each device which takes part of
 the replication. The function will be called with a first argument being
@@ -1145,7 +1201,7 @@ Default: False</p></li>
 Default: <cite>spawn</cite></p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The same object returned by the <cite>torch.multiprocessing.spawn</cite> API. If
 <cite>nprocs</cite> is 1 the <cite>fn</cite> function will be called directly, and the API will
 return None.</p>
@@ -1153,8 +1209,8 @@ return None.</p>
 </dl>
 </dd></dl>
 
-</div>
-<div class="section" id="module-torch_xla.distributed.spmd">
+</section>
+<section id="module-torch_xla.distributed.spmd">
 <span id="spmd"></span><h2>spmd<a class="headerlink" href="#module-torch_xla.distributed.spmd" title="Permalink to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.distributed.spmd.mark_sharding">
@@ -1162,7 +1218,7 @@ return None.</p>
 <dd><p>Annotates the tensor provided with XLA partition spec. Internally,
 it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>t</strong> (<em>Union</em><em>[</em><em>torch.Tensor</em><em>, </em><em>XLAShardedTensor</em><em>]</em>) – input tensor to be annotated with partition_spec.</p></li>
 <li><p><strong>mesh</strong> (<a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.Mesh"><em>Mesh</em></a>) – describes the logical XLA device topology and the underlying device IDs.</p></li>
@@ -1203,13 +1259,13 @@ will impact the resulting sharding.</p>
 <dd><p>Clear sharding annotation from the input tensor and return a <cite>cpu</cite> casted tensor. This
 is a in place operation but will also return the same torch.Tensor back.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>t</strong> (<em>Union</em><em>[</em><em>torch.Tensor</em><em>, </em><em>XLAShardedTensor</em><em>]</em>) – Tensor that we want to clear the sharding</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>tensor that without sharding.</p>
 </dd>
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>t (torch.Tensor)</p>
 </dd>
 </dl>
@@ -1229,7 +1285,7 @@ is a in place operation but will also return the same torch.Tensor back.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">set_global_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.xla_sharding.Mesh"><span class="pre">Mesh</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/distributed/spmd/xla_sharding.html#set_global_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.set_global_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set the global mesh that can be used for the current process.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>mesh</strong> – (Mesh) Mesh object that will be the global mesh.</p>
 </dd>
 </dl>
@@ -1246,10 +1302,10 @@ is a in place operation but will also return the same torch.Tensor back.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">get_global_mesh</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.xla_sharding.Mesh"><span class="pre">Mesh</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/torch_xla/distributed/spmd/xla_sharding.html#get_global_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.get_global_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the global mesh for the current process.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>(Optional[Mesh]) Mesh object if global mesh is set, otherwise return None.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>mesh</p>
 </dd>
 </dl>
@@ -1265,13 +1321,13 @@ is a in place operation but will also return the same torch.Tensor back.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">get_1d_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.xla_sharding.Mesh"><span class="pre">Mesh</span></a></span></span><a class="reference internal" href="../_modules/torch_xla/distributed/spmd/xla_sharding.html#get_1d_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.get_1d_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Helper function to return the mesh with all devices in one dimension.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>axis_name</strong> – (Optional[str]) optional string to represent the axis name of the mesh</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Mesh object</p>
 </dd>
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.Mesh">Mesh</a></p>
 </dd>
 </dl>
@@ -1292,7 +1348,7 @@ is a in place operation but will also return the same torch.Tensor back.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">Mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/distributed/spmd/xla_sharding.html#Mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.Mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Describe the logical XLA device topology mesh and the underlying resources.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>device_ids</strong> – A flattened list of devices (IDs).
 The list is reshaped to an array of shape <cite>mesh_shape</cite>, filling the elements using
@@ -1330,7 +1386,7 @@ requirements.</p>
 </dd>
 </dl>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>ici_mesh_shape</strong> – shape of the logical mesh for inner connected devices.</p></li>
 <li><p><strong>dcn_mesh_shape</strong> – shape of logical mesh for outer connected devices.</p></li>
@@ -1348,8 +1404,8 @@ requirements.</p>
 </div>
 </dd></dl>
 
-</div>
-<div class="section" id="module-torch_xla.experimental">
+</section>
+<section id="module-torch_xla.experimental">
 <span id="experimental"></span><h2>experimental<a class="headerlink" href="#module-torch_xla.experimental" title="Permalink to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.experimental.eager_mode">
@@ -1359,8 +1415,8 @@ requirements.</p>
 traced and compiled. Other torch ops will be executed eagerly.</p>
 </dd></dl>
 
-</div>
-<div class="section" id="module-torch_xla.debug.metrics">
+</section>
+<section id="module-torch_xla.debug.metrics">
 <span id="debug"></span><h2>debug<a class="headerlink" href="#module-torch_xla.debug.metrics" title="Permalink to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.debug.metrics.metrics_report">
@@ -1373,7 +1429,7 @@ traced and compiled. Other torch ops will be executed eagerly.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.debug.metrics.</span></span><span class="sig-name descname"><span class="pre">short_metrics_report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">counter_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/debug/metrics.html#short_metrics_report"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.debug.metrics.short_metrics_report" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieves a string containing the full metrics and counters report.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>counter_names</strong> (<em>list</em>) – The list of counter names whose data needs to be printed.</p></li>
 <li><p><strong>metric_names</strong> (<em>list</em>) – The list of metric names whose data needs to be printed.</p></li>
@@ -1393,10 +1449,10 @@ traced and compiled. Other torch ops will be executed eagerly.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.debug.metrics.</span></span><span class="sig-name descname"><span class="pre">counter_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/debug/metrics.html#counter_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.debug.metrics.counter_value" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the value of an active counter.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>name</strong> (<em>string</em>) – The name of the counter whose value needs to be retrieved.</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The counter value as integer.</p>
 </dd>
 </dl>
@@ -1413,10 +1469,10 @@ traced and compiled. Other torch ops will be executed eagerly.</p>
 <span class="sig-prename descclassname"><span class="pre">torch_xla.debug.metrics.</span></span><span class="sig-name descname"><span class="pre">metric_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/torch_xla/debug/metrics.html#metric_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.debug.metrics.metric_data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the data of an active metric.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>name</strong> (<em>string</em>) – The name of the metric whose data needs to be retrieved.</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The metric data, which is a tuple of (TOTAL_SAMPLES, ACCUMULATOR, SAMPLES).
 The <cite>TOTAL_SAMPLES</cite> is the total number of samples which have been posted to
 the metric. A metric retains only a given number of samples (in a circular
@@ -1427,8 +1483,8 @@ The <cite>SAMPLES</cite> is a list of (TIME, VALUE) tuples.</p>
 </dl>
 </dd></dl>
 
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -1472,79 +1528,14 @@ The <cite>SAMPLES</cite> is a list of (TIME, VALUE) tuples.</p>
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
 <li><a class="reference internal" href="#">PyTorch/XLA API</a><ul>
-<li><a class="reference internal" href="#module-torch_xla">torch_xla</a><ul>
-<li><a class="reference internal" href="#torch_xla.device"><code class="docutils literal notranslate"><span class="pre">device()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.devices"><code class="docutils literal notranslate"><span class="pre">devices()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.device_count"><code class="docutils literal notranslate"><span class="pre">device_count()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.sync"><code class="docutils literal notranslate"><span class="pre">sync()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.compile"><code class="docutils literal notranslate"><span class="pre">compile()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.manual_seed"><code class="docutils literal notranslate"><span class="pre">manual_seed()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#module-torch_xla.runtime">runtime</a><ul>
-<li><a class="reference internal" href="#torch_xla.runtime.device_type"><code class="docutils literal notranslate"><span class="pre">device_type()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.local_process_count"><code class="docutils literal notranslate"><span class="pre">local_process_count()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.local_device_count"><code class="docutils literal notranslate"><span class="pre">local_device_count()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.addressable_device_count"><code class="docutils literal notranslate"><span class="pre">addressable_device_count()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.global_device_count"><code class="docutils literal notranslate"><span class="pre">global_device_count()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.global_runtime_device_count"><code class="docutils literal notranslate"><span class="pre">global_runtime_device_count()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.world_size"><code class="docutils literal notranslate"><span class="pre">world_size()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.global_ordinal"><code class="docutils literal notranslate"><span class="pre">global_ordinal()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.local_ordinal"><code class="docutils literal notranslate"><span class="pre">local_ordinal()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.get_master_ip"><code class="docutils literal notranslate"><span class="pre">get_master_ip()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.use_spmd"><code class="docutils literal notranslate"><span class="pre">use_spmd()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.is_spmd"><code class="docutils literal notranslate"><span class="pre">is_spmd()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.runtime.initialize_cache"><code class="docutils literal notranslate"><span class="pre">initialize_cache()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#module-torch_xla.core.xla_model">xla_model</a><ul>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.xla_device"><code class="docutils literal notranslate"><span class="pre">xla_device()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.xla_device_hw"><code class="docutils literal notranslate"><span class="pre">xla_device_hw()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.is_master_ordinal"><code class="docutils literal notranslate"><span class="pre">is_master_ordinal()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.all_reduce"><code class="docutils literal notranslate"><span class="pre">all_reduce()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.all_gather"><code class="docutils literal notranslate"><span class="pre">all_gather()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.all_to_all"><code class="docutils literal notranslate"><span class="pre">all_to_all()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.add_step_closure"><code class="docutils literal notranslate"><span class="pre">add_step_closure()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.wait_device_ops"><code class="docutils literal notranslate"><span class="pre">wait_device_ops()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.optimizer_step"><code class="docutils literal notranslate"><span class="pre">optimizer_step()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.save"><code class="docutils literal notranslate"><span class="pre">save()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.rendezvous"><code class="docutils literal notranslate"><span class="pre">rendezvous()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.mesh_reduce"><code class="docutils literal notranslate"><span class="pre">mesh_reduce()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.set_rng_state"><code class="docutils literal notranslate"><span class="pre">set_rng_state()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.get_rng_state"><code class="docutils literal notranslate"><span class="pre">get_rng_state()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.get_memory_info"><code class="docutils literal notranslate"><span class="pre">get_memory_info()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.get_stablehlo"><code class="docutils literal notranslate"><span class="pre">get_stablehlo()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.core.xla_model.get_stablehlo_bytecode"><code class="docutils literal notranslate"><span class="pre">get_stablehlo_bytecode()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#module-torch_xla.distributed.parallel_loader">distributed</a><ul>
-<li><a class="reference internal" href="#torch_xla.distributed.parallel_loader.MpDeviceLoader"><code class="docutils literal notranslate"><span class="pre">MpDeviceLoader</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.spawn"><code class="docutils literal notranslate"><span class="pre">spawn()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#module-torch_xla.distributed.spmd">spmd</a><ul>
-<li><a class="reference internal" href="#torch_xla.distributed.spmd.mark_sharding"><code class="docutils literal notranslate"><span class="pre">mark_sharding()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.distributed.spmd.clear_sharding"><code class="docutils literal notranslate"><span class="pre">clear_sharding()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.distributed.spmd.set_global_mesh"><code class="docutils literal notranslate"><span class="pre">set_global_mesh()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.distributed.spmd.get_global_mesh"><code class="docutils literal notranslate"><span class="pre">get_global_mesh()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.distributed.spmd.get_1d_mesh"><code class="docutils literal notranslate"><span class="pre">get_1d_mesh()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh"><code class="docutils literal notranslate"><span class="pre">Mesh</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.distributed.spmd.HybridMesh"><code class="docutils literal notranslate"><span class="pre">HybridMesh</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#module-torch_xla.experimental">experimental</a><ul>
-<li><a class="reference internal" href="#torch_xla.experimental.eager_mode"><code class="docutils literal notranslate"><span class="pre">eager_mode()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#module-torch_xla.debug.metrics">debug</a><ul>
-<li><a class="reference internal" href="#torch_xla.debug.metrics.metrics_report"><code class="docutils literal notranslate"><span class="pre">metrics_report()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.debug.metrics.short_metrics_report"><code class="docutils literal notranslate"><span class="pre">short_metrics_report()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.debug.metrics.counter_names"><code class="docutils literal notranslate"><span class="pre">counter_names()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.debug.metrics.counter_value"><code class="docutils literal notranslate"><span class="pre">counter_value()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.debug.metrics.metric_names"><code class="docutils literal notranslate"><span class="pre">metric_names()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.debug.metrics.metric_data"><code class="docutils literal notranslate"><span class="pre">metric_data()</span></code></a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#module-torch_xla">torch_xla</a></li>
+<li><a class="reference internal" href="#module-torch_xla.backends">backends</a></li>
+<li><a class="reference internal" href="#module-torch_xla.runtime">runtime</a></li>
+<li><a class="reference internal" href="#module-torch_xla.core.xla_model">xla_model</a></li>
+<li><a class="reference internal" href="#module-torch_xla.distributed.parallel_loader">distributed</a></li>
+<li><a class="reference internal" href="#module-torch_xla.distributed.spmd">spmd</a></li>
+<li><a class="reference internal" href="#module-torch_xla.experimental">experimental</a></li>
+<li><a class="reference internal" href="#module-torch_xla.debug.metrics">debug</a></li>
 </ul>
 </li>
 </ul>
@@ -1567,7 +1558,13 @@ The <cite>SAMPLES</cite> is a list of (TIME, VALUE) tuples.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

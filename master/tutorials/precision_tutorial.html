@@ -1,0 +1,1156 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Control MXU Floating Point Precision &mdash; PyTorch/XLA master documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="SPMD User Guide" href="../perf/spmd_basic.html" />
+    <link rel="prev" title="Learn about TPUs" href="../accelerators/tpu.html" />
+  <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','');</script>
+    <!-- End Google Tag Manager -->
+  
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+
+          <li class="main-menu-item">
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Learn
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/get-started">
+                  <span class=dropdown-title>Get Started</span>
+                  <p>Run PyTorch locally or get started quickly with one of the supported cloud platforms</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials">
+                  <span class="dropdown-title">Tutorials</span>
+                  <p>Whats new in PyTorch tutorials</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/basics/intro.html">
+                  <span class="dropdown-title">Learn the Basics</span>
+                  <p>Familiarize yourself with PyTorch concepts and modules</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/recipes/recipes_index.html">
+                  <span class="dropdown-title">PyTorch Recipes</span>
+                  <p>Bite-size, ready-to-deploy PyTorch code examples</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/introyt.html">
+                  <span class="dropdown-title">Intro to PyTorch - YouTube Series</span>
+                  <p>Master PyTorch basics with our engaging YouTube tutorial series</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Ecosystem
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem">
+                  <span class="dropdown-title">Tools</span>
+                  <p>Learn about the tools and frameworks in the PyTorch Ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class=dropdown-title>Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class=dropdown-title>Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class=dropdown-title>Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2024">
+                  <span class="dropdown-title">Contributor Awards - 2024</span>
+                  <p>Award winners announced at this year's PyTorch Conference</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Edge
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/edge">
+                  <span class="dropdown-title">About PyTorch Edge</span>
+                  <p>Build innovative and privacy-aware AI experiences for edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
+                  <span class="dropdown-title">ExecuTorch</span>
+                  <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch/stable/index.html">
+                  <span class="dropdown-title">ExecuTorch Docs</span>
+                </a>
+              </div>
+            </div>  
+          </li>
+
+          <li class="main-menu-item">
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p>Explore the documentation for comprehensive guidance on how to use PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/pytorch-domains">
+                  <span class="dropdown-title">PyTorch Domains</span>
+                  <p>Read the PyTorch Domains documentation to learn more about domain-specific libraries</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Blogs & News 
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/blog/">
+                  <span class="dropdown-title">PyTorch Blog</span>
+                  <p>Catch up on the latest technical news and happenings</p>
+                </a>
+                 <a class="nav-dropdown-item" href="https://pytorch.org/community-blog">
+                  <span class="dropdown-title">Community Blog</span>
+                  <p>Stories from the PyTorch ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/videos">
+                  <span class="dropdown-title">Videos</span>
+                  <p>Learn about the latest PyTorch tutorials, new, and more </p>
+                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
+                  <span class="dropdown-title">Community Stories</span>
+                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/events">
+                  <span class="dropdown-title">Events</span>
+                  <p>Find events, webinars, and podcasts</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/newsletter">
+                  <span class="dropdown-title">Newsletter</span>
+                  <p>Stay up-to-date with the latest updates</p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                About
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
+                  <span class="dropdown-title">PyTorch Foundation</span>
+                  <p>Learn more about the PyTorch Foundation</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
+                  <span class="dropdown-title">Governing Board</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/credits">
+                  <span class="dropdown-title">Cloud Credit Program</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tac">
+                  <span class="dropdown-title">Technical Advisory Council</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/staff">
+                  <span class="dropdown-title">Staff</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
+                  <span class="dropdown-title">Contact Us</span>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li class="main-menu-item">
+            <div class="no-dropdown">
+              <a href="https://pytorch.org/join" data-cta="join">
+                Become a Member
+              </a>
+            </div>
+          </li>
+          <li>
+           <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="github-icon">
+             </a>
+           </div>
+          </li>
+          <!--- TODO: This block adds the search icon to the nav bar. We will enable it later. 
+          <li>
+            <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="search-icon">
+             </a>
+            </div>
+          </li>
+          --->
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+                <div class="version">
+                  master (2.8.0+git066e69e )
+                </div>
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Control MXU Floating Point Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/torch_distributed.html">Support for Torch Distributed</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">Distributed Data Parallel (DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Advanced Techniques</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic Shapes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Troubleshooting recompilations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Building with Bazel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure A Development Environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/cpp_debugger.html">C++ Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">Op Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen Migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="../index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+      <li>Control MXU Floating Point Precision</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/tutorials/precision_tutorial.ipynb.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          <!-- Google Tag Manager (noscript) -->
+          <noscript><iframe src="https://www.googletagmanager.com/ns.html?id="
+          height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+          <!-- End Google Tag Manager (noscript) -->
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <section id="control-mxu-floating-point-precision">
+<h1>Control MXU Floating Point Precision<a class="headerlink" href="#control-mxu-floating-point-precision" title="Permalink to this heading">¶</a></h1>
+<p><strong>Author:</strong> <code class="docutils literal notranslate"><span class="pre">Yaoshiang</span> <span class="pre">Ho</span></code></p>
+<p><strong>Date created:</strong> 2025/05/15</p>
+<p><strong>Last modified:</strong> 2025/05/15</p>
+<p>In this tutorial, you will learn how to control the floating point
+precision of matrix multiplication (mat mul) operations
+when using certain accelerators with PyTorch/XLA, such as TPUs.
+You will also learn how to access torch’s floating point info
+and how to visually inspect the floating point representation of numbers.</p>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this heading">¶</a></h2>
+<p>Google TPUs are built with matrix multiplication optimized on silicon
+in a physical module called a Matrix Multiply Unit or MXU.
+To maintain speed, researchers identified an inexpensive tradeoff.
+<a class="reference external" href="https://cloud.google.com/blog/products/ai-machine-learning/bfloat16-the-secret-to-high-performance-on-cloud-tpus">The research</a>
+showed that neural networks were able to train with less precision
+than FP32
+“without having any noticeable impact on model accuracy”.
+The same was not true for range. Due to operations like norms,
+FP32’s range was important to keep. The solution was bfloat16:
+the same range as FP32, with less precision.</p>
+<p>Nvidia V100 and newer GPUs also include specialized matrix multiplication
+units called TensorCores. These GPUs use a numerical format called
+TF32, which has the same range as FP32 and bfloat16, but an
+intermediate precision (10 bits of mantissa)
+because TF32 only has 19 total bits.</p>
+<p>Matrix multiplication operations performed on FP32 values will
+yield results in bfloat16 for TPUs and TF32 (with 19 bits)
+for Nvidia GPUs.</p>
+<p><img alt="bits layout" src="../_images/bit_layout.svg" /></p>
+</section>
+<section id="higher-precision-math-on-lower-precision-hardware">
+<h2>Higher precision math on lower precision hardware<a class="headerlink" href="#higher-precision-math-on-lower-precision-hardware" title="Permalink to this heading">¶</a></h2>
+<p>Even with the 7 mantissa bits of bfloat16, it is possible to calculate
+math in higher precision. This is done by breaking up a number into
+its components. To build intuition, imagine an MXU
+that supports 2 digits in a base-10 (decimal) number system.
+The goal is to multiply numbers with
+4 digits of precision, for example, $9.111$ and $9.222$.
+In infinite precision, the product is $84.021642$. Notice that
+two numbers with 4 digits of precision generates twice as many
+digits of precision in the result. But given the number format
+is 4 digits, the result will be rounded to $84.02$.</p>
+<p>The simplest approach is to round the numbers to $9.1$ and $9.2$,
+resulting in $83.72$. This is conceptually the “default” precision
+setting of PyTorch/XLA on TPU.</p>
+<p>The next approach is to break each number up into two parts,
+high and low (H and L):
+$(9.1 + 0.011) \times (9.2 + 0.022)$.
+This equals $(H \times H + H \times L + L \times H + L \times L)$.
+The first three matrix
+multiplications comprise the three-pass approach and roughly
+doubles the effective precision. The fourth term, $L \times L$, is ignored
+and looking at the result, $0.000242$, it is easy to see that
+this value will not contribute to the final result. Some values of
+$L \times L$
+could generate a fourth term that moves the value by one bit, but adding
+one bit of information half the time provides little value relative
+to the cost of running another multiplication.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>                  +--------+--------+
+                  | 9.222           |
+                  +--------+--------+
+                  | 9.2    | 0.022  |
++--------+--------+--------+--------+
+|9.111   | 9.1    |83.72   | 0.2002 |
++--------+--------+--------+--------+
+|        | 0.011  | 0.1012 |        | = 84.0214 =&gt; 84.02
++--------+--------+--------+--------+
+</pre></div>
+</div>
+<p>Extending this approach again would yield roughly triple the precision.
+The idea is to break the number into
+into high, medium, and low (H, M, and L), generating nine possible terms:
+$(H + M + L) \times (H + M + L) = HH + HM + MH + MM + HL + LH + ML + LM + LL$.
+The final three are ignored, and the first six comprise the six-pass approach.
+It is essentially equivalent to FP32, with some room for variances in the minor bit.</p>
+</section>
+<section id="pytorch-xla-and-tpus">
+<h2>PyTorch/XLA and TPUs<a class="headerlink" href="#pytorch-xla-and-tpus" title="Permalink to this heading">¶</a></h2>
+<p>PyTorch/XLA allows control of the one-pass, three-pass, and six-pass
+approaches in the <code class="docutils literal notranslate"><span class="pre">torch_xla.backends.set_mat_mul_precision()</span></code>
+function.
+The valid values are <code class="docutils literal notranslate"><span class="pre">default</span></code>, <code class="docutils literal notranslate"><span class="pre">high</span></code>, and <code class="docutils literal notranslate"><span class="pre">highest</span></code>. Now, you’ll investigate
+the differences between these three settings.</p>
+<p>Warning: Although this notebook demonstrates setting precision multiple
+times
+it is recommended to only set the precision once at the beginning of your
+script.</p>
+</section>
+<section id="preparations">
+<h2>Preparations<a class="headerlink" href="#preparations" title="Permalink to this heading">¶</a></h2>
+<p>Make sure you are running this tutorial on a TPU. You can
+access a TPU using Google Colab.</p>
+<p>Import the required packages.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.backends</span>
+
+<span class="n">torch</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">precision</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">sci_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">240</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>WARNING:root:libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.
+</pre></div>
+</div>
+</div>
+</div>
+<p>Epsilon is the minimum difference between 1.0 and the next highest representable number. Retrieve the value out from torch.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">eps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;bfloat16 epsilon: </span><span class="si">{</span><span class="n">eps</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;return type of torch.finfo: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">eps</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>bfloat16 epsilon: 0.0078125
+return type of torch.finfo: &lt;class &#39;float&#39;&gt;
+</pre></div>
+</div>
+</div>
+</div>
+<p>The epsilon is also defined as 1 / 2^p, where p is the number of bits in the mantissa.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">7</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>0.0078125
+</pre></div>
+</div>
+</div>
+</div>
+<p>Numbers in between may get rounded up to 1.0 + epsilon, or down to 1.0.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+        <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">eps</span> <span class="o">/</span> <span class="mf">4.0</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">eps</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">eps</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">4</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">eps</span><span class="p">],</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">,</span>
+    <span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>tensor([1.00000000000000000000, 1.00000000000000000000, 1.00000000000000000000, 1.00781250000000000000, 1.00781250000000000000], dtype=torch.bfloat16)
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="get-ready-to-look-directly-at-bits">
+<h2>Get ready to look directly at bits<a class="headerlink" href="#get-ready-to-look-directly-at-bits" title="Permalink to this heading">¶</a></h2>
+<p>Set up tools to convert binary strings to FP32 numbers, and vice
+versa. Create a function to generate a random matrix.</p>
+<p>In general, when
+testing an MXU (or TensorCore), pass matrices to encourage XLA to
+use the MXU rather than the slower but more precise units for FP32.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">struct</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">binary_fraction_to_fp32</span><span class="p">(</span><span class="n">bstr</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+  <span class="k">if</span> <span class="n">bstr</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;0b1.&quot;</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid binary string: </span><span class="si">{</span><span class="n">bstr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+  <span class="n">fraction_bits</span> <span class="o">=</span> <span class="n">bstr</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>
+  <span class="n">mantissa</span> <span class="o">=</span> <span class="mf">1.0</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">bit</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fraction_bits</span><span class="p">):</span>
+    <span class="n">mantissa</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">bit</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="o">**-</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">mantissa</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fp32_to_binary_fraction</span><span class="p">(</span><span class="n">fp32_float</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+  <span class="n">x_bytes</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;&gt;f&quot;</span><span class="p">,</span> <span class="n">fp32_float</span><span class="p">)</span>  <span class="c1"># Big-endian IEEE 754 float32</span>
+  <span class="n">as_int</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&gt;I&quot;</span><span class="p">,</span> <span class="n">x_bytes</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Interpret bits as uint32</span>
+  <span class="n">sign</span> <span class="o">=</span> <span class="p">(</span><span class="n">as_int</span> <span class="o">&gt;&gt;</span> <span class="mi">31</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mb">0b1</span>
+  <span class="n">exponent</span> <span class="o">=</span> <span class="p">(</span><span class="n">as_int</span> <span class="o">&gt;&gt;</span> <span class="mi">23</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span>
+  <span class="n">mantissa</span> <span class="o">=</span> <span class="n">as_int</span> <span class="o">&amp;</span> <span class="mh">0x7FFFFF</span>  <span class="c1"># lower 23 bits</span>
+  <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;FORMAT:0b SIGN:</span><span class="si">{</span><span class="n">sign</span><span class="si">}</span><span class="s2"> EXPONENT:</span><span class="si">{</span><span class="n">exponent</span><span class="si">:</span><span class="s2">08b</span><span class="si">}</span><span class="s2"> MANTISSA:</span><span class="si">{</span><span class="n">mantissa</span><span class="si">:</span><span class="s2">023b</span><span class="si">}</span><span class="s2"> VALUE=</span><span class="si">{</span><span class="n">fp32_float</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_rand_matrix</span><span class="p">():</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a diagonal matrix of shape 1024, 1024, values between 0.999 and 1.111&quot;&quot;&quot;</span>
+  <span class="n">eye</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;xla&quot;</span><span class="p">)</span>
+  <span class="n">rand_</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span>
+      <span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;xla&quot;</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.2</span> <span class="o">+</span> <span class="mf">0.9</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">eye</span> <span class="o">*</span> <span class="n">rand_</span>
+  <span class="k">assert</span> <span class="n">torch</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="examining-a-number">
+<h2>Examining a number<a class="headerlink" href="#examining-a-number" title="Permalink to this heading">¶</a></h2>
+<p>Generate an FP32 number representing 1 + bf16_eps/2. This
+will put one extra bit out of reach of a bfloat16’s mantissa.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">one_plus_half_eps</span> <span class="o">=</span> <span class="n">binary_fraction_to_fp32</span><span class="p">(</span><span class="s2">&quot;0b1.&quot;</span> <span class="o">+</span> <span class="s2">&quot;0&quot;</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">+</span> <span class="s2">&quot;1&quot;</span> <span class="o">+</span> <span class="s2">&quot;0&quot;</span> <span class="o">*</span> <span class="mi">15</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;FP32     : </span><span class="si">{</span><span class="n">one_plus_half_eps</span><span class="w"> </span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;1 + eps/2: </span><span class="si">{</span><span class="mf">1.0</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">eps</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>FP32     : 1.00390625
+1 + eps/2: 1.00390625
+</pre></div>
+</div>
+</div>
+</div>
+<p>Print the bits for FP32 and BF16. Notice that the 8th bit is lost.
+This reconfirms that BF16 cannot represent the 8th bit of precision.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;FP32: </span><span class="si">{</span><span class="n">fp32_to_binary_fraction</span><span class="p">(</span><span class="n">one_plus_half_eps</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">ones_bf16</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+    <span class="n">one_plus_half_eps</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;BF16: </span><span class="si">{</span><span class="n">fp32_to_binary_fraction</span><span class="p">(</span><span class="n">ones_bf16</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>FP32: FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:00000001000000000000000 VALUE=1.00390625
+BF16: FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:00000000000000000000000 VALUE=1.0
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="mxu">
+<h2>MXU<a class="headerlink" href="#mxu" title="Permalink to this heading">¶</a></h2>
+<p>Place your numbers of interest in a diagonal matrix. By putting them in
+a matrix, XLA will execute the math on the MXU. By making the matrices
+diagonal, the math will be equivalent to element-wise multiplication.</p>
+<p>Notice that the values are essentially rounded down to 1.0 before
+being multiplied, resulting in 1.0 as the output.
+This is the loss of precision that occurs in a TPU.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">X</span> <span class="o">=</span> <span class="n">get_rand_matrix</span><span class="p">()</span>
+<span class="n">Y</span> <span class="o">=</span> <span class="n">get_rand_matrix</span><span class="p">()</span>
+<span class="n">X</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">one_plus_half_eps</span>
+<span class="n">Y</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">one_plus_half_eps</span>
+<span class="n">Z</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;X: </span><span class="si">{</span><span class="n">fp32_to_binary_fraction</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Y: </span><span class="si">{</span><span class="n">fp32_to_binary_fraction</span><span class="p">(</span><span class="n">Y</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Z: </span><span class="si">{</span><span class="n">fp32_to_binary_fraction</span><span class="p">(</span><span class="n">Z</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>X: FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:00000001000000000000000 VALUE=1.00390625
+Y: FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:00000001000000000000000 VALUE=1.00390625
+Z: FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:00000000000000000000000 VALUE=1.0
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="fp32-precision-on-bfloat16-hardware">
+<h2>FP32 precision on bfloat16 hardware<a class="headerlink" href="#fp32-precision-on-bfloat16-hardware" title="Permalink to this heading">¶</a></h2>
+<p>The 3 and 6 pass approaches generate more bits of precision.
+Turn on the highest precision mode (six passes) and run
+the experiment again. Notice that the TPU has calculated FP32 precision.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">Z_ref</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span>
+    <span class="n">X</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+    <span class="n">Y</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Z_ref: </span><span class="si">{</span><span class="n">fp32_to_binary_fraction</span><span class="p">(</span><span class="n">Z_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">torch_xla</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">set_mat_mul_precision</span><span class="p">(</span><span class="s2">&quot;highest&quot;</span><span class="p">)</span>
+<span class="n">Z</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Z:     </span><span class="si">{</span><span class="n">fp32_to_binary_fraction</span><span class="p">(</span><span class="n">Z</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>WARNING:torch_xla.backends:Setting mat mul precision multiple times is not recommended. If you need to do so, please empirically verify that the precision setting is behaving as expected.
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Z_ref: FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:00000010000000010000000 VALUE=1.0078277587890625
+Z:     FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:00000010000000010000000 VALUE=1.0078277587890625
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="edge-case-numbers">
+<h2>Edge-case numbers<a class="headerlink" href="#edge-case-numbers" title="Permalink to this heading">¶</a></h2>
+<p>In the previous example, you saw no difference between
+the six-pass and FP32 multiplication. Now, you will use an edge
+case number to demonstrate a difference in the
+final bit between the six-pass approach and full FP32.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">X</span> <span class="o">=</span> <span class="n">get_rand_matrix</span><span class="p">()</span>
+<span class="n">Y</span> <span class="o">=</span> <span class="n">get_rand_matrix</span><span class="p">()</span>
+<span class="n">X</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.2</span>
+<span class="n">Y</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.2</span>
+<span class="n">Z_ref</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span>
+    <span class="n">X</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+    <span class="n">Y</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Z_ref: </span><span class="si">{</span><span class="n">fp32_to_binary_fraction</span><span class="p">(</span><span class="n">Z_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">torch_xla</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">set_mat_mul_precision</span><span class="p">(</span><span class="s2">&quot;highest&quot;</span><span class="p">)</span>
+<span class="n">Z</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Z:     </span><span class="si">{</span><span class="n">fp32_to_binary_fraction</span><span class="p">(</span><span class="n">Z</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>WARNING:torch_xla.backends:Setting mat mul precision multiple times is not recommended. If you need to do so, please empirically verify that the precision setting is behaving as expected.
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Z_ref: FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:01110000101000111101100 VALUE=1.440000057220459
+Z:     FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:01110000101000111101101 VALUE=1.4400001764297485
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="conclusion">
+<h2>Conclusion<a class="headerlink" href="#conclusion" title="Permalink to this heading">¶</a></h2>
+<p>In this tutorial, you learned how to control the floating point
+precision of your matrix multiplication (mat mul) operations.
+You also learned the internal algorithm used to generate
+higher precision through the three-pass and six-pass approaches.</p>
+</section>
+</section>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../perf/spmd_basic.html" class="btn btn-neutral float-right" title="SPMD User Guide" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="../accelerators/tpu.html" class="btn btn-neutral" title="Learn about TPUs" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright .
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">Control MXU Floating Point Precision</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#higher-precision-math-on-lower-precision-hardware">Higher precision math on lower precision hardware</a></li>
+<li><a class="reference internal" href="#pytorch-xla-and-tpus">PyTorch/XLA and TPUs</a></li>
+<li><a class="reference internal" href="#preparations">Preparations</a></li>
+<li><a class="reference internal" href="#get-ready-to-look-directly-at-bits">Get ready to look directly at bits</a></li>
+<li><a class="reference internal" href="#examining-a-number">Examining a number</a></li>
+<li><a class="reference internal" href="#mxu">MXU</a></li>
+<li><a class="reference internal" href="#fp32-precision-on-bfloat16-hardware">FP32 precision on bfloat16 hardware</a></li>
+<li><a class="reference internal" href="#edge-case-numbers">Edge-case numbers</a></li>
+<li><a class="reference internal" href="#conclusion">Conclusion</a></li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../_static/doctools.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
+     
+
+  
+
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">Stay up to date</li>
+            <li><a href="https://www.facebook.com/pytorch" target="_blank">Facebook</a></li>
+            <li><a href="https://twitter.com/pytorch" target="_blank">Twitter</a></li>
+            <li><a href="https://www.youtube.com/pytorch" target="_blank">YouTube</a></li>
+            <li><a href="https://www.linkedin.com/company/pytorch" target="_blank">LinkedIn</a></li>
+          </ul>  
+          </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">PyTorch Podcasts</li>
+            <li><a href="https://open.spotify.com/show/6UzHKeiy368jKfQMKKvJY5" target="_blank">Spotify</a></li>
+            <li><a href="https://podcasts.apple.com/us/podcast/pytorch-developer-podcast/id1566080008" target="_blank">Apple</a></li>
+            <li><a href="https://www.google.com/podcasts?feed=aHR0cHM6Ly9mZWVkcy5zaW1wbGVjYXN0LmNvbS9PQjVGa0lsOA%3D%3D" target="_blank">Google</a></li>
+            <li><a href="https://music.amazon.com/podcasts/7a4e6f0e-26c2-49e9-a478-41bd244197d0/PyTorch-Developer-Podcast?" target="_blank">Amazon</a></li>
+          </ul>
+         </div>
+        </div>
+        
+        <div class="privacy-policy">
+          <ul>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/terms/" target="_blank">Terms</a></li>
+            <li class="privacy-policy-links">|</li>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/privacy-policy/" target="_blank">Privacy</a></li>
+          </ul>
+        </div>
+        <div class="copyright">
+        <p>© Copyright The Linux Foundation. The PyTorch Foundation is a project of The Linux Foundation.
+          For web site terms of use, trademark policy and other policies applicable to The PyTorch Foundation please see
+          <a href="https://www.linuxfoundation.org/policies/">www.linuxfoundation.org/policies/</a>. The PyTorch Foundation supports the PyTorch open source
+          project, which has been established as PyTorch Project a Series of LF Projects, LLC. For policies applicable to the PyTorch Project a Series of LF Projects, LLC,
+          please see <a href="https://www.lfprojects.org/policies/">www.lfprojects.org/policies/</a>.</p>
+      </div>
+     </div>
+
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+           <li class="resources-mobile-menu-title">
+             <a>Learn</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/get-started">Get Started</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials">Tutorials</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/basics/intro.html">Learn the Basics</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/recipes/recipes_index.html">PyTorch Recipes</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/introyt.html">Introduction to PyTorch - YouTube Series</a>
+             </li>
+           </ul>
+           <li class="resources-mobile-menu-title">
+             <a>Ecosystem</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/ecosystem">Tools</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/#community-module">Community</a>
+             </li>
+             <li>
+               <a href="https://discuss.pytorch.org/">Forums</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/resources">Developer Resources</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2024</a>
+             </li>
+           </ul>
+
+           <li class="resources-mobile-menu-title">
+             <a>Edge</a>
+           </li>
+
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/edge">About PyTorch Edge</a>
+             </li>
+             
+             <li>
+               <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/executorch/stable/index.html">ExecuTorch Documentation</a>
+             </li>
+           </ul>
+
+           <li class="resources-mobile-menu-title">
+             <a>Docs</a>
+           </li>
+
+           <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/pytorch-domains">PyTorch Domains</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            <a>Blog & News</a>
+          </li>
+            
+           <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/blog/">PyTorch Blog</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/community-blog">Community Blog</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/videos">Videos</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/community-stories">Community Stories</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/events">Events</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/newsletter">Newsletter</a>
+             </li>
+          </ul>
+          
+          <li class="resources-mobile-menu-title">
+            <a>About</a>
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/credits">Cloud Credit Program</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/tac">Technical Advisory Council</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/staff">Staff</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/contact-us">Contact Us</a>
+            </li>
+          </ul>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>

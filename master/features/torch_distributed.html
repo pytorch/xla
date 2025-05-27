@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Support for Torch Distributed &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Distributed Data Parallel (DDP)" href="../perf/ddp.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,18 +448,18 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="support-for-torch-distributed">
+  <section id="support-for-torch-distributed">
 <h1>Support for Torch Distributed<a class="headerlink" href="#support-for-torch-distributed" title="Permalink to this heading">¶</a></h1>
 <p>Before the 2.5 release, PyTorch/XLA only supported collective ops through the custom API call <code class="docutils literal notranslate"><span class="pre">torch_xla.core.xla_model.*</span></code>.  In the 2.5 release, we adopted <code class="docutils literal notranslate"><span class="pre">torch.distributed.*</span></code> in PyTorch/XLA for both Dynamo and non-Dynamo cases.</p>
-<div class="section" id="collective-ops-lowering">
+<section id="collective-ops-lowering">
 <h2>Collective ops lowering<a class="headerlink" href="#collective-ops-lowering" title="Permalink to this heading">¶</a></h2>
-<div class="section" id="collective-ops-lowering-stack">
+<section id="collective-ops-lowering-stack">
 <h3>Collective ops lowering stack<a class="headerlink" href="#collective-ops-lowering-stack" title="Permalink to this heading">¶</a></h3>
 <p>After introducing the <a class="reference external" href="https://github.com/pytorch/pytorch/issues/93173">traceable collective communication APIs</a>, dynamo can support the collective ops with reimplementing lowering in PyTorch/XLA. The collective op is only traceable through <code class="docutils literal notranslate"><span class="pre">torch.ops._c10d_functional</span></code> call. Below is the figure that shows how the collective op, <code class="docutils literal notranslate"><span class="pre">all_reduce</span></code> in this case, is lowered between torch and torch_xla:</p>
-<p><span class="raw-html-m2r"><img src="../_static/img/dist_op_stack.png" alt="Alt Text" width="500" height="400"></span></p>
-<p><a href="#id1"><span class="problematic" id="id2">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Collective ops lowering stack</span></span>*</p>
-</div>
-<div class="section" id="non-dynamo-case">
+<img src="../_static/img/dist_op_stack.png" alt="Alt Text" width="500" height="400">
+<p><em><span style="text-decoration:underline;">Figure 1. Collective ops lowering stack</span></em></p>
+</section>
+<section id="non-dynamo-case">
 <h3>non-Dynamo case<a class="headerlink" href="#non-dynamo-case" title="Permalink to this heading">¶</a></h3>
 <p>Collective ops are lowered through registering the <code class="docutils literal notranslate"><span class="pre">ProcessGroupXla</span></code>, which is derived from <code class="docutils literal notranslate"><span class="pre">ProcessGroup</span></code>:</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># torch_xla/distributed/xla_backend.py</span>
@@ -488,8 +495,8 @@
     <span class="n">work</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">allgather</span><span class="p">([</span><span class="n">tensor_list</span><span class="p">],</span> <span class="p">[</span><span class="n">tensor</span><span class="p">])</span> <span class="c1"># uses ProcessGroupXla.allgather instead</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="dynamo-case">
+</section>
+<section id="dynamo-case">
 <h3>Dynamo case<a class="headerlink" href="#dynamo-case" title="Permalink to this heading">¶</a></h3>
 <p>For dynamo case, certain collective ops are remapped to the new function in <a class="reference external" href="https://github.com/pytorch/pytorch/blob/v2.5.0-rc10/torch/distributed/_functional_collectives.py#L1129-L1150">pytorch/torch/distributed/_functional_collectives.py</a>. For example, <code class="docutils literal notranslate"><span class="pre">all_reduce()</span></code> will be mapped to <code class="docutils literal notranslate"><span class="pre">all_reduce_inplace()</span></code>, where eventually <code class="docutils literal notranslate"><span class="pre">torch.ops._c10d_functional.all_reduce()</span></code>. Once we reach the _c10d_functional, we can rewrite the op through PyTorch/Xla lowering:</p>
 <div class="highlight-C++ notranslate"><div class="highlight"><pre><span></span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">all_reduce</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">reduceOp</span><span class="p">,</span>
@@ -500,9 +507,9 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="api-description">
+</section>
+</section>
+<section id="api-description">
 <h2>API description<a class="headerlink" href="#api-description" title="Permalink to this heading">¶</a></h2>
 <p>For release 2.5, we now support four collective operations for both Dynamo and non-Dynamo cases. Our goal is to align the distributed operation (dist op) APIs with PyTorch’s upstream implementation. While the function signatures remain consistent, certain input restrictions still apply.
 For instance, specifying multiple groups for distributed collective operations is not yet supported. For usage examples, refer to <a class="reference external" href="https://github.com/pytorch/xla/blob/v2.5.0-rc10/test/pjrt/test_collective_ops_tpu.py">test_collective_ops_tpu.py</a>, which demonstrates the use of dist ops in both Dynamo and non-Dynamo scenarios.
@@ -524,8 +531,8 @@ Below are the details for each operation:</p>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">all_to_all_single</span></code> function performs an all-to-all communication, updating the output tensor in-place and returning its alias.</p>
 <p>Note: Although <code class="docutils literal notranslate"><span class="pre">output_split_sizes</span></code> and <code class="docutils literal notranslate"><span class="pre">input_split_sizes</span></code> are accepted as arguments, they must be either None or set to all 1s. This limitation reflects a compromise between maintaining PyTorch’s API signature and the constraints of the XLA AllToAll operation.</p>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -600,7 +607,13 @@ Below are the details for each operation:</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

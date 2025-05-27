@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Eager Mode + Compile API &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Source of recompilations in torch_xla" href="../notes/source_of_recompilation.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="eager-mode-compile-api">
+  <section id="eager-mode-compile-api">
 <h1>Eager Mode + Compile API<a class="headerlink" href="#eager-mode-compile-api" title="Permalink to this heading">¶</a></h1>
 <p>In this doc we will go over how to use PyTorch/XLA’s new experimental
 <code class="docutils literal notranslate"><span class="pre">eager</span></code> mode with the <code class="docutils literal notranslate"><span class="pre">compile</span></code> API. The goal is to make PyTorch/XLA
@@ -478,7 +485,7 @@ the whole graph is usually very expensive.</p></li>
 </ol>
 <p>To mitigate above issues we want to introduce the new UX with eager and
 compile.</p>
-<div class="section" id="basic-usage">
+<section id="basic-usage">
 <h2>Basic Usage<a class="headerlink" href="#basic-usage" title="Permalink to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
@@ -511,7 +518,7 @@ function and start tracing. It will call the <code class="docutils literal notra
 target function returns and reenable the eager mode. You can expect the
 same perfomrance by using the <code class="docutils literal notranslate"><span class="pre">eager</span></code> + <code class="docutils literal notranslate"><span class="pre">compile</span></code> API compared to the
 existing <code class="docutils literal notranslate"><span class="pre">mark_step/sync</span></code> approach.</p>
-<div class="section" id="inference">
+<section id="inference">
 <h3>Inference<a class="headerlink" href="#inference" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">eager_mode</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">compiled_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;openxla&quot;</span><span class="p">)</span>
@@ -519,8 +526,8 @@ existing <code class="docutils literal notranslate"><span class="pre">mark_step/
 </div>
 <p>It is recommened to use the <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> instead of
 <code class="docutils literal notranslate"><span class="pre">torch_xla.compile</span></code> for inference to reduce the tracing overhad.</p>
-</div>
-<div class="section" id="training">
+</section>
+<section id="training">
 <h3>Training<a class="headerlink" href="#training" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">eager_mode</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
 
@@ -540,23 +547,19 @@ usually better to compile the model’s forward, backward and optimizer
 together. The long term goal is to also use <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> for training
 but right now we recommend user to use <code class="docutils literal notranslate"><span class="pre">torch_xla.compile</span></code>(for
 perfomrance reason).</p>
-</div>
-</div>
-<div class="section" id="benchmark">
+</section>
+</section>
+<section id="benchmark">
 <h2>Benchmark<a class="headerlink" href="#benchmark" title="Permalink to this heading">¶</a></h2>
 <p>I run a 2 layer decoder only model training(it is pretty much just a
 llama2) with fake data on a single chip of v4-8 for 300 steps. Below is
 the number I observed.</p>
-<blockquote>
-<div><p>Mode                        token/s</p>
-</div></blockquote>
+<p>Mode                        token/s</p>
 <hr class="docutils" />
-<blockquote>
-<div><p>Tracing mode (base line)    147
+<p>Tracing mode (base line)    147
 Eager mode                  65
 Eager + torch_xla compile   147</p>
 <p>: Eager mode benchmarks</p>
-</div></blockquote>
 <p>Eager mode can achieve ~45% performance of the fully compiled model for
 the decoder only model. For more information, see
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/train_decoder_only_base.py">train_decoder_only_base.py</a>
@@ -567,8 +570,8 @@ compiled mode. We don’t exepct user to use eager mode to execute the
 main training loop. Eager mode is meant to be used to handle non-core
 part of the training/inference logic(Data preprocessing, random number
 generations etc) or debug.</p>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -642,7 +645,13 @@ generations etc) or debug.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

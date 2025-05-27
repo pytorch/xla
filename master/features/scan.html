@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Optimizing Repeated Layers with scan and scan_layers &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Optimize Memory Utilization with while_loop" href="../perf/fori_loop.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,24 +448,24 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="optimizing-repeated-layers-with-scan-and-scan-layers">
+  <section id="optimizing-repeated-layers-with-scan-and-scan-layers">
 <h1>Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code><a class="headerlink" href="#optimizing-repeated-layers-with-scan-and-scan-layers" title="Permalink to this heading">¶</a></h1>
 <p>This is a guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> in PyTorch/XLA.</p>
-<div class="section" id="when-should-you-use-this">
+<section id="when-should-you-use-this">
 <h2>When should you use this<a class="headerlink" href="#when-should-you-use-this" title="Permalink to this heading">¶</a></h2>
-<p>Consider using <cite>``scan_layers`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py</a>&gt;`_ if you have a model with
+<p>Consider using <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py"><code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a> if you have a model with
 many homogenous (same shape, same logic) layers, for example LLMs. These models
 can be slow to compile. <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> is a drop-in replacement for a for loop over
 homogenous layers, such as a bunch of decoder layers. <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> traces the
 first layer and reuses the compiled result for all subsequent layers, significantly
 reducing the model compile time.</p>
-<p><cite>``scan`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py</a>&gt;`_ on the other hand is a lower level higher-order-op modeled after
-<cite>``jax.lax.scan`</cite> &lt;<a class="reference external" href="https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html">https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html</a>&gt;`_. Its primary purpose is to implement
+<p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py"><code class="docutils literal notranslate"><span class="pre">scan</span></code></a> on the other hand is a lower level higher-order-op modeled after
+<a class="reference external" href="https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html"><code class="docutils literal notranslate"><span class="pre">jax.lax.scan</span></code></a>. Its primary purpose is to implement
 <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> under the hood. However, you may find it useful
 to program loop logic where the loop itself has a first-class
 representation in the compiler (specifically, the XLA <code class="docutils literal notranslate"><span class="pre">while</span></code> op).</p>
-</div>
-<div class="section" id="scan-layers-example">
+</section>
+<section id="scan-layers-example">
 <h2><code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> example<a class="headerlink" href="#scan-layers-example" title="Permalink to this heading">¶</a></h2>
 <p>Typically, a transformer model passes the input embedding through a sequence of
 homogenous decoder layers:</p>
@@ -471,7 +478,7 @@ homogenous decoder layers:</p>
 <p>When this function is lowered into an HLO graph, the for loop is unrolled into a
 flat list of operations, resulting in long compile times. To reduce compile
 times, replace the for loop with <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>, as shown in
-<cite>``decoder_with_scan.py`</cite> &lt;/examples/scan/decoder_with_scan.py&gt;`_:</p>
+<a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/scan/decoder_with_scan.py"><code class="docutils literal notranslate"><span class="pre">decoder_with_scan.py</span></code></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run_decoder_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">):</span>
   <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.scan_layers</span><span class="w"> </span><span class="kn">import</span> <span class="n">scan_layers</span>
   <span class="k">return</span> <span class="n">scan_layers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">)</span>
@@ -482,10 +489,10 @@ directory of a <code class="docutils literal notranslate"><span class="pre">pyto
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>examples/train_decoder_only_base.py<span class="w"> </span>scan.decoder_with_scan.DecoderWithScan
 </pre></div>
 </div>
-</div>
-<div class="section" id="scan-example">
+</section>
+<section id="scan-example">
 <h2><code class="docutils literal notranslate"><span class="pre">scan</span></code> example<a class="headerlink" href="#scan-example" title="Permalink to this heading">¶</a></h2>
-<p><cite>``scan`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py</a>&gt;`_ takes a combine function and applies that function over the leading
+<p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py"><code class="docutils literal notranslate"><span class="pre">scan</span></code></a> takes a combine function and applies that function over the leading
 dimension of tensors while carrying along state:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">scan</span><span class="p">(</span>
     <span class="n">fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Carry</span><span class="p">,</span> <span class="n">X</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Carry</span><span class="p">,</span> <span class="n">Y</span><span class="p">]],</span>
@@ -509,7 +516,7 @@ is a single tensor, this function is roughly equal to the following Python code:
 <p>Under the hood, <code class="docutils literal notranslate"><span class="pre">scan</span></code> is implemented efficiently by lowering the loop
 into an XLA <code class="docutils literal notranslate"><span class="pre">while</span></code> operation. This ensures that only one iteration of the loop
 is compiled by XLA.</p>
-<p><cite>``scan_examples.py`</cite> &lt;/examples/scan/scan_examples.py&gt;`_ contains some example code showing how to use
+<p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/scan/scan_examples.py"><code class="docutils literal notranslate"><span class="pre">scan_examples.py</span></code></a> contains some example code showing how to use
 <code class="docutils literal notranslate"><span class="pre">scan</span></code>. In that file, <code class="docutils literal notranslate"><span class="pre">scan_example_cumsum</span></code> uses <code class="docutils literal notranslate"><span class="pre">scan</span></code> to implement a cumulative
 sum. <code class="docutils literal notranslate"><span class="pre">scan_example_pytree</span></code> demonstrates how to pass PyTrees to <code class="docutils literal notranslate"><span class="pre">scan</span></code>.</p>
 <p>You can run the examples with:</p>
@@ -533,18 +540,18 @@ sum. <code class="docutils literal notranslate"><span class="pre">scan_example_p
         <span class="p">[</span><span class="mf">3.0000</span><span class="p">]],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="limitations">
+</section>
+<section id="limitations">
 <h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this heading">¶</a></h2>
-<div class="section" id="aotautograd-compatibility-requirement">
+<section id="aotautograd-compatibility-requirement">
 <h3>AOTAutograd compatibility requirement<a class="headerlink" href="#aotautograd-compatibility-requirement" title="Permalink to this heading">¶</a></h3>
 <p>The functions/modules passed to <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> must be AOTAutograd
 traceable. In particular, as of PyTorch/XLA 2.6, <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> cannot
 trace functions with custom Pallas kernels. That means if your decoder uses,
 for example flash attention, then it is incompatible with <code class="docutils literal notranslate"><span class="pre">scan</span></code>. We are working on
 <a class="reference external" href="https://github.com/pytorch/xla/issues/8633">supporting this important use case</a>.</p>
-</div>
-<div class="section" id="aotautograd-overhead">
+</section>
+<section id="aotautograd-overhead">
 <h3>AOTAutograd overhead<a class="headerlink" href="#aotautograd-overhead" title="Permalink to this heading">¶</a></h3>
 <p>Because <code class="docutils literal notranslate"><span class="pre">scan</span></code> uses AOTAutograd to figure out the backward pass of the input
 function/module on every iteration, it is easy to become tracing-bound compared to
@@ -553,9 +560,9 @@ slower under <code class="docutils literal notranslate"><span class="pre">scan</
 We are working on <a class="reference external" href="https://github.com/pytorch/xla/issues/8632">improving tracing speed</a>. This is less of a
 problem when your model is very large or has many layers, which are the situations
 you would want to use <code class="docutils literal notranslate"><span class="pre">scan</span></code>.</p>
-</div>
-</div>
-<div class="section" id="compile-time-experiments">
+</section>
+</section>
+<section id="compile-time-experiments">
 <h2>Compile time experiments<a class="headerlink" href="#compile-time-experiments" title="Permalink to this heading">¶</a></h2>
 <p>To demonstrate the compile time savings, we’ll train a simple decoder with many
 layers on a single TPU chip with for loops vs with <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>.</p>
@@ -608,15 +615,16 @@ Metric:<span class="w"> </span>CompileTime
 </div>
 <p>The maximum compile time dropped from <code class="docutils literal notranslate"><span class="pre">1m03s</span></code> to <code class="docutils literal notranslate"><span class="pre">19s</span></code> by
 switching to <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>.</p>
-</div>
-<div class="section" id="references">
+</section>
+<section id="references">
 <h2>References<a class="headerlink" href="#references" title="Permalink to this heading">¶</a></h2>
-<p>See <a class="reference external" href="https://github.com/pytorch/xla/issues/7253">https://github.com/pytorch/xla/issues/7253</a> for the design of <code class="docutils literal notranslate"><span class="pre">scan</span></code> and
+<p>See https://github.com/pytorch/xla/issues/7253 for the design of <code class="docutils literal notranslate"><span class="pre">scan</span></code> and
 <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> itself.</p>
-<p>See the function doc comments of <cite>``scan`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py</a>&gt;`_ and <cite>``scan_layers`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py</a>&gt;`_
+<p>See the function doc comments of <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py"><code class="docutils literal notranslate"><span class="pre">scan</span></code></a> and <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py"><code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a>
 for details on how to use them.</p>
-<!-- xrefs --></div>
-</div>
+<!-- xrefs -->
+</section>
+</section>
 
 
              </article>
@@ -694,7 +702,13 @@ for details on how to use them.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

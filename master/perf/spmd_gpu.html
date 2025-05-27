@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Running SPMD on GPU &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Building with Bazel" href="../contribute/bazel.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,14 +448,14 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="running-spmd-on-gpu">
+  <section id="running-spmd-on-gpu">
 <h1>Running SPMD on GPU<a class="headerlink" href="#running-spmd-on-gpu" title="Permalink to this heading">¶</a></h1>
 <p>PyTorch/XLA supports SPMD on NVIDIA GPU (single-node or multi-nodes).
 The training/inference script remains the same as the one used for TPU,
 such as this <a class="reference external" href="https://github.com/pytorch/xla/blob/1dc78948c0c9d018d8d0d2b4cce912552ab27083/test/spmd/test_train_spmd_imagenet.py">ResNet
 script</a>.
 To execute the script using SPMD, we leverage <code class="docutils literal notranslate"><span class="pre">torchrun</span></code>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA \
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA \
 torchrun \
 --nnodes=${NUM_GPU_MACHINES} \
 --node_rank=${RANK_OF_CURRENT_MACHINE} \
@@ -469,28 +476,28 @@ single-node training/inference, this parameter can be omitted.</p></li>
 </ul>
 <p>For example, if you want to train a ResNet model on 2 GPU machines using
 SPMD, you can run the script below on the first machine:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_USE_SPMD</span><span class="o">=</span><span class="mi">1</span> <span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CUDA</span> \
-<span class="n">torchrun</span> \
-<span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
-<span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">0</span> \
-<span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">1</span> \
-<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot;</span> \
-<span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">spmd</span><span class="o">/</span><span class="n">test_train_spmd_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span> <span class="mi">128</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>XLA_USE_SPMD=1 PJRT_DEVICE=CUDA \
+torchrun \
+--nnodes=2 \
+--node_rank=0 \
+--nproc_per_node=1 \
+--rdzv_endpoint=&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot; \
+pytorch/xla/test/spmd/test_train_spmd_imagenet.py --fake_data --batch_size 128
 </pre></div>
 </div>
 <p>and run the following on the second machine:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_USE_SPMD</span><span class="o">=</span><span class="mi">1</span> <span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CUDA</span> \
-<span class="n">torchrun</span> \
-<span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
-<span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">1</span> \
-<span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">1</span> \
-<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot;</span> \
-<span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">spmd</span><span class="o">/</span><span class="n">test_train_spmd_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span> <span class="mi">128</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>XLA_USE_SPMD=1 PJRT_DEVICE=CUDA \
+torchrun \
+--nnodes=2 \
+--node_rank=1 \
+--nproc_per_node=1 \
+--rdzv_endpoint=&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot; \
+pytorch/xla/test/spmd/test_train_spmd_imagenet.py --fake_data --batch_size 128
 </pre></div>
 </div>
 <p>For more information, please refer to the <a class="reference external" href="https://github.com/pytorch/xla/issues/6256">SPMD support on GPU
 RFC</a>.</p>
-</div>
+</section>
 
 
              </article>
@@ -556,7 +563,13 @@ RFC</a>.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

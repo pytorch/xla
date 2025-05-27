@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Fully Sharded Data Parallel (FSDP) using SPMD &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Custom Kernels via Pallas" href="../features/pallas.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,13 +448,13 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="fully-sharded-data-parallel-fsdp-using-spmd">
+  <section id="fully-sharded-data-parallel-fsdp-using-spmd">
 <h1>Fully Sharded Data Parallel (FSDP) using SPMD<a class="headerlink" href="#fully-sharded-data-parallel-fsdp-using-spmd" title="Permalink to this heading">¶</a></h1>
 <p>FSDP in PyTorch/XLA is a utility for
 sharding Module parameters across data-parallel workers.</p>
-<p>This differs from the <a class="reference external" href="./fsdp_spmd.md">other</a> implementation of FSDP in PyTorch/XLA
+<p>This differs from the <a class="reference internal" href="#"><span class="doc std std-doc">other</span></a> implementation of FSDP in PyTorch/XLA
 in that this implementation uses SPMD.</p>
-<p>Please review the <a class="reference external" href="./spmd_basic.html">SPMD user guide</a> before
+<p>Please review the SPMD user guide at <a class="reference internal" href="spmd_basic.html"><span class="doc">SPMD User Guide</span></a> before
 proceeding. You can also find a minimum runnable example
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py">here</a>.</p>
 <p>Example usage:</p>
@@ -491,7 +498,7 @@ autowrap each <code class="docutils literal notranslate"><span class="pre">Decod
     <span class="n">model</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">auto_wrap_policy</span><span class="o">=</span><span class="n">auto_wrap_policy</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="section" id="sharding-output">
+<section id="sharding-output">
 <h2>Sharding output<a class="headerlink" href="#sharding-output" title="Permalink to this heading">¶</a></h2>
 <p>To ensure the XLA compiler correctly implements the FSDP algorithm, we
 need to shard both weights and activations. This means sharding the
@@ -506,8 +513,8 @@ tensor 2. A tuple of tensors where the 0th element is the activation.</p>
 <span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span><span class="n">my_module</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">shard_output</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="gradient-checkpointing">
+</section>
+<section id="gradient-checkpointing">
 <h2>Gradient checkpointing<a class="headerlink" href="#gradient-checkpointing" title="Permalink to this heading">¶</a></h2>
 <p>Currently, gradient checkpointing needs to be applied to the module
 before the FSDP wrapper. Otherwise, recursively loop into children
@@ -519,8 +526,8 @@ future releases.</p>
 <span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span><span class="n">checkpoint_module</span><span class="p">(</span><span class="n">my_module</span><span class="p">),</span> <span class="n">mesh</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -590,7 +597,13 @@ future releases.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

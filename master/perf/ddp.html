@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Distributed Data Parallel (DDP) &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator" href="fsdp_collectives.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,24 +448,24 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="distributed-data-parallel-ddp">
+  <section id="distributed-data-parallel-ddp">
 <h1>Distributed Data Parallel (DDP)<a class="headerlink" href="#distributed-data-parallel-ddp" title="Permalink to this heading">¶</a></h1>
 <p>This document shows how to use torch.nn.parallel.DistributedDataParallel
 in xla, and further describes its difference against the native xla data
 parallel approach. You can find a minimum runnable example
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_ddp.py">here</a>.</p>
-<div class="section" id="background-motivation">
+<section id="background-motivation">
 <h2>Background / Motivation<a class="headerlink" href="#background-motivation" title="Permalink to this heading">¶</a></h2>
 <p>Customers have long requested the ability to use PyTorch’s
 DistributedDataParallel API with xla. And here we enable it as an
 experimental feature.</p>
-</div>
-<div class="section" id="how-to-use-distributeddataparallel">
+</section>
+<section id="how-to-use-distributeddataparallel">
 <h2>How to use DistributedDataParallel<a class="headerlink" href="#how-to-use-distributeddataparallel" title="Permalink to this heading">¶</a></h2>
 <p>For those who switched from the PyTorch eager mode to XLA, here are all
 the changes you need to do to convert your eager DDP model into XLA
-model. We assume that you already know how to use XLA <a class="reference external" href="../API_GUIDE.md#running-on-a-single-xla-device">on a single
-device</a>.</p>
+model. We assume that you already know how to use XLA on a single device
+at <a class="reference internal" href="../learn/pytorch-on-xla-devices.html#running-on-a-single-xla-device"><span class="std std-ref">Running on a Single XLA Device</span></a>.</p>
 <ol class="arabic">
 <li><p>Import xla specific distributed packages:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
@@ -567,10 +574,10 @@ your script.</p>
     <span class="n">run_demo</span><span class="p">(</span><span class="n">demo_basic</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="benchmarking">
+</section>
+<section id="benchmarking">
 <h2>Benchmarking<a class="headerlink" href="#benchmarking" title="Permalink to this heading">¶</a></h2>
-<div class="section" id="resnet50-with-fake-data">
+<section id="resnet50-with-fake-data">
 <h3>Resnet50 with fake data<a class="headerlink" href="#resnet50-with-fake-data" title="Permalink to this heading">¶</a></h3>
 <p>The following results are collected with the command on a TPU VM V3-8
 environment with ToT PyTorch and PyTorch/XLA:</p>
@@ -605,12 +612,13 @@ the rate is images per second.</p>
         <td>7.60</td>
         <td>0.02</td>
     </tr>
-</table><p>The performance difference between our native approach for distributed
+</table>
+<p>The performance difference between our native approach for distributed
 data parallel and DistributedDataParallel wrapper is: 1 - 395.97 /
 418.54 = 5.39%. This result seems reasonable given the DDP wrapper
 introduces extra overheads on tracing the DDP runtime.</p>
-</div>
-<div class="section" id="mnist-with-fake-data">
+</section>
+<section id="mnist-with-fake-data">
 <h3>MNIST with fake data<a class="headerlink" href="#mnist-with-fake-data" title="Permalink to this heading">¶</a></h3>
 <p>The following results are collected with the command:
 <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">test/test_train_mp_mnist.py</span> <span class="pre">--fake_data</span></code> on a TPU VM V3-8
@@ -643,38 +651,39 @@ rate is images per second.</p>
         <td>3102.92</td>
         <td>0.29</td>
     </tr>
-</table><p>The performance difference between our native approach for distributed
+</table>
+<p>The performance difference between our native approach for distributed
 data parallel and DistributedDataParallel wrapper is: 1 - 14313.78 /
 24351.74 = 41.22%. Here we compare 90th % instead since the dataset is
 small and first a few rounds are heavily impacted by data loading. This
 slowdown is huge but makes sense given the model is small. The
 additional DDP runtime tracing overhead is hard to amortize.</p>
-</div>
-<div class="section" id="mnist-with-real-data">
+</section>
+<section id="mnist-with-real-data">
 <h3>MNIST with real data<a class="headerlink" href="#mnist-with-real-data" title="Permalink to this heading">¶</a></h3>
 <p>The following results are collected with the command n a TPU VM V3-8
 environment with ToT PyTorch and PyTorch/XLA:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>test/test_train_mp_mnist.py<span class="w"> </span>--logdir<span class="w"> </span>mnist/<span class="w"> </span>o.
 </pre></div>
 </div>
-<a class="reference external image-reference" href="../_static/img/ddp_md_mnist_with_real_data.png"><img alt="" src="../_images/ddp_md_mnist_with_real_data.png" /></a>
+<p><img alt="" src="../_images/ddp_md_mnist_with_real_data.png" /></p>
 <p>And we can observe that the DDP wrapper converges slower than the native
 XLA approach even though it still achieves a high accuracy rate at
 97.48% at the end. (The native approach achieves 99%.)</p>
-</div>
-</div>
-<div class="section" id="disclaimer">
+</section>
+</section>
+<section id="disclaimer">
 <h2>Disclaimer<a class="headerlink" href="#disclaimer" title="Permalink to this heading">¶</a></h2>
 <p>This feature is still experimental and under active development. Use it
 in cautions and feel free to file any bugs to the <a class="reference external" href="https://github.com/pytorch/xla/">xla github
 repo</a>. For those who are interested in
-the native xla data parallel approach, here is the
-<a class="reference external" href="../API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing">tutorial</a>.</p>
+the native xla data parallel approach, here is the tutorial
+at <a class="reference internal" href="../learn/pytorch-on-xla-devices.html#running-on-multiple-xla-devices-with-multi-processing"><span class="std std-ref">Running on Multiple XLA Devices with Multi-processing</span></a>.</p>
 <p>Here are some of the known issues that are under investigation: * There are some
 issues while being used with <code class="docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code>. <code class="docutils literal notranslate"><span class="pre">test_train_mp_mnist.py</span></code>
 with real data crashes before exiting.</p>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -751,7 +760,13 @@ with real data crashes before exiting.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

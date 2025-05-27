@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Op Lowering Guide &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Codegen Migration Guide" href="codegen_migration.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="op-lowering-guide">
+  <section id="op-lowering-guide">
 <h1>Op Lowering Guide<a class="headerlink" href="#op-lowering-guide" title="Permalink to this heading">¶</a></h1>
 <p>PyTorch wraps the C++ ATen tensor library that offers a wide range of
 operations implemented on GPU and CPU. Pytorch/XLA is a PyTorch
@@ -457,10 +464,10 @@ significant slowdown. We must lower all operations used in the model to
 achieve the best performance.</p>
 <p>Here’s an example of what you might see from the PyTorch/XLA debugging
 tool for an operation that has not been lowered:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pt-xla-profiler: Op(s) not lowered: aten::_ctc_loss, aten::_ctc_loss_backward,  Please open a GitHub issue with the above op lowering requests.
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    pt-xla-profiler: Op(s) not lowered: aten::_ctc_loss, aten::_ctc_loss_backward,  Please open a GitHub issue with the above op lowering requests.
 </pre></div>
 </div>
-<div class="section" id="before-you-start">
+<section id="before-you-start">
 <h2>Before you start<a class="headerlink" href="#before-you-start" title="Permalink to this heading">¶</a></h2>
 <p>You should follow the instructions in
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md">Contributing to Pytorch/XLA</a> to
@@ -468,11 +475,11 @@ install required dependencies and build pytorch and pytorch/XLA from the
 source. You do not need access to TPU to implement the lowering. It is
 recommended to experiment on a workstation and configure it to use
 XLA:CPU. You can configure Pytorch/XLA to use XLA:CPU by running</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>CPU
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span><span class="nb">export</span><span class="w"> </span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>CPU
 </pre></div>
 </div>
-</div>
-<div class="section" id="understanding-the-operation">
+</section>
+<section id="understanding-the-operation">
 <h2>Understanding the operation<a class="headerlink" href="#understanding-the-operation" title="Permalink to this heading">¶</a></h2>
 <p>You can find the definition of the C++ ATen operations in
 <a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/native_functions.yaml">native_functions.yaml</a>.
@@ -485,8 +492,8 @@ the case searching the PyTorch native implementation under <a class="reference e
 repo</a> is recommended. The goal is to
 lower the PyTorch operations into a sequence of XLA operations defined
 in <a class="reference external" href="https://www.tensorflow.org/xla/operation_semantics">XLA operation semantics</a>.</p>
-</div>
-<div class="section" id="file-structure">
+</section>
+<section id="file-structure">
 <h2>File structure<a class="headerlink" href="#file-structure" title="Permalink to this heading">¶</a></h2>
 <p>All file mentioned below lives under the <code class="docutils literal notranslate"><span class="pre">xla/torch_xla/csrc</span></code> folder,
 with the exception of <code class="docutils literal notranslate"><span class="pre">codegen/xla_native_functions.yaml</span></code></p>
@@ -533,8 +540,8 @@ can be put into a separate file. All ops inherit from
 <code class="docutils literal notranslate"><span class="pre">ir::ops::Node</span></code> and provide a way to lower input <code class="docutils literal notranslate"><span class="pre">ir::Value</span></code> to a
 sequence of <code class="docutils literal notranslate"><span class="pre">XlaOp</span></code>.</p></li>
 </ol>
-</div>
-<div class="section" id="unit-test">
+</section>
+<section id="unit-test">
 <h2>Unit Test<a class="headerlink" href="#unit-test" title="Permalink to this heading">¶</a></h2>
 <p>Our CI runs PyTorch native python tests for every change and every day.
 Those tests will use XLA implementation if we provide a lowering. We
@@ -547,8 +554,8 @@ call PyTorch c++ API and verify our implementation yields the same
 result as PyTorch native implementation. We also need to verify if the
 xla implementation is called when the tensor is a XLA tensor by checking
 the <code class="docutils literal notranslate"><span class="pre">aten::op</span></code> and <code class="docutils literal notranslate"><span class="pre">xla::op</span></code> counters.</p>
-</div>
-<div class="section" id="tips">
+</section>
+<section id="tips">
 <h2>Tips<a class="headerlink" href="#tips" title="Permalink to this heading">¶</a></h2>
 <p>The process of lowering is breaking down the PyTorch operations into a
 sequence of XlaOp. To provide a good lowering of the PyTorch operation,
@@ -560,47 +567,47 @@ slightly more complicated example with backward lowering in <a class="reference 
 operators for some operators in <code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code>. We only need to lower
 the vanilla op in this case. An example would be <code class="docutils literal notranslate"><span class="pre">lerp</span></code> operator which
 has 6 variants in <code class="docutils literal notranslate"><span class="pre">native_functions.yaml</span></code>, they are</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span> <span class="n">lerp_</span><span class="o">.</span><span class="n">Scalar</span>
-<span class="o">-</span> <span class="n">lerp_</span><span class="o">.</span><span class="n">Tensor</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Scalar_out</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Tensor_out</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Scalar</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Tensor</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>- lerp_.Scalar
+- lerp_.Tensor
+- lerp.Scalar_out
+- lerp.Tensor_out
+- lerp.Scalar
+- lerp.Tensor
 </pre></div>
 </div>
 <p>and will generate function prototypes</p>
-<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">lerp</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">lerp</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_out</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">,</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">out</span><span class="p">);</span>
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_out</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">,</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">out</span><span class="p">);</span>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="w">    </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">lerp</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
+<span class="w">    </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
+<span class="w">    </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">lerp</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
+<span class="w">    </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_out</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">,</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">out</span><span class="p">);</span>
+<span class="w">    </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
+<span class="w">    </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">lerp_out</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">,</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">out</span><span class="p">);</span>
 </pre></div>
 </div>
 <p>in <code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code> if we add all of them to the
 <code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code>. However if we only lower <code class="docutils literal notranslate"><span class="pre">lerp.Scalar</span></code> and
 <code class="docutils literal notranslate"><span class="pre">lerp.Tensor</span></code> and check <code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code>, we will see</p>
-<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">namespace</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="w">    </span><span class="k">namespace</span><span class="w"> </span><span class="p">{</span>
 
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">wrapper_Scalar_lerp</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// No device check</span>
+<span class="w">    </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">wrapper_Scalar_lerp</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// No device check</span>
 
 
-<span class="w">  </span><span class="c1">// DeviceGuard omitted</span>
-<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">torch_xla</span><span class="o">::</span><span class="n">lerp</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="p">}</span>
+<span class="w">      </span><span class="c1">// DeviceGuard omitted</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">torch_xla</span><span class="o">::</span><span class="n">lerp</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
 
-<span class="p">}</span><span class="w"> </span><span class="c1">// anonymous namespace</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="c1">// anonymous namespace</span>
 
-<span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp__tmp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
-<span class="w">  </span><span class="n">at</span><span class="o">::</span><span class="n">_copy_from</span><span class="p">(</span><span class="n">wrapper_Scalar_lerp__tmp</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p">);</span>
-<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">auto</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp__tmp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
+<span class="w">      </span><span class="n">at</span><span class="o">::</span><span class="n">_copy_from</span><span class="p">(</span><span class="n">wrapper_Scalar_lerp__tmp</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p">);</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
 
-<span class="p">...</span>
-<span class="w">  </span><span class="n">m</span><span class="p">.</span><span class="n">impl</span><span class="p">(</span><span class="s">&quot;lerp_.Scalar&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">TORCH_FN</span><span class="p">(</span><span class="n">wrapper_Scalar_lerp_</span><span class="p">));</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="w">      </span><span class="n">m</span><span class="p">.</span><span class="n">impl</span><span class="p">(</span><span class="s">&quot;lerp_.Scalar&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="n">TORCH_FN</span><span class="p">(</span><span class="n">wrapper_Scalar_lerp_</span><span class="p">));</span>
 </pre></div>
 </div>
 <p>The codegen will automatically generate lowerings for <code class="docutils literal notranslate"><span class="pre">lerp_.Scalar</span></code> and
@@ -616,8 +623,8 @@ You can find the <code class="docutils literal notranslate"><span class="pre">Op
 <a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/core/interned_strings.h">interned_strings.h</a>.
 If the aten symbol is missing, you can submit a PR like
 <a class="reference external" href="https://github.com/pytorch/pytorch/pull/36851">this</a>.</p>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -690,7 +697,13 @@ If the aten symbol is missing, you can submit a PR like
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

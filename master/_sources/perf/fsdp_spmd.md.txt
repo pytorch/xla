@@ -6,7 +6,7 @@ sharding Module parameters across data-parallel workers.
 This differs from the [other](./fsdp_spmd.md) implementation of FSDP in PyTorch/XLA
 in that this implementation uses SPMD.
 
-Please review the [SPMD user guide](./spmd_basic.html) before
+Please review the SPMD user guide at {doc}`spmd_basic` before
 proceeding. You can also find a minimum runnable example
 [here](https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py).
 

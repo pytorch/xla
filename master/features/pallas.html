@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Custom Kernels via Pallas &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Torch Export to StableHLO" href="stablehlo.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="custom-kernels-via-pallas">
+  <section id="custom-kernels-via-pallas">
 <h1>Custom Kernels via Pallas<a class="headerlink" href="#custom-kernels-via-pallas" title="Permalink to this heading">¶</a></h1>
 <p>With the rise of OpenAI <a class="reference external" href="https://openai.com/research/triton">Triton</a>,
 custom kernels become more and more popular in the GPU community, for
@@ -474,7 +481,7 @@ support custom kernels, and the best way is through Pallas.</p>
 <p>To be noted, it’s very important to run <code class="docutils literal notranslate"><span class="pre">jax_import_guard()</span></code> before
 importing any jax modules. Otherwise, the program will hang on TPU as
 jax will lock the TPU and torch-xla cannot access it.</p>
-<div class="section" id="adopt-the-above-kernel-to-be-compatible-with-pytorch-xla">
+<section id="adopt-the-above-kernel-to-be-compatible-with-pytorch-xla">
 <h2>Adopt the above kernel to be compatible with PyTorch/XLA<a class="headerlink" href="#adopt-the-above-kernel-to-be-compatible-with-pytorch-xla" title="Permalink to this heading">¶</a></h2>
 <p>Example usage:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">q</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">)</span>
@@ -490,34 +497,34 @@ jax will lock the TPU and torch-xla cannot access it.</p>
 <p>For simple kernels, the adoption is just as simple as one liner. For
 more complicated kernels, you can refer to our Flash Attention
 implementation for details.</p>
-</div>
-<div class="section" id="use-built-in-kernels">
+</section>
+<section id="use-built-in-kernels">
 <h2>Use built-in kernels<a class="headerlink" href="#use-built-in-kernels" title="Permalink to this heading">¶</a></h2>
 <p>Besides manually wrapping external Pallas kernels, there are built-in
 kernels where the adoptions are done by PyTorch/XLA already. These
 built-in kernels can be used like any other torch.ops. The current
 built-in kernels that are suppored are: - FlashAttention -PagedAttention</p>
-<div class="section" id="id1">
-<h3>FlashAttention<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
-<div class="section" id="example-usage">
+<section id="flashattention">
+<h3>FlashAttention<a class="headerlink" href="#flashattention" title="Permalink to this heading">¶</a></h3>
+<section id="example-usage">
 <h4>Example usage<a class="headerlink" href="#example-usage" title="Permalink to this heading">¶</a></h4>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use built-in kernels</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.experimental.custom_kernel</span>
 <span class="n">output</span> <span class="o">=</span> <span class="n">flash_attention</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="integration-example">
+</section>
+<section id="integration-example">
 <h4>Integration Example<a class="headerlink" href="#integration-example" title="Permalink to this heading">¶</a></h4>
 <p>We have an example of <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/flash_attention/train_decoder_only_flash_attention.py">FlashAttention integration
 here</a>
 in our training test script.</p>
-</div>
-</div>
-<div class="section" id="id2">
-<h3>PagedAttention<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
-<div class="section" id="id3">
-<h4>Example usage<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h4>
+</section>
+</section>
+<section id="pagedattention">
+<h3>PagedAttention<a class="headerlink" href="#pagedattention" title="Permalink to this heading">¶</a></h3>
+<section id="id1">
+<h4>Example usage<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h4>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use built-in kernels</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.experimental.custom_kernel</span>
 <span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">paged_attention</span><span class="p">(</span>
@@ -531,16 +538,16 @@ in our training test script.</p>
 <span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="id4">
-<h4>Integration Example<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h4>
+</section>
+<section id="id2">
+<h4>Integration Example<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h4>
 <p>The vLLM TPU integration utilizes <a class="reference external" href="https://github.com/vllm-project/vllm/blob/f5e1bf5d44877149eaabf9c04379a4e14a023145/vllm/attention/backends/pallas.py#L194">PagedAttention
 here</a>
 for effective memory management with KV cache.</p>
-</div>
-</div>
-</div>
-<div class="section" id="dependencies">
+</section>
+</section>
+</section>
+<section id="dependencies">
 <h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this heading">¶</a></h2>
 <p>The Pallas integration depends on JAX to function. However, not every
 JAX version is compatible with your installed PyTorch/XLA. To install
@@ -548,12 +555,12 @@ the proper JAX:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>torch_xla<span class="o">[</span>pallas<span class="o">]</span><span class="w"> </span>-f<span class="w"> </span>https://storage.googleapis.com/jax-releases/jax_nightly_releases.html<span class="w"> </span>-f<span class="w"> </span>https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 </pre></div>
 </div>
-</div>
-<div class="section" id="write-your-own-pallas-kernels">
+</section>
+<section id="write-your-own-pallas-kernels">
 <h2>Write your own Pallas kernels<a class="headerlink" href="#write-your-own-pallas-kernels" title="Permalink to this heading">¶</a></h2>
-<p>You can find the authoritative guide on how to write a Pallas kernel at <a class="reference external" href="https://docs.jax.dev/en/latest/pallas/index.html">https://docs.jax.dev/en/latest/pallas/index.html</a>.</p>
-</div>
-</div>
+<p>You can find the authoritative guide on how to write a Pallas kernel at https://docs.jax.dev/en/latest/pallas/index.html.</p>
+</section>
+</section>
 
 
              </article>
@@ -601,14 +608,14 @@ the proper JAX:</p>
 <li><a class="reference internal" href="#">Custom Kernels via Pallas</a><ul>
 <li><a class="reference internal" href="#adopt-the-above-kernel-to-be-compatible-with-pytorch-xla">Adopt the above kernel to be compatible with PyTorch/XLA</a></li>
 <li><a class="reference internal" href="#use-built-in-kernels">Use built-in kernels</a><ul>
-<li><a class="reference internal" href="#id1">FlashAttention</a><ul>
+<li><a class="reference internal" href="#flashattention">FlashAttention</a><ul>
 <li><a class="reference internal" href="#example-usage">Example usage</a></li>
 <li><a class="reference internal" href="#integration-example">Integration Example</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id2">PagedAttention</a><ul>
-<li><a class="reference internal" href="#id3">Example usage</a></li>
-<li><a class="reference internal" href="#id4">Integration Example</a></li>
+<li><a class="reference internal" href="#pagedattention">PagedAttention</a><ul>
+<li><a class="reference internal" href="#id1">Example usage</a></li>
+<li><a class="reference internal" href="#id2">Integration Example</a></li>
 </ul>
 </li>
 </ul>
@@ -637,7 +644,13 @@ the proper JAX:</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Torch Export to StableHLO &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Automatic Mixed Precision" href="../perf/amp.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="torch-export-to-stablehlo">
+  <section id="torch-export-to-stablehlo">
 <h1>Torch Export to StableHLO<a class="headerlink" href="#torch-export-to-stablehlo" title="Permalink to this heading">¶</a></h1>
 <p>This document describes how to use torch export + torch xla to export to
 <a class="reference external" href="https://github.com/openxla/stablehlo">StableHLO</a> format.</p>
@@ -453,7 +460,7 @@ stablehlo MLIR code.</p></li>
 <li><p>First convert pytorch model to a jax function, then use jax utilities to convert it
 to stablehlo</p></li>
 </ol>
-<div class="section" id="using-torch-export">
+<section id="using-torch-export">
 <h2>Using <code class="docutils literal notranslate"><span class="pre">torch.export</span></code><a class="headerlink" href="#using-torch-export" title="Permalink to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">export</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torchvision</span>
@@ -473,10 +480,10 @@ to stablehlo</p></li>
 </pre></div>
 </div>
 <p>The stablehlo object is of type <code class="docutils literal notranslate"><span class="pre">jax.export.Exported</span></code>.
-Feel free to explore: <a class="reference external" href="https://openxla.org/stablehlo/tutorials/jax-export">https://openxla.org/stablehlo/tutorials/jax-export</a>
+Feel free to explore: https://openxla.org/stablehlo/tutorials/jax-export
 for more details on how to use the MLIR code generated from it.</p>
-</div>
-<div class="section" id="using-extract-jax">
+</section>
+<section id="using-extract-jax">
 <h2>Using <code class="docutils literal notranslate"><span class="pre">extract_jax</span></code><a class="headerlink" href="#using-extract-jax" title="Permalink to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">export</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torchvision</span>
@@ -503,11 +510,11 @@ for more details on how to use the MLIR code generated from it.</p>
 </div>
 <p>The second to last line we used <code class="docutils literal notranslate"><span class="pre">jax.ShapedDtypeStruct</span></code> to specify the input shape.
 You can also pass a numpy array here.</p>
-</div>
-<div class="section" id="preserving-high-level-pytorch-operations-in-stablehlo-by-generating-stablehlo-composite">
+</section>
+<section id="preserving-high-level-pytorch-operations-in-stablehlo-by-generating-stablehlo-composite">
 <h2>Preserving High-Level PyTorch Operations in StableHLO by generating <code class="docutils literal notranslate"><span class="pre">stablehlo.composite</span></code><a class="headerlink" href="#preserving-high-level-pytorch-operations-in-stablehlo-by-generating-stablehlo-composite" title="Permalink to this heading">¶</a></h2>
 <p>High level PyTorch ops (e.g. <code class="docutils literal notranslate"><span class="pre">F.scaled_dot_product_attention</span></code>) will be
-decomposed into low level ops during PyTorch -&amp;gt; StableHLO lowering.
+decomposed into low level ops during PyTorch -&gt; StableHLO lowering.
 Capturing the high level op in downstream ML compilers can be crucial
 for genearting a performant, efficient specialized kernels. While
 pattern matching a bunch of low level ops in the ML compiler can be
@@ -609,8 +616,8 @@ representing the region of code that we want to call, then, we register it
 so that pytorch and jlibrary understands it’s a custom region. Then, th
 emitted Stablehlo will have <code class="docutils literal notranslate"><span class="pre">mylib.scaled_dot_product_attention</span></code> and <code class="docutils literal notranslate"><span class="pre">mylib.softmax</span></code>
 outlined stablehlo functions.</p>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -681,7 +688,13 @@ outlined stablehlo functions.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

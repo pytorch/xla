@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Pytorch/XLA Overview &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Learn about TPUs" href="../accelerators/tpu.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="pytorch-xla-overview">
+  <section id="pytorch-xla-overview">
 <h1>Pytorch/XLA Overview<a class="headerlink" href="#pytorch-xla-overview" title="Permalink to this heading">¶</a></h1>
 <p>This section provides a brief overview of the basic details of PyTorch
 XLA, which should help readers better understand the required
@@ -469,7 +476,7 @@ separately. In case of pod slices, when there are multiple hosts, each
 host does the compilation for XLA devices it is attached to. If SPMD is
 used, then the code is compiled only once (for given shapes and
 computations) on each host for all the devices.</p>
-<a class="reference external image-reference" href="../_static/img/pytorchXLA_flow.svg"><img alt="img" src="../_images/pytorchXLA_flow.svg" /></a>
+<p><img alt="img" src="../_images/pytorchXLA_flow.svg" /></p>
 <p>For more details and examples, please refer to the <a class="reference external" href="https://pytorch.org/blog/understanding-lazytensor-system-performance-with-pytorch-xla-on-cloud-tpu/">LazyTensor
 guide</a>.</p>
 <p>The operations in the IR graph are executed only when values of tensors
@@ -509,7 +516,7 @@ because the <code class="docutils literal notranslate"><span class="pre">for</sp
 of the loop will create a new subgraph corresponding to the computation
 of <code class="docutils literal notranslate"><span class="pre">z</span> <span class="pre">+=</span> <span class="pre">x+y</span></code> and add it to the graph. Here is an example when
 <code class="docutils literal notranslate"><span class="pre">len(tensors_on_device)=3</span></code>.</p>
-<a class="reference external image-reference" href="../_static/img/IRgraph_no_markstep.png"><img alt="img" src="../_images/IRgraph_no_markstep.png" /></a>
+<p><img alt="img" src="../_images/IRgraph_no_markstep.png" /></p>
 <p>However, introducing a barrier at the end of the loop will result in a
 smaller graph that will be compiled once during the first pass inside
 the <code class="docutils literal notranslate"><span class="pre">for</span></code> loop and will be reused for the next
@@ -524,7 +531,7 @@ reused.</p>
 </div>
 <p>In this case there will be a small graph that is used
 <code class="docutils literal notranslate"><span class="pre">len(tensors_on_device)=3</span></code> times.</p>
-<a class="reference external image-reference" href="../_static/img/IRgraph_markstep.png"><img alt="img" src="../_images/IRgraph_markstep.png" /></a>
+<p><img alt="img" src="../_images/IRgraph_markstep.png" /></p>
 <p>It is important to highlight that in PyTorch XLA Python code inside for
 loops is traced and a new graph is constructed for each iteration if
 there is a barrier at the end. This can be a significant performance
@@ -557,7 +564,7 @@ for execution. Note, if you are not using MPDeviceLoader, you might need
 to set <code class="docutils literal notranslate"><span class="pre">barrier=True</span></code> in the <code class="docutils literal notranslate"><span class="pre">optimizer_step()</span></code> to enable
 <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> if running a training job or explicitly adding
 <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>.</p>
-<div class="section" id="tpu-setup">
+<section id="tpu-setup">
 <h2>TPU Setup<a class="headerlink" href="#tpu-setup" title="Permalink to this heading">¶</a></h2>
 <p>Create TPU with base image to use nightly wheels or from the stable
 release by specifying the <code class="docutils literal notranslate"><span class="pre">RUNTIME_VERSION</span></code>.</p>
@@ -592,13 +599,13 @@ sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w
 sudo<span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>libgl1<span class="w"> </span>-y<span class="w"> </span><span class="c1"># diffusion specific</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="reference-implementations">
+</section>
+<section id="reference-implementations">
 <h2>Reference implementations<a class="headerlink" href="#reference-implementations" title="Permalink to this heading">¶</a></h2>
 <p>The <a class="reference external" href="https://github.com/AI-Hypercomputer/tpu-recipes">AI-Hypercomputer/tpu-recipies</a>
 repo. contains examples for training and serving many LLM and diffusion models.</p>
-</div>
-<div class="section" id="converting-code-to-pytorch-xla">
+</section>
+<section id="converting-code-to-pytorch-xla">
 <h2>Converting code to PyTorch XLA<a class="headerlink" href="#converting-code-to-pytorch-xla" title="Permalink to this heading">¶</a></h2>
 <p>General guidelines to modify your code:</p>
 <ul class="simple">
@@ -611,13 +618,13 @@ values</p></li>
 </ul>
 <p>Remember: each case is unique so you might need to do something
 different for each case.</p>
-<div class="section" id="example-1-stable-diffusion-inference-in-pytorch-lightning-on-a-single-tpu-device">
+<section id="example-1-stable-diffusion-inference-in-pytorch-lightning-on-a-single-tpu-device">
 <h3>Example 1. Stable Diffusion inference in PyTorch Lightning on a Single TPU Device<a class="headerlink" href="#example-1-stable-diffusion-inference-in-pytorch-lightning-on-a-single-tpu-device" title="Permalink to this heading">¶</a></h3>
 <p>As a first example consider the <a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/main/scripts/txt2img.py">inference
 code</a>
 of the stable diffusion model in PyTorch Lightning which can be run from
 command line as</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>scripts/txt2img.py<span class="w"> </span>--prompt<span class="w"> </span><span class="s2">&quot;a photograph of an astronaut riding a horse&quot;</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>python<span class="w"> </span>scripts/txt2img.py<span class="w"> </span>--prompt<span class="w"> </span><span class="s2">&quot;a photograph of an astronaut riding a horse&quot;</span>
 </pre></div>
 </div>
 <p>For your reference, the diff of modifications described below can be
@@ -638,8 +645,8 @@ with the <code class="docutils literal notranslate"><span class="pre">xla</span>
 <a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/978da4c625a712a01ee066d019a0b0d2319cd8b3/ldm/modules/encoders/modules.py#L143">line</a>
 as well. For simplicity we will directly define the <code class="docutils literal notranslate"><span class="pre">device</span></code> in this
 tutorial, but you can pass the <code class="docutils literal notranslate"><span class="pre">device</span></code> value to the function as well.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>Another place in the code that has cuda specific code is DDIM scheduler.
@@ -683,8 +690,8 @@ and investigating further. However, this is not covered here.</p>
 In order to run on all 4 devices you need to use <code class="docutils literal notranslate"><span class="pre">torch_xla.launch()</span></code>
 function to spawn the code on all the devices. We will discuss a
 <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code> in the next example.</p>
-</div>
-<div class="section" id="example-2-hf-stable-diffusion-inference">
+</section>
+<section id="example-2-hf-stable-diffusion-inference">
 <h3>Example 2. HF Stable Diffusion Inference<a class="headerlink" href="#example-2-hf-stable-diffusion-inference" title="Permalink to this heading">¶</a></h3>
 <p>Now, consider using <a class="reference external" href="https://github.com/huggingface/diffusers/tree/main/examples/text_to_image">Stable Diffusion
 Inference</a>
@@ -698,8 +705,8 @@ TPU VM:</p>
 <span class="o">(</span>vm<span class="o">)</span>$<span class="w"> </span>python3<span class="w"> </span>inference_tpu_single_device.py
 </pre></div>
 </div>
-</div>
-<div class="section" id="running-on-a-single-tpu-device">
+</section>
+<section id="running-on-a-single-tpu-device">
 <h3>Running on a Single TPU device<a class="headerlink" href="#running-on-a-single-tpu-device" title="Permalink to this heading">¶</a></h3>
 <p>This section describes the changes that need to be made to the
 <a class="reference external" href="https://github.com/huggingface/diffusers/tree/main/examples/text_to_image#inference">text_to_image inference
@@ -759,7 +766,7 @@ two[^1]) may take a long time to compile, but the remaining inference
 steps will be much faster. This is because XLA will reuse the graph that
 it compiled for the first inference.</p>
 <p>If you try to run the code without making any additional changes, you
-will notice that the compilation time is very long (&amp;gt;6 hours). This is
+will notice that the compilation time is very long (&gt;6 hours). This is
 because the XLA compiler tries to build a single graph for all of the
 scheduler steps at once similar to what we have discussed in the
 previous example. To make the code run faster, we need to break the
@@ -785,9 +792,9 @@ CPU, and will improve the performance of the code. Changes are available
 in
 <a class="reference external" href="https://github.com/pytorch-tpu/diffusers/commit/0243d2ef9c2c7bc06956bb1bcc92c23038f6519d">this</a>
 commit. The code now is ready to be run on TPUs.</p>
-</div>
-</div>
-<div class="section" id="profiling-and-performance-analysis">
+</section>
+</section>
+<section id="profiling-and-performance-analysis">
 <h2>Profiling and performance analysis<a class="headerlink" href="#profiling-and-performance-analysis" title="Permalink to this heading">¶</a></h2>
 <p>To further investigate the performance of the model, we can profile it
 using the profiling
@@ -824,7 +831,7 @@ uploaded to tensorboard following the profiling guide.</p>
 <p>Starting from Stable Diffusion model version 2.1</p>
 <p>If we capture a profile without inserting any traces, we will see the
 following:</p>
-<a class="reference external image-reference" href="../_static/img/image.png"><img alt="Alt text" src="../_images/image.png" /></a>
+<p><img alt="Alt text" src="../_images/image.png" /></p>
 <p>The single TPU device on v4-8, which has two cores, appears to be busy.
 There are no significant gaps in their usage, except for a small one in
 the middle. If we scroll up to try to find which process is occupying
@@ -840,7 +847,7 @@ information is displayed in TensorBoard.</p>
 that can fit on the device (32 in this case), we will see that the gap
 in the device is caused by a Python process that is running on the host
 machine.</p>
-<a class="reference external image-reference" href="../_static/img/image-1.png"><img alt="Alt text" src="../_images/image-1.png" /></a>
+<p><img alt="Alt text" src="../_images/image-1.png" /></p>
 <p>We can use the appropriate tool to zoom in on the timeline and see which
 process is running during that period. This is when the Python code
 tracing happens on the host, and we cannot improve the tracing further
@@ -849,7 +856,7 @@ at this point.</p>
 will add traces to the pipeline
 <a class="reference external" href="https://github.com/pytorch-tpu/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py">file</a>
 in the same way that we did for the 2.1 version and capture a profile.</p>
-<a class="reference external image-reference" href="../_static/img/image-4.png"><img alt="Alt text" src="../_images/image-4.png" /></a>
+<p><img alt="Alt text" src="../_images/image-4.png" /></p>
 <p>This time, in addition to the large gap in the middle, which is caused
 by the <code class="docutils literal notranslate"><span class="pre">pipe_watermark</span></code> tracing, there are many small gaps between the
 inference steps within <a class="reference external" href="https://github.com/pytorch-tpu/diffusers/blob/0243d2ef9c2c7bc06956bb1bcc92c23038f6519d/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py#L814-L830">this
@@ -866,7 +873,7 @@ as is.</p>
 <p>Now if we zoom in on the loop, we can see that the graph within the loop
 is broken into smaller parts because the <code class="docutils literal notranslate"><span class="pre">TransferFromDevice</span></code> operation
 happens.</p>
-<a class="reference external image-reference" href="../_static/img/image-2.png"><img alt="Alt text" src="../_images/image-2.png" /></a>
+<p><img alt="Alt text" src="../_images/image-2.png" /></p>
 <p>If we investigate the U-Net function and the scheduler, we can see that
 the U-Net code does not contain any optimization targets for
 PyTorch/XLA. However, there are <code class="docutils literal notranslate"><span class="pre">.item()</span></code> and <code class="docutils literal notranslate"><span class="pre">.nonzero()</span></code> calls inside
@@ -884,8 +891,8 @@ above to the <code class="docutils literal notranslate"><span class="pre">step</
 from python level code tracing and graph building, these gaps are not
 possible to optimize with the current version of PyTorch XLA, but we may
 see improvements in the future when dynamo is enabled in PyTorch XLA.</p>
-</div>
-<div class="section" id="running-on-multiple-tpu-devices">
+</section>
+<section id="running-on-multiple-tpu-devices">
 <h2>Running on Multiple TPU Devices<a class="headerlink" href="#running-on-multiple-tpu-devices" title="Permalink to this heading">¶</a></h2>
 <p>To use multiple TPU devices, you can use the <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code> function
 to spawn the function you ran on a single device to multiple devices.
@@ -913,8 +920,8 @@ version on multiple TPU devices. For this version similar to the above
 changes were made to the
 <a class="reference external" href="https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py">pipeline</a>
 file.</p>
-</div>
-<div class="section" id="running-on-pods">
+</section>
+<section id="running-on-pods">
 <h2>Running on Pods<a class="headerlink" href="#running-on-pods" title="Permalink to this heading">¶</a></h2>
 <p>Once you have the code for running on a single host device, there is no
 further change needed. You can create the TPU pod, for example, by
@@ -933,8 +940,8 @@ HLO. So if there is a random number generator in the code that can
 generate these values, the code will compile for each value
 separately. This can be disabled with <code class="docutils literal notranslate"><span class="pre">XLA_NO_SPECIAL_SCALARS=1</span></code>
 environment variable.</p>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -1013,7 +1020,13 @@ environment variable.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

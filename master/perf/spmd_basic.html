@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>SPMD User Guide &mdash; PyTorch/XLA master documentation</title>
@@ -29,10 +30,15 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="SPMD advanced topics" href="spmd_advanced.html" />
-    <link rel="prev" title="Learn about TPUs" href="../accelerators/tpu.html" />
+    <link rel="prev" title="Control MXU Floating Point Precision" href="../tutorials/precision_tutorial.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,14 +448,14 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="spmd-user-guide">
+  <section id="spmd-user-guide">
 <h1>SPMD User Guide<a class="headerlink" href="#spmd-user-guide" title="Permalink to this heading">¶</a></h1>
 <p>In this user guide, you will learn how
 <a class="reference external" href="https://arxiv.org/abs/2105.04663">SPMD</a> is integrated in PyTorch/XLA.</p>
 <p>For a conceptual guide of the SPMD model of computation, refer to the
 <a class="reference external" href="https://jax-ml.github.io/scaling-book/sharding/">Sharded Matrices and How to Multiply Them</a>
 section of the <em>How to Scale Your Model</em> book.</p>
-<div class="section" id="what-is-pytorch-xla-spmd">
+<section id="what-is-pytorch-xla-spmd">
 <h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
 <p><a class="reference external" href="https://arxiv.org/abs/2105.04663">SPMD</a> is an automatic
 parallelization system for common ML workloads. The XLA compiler will
@@ -457,10 +464,10 @@ collectives, based on the user provided sharding hints. This feature
 allows developers to write PyTorch programs as if they are on a single
 large device without any custom sharded computation ops and/or
 collective communications to scale.</p>
-<a class="reference external image-reference" href="../_static/img/spmd_mode.png"><img alt="Execution strategies" src="../_images/spmd_mode.png" /></a>
-<p><a href="#id2"><span class="problematic" id="id3">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
-</div>
-<div class="section" id="how-to-use-pytorch-xla-spmd">
+<p><img alt="Execution strategies" src="../_images/spmd_mode.png" />
+<em><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></em></p>
+</section>
+<section id="how-to-use-pytorch-xla-spmd">
 <h2>How to use PyTorch/XLA SPMD?<a class="headerlink" href="#how-to-use-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
 <p>Here is an example of using SPMD</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -486,14 +493,14 @@ collective communications to scale.</p>
 <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="section" id="spmd-mode">
+<section id="spmd-mode">
 <h3>SPMD Mode<a class="headerlink" href="#spmd-mode" title="Permalink to this heading">¶</a></h3>
 <p>In order to use SPMD, you need to enable it via <code class="docutils literal notranslate"><span class="pre">xr.use_spmd()</span></code>. In SPMD
 mode there is only one logical device. Distributed computation and
 collective is handled by the <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code>. Note that you can not mix
 SPMD with other distributed libraries.</p>
-</div>
-<div class="section" id="mesh">
+</section>
+<section id="mesh">
 <h3>Mesh<a class="headerlink" href="#mesh" title="Permalink to this heading">¶</a></h3>
 <p>The SPMD programming model is built around the concept of a device mesh.
 A device mesh is a logical N-dimensional
@@ -528,38 +535,38 @@ parallelization. In the previous example, the first mesh dimension is the
 <code class="docutils literal notranslate"><span class="pre">data</span></code> dimension and the second mesh dimension is the <code class="docutils literal notranslate"><span class="pre">model</span></code> dimension.</p></li>
 </ul>
 <p>Retrieve more mesh info via:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
-<span class="go">OrderedDict([(&#39;data&#39;, 4), (&#39;model&#39;, 1)])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="o">&gt;&gt;&gt;</span> <span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
+    <span class="n">OrderedDict</span><span class="p">([(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
 
-<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span><span class="o">.</span><span class="n">get_logical_mesh</span><span class="p">()</span>
-<span class="go">array([[0], [1], [2], [3]])</span>
+    <span class="o">&gt;&gt;&gt;</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_logical_mesh</span><span class="p">()</span>
+    <span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">]])</span>
 
-<span class="go"># Details about these 4 TPUs</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
-<span class="go">[{&#39;core_on_chip&#39;: 0, &#39;num_cores&#39;: 1, &#39;coords&#39;: [0, 0, 0], &#39;name&#39;: &#39;TPU:0&#39;},</span>
-<span class="go"> {&#39;core_on_chip&#39;: 0, &#39;num_cores&#39;: 1, &#39;coords&#39;: [1, 0, 0], &#39;name&#39;: &#39;TPU:1&#39;},</span>
-<span class="go"> {&#39;core_on_chip&#39;: 0, &#39;num_cores&#39;: 1, &#39;coords&#39;: [0, 1, 0], &#39;name&#39;: &#39;TPU:2&#39;},</span>
-<span class="go"> {&#39;core_on_chip&#39;: 0, &#39;num_cores&#39;: 1, &#39;coords&#39;: [1, 1, 0], &#39;name&#39;: &#39;TPU:3&#39;}]</span>
+    <span class="c1"># Details about these 4 TPUs</span>
+    <span class="o">&gt;&gt;&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
+    <span class="p">[{</span><span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:0&#39;</span><span class="p">},</span>
+     <span class="p">{</span><span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:1&#39;</span><span class="p">},</span>
+     <span class="p">{</span><span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:2&#39;</span><span class="p">},</span>
+     <span class="p">{</span><span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:3&#39;</span><span class="p">}]</span>
 </pre></div>
 </div>
-<p>If your workload is run on [multiple TPU slices][multislice] simultaneously, the
+<p>If your workload is run on <a class="reference external" href="https://cloud.google.com/tpu/docs/multislice-introduction">multiple TPU slices</a> simultaneously, the
 device attributes will include a <code class="docutils literal notranslate"><span class="pre">slice_index</span></code> indicating the containing slice:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Details about 8 TPUs allocated over 2 slices</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
-<span class="p">[{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:0&#39;</span><span class="p">},</span>
- <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:1&#39;</span><span class="p">},</span>
- <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:2&#39;</span><span class="p">},</span>
- <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:3&#39;</span><span class="p">},</span>
- <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:4&#39;</span><span class="p">},</span>
- <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:5&#39;</span><span class="p">},</span>
- <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:6&#39;</span><span class="p">},</span>
- <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:7&#39;</span><span class="p">}]</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="c1"># Details about 8 TPUs allocated over 2 slices</span>
+    <span class="o">&gt;&gt;&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
+    <span class="p">[{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:0&#39;</span><span class="p">},</span>
+     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:1&#39;</span><span class="p">},</span>
+     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:2&#39;</span><span class="p">},</span>
+     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:3&#39;</span><span class="p">},</span>
+     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:4&#39;</span><span class="p">},</span>
+     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:5&#39;</span><span class="p">},</span>
+     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:6&#39;</span><span class="p">},</span>
+     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:7&#39;</span><span class="p">}]</span>
 </pre></div>
 </div>
 <p>In this example, a device ID of <code class="docutils literal notranslate"><span class="pre">7</span></code> will refer to the TPU at coordinate
 <code class="docutils literal notranslate"><span class="pre">[1,</span> <span class="pre">1,</span> <span class="pre">0]</span></code> in the second slice.</p>
-</div>
-<div class="section" id="partition-spec">
+</section>
+<section id="partition-spec">
 <h3>Partition spec<a class="headerlink" href="#partition-spec" title="Permalink to this heading">¶</a></h3>
 <p>In the following snippet:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">)</span>
@@ -586,8 +593,8 @@ sharded over the <code class="docutils literal notranslate"><span class="pre">da
 <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">((</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">),))</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="which-device-holds-which-shard">
+</section>
+<section id="which-device-holds-which-shard">
 <h3>Which device holds which shard?<a class="headerlink" href="#which-device-holds-which-shard" title="Permalink to this heading">¶</a></h3>
 <p>Each dimension of a tensor passed to <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> will be split over the
 devices identified by the corresponding element in the partition spec. For
@@ -600,23 +607,23 @@ and <code class="docutils literal notranslate"><span class="pre">b</span> <span 
 <p>This assumes that <code class="docutils literal notranslate"><span class="pre">M</span></code> and <code class="docutils literal notranslate"><span class="pre">N</span></code> are divisible by <code class="docutils literal notranslate"><span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">Y</span></code>, respectively. If not,
 the last device may hold some padding.</p>
 <p>You can also visualize how a tensor is sharded over devices with our
-[SPMD debugging tool][debug-tool].</p>
-</div>
-</div>
-<div class="section" id="further-reading">
+SPMD debugging tool at <a class="reference internal" href="spmd_advanced.html#spmd-debugging-tool"><span class="std std-ref">SPMD Debugging Tool</span></a>.</p>
+</section>
+</section>
+<section id="further-reading">
 <h2>Further Reading<a class="headerlink" href="#further-reading" title="Permalink to this heading">¶</a></h2>
 <ol class="arabic simple">
 <li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_spmd_data_parallel.py">Example</a>
 to use SPMD to express data parallelism.</p></li>
 <li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py">Example</a>
 to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
-<li><p><a class="reference external" href="./spmd_advanced.md">SPMD advanced topics</a></p></li>
-<li><p><a class="reference external" href="./spmd_distributed_checkpoint.md">Spmd Distributed Checkpoint</a></p></li>
-<li><p>[multislice]: <a class="reference external" href="https://cloud.google.com/tpu/docs/multislice-introduction">https://cloud.google.com/tpu/docs/multislice-introduction</a></p></li>
-<li><p>[debug-tool]: ./spmd_advanced.md#spmd-debugging-tool</p></li>
+<li><p><a class="reference internal" href="spmd_advanced.html"><span class="doc std std-doc">SPMD advanced topics</span></a></p></li>
+<li><p><a class="reference internal" href="spmd_distributed_checkpoint.html"><span class="doc std std-doc">Spmd Distributed Checkpoint</span></a></p></li>
+<li></li>
+<li></li>
 </ol>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -629,7 +636,7 @@ to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
         <a href="spmd_advanced.html" class="btn btn-neutral float-right" title="SPMD advanced topics" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="../accelerators/tpu.html" class="btn btn-neutral" title="Learn about TPUs" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="../tutorials/precision_tutorial.html" class="btn btn-neutral" title="Control MXU Floating Point Precision" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -693,7 +700,13 @@ to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

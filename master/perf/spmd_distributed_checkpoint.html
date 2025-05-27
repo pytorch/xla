@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Distributed Checkpointing &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Support for Torch Distributed" href="../features/torch_distributed.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="distributed-checkpointing">
+  <section id="distributed-checkpointing">
 <h1>Distributed Checkpointing<a class="headerlink" href="#distributed-checkpointing" title="Permalink to this heading">¶</a></h1>
 <p>PyTorch/XLA SPMD is compatible with the
 <a class="reference external" href="https://pytorch.org/docs/stable/distributed.checkpoint.html">torch.distributed.checkpoint</a>
@@ -484,7 +491,7 @@ API:</p>
 <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
-<div class="section" id="checkpointmanager">
+<section id="checkpointmanager">
 <h2>CheckpointManager<a class="headerlink" href="#checkpointmanager" title="Permalink to this heading">¶</a></h2>
 <p>The experimental
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint/manager.py#L40">CheckpointManager</a>
@@ -541,7 +548,7 @@ filesystem, including GCS.</p></li>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Checkpoint taken at step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="section" id="restoring-optimizer-state">
+<section id="restoring-optimizer-state">
 <h3>Restoring Optimizer State<a class="headerlink" href="#restoring-optimizer-state" title="Permalink to this heading">¶</a></h3>
 <p>In distributed checkpointing, the state_dicts are loaded in-place, and
 only the required shards of the checkpoint are loaded. Since optimizer
@@ -553,7 +560,7 @@ fake train step by setting all gradients to zero and calling
 <code class="docutils literal notranslate"><span class="pre">optimizer.step</span></code>. <em>This is a destructive method and will touch both
 model parameters and optimizer state</em>, so it should only be called just
 prior to restoration.</p>
-<div class="section" id="process-groups">
+<section id="process-groups">
 <h4>Process Groups<a class="headerlink" href="#process-groups" title="Permalink to this heading">¶</a></h4>
 <p>To use <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> APIs such as distributed checkpointing, a
 process group is required. In SPMD mode, the <code class="docutils literal notranslate"><span class="pre">xla</span></code> backend is not
@@ -573,10 +580,10 @@ global world size, and host rank. An example initialization is below:</p>
 <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">&#39;gloo&#39;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
+</section>
 
 
              </article>
@@ -651,7 +658,13 @@ global world size, and host rank. An example initialization is below:</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

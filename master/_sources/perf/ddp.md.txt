@@ -15,8 +15,8 @@ experimental feature.
 
 For those who switched from the PyTorch eager mode to XLA, here are all
 the changes you need to do to convert your eager DDP model into XLA
-model. We assume that you already know how to use XLA [on a single
-device](../API_GUIDE.md#running-on-a-single-xla-device).
+model. We assume that you already know how to use XLA on a single device
+at {ref}`running-on-a-single-xla-device`.
 
 1.  Import xla specific distributed packages:
 
@@ -241,8 +241,8 @@ XLA approach even though it still achieves a high accuracy rate at
 This feature is still experimental and under active development. Use it
 in cautions and feel free to file any bugs to the [xla github
 repo](https://github.com/pytorch/xla/). For those who are interested in
-the native xla data parallel approach, here is the
-[tutorial](../API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing).
+the native xla data parallel approach, here is the tutorial
+at {ref}`running-on-multiple-xla-devices-with-multi-processing`.
 
 Here are some of the known issues that are under investigation: \* There are some
 issues while being used with `torch.utils.data.DataLoader`. `test_train_mp_mnist.py`

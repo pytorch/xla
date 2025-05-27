@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>SPMD advanced topics &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Distributed Checkpointing" href="spmd_distributed_checkpoint.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,20 +448,20 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="spmd-advanced-topics">
+  <section id="spmd-advanced-topics">
 <h1>SPMD advanced topics<a class="headerlink" href="#spmd-advanced-topics" title="Permalink to this heading">¶</a></h1>
 <p>This guide covers advanced topics with SPMD. Please read the
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/spmd_basic.md">SPMD user guide</a> as a prerequisite.</p>
-<div class="section" id="sharding-aware-host-to-device-data-loading">
+<section id="sharding-aware-host-to-device-data-loading">
 <h2>Sharding-Aware Host-to-Device Data Loading<a class="headerlink" href="#sharding-aware-host-to-device-data-loading" title="Permalink to this heading">¶</a></h2>
 <p>SPMD takes a single-device program, shards it, and executes it in parallel.</p>
 <p>SPMD execution does not work well with the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step.</p>
-<p>To improve the native data loading performance, use PyTorch/XLA’s ParallelLoader, which shards the directly when passed the optional kwarg _input_sharding_:</p>
+<p>To improve the native data loading performance, use PyTorch/XLA’s ParallelLoader, which shards the directly when passed the optional kwarg <em>input_sharding</em>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># MpDeviceLoader returns ParallelLoader.per_device_loader as iterator</span>
 <span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
          <span class="n">train_loader</span><span class="p">,</span>  <span class="c1"># wraps PyTorch DataLoader</span>
          <span class="n">device</span><span class="p">,</span>
-     <span class="c1"># assume 4d input and we want to shard at the batch dimension.</span>
+	 <span class="c1"># assume 4d input and we want to shard at the batch dimension.</span>
          <span class="n">input_sharding</span><span class="o">=</span><span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
 </pre></div>
 </div>
@@ -466,7 +473,7 @@
 <span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
          <span class="n">train_loader</span><span class="p">,</span>  <span class="c1"># wraps PyTorch DataLoader</span>
          <span class="n">device</span><span class="p">,</span>
-     <span class="c1"># specify different sharding for each input of the batch.</span>
+	 <span class="c1"># specify different sharding for each input of the batch.</span>
          <span class="n">input_sharding</span><span class="o">=</span><span class="p">{</span>
           <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
           <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
@@ -474,12 +481,13 @@
 <span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="virtual-device-optimization">
+</section>
+<section id="virtual-device-optimization">
 <h2>Virtual device optimization<a class="headerlink" href="#virtual-device-optimization" title="Permalink to this heading">¶</a></h2>
 <p>PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because SPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.</p>
-<div class="section" id="hybrid-mesh">
-<h3>Hybrid mesh<a class="headerlink" href="#hybrid-mesh" title="Permalink to this heading">¶</a></h3>
+</section>
+<section id="hybrid-mesh">
+<h2>Hybrid mesh<a class="headerlink" href="#hybrid-mesh" title="Permalink to this heading">¶</a></h2>
 <p>Mesh nicely abstracts how the physical device mesh is constructed. Users can arrange devices in any shape and order using the logical mesh. However, one can define a more performant mesh based on the physical topology, especially when it involves Data Center Network (DCN) cross slice connections. HybridMesh creates a mesh which gives good performance out of the box for such multislice environments. It accepts ici_mesh_shape and dcn_mesh_shape which denote logical mesh shapes of inner and outer network.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="kn">import</span> <span class="n">HybridMesh</span>
 
@@ -494,26 +502,24 @@
 <span class="o">&gt;&gt;</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;tensor&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="running-spmd-on-tpu-pod">
-<h2>Running SPMD on TPU Pod<a class="headerlink" href="#running-spmd-on-tpu-pod" title="Permalink to this heading">¶</a></h2>
+<section id="running-spmd-on-tpu-pod">
+<h3>Running SPMD on TPU Pod<a class="headerlink" href="#running-spmd-on-tpu-pod" title="Permalink to this heading">¶</a></h3>
 <p>There is no code change required to go from single TPU host to TPU Pod if you construct your mesh and partition spec based on the number of devices instead of some hardcode constant. To run the PyTorch/XLA workload on TPU Pod, please refer to the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md#pods">Pods section</a> of our PJRT guide.</p>
-</div>
-<div class="section" id="xlashardedtensor">
-<h2>XLAShardedTensor<a class="headerlink" href="#xlashardedtensor" title="Permalink to this heading">¶</a></h2>
+</section>
+<section id="xlashardedtensor">
+<h3>XLAShardedTensor<a class="headerlink" href="#xlashardedtensor" title="Permalink to this heading">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">xs.mark_sharding</span></code> is a inplace op that will attach the sharding annotation to the input tensor, but it also return a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> python object.</p>
 <p>The main use case for <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> [<a class="reference external" href="https://github.com/pytorch/xla/issues/3871">RFC</a>] is to annotate a native <code class="docutils literal notranslate"><span class="pre">torch.tensor</span></code> (on a single device) with a sharding spec. The annotation takes place immediately, but the actual sharding of the tensor is delayed as the computation is carried out lazily, except for the input tensors which are sharded without delay. Once a tensor is annotated and wrapped inside a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>, it can be passed to existing PyTorch ops and <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> layers as <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code>. This is important to ensure that the same PyTorch layers and tensor ops can be stacked together with <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>. This means that the user does not need to rewrite the existing ops and model codes for sharded computation. Namely, <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> will satisfy the following requirements:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> is a <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> subclass and works directly with native torch ops and <code class="docutils literal notranslate"><span class="pre">module.layers</span></code>. We use <code class="docutils literal notranslate"><span class="pre">__torch_dispatch__</span></code> to send <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> to the XLA backend. PyTorch/XLA retrieves attached sharding annotations to trace the graph and invokes XLA SPMDPartitioner.</p></li>
 <li><p>Internally, <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> (and its global_tensor input) is backed by <code class="docutils literal notranslate"><span class="pre">XLATensor</span></code> with a special data structure holding references to the sharded device data.</p></li>
 <li><p>The sharded tensor after lazy execution may be gathered and materialized back to the host as global_tensor when requested on the host (e.g., printing the value of the global tensor.</p></li>
-<li><p>The handles to the local shards are materialized strictly after the lazy execution. <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> exposes <a class="reference external" href="https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharded_tensor.py#L117">local_shards</a> to return the local shards on addressable devices as <span class="raw-html-m2r"><code>List[[XLAShard](https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharded_tensor.py#L12)]</code></span>.</p></li>
+<li><p>The handles to the local shards are materialized strictly after the lazy execution. <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> exposes <a class="reference external" href="https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharded_tensor.py#L117">local_shards</a> to return the local shards on addressable devices as <code>List[<a class="reference external" href="https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharded_tensor.py#L12">XLAShard</a>]</code>.</p></li>
 </ul>
-<p>There is also an ongoing effort to integrate <span class="raw-html-m2r"><code>XLAShardedTensor</code></span> into <span class="raw-html-m2r"><code>DistributedTensor</code></span> API to support XLA backend [<a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>].</p>
-</div>
-<div class="section" id="dtensor-integration">
-<h2>DTensor Integration<a class="headerlink" href="#dtensor-integration" title="Permalink to this heading">¶</a></h2>
+<p>There is also an ongoing effort to integrate <code>XLAShardedTensor</code> into <code>DistributedTensor</code> API to support XLA backend [<a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>].</p>
+</section>
+<section id="dtensor-integration">
+<h3>DTensor Integration<a class="headerlink" href="#dtensor-integration" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch has prototype-released <a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/tensor/README.md">DTensor</a> since 2.1.
 We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>. We have a proof-of-concept integration for <code class="docutils literal notranslate"><span class="pre">distribute_tensor</span></code>, which calls <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> annotation API to shard a tensor and its computation using XLA:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
@@ -526,9 +532,9 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 </pre></div>
 </div>
 <p>This feature is experimental and stay tuned for more updates, examples and tutorials in the upcoming releases.</p>
-</div>
-<div class="section" id="activation-sharding-for-torch-compile">
-<h2>Activation Sharding for torch.compile<a class="headerlink" href="#activation-sharding-for-torch-compile" title="Permalink to this heading">¶</a></h2>
+</section>
+<section id="activation-sharding-for-torch-compile">
+<h3>Activation Sharding for torch.compile<a class="headerlink" href="#activation-sharding-for-torch-compile" title="Permalink to this heading">¶</a></h3>
 <p>In the 2.3 release, PyTorch/XLA added the custom op <code class="docutils literal notranslate"><span class="pre">dynamo_mark_sharding</span></code> which can be used to perform the activation sharding in a <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> region. This is part of our ongoing effort to make <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> + <code class="docutils literal notranslate"><span class="pre">SPMD</span></code> to be the recommended way of doing the model inference using PyTorch/XLA. Example of using this custom op:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Activation output sharding</span>
 <span class="n">device_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_devices</span><span class="p">)]</span> <span class="c1"># List[int]</span>
@@ -538,9 +544,9 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">dynamo_mark_sharding</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="n">axis_names</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="spmd-debugging-tool">
-<h2>SPMD Debugging Tool<a class="headerlink" href="#spmd-debugging-tool" title="Permalink to this heading">¶</a></h2>
+</section>
+<section id="spmd-debugging-tool">
+<span id="id1"></span><h3>SPMD Debugging Tool<a class="headerlink" href="#spmd-debugging-tool" title="Permalink to this heading">¶</a></h3>
 <p>We provide a <code class="docutils literal notranslate"><span class="pre">shard</span> <span class="pre">placement</span> <span class="pre">visualization</span> <span class="pre">debug</span> <span class="pre">tool</span></code> for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> to visualize sharded tensor, or you could use <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> or <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code>:</p>
 <ul class="simple">
 <li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:</p></li>
@@ -559,7 +565,8 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../_static/img/spmd_debug_1.png">
   <img alt="visualize_tensor_sharding example on TPU v4-8(single-host)" src="../_static/img/spmd_debug_1_light.png">
-</picture><ul class="simple">
+</picture>
+<ul class="simple">
 <li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> and visualization result:</p></li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd.debugging</span><span class="w"> </span><span class="kn">import</span> <span class="n">visualize_sharding</span>
@@ -570,10 +577,11 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../_static/img/spmd_debug_2.png">
   <img alt="visualize_sharding example on TPU v4-8(single-host)" src="../_static/img/spmd_debug_2_light.png">
-</picture><p>You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style <code class="docutils literal notranslate"><span class="pre">tiled</span></code>, <code class="docutils literal notranslate"><span class="pre">partial_replication</span></code> and <code class="docutils literal notranslate"><span class="pre">replicated</span></code>.</p>
-</div>
-<div class="section" id="auto-sharding">
-<h2>Auto-Sharding<a class="headerlink" href="#auto-sharding" title="Permalink to this heading">¶</a></h2>
+</picture>
+<p>You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style <code class="docutils literal notranslate"><span class="pre">tiled</span></code>, <code class="docutils literal notranslate"><span class="pre">partial_replication</span></code> and <code class="docutils literal notranslate"><span class="pre">replicated</span></code>.</p>
+</section>
+<section id="auto-sharding">
+<h3>Auto-Sharding<a class="headerlink" href="#auto-sharding" title="Permalink to this heading">¶</a></h3>
 <p>We are introducing a new PyTorch/XLA SPMD feature, called <code class="docutils literal notranslate"><span class="pre">auto-sharding</span></code>, <a class="reference external" href="https://github.com/pytorch/xla/issues/6322">RFC</a>. This is an experimental feature in <code class="docutils literal notranslate"><span class="pre">r2.3</span></code> and <code class="docutils literal notranslate"><span class="pre">nightly</span></code>, that supports <code class="docutils literal notranslate"><span class="pre">XLA:TPU</span></code> and a single TPUVM host.</p>
 <p>PyTorch/XLA auto-sharding can be enabled by one of the following:</p>
 <ul class="simple">
@@ -607,8 +615,9 @@ the XLA-based auto-sharding pass:</p>
 <code class="docutils literal notranslate"><span class="pre">XLA_AUTO_SPMD_MESH=2,2</span></code> corresponds to a 2-by-2 mesh with 4 global devices. If unset,
 a default device mesh shape of <code class="docutils literal notranslate"><span class="pre">num_devices,1</span></code> will be used.</p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
              </article>
@@ -655,16 +664,16 @@ a default device mesh shape of <code class="docutils literal notranslate"><span 
               <ul>
 <li><a class="reference internal" href="#">SPMD advanced topics</a><ul>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
-<li><a class="reference internal" href="#virtual-device-optimization">Virtual device optimization</a><ul>
-<li><a class="reference internal" href="#hybrid-mesh">Hybrid mesh</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#virtual-device-optimization">Virtual device optimization</a></li>
+<li><a class="reference internal" href="#hybrid-mesh">Hybrid mesh</a><ul>
 <li><a class="reference internal" href="#running-spmd-on-tpu-pod">Running SPMD on TPU Pod</a></li>
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
 <li><a class="reference internal" href="#dtensor-integration">DTensor Integration</a></li>
 <li><a class="reference internal" href="#activation-sharding-for-torch-compile">Activation Sharding for torch.compile</a></li>
 <li><a class="reference internal" href="#spmd-debugging-tool">SPMD Debugging Tool</a></li>
 <li><a class="reference internal" href="#auto-sharding">Auto-Sharding</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -687,7 +696,13 @@ a default device mesh shape of <code class="docutils literal notranslate"><span 
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

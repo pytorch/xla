@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Building with Bazel &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Configure A Development Environment" href="configure-environment.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,14 +448,14 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="building-with-bazel">
+  <section id="building-with-bazel">
 <h1>Building with Bazel<a class="headerlink" href="#building-with-bazel" title="Permalink to this heading">¶</a></h1>
 <p><a class="reference external" href="https://bazel.build/">Bazel</a> is a free software tool used for the
 automation of building and testing software.
 <a class="reference external" href="https://www.tensorflow.org/http">TensorFlow</a> and
 <a class="reference external" href="https://github.com/openxla/xla">OpenXLA</a> both use it, which makes it a
 good fit for PyTorch/XLA as well.</p>
-<div class="section" id="bazel-dependencies">
+<section id="bazel-dependencies">
 <h2>Bazel dependencies<a class="headerlink" href="#bazel-dependencies" title="Permalink to this heading">¶</a></h2>
 <p>Openxla is a <a class="reference external" href="https://bazel.build/external/overview">bazel external dependency</a> for PyTorch/XLA,
 which can be seen in the <code class="docutils literal notranslate"><span class="pre">WORKSPACE</span></code> file:</p>
@@ -516,8 +523,8 @@ this mechanism. Python headers are also sourced from there instead of
 depending on the system version. These are satisfied from the
 <code class="docutils literal notranslate"><span class="pre">&quot;&#64;pybind11//:pybind11_embed&quot;</span></code>, which sets up compiler options for
 linking with <code class="docutils literal notranslate"><span class="pre">libpython</span></code> transitively.</p>
-</div>
-<div class="section" id="how-to-build-xla-libraries">
+</section>
+<section id="how-to-build-xla-libraries">
 <h2>How to build XLA libraries<a class="headerlink" href="#how-to-build-xla-libraries" title="Permalink to this heading">¶</a></h2>
 <p>Building the libraries is simple:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bazel<span class="w"> </span>build<span class="w"> </span>//torch_xla/csrc/runtime/...
@@ -537,8 +544,8 @@ in the same way. Therefore, there is no need to build the XLA libraries
 separately from the rest of the pluing as used to be the case, building
 the whole repository, or the plugin shared object that links everythin
 else in, is enough.</p>
-</div>
-<div class="section" id="how-to-build-the-torch-xla-plugin">
+</section>
+<section id="how-to-build-the-torch-xla-plugin">
 <h2>How to build the Torch/XLA plugin<a class="headerlink" href="#how-to-build-the-torch-xla-plugin" title="Permalink to this heading">¶</a></h2>
 <p>The normal build can be achieved by the invoking the standard
 <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">bdist_wheel</span></code>, but C++ bindings can be built simply
@@ -549,8 +556,8 @@ with:</p>
 <p>This will build the XLA client and the PyTorch plugin and link it all
 together. This can be useful when testing changes, to be able to compile
 the C++ code without building the python plugin faster iteration cycles.</p>
-</div>
-<div class="section" id="remote-caching">
+</section>
+<section id="remote-caching">
 <h2>Remote caching<a class="headerlink" href="#remote-caching" title="Permalink to this heading">¶</a></h2>
 <p>Bazel comes with <a class="reference external" href="https://bazel.build/remote/caching">remote caching</a>
 built in. There are plenty of cache backends that can be used; we deploy
@@ -605,8 +612,8 @@ because it will compile everything from scratch, but incremental
 compilations will be very fast. On updating the TensorFlow pin, it will
 once again be a bit slower the first time per key, and then until the
 next update quite fast again.</p>
-</div>
-<div class="section" id="running-tests">
+</section>
+<section id="running-tests">
 <h2>Running tests<a class="headerlink" href="#running-tests" title="Permalink to this heading">¶</a></h2>
 <p>Currently C++ code is built and tested by bazel. Python code will be
 migrated in the future.</p>
@@ -632,8 +639,8 @@ port, or because they use a GPU or TPU device and there’s only one
 available at the time. For that reason, all tests under
 <code class="docutils literal notranslate"><span class="pre">torch_xla/csrc/</span></code> are bundled into a single target <code class="docutils literal notranslate"><span class="pre">:main</span></code> that runs
 them all sequentially.</p>
-</div>
-<div class="section" id="code-coverage">
+</section>
+<section id="code-coverage">
 <h2>Code coverage<a class="headerlink" href="#code-coverage" title="Permalink to this heading">¶</a></h2>
 <p>When running tests, it can be useful to calculate code coverage.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bazel<span class="w"> </span>coverage<span class="w"> </span>//torch_xla/csrc/runtime/...
@@ -644,23 +651,23 @@ documentation</a>, or in your
 editor of choice with lcov plugins, e.g. <a class="reference external" href="https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters">Coverage
 Gutters</a>
 for VSCode.</p>
-</div>
-<div class="section" id="language-server">
+</section>
+<section id="language-server">
 <h2>Language Server<a class="headerlink" href="#language-server" title="Permalink to this heading">¶</a></h2>
 <p>Bazel can power a language server like <a class="reference external" href="https://clangd.llvm.org/">clangd</a> that brings code references,
 autocompletion and semantic understanding of the underlying code to your
 editor of choice. For VSCode, one can use <a class="reference external" href="https://github.com/stackb/bazel-stack-vscode-cc">Bazel Stack</a>
 that can be combined with <a class="reference external" href="https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd">Visual Studio clangd extension</a>
 functionality to bring powerful features to assist code editing.</p>
-</div>
-<div class="section" id="building-pytorch-xla">
+</section>
+<section id="building-pytorch-xla">
 <h2>Building PyTorch/XLA<a class="headerlink" href="#building-pytorch-xla" title="Permalink to this heading">¶</a></h2>
 <p>As always, PyTorch/XLA can be built using Python <code class="docutils literal notranslate"><span class="pre">distutils</span></code>:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BAZEL_REMOTE_CACHE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">SILO_NAME</span><span class="o">=</span><span class="s2">&quot;cache-silo-YOUR-USER&quot;</span><span class="w"> </span><span class="nv">TPUVM_MODE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>setup.py<span class="w"> </span>bdist_wheel
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -736,7 +743,13 @@ functionality to bring powerful features to assist code editing.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

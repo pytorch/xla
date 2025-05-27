@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Configure A Development Environment &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="C++ Debugging" href="cpp_debugger.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="configure-a-development-environment">
+  <section id="configure-a-development-environment">
 <h1>Configure A Development Environment<a class="headerlink" href="#configure-a-development-environment" title="Permalink to this heading">¶</a></h1>
 <p>The goal of this guide is to set up an interactive development
 environment on a Cloud TPU with PyTorch/XLA installed. If this is your
@@ -453,7 +460,7 @@ ecosystem packages. For an up-to-date list of examples, see our main
 <a class="reference external" href="https://github.com/pytorch/xla">README</a>.</p>
 <p>If you would like to set up a more customized development environment,
 keep reading.</p>
-<div class="section" id="visual-studio-code">
+<section id="visual-studio-code">
 <h2>Visual Studio Code<a class="headerlink" href="#visual-studio-code" title="Permalink to this heading">¶</a></h2>
 <p>Prerequisites:</p>
 <ul class="simple">
@@ -475,7 +482,7 @@ zone where you have Cloud TPU quota:</p>
 <span class="nb">export</span><span class="w"> </span><span class="nv">TPU_TYPE</span><span class="o">=</span>...<span class="w"> </span><span class="c1"># e.g. &quot;v2-8&quot;</span>
 </pre></div>
 </div>
-<div class="section" id="creating-and-connecting-to-your-tpu">
+<section id="creating-and-connecting-to-your-tpu">
 <h3>Creating and connecting to your TPU<a class="headerlink" href="#creating-and-connecting-to-your-tpu" title="Permalink to this heading">¶</a></h3>
 <p>Create a Cloud TPU VM with your SSH key registered:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Assuming your SSH key is named `id_ed25519`</span>
@@ -495,13 +502,13 @@ gcloud<span class="w"> </span>compute<span class="w"> </span>tpus<span class="w"
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh<span class="w"> </span><span class="nv">$USER</span>-tpu
 </pre></div>
 </div>
-</div>
-<div class="section" id="setting-up-a-visual-studio-code-workspace-with-pytorch-xla">
+</section>
+<section id="setting-up-a-visual-studio-code-workspace-with-pytorch-xla">
 <h3>Setting up a Visual Studio Code workspace with PyTorch/XLA<a class="headerlink" href="#setting-up-a-visual-studio-code-workspace-with-pytorch-xla" title="Permalink to this heading">¶</a></h3>
 <p>From the <a class="reference external" href="https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette">VS Code Command
 Palette</a>,
 select <code class="docutils literal notranslate"><span class="pre">`Remote-SSH:</span> <span class="pre">Connect</span> <span class="pre">to</span> <span class="pre">Host</span></code>
-&lt;<a class="reference external" href="https://code.visualstudio.com/docs/remote/ssh&amp;gt;[__">https://code.visualstudio.com/docs/remote/ssh&amp;gt;[__</a> and select the
+&lt;<a class="reference external" href="https://code.visualstudio.com/docs/remote/ssh">https://code.visualstudio.com/docs/remote/ssh</a>&gt;[__ and select the
 host you just created (named ]{.title-ref}[$USER-tpu]{.title-ref}`).
 VS Code will then open a new window connected to your TPU VM.</p>
 <p>From the built-in <code class="docutils literal notranslate"><span class="pre">Terminal</span></code>, create a new folder to use as a workspace
@@ -534,15 +541,15 @@ via the Command Palette (<code class="docutils literal notranslate"><span class=
 <span class="c1"># Number of devices will vary based on TPU type</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="next-steps">
+</section>
+<section id="next-steps">
 <h3>Next steps<a class="headerlink" href="#next-steps" title="Permalink to this heading">¶</a></h3>
 <p>That’s it! You should now have a remote Visual Studio Code workspace set
 up with PyTorch/XLA installed. To run more realistic examples, see our
 <a class="reference external" href="https://github.com/pytorch/xla/tree/master/examples">examples guide</a>.</p>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
              </article>
@@ -616,7 +623,13 @@ up with PyTorch/XLA installed. To run more realistic examples, see our
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

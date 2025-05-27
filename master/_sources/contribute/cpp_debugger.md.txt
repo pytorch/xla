@@ -20,7 +20,7 @@ conda install -c conda-forge gdb
 
 ## Building PyTorch with Debugging Symbols
 
-Debugging options are described in [`setup.py`]((https://github.com/pytorch/pytorch/blob/300e0ee13c08ef77e88f32204a2e0925c17ce216/setup.py#L2C1-L11C53)):
+Debugging options are described in [setup.py on GitHub](https://github.com/pytorch/pytorch/blob/300e0ee13c08ef77e88f32204a2e0925c17ce216/setup.py#L2C1-L11C53):
 
 ``` python
 # Environment variables you are probably interested in:
@@ -54,7 +54,7 @@ We suggest the following steps:
 
 At this point, your PyTorch is built with debugging symbols and ready to debug
 with GDB. However, we recommend debugging with VSCode. For more information, see
-[Debug with VSCode](debug-with-vscode).
+{ref}`Debug with VSCode`.
 
 ### Verify your file is built
 

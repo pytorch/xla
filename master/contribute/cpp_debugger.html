@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>C++ Debugging &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Op Lowering Guide" href="op_lowering.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,16 +448,16 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="c-debugging">
+  <section id="c-debugging">
 <h1>C++ Debugging<a class="headerlink" href="#c-debugging" title="Permalink to this heading">¶</a></h1>
 <p>This guide shows you how build your PyTorch C++ code with debugging symbols, and
 how to debug PyTorch using GDB or LLDB with VSCode.</p>
-<div class="section" id="why-would-you-need-this">
+<section id="why-would-you-need-this">
 <h2>Why would you need this?<a class="headerlink" href="#why-would-you-need-this" title="Permalink to this heading">¶</a></h2>
 <p>This guide is for contributors to PyTorch or PyTorch/XLA who use C++ to build
 features like <a class="reference external" href="https://pytorch.org/tutorials/advanced/cpp_custom_ops.html">custom C++ operations</a>.</p>
-</div>
-<div class="section" id="install-gdb-the-gnu-project-debugger">
+</section>
+<section id="install-gdb-the-gnu-project-debugger">
 <h2>Install GDB: The GNU Project Debugger<a class="headerlink" href="#install-gdb-the-gnu-project-debugger" title="Permalink to this heading">¶</a></h2>
 <p>You can install GDB using the <a class="reference external" href="https://www.sourceware.org/gdb/">official instructions</a>.
 If you are using a conda environment, you can also install GDB with the following
@@ -458,10 +465,10 @@ command:</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>gdb
 </pre></div>
 </div>
-</div>
-<div class="section" id="building-pytorch-with-debugging-symbols">
+</section>
+<section id="building-pytorch-with-debugging-symbols">
 <h2>Building PyTorch with Debugging Symbols<a class="headerlink" href="#building-pytorch-with-debugging-symbols" title="Permalink to this heading">¶</a></h2>
-<p>Debugging options are described in <cite>``setup.py`</cite> &lt;(<a class="reference external" href="https://github.com/pytorch/pytorch/blob/300e0ee13c08ef77e88f32204a2e0925c17ce216/setup.py#L2C1-L11C53">https://github.com/pytorch/pytorch/blob/300e0ee13c08ef77e88f32204a2e0925c17ce216/setup.py#L2C1-L11C53</a>&gt;`_):</p>
+<p>Debugging options are described in <a class="reference external" href="https://github.com/pytorch/pytorch/blob/300e0ee13c08ef77e88f32204a2e0925c17ce216/setup.py#L2C1-L11C53">setup.py on GitHub</a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Environment variables you are probably interested in:</span>
 <span class="c1">#</span>
 <span class="c1">#   DEBUG</span>
@@ -492,8 +499,8 @@ additional files you want to debug.</p></li>
 </ol>
 <p>At this point, your PyTorch is built with debugging symbols and ready to debug
 with GDB. However, we recommend debugging with VSCode. For more information, see
-<a class="reference external" href="debug-with-vscode">Debug with VSCode</a>.</p>
-<div class="section" id="verify-your-file-is-built">
+<a class="reference internal" href="#debug-with-vscode"><span class="std std-ref">Debug with VSCode</span></a>.</p>
+<section id="verify-your-file-is-built">
 <h3>Verify your file is built<a class="headerlink" href="#verify-your-file-is-built" title="Permalink to this heading">¶</a></h3>
 <p>For PyTorch, we recommend you do a full clean and rebuild each time.
 Unfortunately, touching a file to update its timestamp does not reliably cause
@@ -511,14 +518,14 @@ built with debug symbols. For example:</p>
 </div>
 <p>Before you start a new debug session, make sure you have shut down any previous
 debug sessions.</p>
-</div>
-</div>
-<div class="section" id="vscode-configuration">
+</section>
+</section>
+<section id="vscode-configuration">
 <h2>VSCode Configuration<a class="headerlink" href="#vscode-configuration" title="Permalink to this heading">¶</a></h2>
 <p>To use VSCode for debugging, you must install the C/C++ Extension Pack,
 published by Microsoft. Search for <code class="docutils literal notranslate"><span class="pre">ms-vscode.cpptools-extension-pack</span></code> in the
 VSCode <em>Extensions</em> tab.</p>
-<a class="reference external image-reference" href="../_static/img/debugger0_pack.png"><img alt="Microsoft C/C++ Extension Pack" src="../_images/debugger0_pack.png" /></a>
+<p><img alt="Microsoft C/C++ Extension Pack" src="../_images/debugger0_pack.png" /></p>
 <p>Next, create a file named <code class="docutils literal notranslate"><span class="pre">launch.json</span></code> in the <code class="docutils literal notranslate"><span class="pre">pytorch/.vscode</span></code> folder. The
 following is a sample file to start from. You’ll need to adjust the file paths
 to match your specific installation.</p>
@@ -554,66 +561,57 @@ to match your specific installation.</p>
 <span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="lldb">
+</section>
+<section id="lldb">
 <h2>LLDB<a class="headerlink" href="#lldb" title="Permalink to this heading">¶</a></h2>
 <p>You can also debug with LLDB. In our experience, LLDB is faster. But both have
 their quirks, and you may benefit from switching between the two.</p>
 <p>Install LLDB for VSCode by searching for <code class="docutils literal notranslate"><span class="pre">vadimcn.vscode-lldb</span></code> in the VSCode
 <em>Extensions</em>.</p>
 <p>Then add the following snippet to your launch.json file:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;LLDB Python&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lldb&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;request&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;program&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/home/your-user-id/miniconda3/envs/torch310/bin/python&quot;</span><span class="p">,</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;LLDB Python&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lldb&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;request&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;program&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/home/your-user-id/miniconda3/envs/torch310/bin/python&quot;</span><span class="p">,</span>
 
-<span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
 </pre></div>
 </div>
 <p>Replace the value for <code class="docutils literal notranslate"><span class="pre">program</span></code> with the path to <code class="docutils literal notranslate"><span class="pre">python</span></code> in your virtual
 environment.</p>
-</div>
-<div class="section" id="id1">
-<h2>Debug with VSCode<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h2>
+</section>
+<section id="debug-with-vscode">
+<h2>Debug with VSCode<a class="headerlink" href="#debug-with-vscode" title="Permalink to this heading">¶</a></h2>
 <ol class="arabic">
 <li><p>Open the file you want to debug.</p>
-<a class="reference external image-reference" href="../_static/img/debugger1_file.png"><img alt="Opened File" src="../_images/debugger1_file.png" /></a>
+<p><img alt="Opened File" src="../_images/debugger1_file.png" /></p>
 </li>
 <li><p>Click to the left of the line number to set a breakpoint. A red dot is
 displayed indicating the breakpoint has been set. The breakpoint will also
 be listed in the debugger tab.</p>
-<a class="reference external image-reference" href="../_static/img/debugger2_breakpoint.png"><img alt="Breakpoint" src="../_images/debugger2_breakpoint.png" /></a>
+<p><img alt="Breakpoint" src="../_images/debugger2_breakpoint.png" /></p>
 </li>
-<li><dl class="simple">
-<dt>Select the GDB or LLDB configuration using the dropdown to the right of the</dt><dd><p>green play button.</p>
-</dd>
-</dl>
-</li>
-<li><dl>
-<dt>Click the green play button to start the debugging session. The debugger</dt><dd><p>processes the rules set in the <code class="docutils literal notranslate"><span class="pre">launch.json</span></code> file.</p>
+<li><p>Select the GDB or LLDB configuration using the dropdown to the right of the
+green play button.</p></li>
+<li><p>Click the green play button to start the debugging session. The debugger
+processes the rules set in the <code class="docutils literal notranslate"><span class="pre">launch.json</span></code> file.</p>
 <p>After starting the debug session, the red dot will change to an empty white
 circle indicated <code class="docutils literal notranslate"><span class="pre">torch</span></code> symbols have not been loaded.</p>
-</dd>
-</dl>
-<a class="reference external image-reference" href="../_static/img/debugger3_session.png"><img alt="Debugger Session" src="../_images/debugger3_session.png" /></a>
+<p><img alt="Debugger Session" src="../_images/debugger3_session.png" /></p>
 </li>
-<li><dl class="simple">
-<dt>In the python interpreter, <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">torch</span></code>. This loads the <code class="docutils literal notranslate"><span class="pre">torch</span></code> library you</dt><dd><p>built. The breakpoints are displayed as red dots again.</p>
-</dd>
-</dl>
-<a class="reference external image-reference" href="../_static/img/debugger4_active.png"><img alt="Active torch" src="../_images/debugger4_active.png" /></a>
+<li><p>In the python interpreter, <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">torch</span></code>. This loads the <code class="docutils literal notranslate"><span class="pre">torch</span></code> library you
+built. The breakpoints are displayed as red dots again.</p>
+<p><img alt="Active torch" src="../_images/debugger4_active.png" /></p>
 </li>
-<li><dl class="simple">
-<dt>Run a command that will trigger the breakpoint, for example, <code class="docutils literal notranslate"><span class="pre">torch.einsum()</span></code>.</dt><dd><p>A yellow arrow indicates the current file location. Variable and call stack
+<li><p>Run a command that will trigger the breakpoint, for example, <code class="docutils literal notranslate"><span class="pre">torch.einsum()</span></code>.
+A yellow arrow indicates the current file location. Variable and call stack
 information is displayed on the left.</p>
-</dd>
-</dl>
-<a class="reference external image-reference" href="../_static/img/debugger5_break.png"><img alt="Breakpoint" src="../_images/debugger5_break.png" /></a>
+<p><img alt="Breakpoint" src="../_images/debugger5_break.png" /></p>
 </li>
 </ol>
-</div>
-<div class="section" id="a-realistic-build-command">
+</section>
+<section id="a-realistic-build-command">
 <h2>A realistic build command<a class="headerlink" href="#a-realistic-build-command" title="Permalink to this heading">¶</a></h2>
 <p>Over time, you’ll collect additional flags for your build command, such as not
 building certain libraries to speed up builds, or adding diagnostics. The following
@@ -622,13 +620,13 @@ to print dispatcher traces.</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">USE_CUSTOM_DEBINFO</span><span class="o">=</span><span class="s2">&quot;aten/src/ATen/native/Linear.cpp&quot;</span><span class="w"> </span><span class="nv">USE_CUDA</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/home/USERNAME/miniconda3/envs/torch310/lib<span class="w"> </span><span class="nv">CFLAGS</span><span class="o">=</span><span class="s2">&quot;-DHAS_TORCH_SHOW_DISPATCH_TRACE&quot;</span><span class="w"> </span>python<span class="w"> </span>setup.py<span class="w"> </span>develop
 </pre></div>
 </div>
-</div>
-<div class="section" id="future-work">
+</section>
+<section id="future-work">
 <h2>Future Work<a class="headerlink" href="#future-work" title="Permalink to this heading">¶</a></h2>
 <p>This guide has demonstrated how to build debugging symbols for PyTorch C++ files.
 Future work will demonstrate adding debugging symbols to PyTorch/XLA C++ files.</p>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -682,7 +680,7 @@ Future work will demonstrate adding debugging symbols to PyTorch/XLA C++ files.<
 </li>
 <li><a class="reference internal" href="#vscode-configuration">VSCode Configuration</a></li>
 <li><a class="reference internal" href="#lldb">LLDB</a></li>
-<li><a class="reference internal" href="#id1">Debug with VSCode</a></li>
+<li><a class="reference internal" href="#debug-with-vscode">Debug with VSCode</a></li>
 <li><a class="reference internal" href="#a-realistic-build-command">A realistic build command</a></li>
 <li><a class="reference internal" href="#future-work">Future Work</a></li>
 </ul>
@@ -707,7 +705,13 @@ Future work will demonstrate adding debugging symbols to PyTorch/XLA C++ files.<
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>PJRT Runtime &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
   <!-- Google Tag Manager -->
@@ -283,7 +289,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -319,6 +325,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -439,7 +446,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="pjrt-runtime">
+  <section id="pjrt-runtime">
 <h1>PJRT Runtime<a class="headerlink" href="#pjrt-runtime" title="Permalink to this heading">¶</a></h1>
 <p>PyTorch/XLA has migrated from the TensorFlow-based XRT runtime to the
 <a class="reference external" href="https://github.com/openxla/xla/tree/main/xla/pjrt">PJRT runtime</a> used
@@ -473,7 +480,7 @@ cores</p></li>
 <li><p>[experimental] <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> support for TPU v2 and v3,
 including <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code></p></li>
 </ul>
-<div class="section" id="tl-dr">
+<section id="tl-dr">
 <h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>To use the PJRT preview runtime, set the <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment
@@ -481,8 +488,8 @@ variable to <code class="docutils literal notranslate"><span class="pre">CPU</sp
 <li><p>In XRT, all distributed workloads are multiprocess, with one process
 per device. On TPU v2 and v3 in PJRT, workloads are multiprocess and
 multithreaded (4 processes with 2 threads each), so your workload
-should be thread-safe. See <a class="reference external" href="#multithreading-on-tpu-v2v3">Multithreading on TPU
-v2/v3</a> and the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing">Multiprocessing section
+should be thread-safe. See <span class="xref myst">Multithreading on TPU
+v2/v3</span> and the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing">Multiprocessing section
 of the API
 guide</a>
 for more information. Key differences to keep in mind:</p>
@@ -556,15 +563,15 @@ if __name__ == &#39;__main__&#39;:
 <span class="w"> </span> torch_xla.launch(_mp_fn)
 </pre></div>
 </div>
-</div>
-<div class="section" id="benefits">
+</section>
+<section id="benefits">
 <h2>Benefits<a class="headerlink" href="#benefits" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>Simple runtime configuration: just set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> to <code class="docutils literal notranslate"><span class="pre">TPU</span></code>,
 <code class="docutils literal notranslate"><span class="pre">CPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">CUDA</span></code> and start using XLA! Or, let PJRT select a device
 automatically based on your environment.</p></li>
 <li><p>Improved performance: reduced overhead from gRPC means faster
-end-to-end execution. On TorchBench 2.0, we observed a &amp;gt;35%
+end-to-end execution. On TorchBench 2.0, we observed a &gt;35%
 improvement in training time on TPU v4.</p></li>
 <li><p>Easy pod execution: just copy your code to each TPU worker, and
 execute them all at the same time with
@@ -573,50 +580,50 @@ execute them all at the same time with
 sizes</a> and supports up to
 2048 TPU chips.</p></li>
 </ul>
-</div>
-<div class="section" id="quickstart">
+</section>
+<section id="quickstart">
 <h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this heading">¶</a></h2>
 <p>To start using PJRT with PyTorch/XLA, all you need to do is set the
 <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment variable. If you’re working on a TPU v2 or v3,
 keep reading to learn about the differences between TPU v2 and v3 and
 v4.</p>
-<div class="section" id="cpu">
+<section id="cpu">
 <h3>CPU<a class="headerlink" href="#cpu" title="Permalink to this heading">¶</a></h3>
 <p>On any machine with PyTorch/XLA installed, you can run our MNIST example
 on CPU like this:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_mnist</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CPU python3 xla/test/test_train_mp_mnist.py --fake_data
 </pre></div>
 </div>
-</div>
-<div class="section" id="tpu">
+</section>
+<section id="tpu">
 <h3>TPU<a class="headerlink" href="#tpu" title="Permalink to this heading">¶</a></h3>
 <p>To create a new TPU with PyTorch/XLA r2.0 installed:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm create $USER-pjrt --accelerator-type=v4-8 --version=tpu-vm-v4-pt-2.0 --zone=us-central2-b --project=$PROJECT
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm create $USER-pjrt --accelerator-type=v4-8 --version=tpu-vm-v4-pt-2.0 --zone=us-central2-b --project=$PROJECT
 </pre></div>
 </div>
 <p>On a v4-8, you can run our ResNet50 example like this:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="o">--</span><span class="n">depth</span><span class="o">=</span><span class="mi">1</span> <span class="o">--</span><span class="n">branch</span> <span class="n">r2</span><span class="mf">.0</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">.</span><span class="n">git</span>
-<span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">256</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git clone --depth=1 --branch r2.0 https://github.com/pytorch/xla.git
+PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1
 </pre></div>
 </div>
 <p>By default, PJRT will use all TPU chips. To use only one TPU chip,
 configure <code class="docutils literal notranslate"><span class="pre">TPU_PROCESS_BOUNDS</span></code> and <code class="docutils literal notranslate"><span class="pre">TPU_VISIBLE_CHIPS</span></code>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">TPU_PROCESS_BOUNDS</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span> <span class="n">TPU_VISIBLE_CHIPS</span><span class="o">=</span><span class="mi">0</span> <span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">256</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=0 PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1
 </pre></div>
 </div>
-<div class="section" id="pods">
+<section id="pods">
 <h4>Pods<a class="headerlink" href="#pods" title="Permalink to this heading">¶</a></h4>
 <p>On TPU Pods, use <code class="docutils literal notranslate"><span class="pre">gcloud</span></code> to run your command on each TPU in parallel:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command=&quot;git clone --depth=1 --branch r1.13 https://github.com/pytorch/xla.git&quot;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command=&quot;git clone --depth=1 --branch r1.13 https://github.com/pytorch/xla.git&quot;
 gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command=&quot;PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1&quot;
 </pre></div>
 </div>
-</div>
-<div class="section" id="docker">
+</section>
+<section id="docker">
 <h4>Docker<a class="headerlink" href="#docker" title="Permalink to this heading">¶</a></h4>
 <p>You can also use Docker to run your workload in a container with
 PyTorch/XLA preinstalled:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export DOCKER_IMAGE=gcr.io/...
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>export DOCKER_IMAGE=gcr.io/...
 
 # Optional: authenticate docker if your image is in a private GCP repository
 gcloud compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command &quot;sudo gcloud auth configure-docker&quot;
@@ -631,32 +638,32 @@ TPU pods is only supported with host networking <code class="docutils literal no
 time. See the <a class="reference external" href="https://cloud.google.com/tpu/docs/run-in-container">Cloud TPU
 documentation</a> for
 more information.</p>
-</div>
-</div>
-<div class="section" id="gpu">
+</section>
+</section>
+<section id="gpu">
 <h3>GPU<a class="headerlink" href="#gpu" title="Permalink to this heading">¶</a></h3>
-</div>
-<div class="section" id="single-node-gpu-training">
+</section>
+<section id="single-node-gpu-training">
 <h3>Single-node GPU training<a class="headerlink" href="#single-node-gpu-training" title="Permalink to this heading">¶</a></h3>
 <p>To use GPUs with PJRT, simply set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=CUDA</span></code> and configure
 <code class="docutils literal notranslate"><span class="pre">GPU_NUM_DEVICES</span></code> to the number of devices on the host. For example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CUDA</span> <span class="n">GPU_NUM_DEVICES</span><span class="o">=</span><span class="mi">4</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
 </pre></div>
 </div>
 <p>You can also use <code class="docutils literal notranslate"><span class="pre">torchrun</span></code> to initiate the single-node multi-GPU
 training. For example,</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
 </pre></div>
 </div>
 <p>In the above example, <code class="docutils literal notranslate"><span class="pre">--nnodes</span></code> means how many machines (physical
 machines or VMs) to be used (it is 1 since we do single-node training).
 <code class="docutils literal notranslate"><span class="pre">--nproc-per-node</span></code> means how many GPU devices to be used.</p>
-</div>
-<div class="section" id="multi-node-gpu-training">
+</section>
+<section id="multi-node-gpu-training">
 <h3>Multi-node GPU training<a class="headerlink" href="#multi-node-gpu-training" title="Permalink to this heading">¶</a></h3>
 <p><strong>Note that this feature only works for cuda 12+</strong>. Similar to how
 PyTorch uses multi-node training, you can run the command as below:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun \
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun \
 --nnodes=${NUMBER_GPU_VM} \
 --node_rank=${CURRENT_NODE_RANK} \
 --nproc_per_node=${NUMBER_LOCAL_GPU_DEVICES} \
@@ -677,19 +684,19 @@ omitted.</p></li>
 </ul>
 <p>For example, if you want to train on 2 GPU machines: machine_0 and
 machine_1, on the first GPU machine machine_0, run</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=CUDA torchrun \</span>
-<span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
-<span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">0</span> \
-<span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">4</span> \
-<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot;</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span>  <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># PJRT_DEVICE=CUDA torchrun \
+--nnodes=2 \
+--node_rank=0 \
+--nproc_per_node=4 \
+--rdzv_endpoint=&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot; pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
 </pre></div>
 </div>
 <p>On the second GPU machine, run</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=CUDA torchrun \</span>
-<span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
-<span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">1</span> \
-<span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">4</span> \
-<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot;</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span>  <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># PJRT_DEVICE=CUDA torchrun \
+--nnodes=2 \
+--node_rank=1 \
+--nproc_per_node=4 \
+--rdzv_endpoint=&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot; pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
 </pre></div>
 </div>
 <p>the difference between the 2 commands above are <code class="docutils literal notranslate"><span class="pre">--node_rank</span></code> and
@@ -697,9 +704,9 @@ potentially <code class="docutils literal notranslate"><span class="pre">--nproc
 GPU devices on each machine. All the rest are identical. For more
 information about <code class="docutils literal notranslate"><span class="pre">torchrun</span></code>, please refer to this
 <a class="reference external" href="https://pytorch.org/docs/stable/elastic/run.html">page</a>.</p>
-</div>
-</div>
-<div class="section" id="differences-from-xrt">
+</section>
+</section>
+<section id="differences-from-xrt">
 <h2>Differences from XRT<a class="headerlink" href="#differences-from-xrt" title="Permalink to this heading">¶</a></h2>
 <p>Although in most cases we expect PJRT and XRT to work mostly
 interchangeably from the end-user’s perspective (especially on TPU v4),
@@ -741,8 +748,8 @@ and run the code on each host in parallel
 communication to enhance stability on large TPU pods. See below for
 more details.</p></li>
 </ul>
-<div class="section" id="id3">
-<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<section id="multithreading-on-tpu-v2-v3">
+<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#multithreading-on-tpu-v2-v3" title="Permalink to this heading">¶</a></h3>
 <p>On TPU v2 and v3, <strong>distributed workloads always run multithreaded</strong>,
 since each TPU core exposes two TPU cores as devices and only one
 process may open a TPU chip at a time. In its default configuration,
@@ -753,15 +760,15 @@ distributed workloads will run across 4 processes, each with only one
 thread. This is identical to XRT’s behavior.</p>
 <p>In most cases, this will not require substantial changes to your
 existing code. The main change you will have to make in most cases is to
-model initialization. Because <code class="docutils literal notranslate"><span class="pre">torch</span></code>‘s global RNG is shared between
+model initialization. Because <code class="docutils literal notranslate"><span class="pre">torch</span></code>’s global RNG is shared between
 threads, results will vary between threads and runs even if you set
 <code class="docutils literal notranslate"><span class="pre">torch.manual_seed</span></code> to the same value in every replica. To get
 consistent parameters between replicas, either use
 <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt.broadcast_master_param</span></code> to broadcast one
 replica’s parameters to all other replicas, or load each replica’s
 parameters from a common checkpoint.</p>
-</div>
-<div class="section" id="changes-to-xm-rendezvous">
+</section>
+<section id="changes-to-xm-rendezvous">
 <h3>Changes to xm.rendezvous<a class="headerlink" href="#changes-to-xm-rendezvous" title="Permalink to this heading">¶</a></h3>
 <p><em>New in PyTorch/XLA r2.0</em></p>
 <p>With XRT, worker 0 runs a mesh master service, and all processes on all
@@ -785,15 +792,15 @@ of workers, all workers must participate in the <code class="docutils literal no
 <p>If you require the old behavior of <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> (i.e. communicating
 data without altering the XLA graph and/or synchronizing a subset of
 workers), consider using <code class="docutils literal notranslate"><span class="pre">`torch.distributed.barrier</span></code>
-&lt;<a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier&amp;gt;[__">https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier&amp;gt;[__</a>
+&lt;<a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier">https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier</a>&gt;[__
 or ]{.title-ref}<code class="docutils literal notranslate"><span class="pre">torch.distributed.all_gather_object</span></code>
-&lt;<a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object&amp;gt;[__">https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object&amp;gt;[__</a>
+&lt;<a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object">https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object</a>&gt;[__
 with a ]{.title-ref}[gloo]{.title-ref}[ process group. If you are also
 using the ]{.title-ref}[xla]{.title-ref}[
 ]{.title-ref}[torch.distributed]{.title-ref}[ backend, you can use
-]{.title-ref}[torch.new<a href="#id4"><span class="problematic" id="id5">*</span></a>group]{.title-ref}[ to create a
-]{.title-ref}[gloo]{.title-ref}[ subgroup. See <a href="#id6"><span class="problematic" id="id7">`</span></a>this example
-https://pytorch.org/docs/stable/distributed.html#monitored-barrier]{.title-ref}*_
+]{.title-ref}[torch.new_group]{.title-ref}[ to create a
+]{.title-ref}[gloo]{.title-ref}[ subgroup. See `this example
+&lt;https://pytorch.org/docs/stable/distributed.html#monitored-barrier&gt;]{.title-ref}__
 from the PyTorch documentation. Keep in mind these constraints:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> is not fully supported on TPU v2/v3. Only a
@@ -803,8 +810,8 @@ subset of operations with the <code class="docutils literal notranslate"><span c
 chips, so expect this alternative to be less reliable than using
 <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> with PJRT at large scales.</p></li>
 </ul>
-</div>
-<div class="section" id="pjrt-and-torch-distributed">
+</section>
+<section id="pjrt-and-torch-distributed">
 <h3>PJRT and torch.distributed<a class="headerlink" href="#pjrt-and-torch-distributed" title="Permalink to this heading">¶</a></h3>
 <p><em>New in PyTorch/XLA r2.0</em></p>
 <p>When using PJRT with <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> and
@@ -844,22 +851,22 @@ init_method finds this IP automatically.</p>
 <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt_backend</span></code>, as TPU v2/v3 support in
 <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> is still experimental.</p>
 <p>For more information about using <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code> on
-PyTorch/XLA, see <a class="reference external" href="./ddp.md">ddp.md</a> on TPU V4. For an example that uses
-DDP and PJRT together, run the following <a class="reference external" href="../test/test_train_mp_imagenet.py">example
-script</a> on a TPU:</p>
+PyTorch/XLA, see <span class="xref myst">ddp.md</span> on TPU V4. For an example that uses
+DDP and PJRT together, run the following <span class="xref myst">example
+script</span> on a TPU:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>TPU<span class="w"> </span>python<span class="w"> </span>xla/test/test_train_mp_mnist.py<span class="w"> </span>--ddp<span class="w"> </span>--pjrt_distributed<span class="w"> </span>--fake_data<span class="w"> </span>--num_epochs<span class="w"> </span><span class="m">1</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="performance">
+</section>
+</section>
+<section id="performance">
 <h2>Performance<a class="headerlink" href="#performance" title="Permalink to this heading">¶</a></h2>
 <p>TorchBench shows improvements in average training time across tasks with
 PJRT compared to XRT, with an average improvement of over 35% on TPU
 v4-8. The benefits vary significantly by task and model type, ranging
 from 0% to 175%. The following chart shows the breakdown by task:</p>
-<a class="reference external image-reference" href="../_static/img/torchbench_pjrt_vs_xrt.svg"><img alt="PJRT vs XRT" src="../_images/torchbench_pjrt_vs_xrt.svg" /></a>
-<div class="section" id="new-tpu-runtime">
+<p><img alt="PJRT vs XRT" src="../_images/torchbench_pjrt_vs_xrt.svg" /></p>
+<section id="new-tpu-runtime">
 <h3>New TPU runtime<a class="headerlink" href="#new-tpu-runtime" title="Permalink to this heading">¶</a></h3>
 <p><em>New in PyTorch/XLA r2.0</em></p>
 <p>The PyTorch/XLA r2.0 release introduces support for the <a class="reference external" href="https://github.com/openxla/community/blob/main/rfcs/20230123-pjrt-plugin.md#rfc-openxla-pjrt-plugin">PJRT Plugin
@@ -873,12 +880,12 @@ in a future version. If you encounter an issue that only happens on
 <p>In most cases, we expect performance to be similar between the two
 runtimes, but in some cases, the new runtime may be up to 30% faster.
 The following chart shows the breakdown by task:</p>
-<a class="reference external image-reference" href="../_static/img/torchbench_tfrt_vs_se.svg"><img alt="TFRT vs StreamExecutor" src="../_images/torchbench_tfrt_vs_se.svg" /></a>
+<p><img alt="TFRT vs StreamExecutor" src="../_images/torchbench_tfrt_vs_se.svg" /></p>
 <p>Note: the improvements shown in this chart are also included in the PJRT
 vs XRT comparison.</p>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
              </article>
@@ -930,7 +937,7 @@ vs XRT comparison.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#differences-from-xrt">Differences from XRT</a><ul>
-<li><a class="reference internal" href="#id3">Multithreading on TPU v2/v3</a></li>
+<li><a class="reference internal" href="#multithreading-on-tpu-v2-v3">Multithreading on TPU v2/v3</a></li>
 <li><a class="reference internal" href="#changes-to-xm-rendezvous">Changes to xm.rendezvous</a></li>
 <li><a class="reference internal" href="#pjrt-and-torch-distributed">PJRT and torch.distributed</a></li>
 </ul>
@@ -961,7 +968,13 @@ vs XRT comparison.</p>
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Codegen Migration Guide &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Custom Hardware Plugins" href="plugins.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,23 +448,23 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="codegen-migration-guide">
+  <section id="codegen-migration-guide">
 <h1>Codegen Migration Guide<a class="headerlink" href="#codegen-migration-guide" title="Permalink to this heading">¶</a></h1>
 <p>As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean
 up the existing stub code (which spans over 6+ files) that were used to
 do the op lowering. The complete process and file structure for the old
-op lowering can be found in the op lowering guide :ref:'op-lowering'.</p>
+op lowering can be found in the op lowering guide :ref:’op-lowering’.</p>
 <p>For more information on different operation configurations, see
-<cite>``codegen/xla_native_functions.yaml`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml">https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml</a>&gt;`_.
+<a class="reference external" href="https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml"><code class="docutils literal notranslate"><span class="pre">codegen/xla_native_functions.yaml</span></code></a>.
 Replacing a supported op (under the <code class="docutils literal notranslate"><span class="pre">supported</span></code> config) with an codegen
 equivalent (under the <code class="docutils literal notranslate"><span class="pre">full_codegen</span></code> config) SHOULD NOT introduce any new
 behavior, it is purely for the clean up purpose. Operations under other
 configurations might have different behavior. See
-<cite>``codegen/xla_native_functions.yaml`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml">https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml</a>&gt;`_
+<a class="reference external" href="https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml"><code class="docutils literal notranslate"><span class="pre">codegen/xla_native_functions.yaml</span></code></a>
 for info on other configs.</p>
 <p>For more information about dispatching in PyTorch, see
 <a class="reference external" href="https://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/">Exyang’s Blog post</a>.</p>
-<div class="section" id="before-you-start">
+<section id="before-you-start">
 <h2>Before you start<a class="headerlink" href="#before-you-start" title="Permalink to this heading">¶</a></h2>
 <p>You should follow the instructions in
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md">here</a> to
@@ -474,12 +481,12 @@ before you work on the codegen.</p>
 <p>PyTorch/XLA uses <a class="reference external" href="https://github.com/pytorch/xla/issues/3560">https://github.com/pytorch/xla/issues/3560</a> to track
 the status of codegen migration. When working on a codegen, please put
 your GitHub alias with the PR link on the issue to avoid duplicate work.</p>
-</div>
-<div class="section" id="file-structure">
+</section>
+<section id="file-structure">
 <h2>File structure<a class="headerlink" href="#file-structure" title="Permalink to this heading">¶</a></h2>
 <p>All file mentioned below lives under the <code class="docutils literal notranslate"><span class="pre">xla/torch_xla/csrc</span></code> folder,
 with the exception of <code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code></p>
-<div class="section" id="pytorch-codegen-files">
+<section id="pytorch-codegen-files">
 <h3>PyTorch Codegen files<a class="headerlink" href="#pytorch-codegen-files" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>torch/csrc/lazy/core/shape_inference.h</p>
@@ -504,8 +511,8 @@ and defined the generated IR class</p></li>
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="pytorch-xla-codegen-files">
+</section>
+<section id="pytorch-xla-codegen-files">
 <h3>PyTorch/XLA Codegen files<a class="headerlink" href="#pytorch-xla-codegen-files" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>xla/xla_native_functions.yaml</p>
@@ -538,8 +545,8 @@ used to construct the full_codegen ops.</p></li>
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="pytorch-xla-old-op-lowering-files">
+</section>
+<section id="pytorch-xla-old-op-lowering-files">
 <h3>PyTorch/XLA Old Op Lowering files<a class="headerlink" href="#pytorch-xla-old-op-lowering-files" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>xla/torch_xla/csrc/generated/aten_xla_type.cpp</p>
@@ -570,11 +577,11 @@ ops share the same IR.</p></li>
 </ul>
 </li>
 </ul>
-</div>
-</div>
-<div class="section" id="codegen-step-by-step">
+</section>
+</section>
+<section id="codegen-step-by-step">
 <h2>Codegen step by step<a class="headerlink" href="#codegen-step-by-step" title="Permalink to this heading">¶</a></h2>
-<div class="section" id="identify-the-op">
+<section id="identify-the-op">
 <h3>1. Identify the op<a class="headerlink" href="#identify-the-op" title="Permalink to this heading">¶</a></h3>
 <p>When you work on your first few codegens, we generally recommend you to
 start with the simpler ops. This guide will go over one unary one one
@@ -587,7 +594,7 @@ in _adaptive_avg_pool3d, there is a conditional fallback:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<ol class="arabic simple">
+<ol class="arabic simple" start="2">
 <li><p>Results in dynamic shape as these ops are WIP and may evolve over
 time. At some future point, we may bring the ops into codegen.</p></li>
 <li><p>Does not invoke a tensor_method directly. For example:</p></li>
@@ -600,7 +607,7 @@ time. At some future point, we may bring the ops into codegen.</p></li>
 <span class="p">}</span>
 </pre></div>
 </div>
-<ol class="arabic simple">
+<ol class="arabic simple" start="4">
 <li><p>Has a complicated tensor_method, ideally it should be a directly
 mapping from op to IR.</p></li>
 </ol>
@@ -611,19 +618,19 @@ mapping from op to IR.</p></li>
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="codegen-the-op-and-inspect-the-generated-file">
+</section>
+<section id="codegen-the-op-and-inspect-the-generated-file">
 <h3>2. Codegen the op and inspect the generated file<a class="headerlink" href="#codegen-the-op-and-inspect-the-generated-file" title="Permalink to this heading">¶</a></h3>
 <p>Find the op in <code class="docutils literal notranslate"><span class="pre">xla/codegen/xla_native_functions.yaml</span></code> and move it to
 the <code class="docutils literal notranslate"><span class="pre">full_codegen</span></code> column and run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code> under the xla
 directory again. The build will fail (reason explained later in this
 guide) but you can still see the generated file.</p>
 <p>If while generating the file you run into an error involving
-<cite>``shape_inference.h`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h">https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h</a>&gt;`_,
+<a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h"><code class="docutils literal notranslate"><span class="pre">shape_inference.h</span></code></a>,
 you might be running into a problem with PyTorch not yet having the
 necessary implementation for the function to be generated. You can
 attempt to add the necessary function in
-<cite>``shape_inference.h`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h">https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h</a>&gt;`_
+<a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h"><code class="docutils literal notranslate"><span class="pre">shape_inference.h</span></code></a>
 to be unblocked.</p>
 <p>The code snippets below uses <code class="docutils literal notranslate"><span class="pre">abs</span></code> as an example. #### XLANativeFunctions.cpp</p>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">XLANativeFunctions::abs</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
@@ -666,7 +673,7 @@ and return it as a result. Note that this part used to be manually done in tenso
 <span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
 </pre></div>
 </div>
-<div class="section" id="lazyir-h">
+<section id="lazyir-h">
 <h4>LazyIr.h<a class="headerlink" href="#lazyir-h" title="Permalink to this heading">¶</a></h4>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Abs</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">XlaNode</span><span class="w"> </span><span class="p">{</span>
 <span class="w"> </span><span class="k">public</span><span class="o">:</span>
@@ -692,18 +699,18 @@ migration. - For every op, it will generate a {OP}OutputShape method. We
 need to manually declare and implement this method in a separate file.
 -For every op, it will generate a Lower declaration. We need to manually
 implement this lowering function in a separate file.</p>
-</div>
-</div>
-<div class="section" id="implement-the-missing-ir-function">
+</section>
+</section>
+<section id="implement-the-missing-ir-function">
 <h3>3. Implement the missing IR function<a class="headerlink" href="#implement-the-missing-ir-function" title="Permalink to this heading">¶</a></h3>
-<div class="section" id="torch-xla-csrc-ops-ops-xla-shape-fn-h">
+<section id="torch-xla-csrc-ops-ops-xla-shape-fn-h">
 <h4>torch_xla/csrc/ops/ops_xla_shape_fn.h<a class="headerlink" href="#torch-xla-csrc-ops-ops-xla-shape-fn-h" title="Permalink to this heading">¶</a></h4>
 <p>Declare the {OP}OutputShape:</p>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">xla</span><span class="o">::</span><span class="n">Shape</span><span class="w"> </span><span class="nf">AbsOutputShape</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">XlaValue</span><span class="o">&amp;</span><span class="w"> </span><span class="n">input</span><span class="p">);</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="torch-xla-csrc-ops-ops-xla-shape-fn-cpp">
+</section>
+<section id="torch-xla-csrc-ops-ops-xla-shape-fn-cpp">
 <h4>torch_xla/csrc/ops/ops_xla_shape_fn.cpp<a class="headerlink" href="#torch-xla-csrc-ops-ops-xla-shape-fn-cpp" title="Permalink to this heading">¶</a></h4>
 <p>Implement the {OP}OutputShape:</p>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">xla</span><span class="o">::</span><span class="n">Shape</span><span class="w"> </span><span class="nf">AbsOutputShape</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">XlaValue</span><span class="o">&amp;</span><span class="w"> </span><span class="n">input</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">input</span><span class="p">.</span><span class="n">xla_shape</span><span class="p">();</span><span class="w"> </span><span class="p">}</span>
@@ -725,11 +732,11 @@ example would be:</p>
 </div>
 <p>Note that you should not start from scratch. Find the Xla::Shape
 computation logic from the existing op and move it this these two files.</p>
-</div>
-</div>
-<div class="section" id="implement-the-lowering-function">
+</section>
+</section>
+<section id="implement-the-lowering-function">
 <h3>4. Implement the lowering function<a class="headerlink" href="#implement-the-lowering-function" title="Permalink to this heading">¶</a></h3>
-<div class="section" id="torch-xla-csrc-ops-ops-lower-fn-cpp">
+<section id="torch-xla-csrc-ops-ops-lower-fn-cpp">
 <h4>torch_xla/csrc/ops/ops_lower_fn.cpp<a class="headerlink" href="#torch-xla-csrc-ops-ops-lower-fn-cpp" title="Permalink to this heading">¶</a></h4>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">torch_xla</span><span class="o">::</span><span class="n">XlaOpVector</span><span class="w"> </span><span class="nf">Abs::Lower</span><span class="p">(</span><span class="n">LoweringContext</span><span class="o">*</span><span class="w"> </span><span class="n">loctx</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="n">xla</span><span class="o">::</span><span class="n">XlaOp</span><span class="w"> </span><span class="n">xla_input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">loctx</span><span class="o">-&gt;</span><span class="n">GetOutputOp</span><span class="p">(</span><span class="n">operand</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
@@ -742,9 +749,9 @@ lowering. Some Ops that were originally implemented in
 <code class="docutils literal notranslate"><span class="pre">torch_xla/csrc/ops/ops.cpp</span></code> use <code class="docutils literal notranslate"><span class="pre">GenericOp</span></code>. You will need to slightly
 modify their lowering implementation to fit the implementation provided
 above.</p>
-</div>
-</div>
-<div class="section" id="cleanup">
+</section>
+</section>
+<section id="cleanup">
 <h3>5. Cleanup<a class="headerlink" href="#cleanup" title="Permalink to this heading">¶</a></h3>
 <p>Delete the existing op from aten_xla_type.cpp, tensor_methods.h,
 tensor_methods.cpp, and ops/…. Note that sometimes you have to keep
@@ -766,9 +773,9 @@ lowering function for each op.</p>
 <span class="w">        </span><span class="n">norm_exp</span><span class="p">);</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="run-the-test-and-verify-the-result">
+</section>
+</section>
+<section id="run-the-test-and-verify-the-result">
 <h2>Run the test and verify the result<a class="headerlink" href="#run-the-test-and-verify-the-result" title="Permalink to this heading">¶</a></h2>
 <p>Run the C++ op test or a simple test that only involves the generated
 ops. To run the C++ test: 1. Build the xla through
@@ -781,27 +788,27 @@ run the desired C++ test (for example, to run <code class="docutils literal notr
 </div>
 <p>As usual, two things to verify are the correctness and the xla counter
 being incremented correctly.</p>
-</div>
-<div class="section" id="sample-prs">
+</section>
+<section id="sample-prs">
 <h2>Sample PRs<a class="headerlink" href="#sample-prs" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>Lowering of <code class="docutils literal notranslate"><span class="pre">bitwise_left_shift</span></code> <a class="reference external" href="https://github.com/pytorch/xla/pull/8865">https://github.com/pytorch/xla/pull/8865</a></p></li>
-<li><p>Unary/Binary OP -&amp;gt; Codegen erf, erfc, erfinv, and exp
+<li><p>Unary/Binary OP -&gt; Codegen erf, erfc, erfinv, and exp
 (<a class="reference external" href="https://github.com/pytorch/xla/pull/3659">https://github.com/pytorch/xla/pull/3659</a>)</p></li>
-<li><p>OP with optional -&amp;gt; Codegen binary_cross_entropy/backward
+<li><p>OP with optional -&gt; Codegen binary_cross_entropy/backward
 (<a class="reference external" href="https://github.com/pytorch/xla/pull/3809">https://github.com/pytorch/xla/pull/3809</a>)</p></li>
-<li><p>OP with <code class="docutils literal notranslate"><span class="pre">at::Scalar</span></code> -&amp;gt; Codegen addcdiv and addcmul
+<li><p>OP with <code class="docutils literal notranslate"><span class="pre">at::Scalar</span></code> -&gt; Codegen addcdiv and addcmul
 (<a class="reference external" href="https://github.com/pytorch/xla/pull/3768">https://github.com/pytorch/xla/pull/3768</a>)</p></li>
-<li><p>OP with vector that support negative index -&amp;gt; Codegen amin amax
+<li><p>OP with vector that support negative index -&gt; Codegen amin amax
 (<a class="reference external" href="https://github.com/pytorch/xla/pull/3771">https://github.com/pytorch/xla/pull/3771</a>)</p></li>
-<li><p>OP with special fallback logic -&amp;gt; partially codegen
+<li><p>OP with special fallback logic -&gt; partially codegen
 adaptive_avgpool3d and backward
 (<a class="reference external" href="https://github.com/pytorch/xla/pull/3790">https://github.com/pytorch/xla/pull/3790</a>) To see more examples,
 please take a look at the tracking issue
 (<a class="reference external" href="https://github.com/pytorch/xla/issues/3560">https://github.com/pytorch/xla/issues/3560</a>).</p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -896,7 +903,13 @@ please take a look at the tracking issue
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>PyTorch/XLA documentation &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="PyTorch on XLA Devices" href="learn/pytorch-on-xla-devices.html" />
@@ -284,7 +290,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -320,6 +326,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -445,15 +452,10 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="pytorch-xla-documentation">
+  <section id="pytorch-xla-documentation">
 <h1>PyTorch/XLA documentation<a class="headerlink" href="#pytorch-xla-documentation" title="Permalink to this heading">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">torch_xla</span></code> is a Python package that implements <a class="reference external" href="https://openxla.org/xla">XLA</a> as a backend for PyTorch.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
 <tbody>
 <tr class="row-odd"><td><p><strong>Familiar APIs</strong></p>
 <p>Create and train PyTorch models on TPUs,
@@ -470,7 +472,7 @@ for cost-efficient training and inference.</p>
 </tr>
 </tbody>
 </table>
-<div class="section" id="getting-started">
+<section id="getting-started">
 <h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this heading">¶</a></h2>
 <p>Install with pip.</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>torch<span class="w"> </span>torch_xla<span class="o">[</span>tpu<span class="o">]</span>
@@ -481,8 +483,8 @@ for cost-efficient training and inference.</p>
 python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import torch; import torch_xla; print(torch.tensor(1.0, device=&#39;xla&#39;).device)&quot;</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="tutorials">
+</section>
+<section id="tutorials">
 <h2>Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this heading">¶</a></h2>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
@@ -495,6 +497,7 @@ python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;i
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -546,13 +549,14 @@ python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;i
 <li class="toctree-l1"><a class="reference internal" href="contribute/plugins.html">Custom Hardware Plugins</a></li>
 </ul>
 </div>
-</div>
-<div class="section" id="api-reference">
+</section>
+<section id="api-reference">
 <h2>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this heading">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="learn/api-guide.html">PyTorch/XLA API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="learn/api-guide.html#module-torch_xla">torch_xla</a></li>
+<li class="toctree-l2"><a class="reference internal" href="learn/api-guide.html#module-torch_xla.backends">backends</a></li>
 <li class="toctree-l2"><a class="reference internal" href="learn/api-guide.html#module-torch_xla.runtime">runtime</a></li>
 <li class="toctree-l2"><a class="reference internal" href="learn/api-guide.html#module-torch_xla.core.xla_model">xla_model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="learn/api-guide.html#module-torch_xla.distributed.parallel_loader">distributed</a></li>
@@ -563,8 +567,8 @@ python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;i
 </li>
 </ul>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -635,7 +639,13 @@ python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;i
          <script src="_static/underscore.js"></script>
          <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="_static/doctools.js"></script>
-         <script src="_static/sphinx_highlight.js"></script>
+         <script src="_static/clipboard.min.js"></script>
+         <script src="_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

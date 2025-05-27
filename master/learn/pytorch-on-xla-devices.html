@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>PyTorch on XLA Devices &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Pytorch/XLA Overview" href="xla-overview.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,11 +448,11 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="pytorch-on-xla-devices">
+  <section id="pytorch-on-xla-devices">
 <h1>PyTorch on XLA Devices<a class="headerlink" href="#pytorch-on-xla-devices" title="Permalink to this heading">¶</a></h1>
 <p>PyTorch runs on XLA devices, like TPUs, with the <a class="reference external" href="https://github.com/pytorch/xla/">torch_xla package</a>. This document describes how
 to run your models on these devices.</p>
-<div class="section" id="creating-an-xla-tensor">
+<section id="creating-an-xla-tensor">
 <h2>Creating an XLA Tensor<a class="headerlink" href="#creating-an-xla-tensor" title="Permalink to this heading">¶</a></h2>
 <p>PyTorch/XLA adds a new <code class="docutils literal notranslate"><span class="pre">xla</span></code> device type to PyTorch. This device type
 works just like other PyTorch device types. For example, here’s how to
@@ -463,8 +470,8 @@ create and print an XLA tensor:</p>
 regular PyTorch with a few additions. Importing <code class="docutils literal notranslate"><span class="pre">torch_xla</span></code> initializes
 PyTorch/XLA, and <code class="docutils literal notranslate"><span class="pre">xm.xla_device()</span></code> returns the current XLA device. This
 may be a CPU or TPU depending on your environment.</p>
-</div>
-<div class="section" id="xla-tensors-are-pytorch-tensors">
+</section>
+<section id="xla-tensors-are-pytorch-tensors">
 <h2>XLA Tensors are PyTorch Tensors<a class="headerlink" href="#xla-tensors-are-pytorch-tensors" title="Permalink to this heading">¶</a></h2>
 <p>PyTorch operations can be performed on XLA tensors just like CPU or CUDA
 tensors.</p>
@@ -495,15 +502,15 @@ the same device. So code like</p>
 </pre></div>
 </div>
 <p>will throw an error since the <code class="docutils literal notranslate"><span class="pre">torch.nn.Linear</span></code> module is on the CPU.</p>
-</div>
-<div class="section" id="running-models-on-xla-devices">
+</section>
+<section id="running-models-on-xla-devices">
 <h2>Running Models on XLA Devices<a class="headerlink" href="#running-models-on-xla-devices" title="Permalink to this heading">¶</a></h2>
 <p>Building a new PyTorch network or converting an existing one to run on
 XLA devices requires only a few lines of XLA-specific code. The
 following snippets highlight these lines when running on a single device
 and multiple devices with XLA multi-processing.</p>
-<div class="section" id="running-on-a-single-xla-device">
-<h3>Running on a Single XLA Device<a class="headerlink" href="#running-on-a-single-xla-device" title="Permalink to this heading">¶</a></h3>
+<section id="running-on-a-single-xla-device">
+<span id="id1"></span><h3>Running on a Single XLA Device<a class="headerlink" href="#running-on-a-single-xla-device" title="Permalink to this heading">¶</a></h3>
 <p>The following snippet shows a network training on a single XLA device:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
@@ -529,12 +536,12 @@ XLA. The model definition, dataloader, optimizer and training loop can
 work on any device. The only XLA-specific code is a couple lines that
 acquire the XLA device and materializing the tensors. Calling <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>
 at the end of each training iteration causes XLA to execute its current
-graph and update the model’s parameters. See <a class="reference external" href="#xla-tensor-deep-dive">XLA Tensor Deep
-Dive</a> for more on how XLA creates graphs and runs
+graph and update the model’s parameters. See <a class="reference internal" href="#xla-tensor-deep-dive"><span class="std std-ref">XLA Tensor Deep Dive</span></a>
+for more on how XLA creates graphs and runs
 operations.</p>
-</div>
-<div class="section" id="running-on-multiple-xla-devices-with-multi-processing">
-<h3>Running on Multiple XLA Devices with Multi-processing<a class="headerlink" href="#running-on-multiple-xla-devices-with-multi-processing" title="Permalink to this heading">¶</a></h3>
+</section>
+<section id="running-on-multiple-xla-devices-with-multi-processing">
+<span id="id2"></span><h3>Running on Multiple XLA Devices with Multi-processing<a class="headerlink" href="#running-on-multiple-xla-devices-with-multi-processing" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch/XLA makes it easy to accelerate training by running on multiple
 XLA devices. The following snippet shows how:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
@@ -613,8 +620,8 @@ which has <code class="docutils literal notranslate"><span class="pre">torch_xla
 example</a>
 for more on training a network on multiple XLA devices with
 multi-processing.</p>
-</div>
-<div class="section" id="running-on-tpu-pods">
+</section>
+<section id="running-on-tpu-pods">
 <h3>Running on TPU Pods<a class="headerlink" href="#running-on-tpu-pods" title="Permalink to this heading">¶</a></h3>
 <p>Multi-host setup for different accelerators can be very different. This
 doc will talk about the device independent bits of multi-host training
@@ -629,7 +636,7 @@ Howto. This doc will focus on the PyTorch/XLA perspective of the Setup.</p>
 <p>Let’s assume you have the above mnist example from above section in a
 <code class="docutils literal notranslate"><span class="pre">train_mnist_xla.py</span></code>. If it is a single host multi device training, you
 would ssh to the TPUVM and run command like</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">train_mnist_xla</span><span class="o">.</span><span class="n">py</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=TPU python3 train_mnist_xla.py
 </pre></div>
 </div>
 <p>Now in order to run the same models on a TPU v4-16 (which has 2 host,
@@ -638,7 +645,7 @@ access the training script and training data. This is usually done by
 using the <code class="docutils literal notranslate"><span class="pre">gcloud</span> <span class="pre">scp</span></code> command or <code class="docutils literal notranslate"><span class="pre">gcloud</span> <span class="pre">ssh</span></code> command to copy the
 training scripts to all hosts. - Run the same training command on all
 hosts at the same time.</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=$ZONE --project=$PROJECT --worker=all --command=&quot;PJRT_DEVICE=TPU python3 train_mnist_xla.py&quot;</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">    gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=$ZONE --project=$PROJECT --worker=all --command=&quot;PJRT_DEVICE=TPU python3 train_mnist_xla.py&quot;</span>
 </pre></div>
 </div>
 <p>Above <code class="docutils literal notranslate"><span class="pre">gcloud</span> <span class="pre">ssh</span></code> command will ssh to all hosts in TPUVM Pod and run
@@ -658,15 +665,15 @@ refer to this
 more information about PyTorch/XLA and TPU pod and a complete guide to
 run a resnet50 with fakedata on TPU pod, please refer to this
 <a class="reference external" href="https://cloud.google.com/tpu/docs/pytorch-pods">guide</a>.</p>
-</div>
-</div>
-<div class="section" id="id3">
-<h2>XLA Tensor Deep Dive<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h2>
+</section>
+</section>
+<section id="xla-tensor-deep-dive">
+<h2>XLA Tensor Deep Dive<a class="headerlink" href="#xla-tensor-deep-dive" title="Permalink to this heading">¶</a></h2>
 <p>Using XLA tensors and devices requires changing only a few lines of
 code. But even though XLA tensors act a lot like CPU and CUDA tensors,
 their internals are different. This section describes what makes XLA
 tensors unique.</p>
-<div class="section" id="xla-tensors-are-lazy">
+<section id="xla-tensors-are-lazy">
 <h3>XLA Tensors are Lazy<a class="headerlink" href="#xla-tensors-are-lazy" title="Permalink to this heading">¶</a></h3>
 <p>CPU and CUDA tensors launch operations immediately or eagerly. XLA
 tensors, on the other hand, are lazy. They record operations in a graph
@@ -680,15 +687,15 @@ Inserting a barrier when taking an optimizer step explicitly
 synchronizes the CPU and the XLA device. For more information about our
 lazy tensor design, you can read <a class="reference external" href="https://arxiv.org/pdf/2102.13267.pdf">this
 paper</a>.</p>
-</div>
-<div class="section" id="memory-layout">
+</section>
+<section id="memory-layout">
 <h3>Memory Layout<a class="headerlink" href="#memory-layout" title="Permalink to this heading">¶</a></h3>
 <p>The internal data representation of XLA tensors is opaque to the user.
 They do not expose their storage and they always appear to be
 contiguous, unlike CPU and CUDA tensors. This allows XLA to adjust a
 tensor’s memory layout for better performance.</p>
-</div>
-<div class="section" id="moving-xla-tensors-to-and-from-the-cpu">
+</section>
+<section id="moving-xla-tensors-to-and-from-the-cpu">
 <h3>Moving XLA Tensors to and from the CPU<a class="headerlink" href="#moving-xla-tensors-to-and-from-the-cpu" title="Permalink to this heading">¶</a></h3>
 <p>XLA tensors can be moved from the CPU to an XLA device and from an XLA
 device to the CPU. If a view is moved then the data its viewing is also
@@ -697,8 +704,8 @@ Put another way, once data is copied to another device it has no
 relationship with its previous device or any tensors on it. Again,
 depending on how your code operates, appreciating and accommodating this
 transition can be important.</p>
-</div>
-<div class="section" id="saving-and-loading-xla-tensors">
+</section>
+<section id="saving-and-loading-xla-tensors">
 <h3>Saving and Loading XLA Tensors<a class="headerlink" href="#saving-and-loading-xla-tensors" title="Permalink to this heading">¶</a></h3>
 <p>XLA tensors should be moved to the CPU before saving, as in the
 following snippet:</p>
@@ -759,9 +766,9 @@ are always loaded back to the device they were saved from, and if that
 device is unavailable the load will fail. PyTorch/XLA, like all of
 PyTorch, is under active development and this behavior may change in the
 future.</p>
-</div>
-</div>
-<div class="section" id="compilation-caching">
+</section>
+</section>
+<section id="compilation-caching">
 <h2>Compilation Caching<a class="headerlink" href="#compilation-caching" title="Permalink to this heading">¶</a></h2>
 <p>The XLA compiler converts the traced HLO into an executable which runs
 on the devices. Compilation can be time consuming, and in cases where
@@ -796,15 +803,15 @@ different path for different process.</p>
 <p>If you don’t have the access to the <code class="docutils literal notranslate"><span class="pre">index</span></code>, you can use
 <code class="docutils literal notranslate"><span class="pre">xr.global_ordinal()</span></code>. Check out the runnable example in
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_xla_ddp.py">here</a>.</p>
-</div>
-<div class="section" id="further-reading">
+</section>
+<section id="further-reading">
 <h2>Further Reading<a class="headerlink" href="#further-reading" title="Permalink to this heading">¶</a></h2>
 <p>Additional documentation is available at the <a class="reference external" href="https://github.com/pytorch/xla/">PyTorch/XLA
 repo</a>. More examples of running
 networks on TPUs are available
 <a class="reference external" href="https://github.com/pytorch-tpu/examples">here</a>.</p>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -858,7 +865,7 @@ networks on TPUs are available
 <li><a class="reference internal" href="#running-on-tpu-pods">Running on TPU Pods</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id3">XLA Tensor Deep Dive</a><ul>
+<li><a class="reference internal" href="#xla-tensor-deep-dive">XLA Tensor Deep Dive</a><ul>
 <li><a class="reference internal" href="#xla-tensors-are-lazy">XLA Tensors are Lazy</a></li>
 <li><a class="reference internal" href="#memory-layout">Memory Layout</a></li>
 <li><a class="reference internal" href="#moving-xla-tensors-to-and-from-the-cpu">Moving XLA Tensors to and from the CPU</a></li>
@@ -889,7 +896,13 @@ networks on TPUs are available
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   

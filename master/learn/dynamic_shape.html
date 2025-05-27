@@ -6,7 +6,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Dynamic Shapes &mdash; PyTorch/XLA master documentation</title>
@@ -29,6 +30,11 @@
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/mystnb.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/togglebutton.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="TorchDynamo Integration" href="../perf/dynamo.html" />
@@ -285,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitc7ef439 )
+                  master (2.8.0+git066e69e )
                 </div>
               
             
@@ -321,6 +327,7 @@
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
@@ -441,7 +448,7 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="dynamic-shapes">
+  <section id="dynamic-shapes">
 <h1>Dynamic Shapes<a class="headerlink" href="#dynamic-shapes" title="Permalink to this heading">¶</a></h1>
 <p>Dynamic shapes means a tensor’s shape depends on the value of another tensor. For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span><span class="o">,</span><span class="w"> </span><span class="nn">torch_xla</span>
@@ -461,7 +468,7 @@
 <li><p>Unbounded dynamic shape: refers to a shape whose dynamic dimensions can be infinitely large. It works for accelerators that don’t require static memory allocation (e.g. GPU).</p></li>
 </ul>
 <p>Today, only the bounded dynamic shape is supported and it is in the experimental phase.</p>
-<div class="section" id="bounded-dynamic-shape">
+<section id="bounded-dynamic-shape">
 <h2>Bounded dynamic shape<a class="headerlink" href="#bounded-dynamic-shape" title="Permalink to this heading">¶</a></h2>
 <p>Currently, we support multi-layer perceptron models (MLP) with dynamic size input on TPU.</p>
 <p>This feature is controlled by a flag <code class="docutils literal notranslate"><span class="pre">XLA_EXPERIMENTAL=&quot;nonzero:masked_select&quot;</span></code>. To run a model with the feature enabled, launch Python with the following environment variable:</p>
@@ -470,40 +477,35 @@
 </div>
 <p>Here are some numbers we get when we run the MLP model for 100 iterations:</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
-<tr class="row-odd"><th class="head"></th>
-<th class="head"><p>No dynamic shape</p></th>
-<th class="head"><p>With dynamic shape</p></th>
+<tr class="row-odd"><th class="head text-left"><p></p></th>
+<th class="head text-center"><p>No dynamic shape</p></th>
+<th class="head text-right"><p>With dynamic shape</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>End-to-end training time</p></td>
-<td><p>29.49</p></td>
-<td><p>20.03</p></td>
+<tr class="row-even"><td class="text-left"><p>End-to-end training time</p></td>
+<td class="text-center"><p>29.49</p></td>
+<td class="text-right"><p>20.03</p></td>
 </tr>
-<tr class="row-odd"><td><p>Number of compilations</p></td>
-<td><p>102</p></td>
-<td><p>49</p></td>
+<tr class="row-odd"><td class="text-left"><p>Number of compilations</p></td>
+<td class="text-center"><p>102</p></td>
+<td class="text-right"><p>49</p></td>
 </tr>
-<tr class="row-even"><td><p>Compilation cache hit</p></td>
-<td><p>198</p></td>
-<td><p>1953</p></td>
+<tr class="row-even"><td class="text-left"><p>Compilation cache hit</p></td>
+<td class="text-center"><p>198</p></td>
+<td class="text-right"><p>1953</p></td>
 </tr>
 </tbody>
 </table>
-<a class="reference external image-reference" href="../_static/img/dynamic_shape_mlp_perf.png"><img alt="Performance comparison (a) without dynamic shape  (b) with dynamic shape" src="../_images/dynamic_shape_mlp_perf.png" /></a>
+<p><img alt="Performance comparison (a) without dynamic shape  (b) with dynamic shape" src="../_images/dynamic_shape_mlp_perf.png" /></p>
 <p>One of the motivations of the dynamic shape is to reduce the number of excessive recompilation when the shape keeps changing between iterations. From the figure above, you can see the number of compilations reduced by half which results in the drop of the training time.</p>
 <p>To try it:</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">XLA_EXPERIMENTAL</span><span class="o">=</span><span class="s2">&quot;nonzero:masked_select&quot;</span><span class="w"> </span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>TPU<span class="w"> </span>python3<span class="w"> </span>pytorch/xla/test/ds/test_dynamic_shape_models.py<span class="w"> </span>TestDynamicShapeModels.test_backward_pass_with_dynamic_input
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
              </article>
@@ -572,7 +574,13 @@
          <script src="../_static/underscore.js"></script>
          <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/sphinx_highlight.js"></script>
+         <script src="../_static/clipboard.min.js"></script>
+         <script src="../_static/copybutton.js"></script>
+         <script>let toggleHintShow = 'Click to show';</script>
+         <script>let toggleHintHide = 'Click to hide';</script>
+         <script>let toggleOpenOnPrint = 'true';</script>
+         <script src="../_static/togglebutton.js"></script>
+         <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
      
 
   
