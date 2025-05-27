@@ -14,21 +14,41 @@ import pytorch_sphinx_theme
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',
-    'm2r',
-    'nbsphinx',
+
+# The following list are extension used by PyTorch as of v2.7.0 tag.
+# Commented lines are not used by PyTorch/XLA.
+pytorch_extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.doctest",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx.ext.coverage",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinxcontrib.katex",
+    "sphinx.ext.autosectionlabel",
+    "sphinx_copybutton",
+    # "sphinx_panels",
+    # "myst_parser", # Will be activated by myst_nb
+    # "sphinx.ext.linkcode",
 ]
 
-nbsphinx_execute = 'never' # Given diverse hardware requirements, authors must run notebooks manually.
+# These are additional extensions used by PyTorch/XLA.
+extensions = pytorch_extensions + [
+    "myst_nb"
+]
+
+# Users must manually execute their notebook cells
+# with the correct hardware accelerator.
+nb_execution_mode = "off"
+
+
+# katex options
+#
+#
+
+katex_prerender = True
 
 napoleon_use_ivar = True
 
@@ -63,7 +83,7 @@ release = 'master'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -78,10 +98,13 @@ todo_include_todos = True
 
 
 # -- Options for HTML output ----------------------------------------------
-
+#
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
+#
+#
+
 html_theme = 'pytorch_sphinx_theme'
 html_theme_path = [pytorch_sphinx_theme.get_html_theme_path()]
 
@@ -90,10 +113,10 @@ html_theme_path = [pytorch_sphinx_theme.get_html_theme_path()]
 # documentation.
 #
 html_theme_options = {
-    'collapse_navigation': True,
+    'pytorch_project': 'docs',
+    'collapse_navigation': False,
     'display_version': True,
     'logo_only': True,
-    'pytorch_project': 'docs'
 }
 
 html_logo = '_static/img/pytorch-logo-dark.svg'
