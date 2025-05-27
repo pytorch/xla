@@ -1553,7 +1553,7 @@ def ragged_paged_attention_non_xla(
 
 
 XLA_LIB.define(
-    "gmm(Tensor lhs, Tensor rhs, Tensor group_sizes, int[]? tiling=None, Tensor? group_offfset=None, bool? transpose_rhs=False) -> Tensor",
+    "gmm(Tensor lhs, Tensor rhs, Tensor group_sizes, int[]? tiling=None, Tensor? group_offset=None, bool transpose_rhs=False) -> Tensor",
 )
 
 
