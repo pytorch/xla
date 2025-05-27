@@ -131,9 +131,10 @@ class PallasTest(parameterized.TestCase):
                                       (0, max_num_seqs - kv_lens.shape[0]),
                                       "constant", 0)
     q = torch.randn((max_num_batched_tokens, num_q_heads, head_dim),
-                    dtype=q_dtype)
+                    dtype=torch.float32).to(q_dtype)
+    # Use float32 for randn because it doesn't support some dtypes like float8
     kv_pages = torch.randn((num_pages, page_size, num_kv_heads * 2, head_dim),
-                           dtype=kv_dtype)
+                           dtype=torch.float32).to(kv_dtype)
     page_indices = torch.randint(
         0, num_pages, (max_num_seqs, pages_per_seq), dtype=torch.int32)
     return q, kv_pages, kv_lens, page_indices, cu_q_lens
