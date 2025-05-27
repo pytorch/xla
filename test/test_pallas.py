@@ -98,7 +98,8 @@ class PallasTest(parameterized.TestCase):
       head_dim,
       page_size,
       num_pages,
-      dtype,
+      q_dtype,
+      kv_dtype,
       *,
       max_num_batched_tokens=None,
       max_num_seqs=16,
@@ -130,9 +131,9 @@ class PallasTest(parameterized.TestCase):
                                       (0, max_num_seqs - kv_lens.shape[0]),
                                       "constant", 0)
     q = torch.randn((max_num_batched_tokens, num_q_heads, head_dim),
-                    dtype=dtype)
+                    dtype=q_dtype)
     kv_pages = torch.randn((num_pages, page_size, num_kv_heads * 2, head_dim),
-                           dtype=dtype)
+                           dtype=kv_dtype)
     page_indices = torch.randint(
         0, num_pages, (max_num_seqs, pages_per_seq), dtype=torch.int32)
     return q, kv_pages, kv_lens, page_indices, cu_q_lens
@@ -632,7 +633,8 @@ class PallasTest(parameterized.TestCase):
       head_dim,
       page_size,
       num_pages,
-      dtype,
+      q_dtype,
+      kv_dtype,
       *,
       sm_scale=1.0,
       sliding_window=None,
@@ -654,7 +656,8 @@ class PallasTest(parameterized.TestCase):
         head_dim,
         page_size,
         num_pages,
-        dtype,
+        q_dtype,
+        kv_dtype,
         max_num_batched_tokens=max_num_batched_tokens,
         max_num_seqs=max_num_seqs)
 
@@ -776,7 +779,8 @@ class PallasTest(parameterized.TestCase):
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
       num_heads=[(32, 8), (8, 1)],
-      dtype=[torch.float32, torch.bfloat16],
+      dtype=[(torch.bfloat16, torch.bfloat16),
+             (torch.bfloat16, torch.float8_e5m2)],
       sm_scale=[1.0, 0.5],
       sliding_window=[None, 128],
       soft_cap=[None, 10.0],
@@ -796,6 +800,7 @@ class PallasTest(parameterized.TestCase):
     head_dim = 128
     page_size = 16
     num_pages = 1000
+    q_dtype, kv_dtype = dtype
 
     self._test_ragged_paged_attention(
         seq_lens,
@@ -803,7 +808,8 @@ class PallasTest(parameterized.TestCase):
         head_dim,
         page_size,
         num_pages,
-        dtype,
+        q_dtype,
+        kv_dtype,
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
@@ -814,7 +820,8 @@ class PallasTest(parameterized.TestCase):
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
       num_heads=[(32, 8), (8, 1)],
-      dtype=[torch.float32, torch.bfloat16],
+      dtype=[(torch.bfloat16, torch.bfloat16),
+             (torch.bfloat16, torch.float8_e5m2)],
       sm_scale=[1.0, 0.5],
       sliding_window=[None, 128],
       soft_cap=[None, 10.0],
@@ -835,6 +842,7 @@ class PallasTest(parameterized.TestCase):
     head_dim = 128
     page_size = 16
     num_pages = 1000
+    q_dtype, kv_dtype = dtype
 
     self._test_ragged_paged_attention(
         seq_lens,
@@ -842,7 +850,8 @@ class PallasTest(parameterized.TestCase):
         head_dim,
         page_size,
         num_pages,
-        dtype,
+        q_dtype,
+        kv_dtype,
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
