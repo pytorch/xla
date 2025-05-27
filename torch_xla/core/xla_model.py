@@ -118,7 +118,7 @@ def master_print(*args: Any,
     print(*args, file=fd, flush=flush)
 
 
-@deprecated("Use torch_xla.device instead")
+@deprecated("Use torch.device('xla') instead")
 def xla_device(n: Optional[int] = None,
                devkind: Optional[str] = None) -> torch.device:
   """Returns a given instance of an XLA device.

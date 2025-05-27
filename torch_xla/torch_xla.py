@@ -4,6 +4,7 @@ import contextlib
 import functools
 import uuid
 from typing import Any, Callable, List, Optional, Tuple
+from typing_extensions import deprecated
 import weakref
 
 import torch
@@ -16,6 +17,7 @@ import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 
 
+@deprecated("Use torch.device('xla') instead")
 def device(index: int = None) -> torch.device:
   """Returns a given instance of an XLA device.
 
