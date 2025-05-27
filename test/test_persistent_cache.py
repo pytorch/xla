@@ -51,14 +51,14 @@ def _mp_test(rank, tmpdir, metrics):
   xr.initialize_cache(os.path.join(tmpdir, str(rank)))
 
   t = torch.randn(16)
-  xt = t.to(torch_xla.device())
+  xt = t.to(torch.device('xla'))
   _assert_correctness_and_metrics(t, xt, metrics)
 
 
 def _single_device_test(tmpdir, metrics):
   xr.initialize_cache(tmpdir)
   t = torch.randn(16)
-  xt = t.to(torch_xla.device())
+  xt = t.to(torch.device('xla'))
   _assert_correctness_and_metrics(t, xt, metrics)
 
 
@@ -66,7 +66,7 @@ def _spmd_replicated_test(tmpdir, metrics):
   xr.initialize_cache(tmpdir)
   xr.use_spmd()
   t = torch.randn(16)
-  xt = t.to(torch_xla.device())
+  xt = t.to(torch.device('xla'))
   _assert_correctness_and_metrics(t, xt, metrics)
 
 
@@ -74,7 +74,7 @@ def _spmd_explicitly_replicated_test(tmpdir, metrics):
   xr.initialize_cache(tmpdir)
   xr.use_spmd()
   t = torch.randn(16)
-  xt = t.to(torch_xla.device())
+  xt = t.to(torch.device('xla'))
 
   n_dev = xr.global_runtime_device_count()
   mesh = xs.Mesh(range(n_dev), (n_dev,))
@@ -87,7 +87,7 @@ def _spmd_sharded_test(tmpdir, metrics):
   xr.use_spmd()
   t = torch.randn(16)
 
-  xt = t.to(torch_xla.device())
+  xt = t.to(torch.device('xla'))
   n_dev = xr.global_runtime_device_count()
   mesh = xs.Mesh(range(n_dev), (n_dev,))
   xs.mark_sharding(xt, mesh, (0,))

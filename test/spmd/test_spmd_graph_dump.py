@@ -26,7 +26,7 @@ class SpmdGraphDumpTest(test_xla_sharding_base.XlaShardingTest):
     assert save_file, "This test should be run with XLA_SAVE_TENSORS_FILE"
     should_dump_output_sharding = (save_format == 'hlo')
     save_file += '.0'
-    device = torch_xla.device()
+    device = torch.device('xla')
     xla_x = torch.randn(8, 32).to(device)
     xla_y = torch.randn(8, 32).to(device)
     # shard one of the input tensor

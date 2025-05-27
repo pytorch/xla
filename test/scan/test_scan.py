@@ -43,7 +43,7 @@ class TestBase(XlaTestCase):
 
   def setUp(self):
     super().setUp()
-    self.device = torch_xla.device()
+    self.device = torch.device('xla')
 
   def compare_pytree(self, expected_pytree, actual_pytree):
     flat_expected_pytree, expected_spec = tree_flatten(expected_pytree)

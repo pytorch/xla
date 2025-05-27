@@ -141,7 +141,7 @@ class TestFSDPWithMetaDevice():
 
 
 def _mp_fn(index):
-  device = torch_xla.device()
+  device = torch.device('xla')
   # This test fails on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)
   if xm.xla_device_hw(device) in ('TPU', 'NEURON'):
     dist.init_process_group('xla', init_method='xla://')

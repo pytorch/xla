@@ -10,7 +10,7 @@ class DynamoconfigTest(unittest.TestCase):
     return a.cos().sin()
 
   def test_config_skip_input_data_check(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     print(config.skip_input_data_check)
     config.skip_input_data_check = True
     compiled_dummy = torch.compile(self.dummy_test, backend="openxla")

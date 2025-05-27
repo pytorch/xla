@@ -122,7 +122,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
       def backward(ctx, grad_output):
         results['forward_ordinal'] = ctx.forward_ordinal
         results['backward_ordinal'] = xr.global_ordinal()
-        results['device'] = str(torch_xla.device())
+        results['device'] = str(torch.device('xla'))
         return grad_output
 
     x = torch.ones(1, requires_grad=True, device='xla')
@@ -166,7 +166,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
   @staticmethod
   def _broadcast(sync):
     torch.manual_seed(xr.global_ordinal())
-    device = torch_xla.device()
+    device = torch.device('xla')
     model = nn.Linear(5, 5).to(device)
     if sync:
       xm.broadcast_master_param(model)
@@ -188,7 +188,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
 
   @staticmethod
   def _all_gather(pin_layout):
-    device = torch_xla.device()
+    device = torch.device('xla')
     ordinal = torch.tensor([xr.global_ordinal()], device=device)
     out = xm.all_gather(ordinal, pin_layout=pin_layout)
     torch_xla.sync()
@@ -205,7 +205,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
 
   @staticmethod
   def _reduce_scatter(pin_layout):
-    device = torch_xla.device()
+    device = torch.device('xla')
     world_size = xr.world_size()
     tensor = -torch.arange(world_size, dtype=torch.float32).to(device)
 
@@ -231,7 +231,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
 
   @staticmethod
   def _all_to_all(pin_layout):
-    device = torch_xla.device()
+    device = torch.device('xla')
     world_size = xr.world_size()
 
     tensor = torch.cat(

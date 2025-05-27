@@ -35,7 +35,7 @@ class TrainDecoderOnlyBase:
               torch.zeros(self.batch_size, self.seq_len, dtype=torch.int64)),
         sample_count=self.train_dataset_len // self.batch_size)
 
-    self.device = torch_xla.device()
+    self.device = torch.device('xla')
     self.train_device_loader = pl.MpDeviceLoader(train_loader, self.device)
     self.model = decoder_cls(self.config).to(self.device)
     self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0001)
