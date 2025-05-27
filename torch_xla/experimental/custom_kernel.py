@@ -1289,7 +1289,9 @@ def gmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: Tuple[int, int, int] = (512, 512, 512)
+    tiling: Tuple[int, int, int] = (512, 512, 512),
+    group_offset: torch.Tensor | None = None,
+    transpose_rhs: bool = False,
 ) -> torch.Tensor:
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
 
@@ -1298,7 +1300,9 @@ def gmm(
     rhs: A 3d, torch.Tensor with shape [num_groups, k, n].
     group_sizes: A 1d, torch.Tensor with shape [num_groups] and torch.int32 dtype.
     tiling: 3-tuple of ints. The m, k and n-dimension tile sizes.
-
+    group_offset: The group in group sizes to start computing from. This is
+      particularly useful for when rhs num_groups is sharded.
+    transpose_rhs: True if the rhs needs to be transposed.
   Returns:
     A 2d, torch.Tensor with shape [m, n].
   """
@@ -1310,7 +1314,7 @@ def gmm(
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
   preferred_element_type = lhs.dtype
   return xb.call_jax(gmm, (lhs, rhs, group_sizes, preferred_element_type,
-                           (tm, tk, tn)))
+                           (tm, tk, tn), group_offset, transpose_rhs))
 
 
 @requires_jax
@@ -1318,7 +1322,9 @@ def tgmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: Tuple[int, int, int] = (512, 512, 512)
+    tiling: Tuple[int, int, int] = (512, 512, 512),
+    group_offset: torch.Tensor | None = None,
+    num_actual_groups: int | None = None,
 ) -> torch.Tensor:
   """Compute lhs[:, sizes[i-1]:sizes[i]] @ rhs[sizes[i-1]:sizes[i], :].
 
@@ -1340,7 +1346,7 @@ def tgmm(
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
   preferred_element_type = lhs.dtype
   return xb.call_jax(tgmm, (lhs, rhs, group_sizes, preferred_element_type,
-                            (tm, tk, tn)))
+                            (tm, tk, tn), group_offset, num_actual_groups))
 
 
 def gmm_backward(grad, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
@@ -1547,7 +1553,7 @@ def ragged_paged_attention_non_xla(
 
 
 XLA_LIB.define(
-    "gmm(Tensor lhs, Tensor rhs, Tensor group_sizes, int[]? tiling=None) -> Tensor",
+    "gmm(Tensor lhs, Tensor rhs, Tensor group_sizes, int[]? tiling=None, Tensor? group_offfset=None, bool? transpose_rhs=False) -> Tensor",
 )
 
 
@@ -1557,20 +1563,24 @@ def gmm_xla(
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
     # pytorch custom op does not allow tuple type, use list instead
-    tiling: Optional[List[int]] = [512, 512, 512]):
+    tiling: Optional[List[int]] = [512, 512, 512],
+    group_offset: torch.Tensor | None = None,
+    transpose_rhs: bool = False):
   assert len(tiling) == 3, "tiling must be a list with 3 integers"
   assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
   assert rhs.dim(
   ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n]"
   tiling = tuple(tiling)
-  return gmm(lhs, rhs, group_sizes, tiling)
+  return gmm(lhs, rhs, group_sizes, tiling, group_offset, transpose_rhs)
 
 
 @impl(XLA_LIB, "gmm", "CompositeExplicitAutograd")
 def gmm_non_xla(lhs: torch.Tensor,
                 rhs: torch.Tensor,
                 group_sizes: torch.Tensor,
-                tiling: Optional[List[int]] = [512, 512, 512]):
+                tiling: Optional[List[int]] = [512, 512, 512],
+                group_offset: torch.Tensor | None = None,
+                transpose_rhs: bool = False):
   # This will be called when dynamo use fake tensor to construct the fake output.
   # We need to make sure output tensor's shape is correct.
   if lhs.device != torch.device("meta"):
@@ -1578,7 +1588,8 @@ def gmm_non_xla(lhs: torch.Tensor,
   assert len(tiling) == 3, "tiling must be a list with 3 integers"
   assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
   assert rhs.dim(
-  ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n]"
+  ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n] or [num_groups, n, k] when transpose_rhs is True"
+  rhs_dim_size = rhs.size()[1] if transpose_rhs is True else rhs.size()[2]
 
   # we only need to return the tensor with correct shape for meta tensor.
-  return torch.empty(lhs.size()[0], rhs.size()[2], device=lhs.device)
+  return torch.empty(lhs.size()[0], rhs_dim_size, device=lhs.device)
