@@ -23,12 +23,19 @@ if xr.device_type() == 'TPU':
 
 class MegabloxTest(unittest.TestCase):
 
-  def _reference_gmm(self, lhs: torch.Tensor, rhs: torch.Tensor,
-                     group_sizes: torch.Tensor) -> torch.Tensor:
+  def _reference_gmm(self,
+                     lhs: torch.Tensor,
+                     rhs: torch.Tensor,
+                     group_sizes: torch.Tensor,
+                     transpose_rhs: bool = False) -> torch.Tensor:
     start = 0
     out = []
     for i, size in enumerate(group_sizes):
-      result = lhs[start:start + size, :] @ rhs[i, :, :]
+      if transpose_rhs is True:
+        rhsi = torch.transpose(rhs[i, :, :], 1, 2)
+      else:
+        rhsi = rhs[i, :, :]
+      result = lhs[start:start + size, :] @ rhsi
       out.append(result)
       start += group_sizes[i]
     return torch.cat(out)
@@ -105,27 +112,36 @@ class MegabloxTest(unittest.TestCase):
     for test_cache in [False, True]:
       for gmm_func in gmm_funcs:
         for test_case in self.tests_cases:
-          num_groups = test_case['num_groups']
-          k = test_case['k']
-          m = test_case['m']
-          n = test_case['n']
-          lhs_dtype = rhs_dtype = test_case['dtype']
+          for transpose_rhs in [True, False]:
+            num_groups = test_case['num_groups']
+            k = test_case['k']
+            m = test_case['m']
+            n = test_case['n']
+            lhs_dtype = rhs_dtype = test_case['dtype']
 
-          lhs = torch.rand(m, k, dtype=lhs_dtype)
-          rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
-          group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-          ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+            lhs = torch.rand(m, k, dtype=lhs_dtype)
+            if transpose_rhs is False:
+              rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+            else:
+              rhs = torch.rand(num_groups, n, k, dtype=rhs_dtype)
+            group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+            ref_out = self._reference_gmm(lhs, rhs, group_sizes, transpose_rhs)
 
-          out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
-          # torch.compiled version of the gmm will cache the payload in dynamo layer
-          # hence won't trigger the trace_pallas cache
-          if test_cache and gmm_func != compiled_gmm:
-            old_cnt = xr.get_num_cached_compilation_graph()
-            # execute the same gmm func, expected to hit the cache
-            out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
-            new_cnt = xr.get_num_cached_compilation_graph()
-            self.assertEqual(old_cnt, new_cnt)
-          self.assertTrue(torch.allclose(ref_out, out.cpu()))
+            out = gmm_func(
+                lhs.to("xla"),
+                rhs.to("xla"),
+                group_sizes.to("xla"),
+                transpose_rhs=transpose_rhs)
+            # torch.compiled version of the gmm will cache the payload in dynamo layer
+            # hence won't trigger the trace_pallas cache
+            if test_cache and gmm_func != compiled_gmm:
+              old_cnt = xr.get_num_cached_compilation_graph()
+              # execute the same gmm func, expected to hit the cache
+              out = gmm_func(
+                  lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+              new_cnt = xr.get_num_cached_compilation_graph()
+              self.assertEqual(old_cnt, new_cnt)
+            self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure gmm doesn't fallback.
     self.assertEqual(len(torch_xla._XLAC._get_executed_fallback_ops()), 0)

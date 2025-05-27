@@ -1314,7 +1314,7 @@ def gmm(
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
   preferred_element_type = lhs.dtype
   return xb.call_jax(gmm, (lhs, rhs, group_sizes, preferred_element_type,
-                           (tm, tk, tn), group_offset, transpose_rhs))
+                           (tm, tk, tn), group_offset, None, transpose_rhs))
 
 
 @requires_jax
