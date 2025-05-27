@@ -78,3 +78,22 @@ The final code output in the ipynb and html should look like this:
     Z_ref: FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:01110000101000111101100 VALUE=1.440000057220459
     Z:     FORMAT:0b SIGN:0 EXPONENT:01111111 MANTISSA:01110000101000111101101 VALUE=1.4400001764297485
 ```
+
+## Build changes for runnable tutorials.
+
+As of May 2025, the requirements.txt used several out of date packages and was 
+out of sync with upstream PyTorch. Here is a copy of the former:
+
+```
+Jinja2==3.1.3
+docutils==0.16
+m2r
+mistune==0.8.4
+sphinx==5.3.0
+-e git+https://github.com/pytorch/pytorch_sphinx_theme.git#egg=pytorch_sphinx_theme
+```
+
+PyTorch/XLA's requirements.txt is now updated to match
+PyTorch v.2.7.0's requirements.txt, with some removed packages.
+Necessary changes to conf.py have been added, as well
+as myst style links instead of m2r style links. 
