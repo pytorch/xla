@@ -1066,6 +1066,15 @@ def ragged_paged_attention_kernel(
           )
       return kv_blk_idx + 1, next_buf_idx
 
+    _, next_buf_idx = lax.while_loop(
+        is_valid_kv_blk_in_cur_seq,
+        compute_with_kv_blk_in_cur_seq,
+        (0, cur_buf_idx),  # (kv_blk_idx, buf_idx)
+    )
+    next_seq_idx = lax.select(q_end <= q_len_end, cur_seq_idx + 1, cur_seq_idx)
+    done = lax.select(q_end < q_len_end, done, 1)
+    return done, next_seq_idx, next_buf_idx
+
   _, seq_idx, buf_idx = lax.while_loop(
       is_cur_q_blk_needed,
       compute_with_cur_q_blk,

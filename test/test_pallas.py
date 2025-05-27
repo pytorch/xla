@@ -660,6 +660,8 @@ class PallasTest(parameterized.TestCase):
         kv_dtype,
         max_num_batched_tokens=max_num_batched_tokens,
         max_num_seqs=max_num_seqs)
+    k_scale = 0.5 if kv_dtype in [torch.float8_e5m2] else None
+    v_scale = 0.5 if kv_dtype in [torch.float8_e5m2] else None
 
     q_xla = q.to("xla")
     kv_pages_xla = kv_pages.to("xla")
@@ -680,6 +682,8 @@ class PallasTest(parameterized.TestCase):
           sm_scale=sm_scale,
           sliding_window=sliding_window,
           soft_cap=soft_cap,
+          k_scale=k_scale,
+          v_scale=v_scale,
           use_kernel=True,
           num_kv_pages_per_block=num_kv_pages_per_block,
           num_queries_per_block=num_queries_per_block,
@@ -694,6 +698,8 @@ class PallasTest(parameterized.TestCase):
             sm_scale=sm_scale,
             sliding_window=sliding_window,
             soft_cap=soft_cap,
+            k_scale=k_scale,
+            v_scale=v_scale,
             use_kernel=use_kernel,
             num_kv_pages_per_block=num_kv_pages_per_block,
             num_queries_per_block=num_queries_per_block,
@@ -714,6 +720,8 @@ class PallasTest(parameterized.TestCase):
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
+        k_scale=k_scale,
+        v_scale=v_scale,
         use_kernel=True,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
@@ -729,6 +737,8 @@ class PallasTest(parameterized.TestCase):
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
+        k_scale=k_scale,
+        v_scale=v_scale,
         use_kernel=False,
     )
 
@@ -737,10 +747,9 @@ class PallasTest(parameterized.TestCase):
     self.assertEqual(kernel_output_cpu.shape, nonkernel_output_cpu.shape)
     self.assertEqual(kernel_output_cpu.dtype, nonkernel_output_cpu.dtype)
 
-    assert dtype == torch.float32 or dtype == torch.bfloat16
     jnp_dtype = jnp.float32
     tol = 0.15
-    if dtype == torch.bfloat16:
+    if q_dtype == torch.bfloat16:
       jnp_dtype = jnp.bfloat16
       tol = 0.3
 
@@ -768,7 +777,7 @@ class PallasTest(parameterized.TestCase):
                 sm_scale=sm_scale,
                 sliding_window=sliding_window,
                 soft_cap=soft_cap,
-            )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(dtype)
+            )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(q_dtype)
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 
     torch.testing.assert_close(
