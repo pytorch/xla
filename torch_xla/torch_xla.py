@@ -19,18 +19,34 @@ import torch_xla.utils.utils as xu
 def device(index: int = None) -> torch.device:
   """Returns a given instance of an XLA device.
 
-  If SPMD enables, returns a virtual device that wraps all devices available
+  If SPMD is enabled, returns a virtual device that wraps all devices available
   to this process.
 
   Args:
     index: index of the XLA device to be returned. Corresponds to index in
-      `torch_xla.devices()`.
+      `torch_xla.devices()`. By default, get the first device.
 
   Returns:
     An XLA `torch.device`.
   """
+  # When SPMD is enabled, we always return `xla:0` to the user, and
+  # under the hood we use virtual device logic for every xla tensor
+  if xu.check_env_flag('XLA_USE_SPMD'):
+    device = 'xla:0'
+    torch_xla._XLAC._xla_set_default_device(device)
+    return torch.device(device)
 
-  return xm.xla_device(index)
+  if index is None:
+    return torch.device(torch_xla._XLAC._xla_get_default_device())
+
+  devices = xm.get_xla_supported_devices()
+  if index > len(devices):
+    raise IndexError('Device index {} out of range in {}'.format(
+        index, devices))
+
+  device = devices[index]
+  torch_xla._XLAC._xla_set_default_device(device)
+  return torch.device(device)
 
 
 def devices() -> List[torch.device]:

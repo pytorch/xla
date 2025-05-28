@@ -5,6 +5,7 @@ import sys
 import torch.distributed as dist
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 from torch_xla import runtime as xr
@@ -25,7 +26,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
   @staticmethod
   def _ddp_init(index: int = ...):
     dist.init_process_group('xla', init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
     model = nn.Linear(10, 10).to(device)
     ddp_model = DDP(model)
 

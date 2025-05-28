@@ -164,7 +164,7 @@ def train_mnist(flags, **kwargs):
   # Scale learning rate to num cores
   lr = flags.lr * xr.world_size()
 
-  device = xm.xla_device()
+  device = torch_xla.device()
   model = MNIST()
   # Automatic wrapping sub-modules with inner FSDP
   auto_wrap_policy = None

@@ -50,7 +50,7 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
     def foo(x):
       return x + x
 
-    inp = torch.rand(10, device=torch_xla.device())
+    inp = torch.rand(10, device='xla')
     self._run_and_compare(foo, args=(inp,), max_different_graphs=1)
 
   def test_many_graphs(self):
@@ -70,7 +70,7 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
         return r * 4
       return r0
 
-    inp = torch.rand(10, device=torch_xla.device())
+    inp = torch.rand(10, device='xla')
 
     for i in range(6):
       self._run_and_compare(foo, args=(inp, i), max_different_graphs=4)
@@ -84,7 +84,7 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
     def foo(x):
       return x + x
 
-    inp1 = torch.rand(10, device=torch_xla.device())
+    inp1 = torch.rand(10, device='xla')
     self._run_and_compare(
         foo, args=(inp1,), max_different_graphs=max_different_graphs)
 
@@ -95,7 +95,7 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
     """)
 
     with self.assertRaisesRegex(RuntimeError, expected_error_msg):
-      inp2 = torch.rand(5, device=torch_xla.device())
+      inp2 = torch.rand(5, device='xla')
       self._run_and_compare(
           foo, args=(inp2,), max_different_graphs=max_different_graphs)
 
@@ -118,7 +118,7 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
       else:
         return x * 5
 
-    inp = torch.rand(10, device=torch_xla.device())
+    inp = torch.rand(10, device='xla')
     self._run_and_compare(
         foo, args=(inp, 0), max_different_graphs=max_different_graphs)
 
@@ -157,7 +157,7 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
         return r + x
       return r / 3
 
-    inp = torch.rand(10, device=torch_xla.device())
+    inp = torch.rand(10, device='xla')
     self._run_and_compare(
         foo, args=(inp, 0), max_different_graphs=max_different_graphs)
     self._run_and_compare(
@@ -194,7 +194,7 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
       else:
         return r
 
-    inp = torch.rand(10, device=torch_xla.device())
+    inp = torch.rand(10, device='xla')
     self._run_and_compare(
         foo, args=(inp, True), max_different_graphs=max_different_graphs)
 
@@ -231,7 +231,7 @@ class TestDynamicShapeDetector(test_utils.XlaTestCase):
         return r + x
       return r
 
-    inp = torch.rand(10, device=torch_xla.device())
+    inp = torch.rand(10, device='xla')
     self._run_and_compare(
         foo, args=(inp, 0), max_different_graphs=max_different_graphs)
     self._run_and_compare(

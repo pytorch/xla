@@ -172,7 +172,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   @staticmethod
   def _spawn_threads() -> Dict[int, torch.device]:
     results = {}
-    pjrt.spawn_threads(lambda i: results.setdefault(i, xm.xla_device()))
+    pjrt.spawn_threads(lambda i: results.setdefault(i, torch_xla.device()))
 
     return results
 
@@ -187,7 +187,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   @staticmethod
   def _spawn_error():
     # Initialize the client in the parent process
-    xm.xla_device()
+    torch_xla.device()
 
     torch_xla.launch(xm.xla_device)
 
@@ -199,7 +199,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @staticmethod
   def _runtime_device_attributes():
-    return xr.runtime_device_attributes(str(xm.xla_device()))
+    return xr.runtime_device_attributes(str(torch_xla.device()))
 
   def test_runtime_device_attributes(self):
     result = pjrt.run_multiprocess(self._runtime_device_attributes)
@@ -226,12 +226,12 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   @staticmethod
   def _execute_time_metric():
     # Initialize the client before starting the timer.
-    xm.xla_device()
+    torch_xla.device()
 
     begin = time.perf_counter_ns()
     value = (
-        torch.randn(10000, 10000, device=xm.xla_device()) *
-        torch.randn(10000, 10000, device=xm.xla_device()))
+        torch.randn(10000, 10000, device='xla') *
+        torch.randn(10000, 10000, device='xla'))
     value_mean = value.mean()
     torch_xla.sync()
     cpu_value = value_mean.cpu()
