@@ -6,7 +6,6 @@ from torch.autograd import Function
 aten = torch.ops.aten
 
 _COO_DISPATCH_TABLE = {}
-_COO_FUNCTION_TABLE = {}
 
 from .coo import SparseCOOTensor
 
@@ -15,15 +14,6 @@ def _register_dispatch_func(op):
 
   def wrapper(f):
     _COO_DISPATCH_TABLE[op] = f
-    return f
-
-  return wrapper
-
-
-def _register_function_func(op):
-
-  def wrapper(f):
-    _COO_FUNCTION_TABLE[op] = f
     return f
 
   return wrapper
@@ -89,7 +79,6 @@ def coo_sparse_mask(args=(), kwargs=None):
       f"sparse_mask: expected mask and self to have the same shape (self: {self.size()}, mask: {mask.size()})"
   )
   _check_no_kwargs(kwargs, "sparse_mask")
-  #mask = mask.coalesce()
   mask_indices = mask._indices()
   sparse_size = mask.shape[:mask.sparse_dim()]
   flat_indices = _flatten_indices(mask_indices, sparse_size)
@@ -120,7 +109,7 @@ def coo_resize_as_(args, kwargs=None):
   _check_sparse(self, "resize_as_", "self")
   _check_sparse(other, "resize_as_", "other")
   torch._check(
-      self._nnz() == 0,
+      self._nnz() == 0, lambda:
       "resize_as_: resizing a sparse tensor with nnz != 0 is not supported")
   _check_no_kwargs(kwargs, "resize_as_")
 
@@ -142,7 +131,6 @@ def coo_is_coalesced(args, kwargs=None):
   return self._is_coalesced or self._nnz() < 2
 
 
-@_register_function_func(torch.Tensor.coalesce)
 @_register_dispatch_func(aten.coalesce)
 def coo_coalesce(args, kwargs=None):
   _check_no_kwargs(kwargs, "coalesce")
@@ -204,7 +192,19 @@ def coo_add_(args=(), kwargs=None):
   return self
 
 
-@_register_function_func(torch.Tensor.indices)
+@_register_dispatch_func(aten.add)
+def coo_add(args=(), kwargs=None):
+  alpha = kwargs.pop('alpha', 1)
+  torch._check(
+      len(args) == 2, lambda: f"add: expected two operands, got {len(args)}")
+  self, other = args
+  _check_sparse(other, "other", "add")
+
+  out = self.clone()
+  out[other._indices().squeeze(0)] += (alpha * other._values())
+  return out
+
+
 @_register_dispatch_func(aten.indices)
 def coo_indices(args=(), kwargs=None):
   torch._check(len(args) == 1, "indices: expected one argument")
@@ -214,7 +214,6 @@ def coo_indices(args=(), kwargs=None):
   return self._i.clone()
 
 
-@_register_function_func(torch.Tensor._indices)
 @_register_dispatch_func(aten._indices)
 def coo_indices_unsafe(args=(), kwargs=None):
   self = args[0]
@@ -227,7 +226,6 @@ def coo_values_unsafe(args=(), kwargs=None):
   return self._v
 
 
-@_register_function_func(torch.Tensor.values)
 @_register_dispatch_func(aten.values)
 def coo_values(args=(), kwargs=None):
   torch._check(len(args) == 1, "values: expected one argument")
@@ -237,7 +235,6 @@ def coo_values(args=(), kwargs=None):
   return self._v.clone()
 
 
-@_register_function_func(torch.Tensor._nnz)
 @_register_dispatch_func(aten._nnz)
 def coo_nnz(args=(), kwargs=None):
   torch._check(len(args) == 1, "values: expected one argument")
@@ -294,7 +291,6 @@ def coo_to_copy(args=(), kwargs=None):
   return make_sparse(new_i, new_v, self.shape)
 
 
-@_register_function_func(torch.Tensor.to)
 @_register_dispatch_func(aten.to)
 def coo_to(args=(), kwargs=None):
   self = args[0]
@@ -324,16 +320,3 @@ def coo_to(args=(), kwargs=None):
       # if no conversion is needed to returns an alias to this
       ret = self
     return ret
-
-
-def _register_missing_metas():
-  lib = torch.library.Library("aten", "IMPL", "AutogradXLA")
-
-  @torch.library.impl(lib, "sparse_mask")
-  def _(self, mask):
-    breakpoint()
-    return coo_sparse_mask(args=(self, mask))
-
-
-_register_missing_metas()
-del _register_missing_metas

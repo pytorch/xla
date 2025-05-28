@@ -20,10 +20,6 @@ float_dtypes = {torch.float32, torch.float16, torch.bfloat16}
 
 xla_device = torch_xla.device()
 
-# def _ref_embedding(input, init_args*, **init_kwargs):
-# upstream_embed = nn.Embedding(*init_args, **init_kwargs)
-# return upstream_embed(input)
-
 
 class TestEmbedding(TestCase):
 
@@ -51,7 +47,7 @@ class TestEmbedding(TestCase):
     self.assertEqual(xla_weights.grad, torch_weights.grad)
 
   def test_embedding_optimizer(self):
-    context_size = 2
+    context_size = 5
     embedding_dim = 10
     # We will use Shakespeare Sonnet 2, first few lines
     test_sentence = """When forty winters shall besiege thy brow,
@@ -66,10 +62,12 @@ class TestEmbedding(TestCase):
     vocab_size = len(vocab)
 
     model = Embedding(vocab_size, context_size, sparse=True).to(xla_device)
+    cloned_weight = model.weight.clone().detach()
 
-    optimizer = SparseAdam(model.parameters(), lr=0.001)
-    for _ in range(10):
-      total_loss = 0
+    optimizer = SparseAdam(model.parameters(), lr=0.9)
+    optimizer.state
+    total_loss = 0
+    for _ in range(5):
       for context, _ in ngrams:
         context_idxs = torch.tensor([word_to_ix[w] for w in context],
                                     dtype=torch.long).to(xla_device)
@@ -80,7 +78,8 @@ class TestEmbedding(TestCase):
         optimizer.step()
         total_loss += loss.item()
         xm.mark_step()
-    # TODO: inspect optimizer context assert update has happend.
+    self.assertNotEqual(total_loss, 0)
+    self.assertNotEqual(cloned_weight, model.weight)
 
 
 # repeat for Bag
