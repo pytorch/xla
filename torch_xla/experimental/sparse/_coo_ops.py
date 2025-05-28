@@ -1,5 +1,3 @@
-from contextlib import contextmanager
-from typing import Tuple
 import torch
 from torch.autograd import Function
 
@@ -146,30 +144,19 @@ def coo__coalesce(args, kwargs=None):
   self = args[0]
 
   indices = self._indices()
-  values = self._values()
   sparse_dim = self.sparse_dim()
-  nnz = self._nnz()
+
   indices_scalar = _flatten_indices(indices, self.shape[:sparse_dim])
-
-  new_indices = torch.empty_like(indices)
-  new_values = torch.empty_like(values)
-  indices_buffer, indices_perm = indices_scalar.sort(0)
-  last_flat = -1
-  n = -1
-  for i in range(nnz):
-    flat_idx = indices_buffer[i]
-    # if an index is duplicated, don't advance the counter for new nnz (n), just
-    # sum the value into the position
-    if flat_idx != last_flat:
-      n += 1
-    original_loc = indices_perm[i]
-    full_sparse_idx = indices[:, original_loc]
-    new_indices[:, n] = full_sparse_idx
-    new_values[n] += values[original_loc]
-    last_flat = flat_idx
-
-  r = make_sparse(
-      new_indices, new_values, self.shape, dtype=self.dtype, device=self.device)
+  sorted_indices, indices_perm, counts = indices_scalar.unique(
+      return_counts=True, return_inverse=True)
+  torch._check(
+      counts.eq(1).all().item(),
+      lambda: f"coalesce: Duplicate indices detected!")
+  # Note: Only prevent duplicate indices from passing calls, we do any coalesence.
+  # 1) it is hard to write a functionalization compliant coalescece algorithm which is performant
+  # 2) We don't implement any ordering dependant ops like binary intersection
+  # based pointwise, so index ordering is not important, but unevaluated sums will break autograd.
+  r = self.clone()
   r._is_coalesced = True
   return r
 
