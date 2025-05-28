@@ -12,27 +12,12 @@ aten = torch.ops.aten
 
 class SparseCOOTensor(torch.Tensor):
 
-  # DISPATCH_TABLE: ClassVar[Dict[OpOverload, Callable]] = {
-  #     aten.values: coo_values,
-  #     aten.indices: coo_indices,
-  #     aten._indices: coo_indices_unsafe,
-  #     aten._values: coo_values_unsafe,
-  #     aten.coalesce: coo_coalesce,
-  #     aten.add_: coo_add_,
-  #     aten.sparse_mask: coo_sparse_mask,
-  #     aten.resize_as_: coo_resize_as_,
-  #     aten.clone: coo_clone,
-  #     aten.detach: coo_detach,
-  #     aten.to_dense: coo_to_dense,
-  #     aten._to_copy: coo_to_copy,
-  #     aten._nnz: coo_nnz,
-  #     aten.sparse_dim: coo_sparse_dim,
-  #     aten.to: coo_to,
-  # }
   _v: torch.Tensor
   _i: torch.Tensor
-  # make these constant properties
+  # If we set layout kwarg in `make_wrapper_subclass` we will get the SparseXLA
+  # dispatch key, and that can interfere with dispatch for composite ops.
   _layout: torch.layout = torch.sparse_coo
+  # make these constant properties
   is_sparse: bool = True
   is_coalesced: bool = False
 
@@ -80,30 +65,19 @@ class SparseCOOTensor(torch.Tensor):
   # returns where needed, and bare tensors returned should remain as such.
   __torch_function__ = torch._C._disabled_torch_function_impl
 
-  # @classmethod
-  # def __torch_function__(cls,
-  #                        func: OpOverload,
-  #                        types: Tuple,
-  #                        args: Tuple = (),
-  #                        kwargs: Dict[str, Any] | None = None) -> torch.Tensor:
-  #   kwargs = kwargs or {}
-  #   from ._coo_ops import _COO_FUNCTION_TABLE
-  #   if func in _COO_FUNCTION_TABLE:
-  #     return _COO_FUNCTION_TABLE[func](args=args, kwargs=kwargs)
-  #   else:
-  #     super().__torch_function__(func, types, args, kwargs)
-
   @classmethod
   def __torch_dispatch__(cls,
                          func: OpOverload,
                          types: Tuple,
                          args: Tuple = (),
                          kwargs: Dict[str, Any] | None = None) -> torch.Tensor:
+    # We don't have enough functionality to need to handle overloads. We might
+    # need to refactor this at some point to register on a per-overload basis
     func = func.overloadpacket
-    from ._coo_ops import _COO_DISPATCH_TABLE
-    print(func.__name__)
+    from ._coo_ops import _COO_DISPATCH_TABLE, coo_add_
     if func in _COO_DISPATCH_TABLE:
       return _COO_DISPATCH_TABLE[func](args, kwargs)
+
     msg = (f"Sparse support via {cls.__name__} is limited to a very narrow "
            f"scope. The {func.__name__} operator is not currently supported. It"
            " is likely you are using this outside of its intended purpose "
@@ -120,3 +94,15 @@ class SparseCOOTensor(torch.Tensor):
   @property
   def layout(self):
     return self._layout
+
+  @classmethod
+  def new(cls,
+          indices: torch.Tensor,
+          values: torch.Tensor,
+          size: Iterable[int],
+          *,
+          dtype: torch.dtype | None = None,
+          device: torch.device | None = None,
+          requires_grad: bool = False):
+    from ._coo_ops import make_sparse
+    return make_sparse(indices, values, size, dtype=dtype, device=device)
