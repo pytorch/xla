@@ -183,12 +183,6 @@ def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
     return jnp.int8
   elif dtype == torch.uint8:
     return jnp.uint8
-  elif dtype == torch.float8_e5m2:
-    return jnp.float8_e5m2
-  elif dtype == torch.float8_e4m3fn:
-    return jnp.float8_e4m3fn
-  elif dtype == torch.float8_e4m3fnuz:
-    return jnp.float8_e4m3fnuz
   else:
     raise ValueError(f"Unsupported dtype: {dtype}")
 
@@ -1320,7 +1314,8 @@ def gmm(
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
   preferred_element_type = lhs.dtype
   return xb.call_jax(gmm, (lhs, rhs, group_sizes, preferred_element_type,
-                           (tm, tk, tn), group_offset, None, transpose_rhs))
+                           (tm, tk, tn), group_offset),
+                     {"transpose_rhs": transpose_rhs})
 
 
 @requires_jax
@@ -1572,6 +1567,8 @@ def gmm_xla(
     tiling: Optional[List[int]] = [512, 512, 512],
     group_offset: torch.Tensor | None = None,
     transpose_rhs: bool = False):
+  if tiling is None:
+    tiling = [512, 512, 512]
   assert len(tiling) == 3, "tiling must be a list with 3 integers"
   assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
   assert rhs.dim(
@@ -1591,6 +1588,8 @@ def gmm_non_xla(lhs: torch.Tensor,
   # We need to make sure output tensor's shape is correct.
   if lhs.device != torch.device("meta"):
     warnings.warn(f'XLA gmm should only be applied to tensors on XLA device')
+  if tiling is None:
+    tiling = [512, 512, 512]
   assert len(tiling) == 3, "tiling must be a list with 3 integers"
   assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
   assert rhs.dim(

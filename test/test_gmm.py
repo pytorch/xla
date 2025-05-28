@@ -31,10 +31,9 @@ class MegabloxTest(unittest.TestCase):
     start = 0
     out = []
     for i, size in enumerate(group_sizes):
+      rhsi = rhs[i, :, :]
       if transpose_rhs is True:
-        rhsi = torch.transpose(rhs[i, :, :], 1, 2)
-      else:
-        rhsi = rhs[i, :, :]
+        rhsi = torch.transpose(rhsi, 0, 1)
       result = lhs[start:start + size, :] @ rhsi
       out.append(result)
       start += group_sizes[i]
@@ -138,7 +137,10 @@ class MegabloxTest(unittest.TestCase):
               old_cnt = xr.get_num_cached_compilation_graph()
               # execute the same gmm func, expected to hit the cache
               out = gmm_func(
-                  lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+                  lhs.to("xla"),
+                  rhs.to("xla"),
+                  group_sizes.to("xla"),
+                  transpose_rhs=transpose_rhs)
               new_cnt = xr.get_num_cached_compilation_graph()
               self.assertEqual(old_cnt, new_cnt)
             self.assertTrue(torch.allclose(ref_out, out.cpu()))
