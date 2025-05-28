@@ -4363,5 +4363,14 @@ at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(tensor_methods::view(
       bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
 }
-
+at::Tensor XLANativeFunctions::sparse_mask(const at::Tensor& self,
+                                           const at::Tensor& mask) {
+  at::Tensor ret;
+  {
+    at::AutoDispatchSkipFunctionalize guard;
+    at::AutoDispatchBelowAutograd guard2;
+    ret = self.sparse_mask(mask);
+  }
+  return ret;
+}
 }  // namespace torch_xla
