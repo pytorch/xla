@@ -183,6 +183,12 @@ def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
     return jnp.int8
   elif dtype == torch.uint8:
     return jnp.uint8
+  elif dtype == torch.float8_e5m2:
+    return jnp.float8_e5m2
+  elif dtype == torch.float8_e4m3fn:
+    return jnp.float8_e4m3fn
+  elif dtype == torch.float8_e4m3fnuz:
+    return jnp.float8_e4m3fnuz
   else:
     raise ValueError(f"Unsupported dtype: {dtype}")
 
