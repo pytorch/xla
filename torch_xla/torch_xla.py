@@ -36,14 +36,15 @@ def device(index: int = None) -> torch.device:
     torch_xla._XLAC._xla_set_default_device(device)
     return torch.device(device)
 
-  if n is None:
+  if index is None:
     return torch.device(torch_xla._XLAC._xla_get_default_device())
 
   devices = xm.get_xla_supported_devices()
-  if n > len(devices):
-    raise IndexError('Device index {} out of range in {}'.format(n, devices))
+  if index > len(devices):
+    raise IndexError('Device index {} out of range in {}'.format(
+        index, devices))
 
-  device = devices[n]
+  device = devices[index]
   torch_xla._XLAC._xla_set_default_device(device)
   return torch.device(device)
 
