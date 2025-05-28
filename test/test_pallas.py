@@ -14,7 +14,7 @@ from torch_xla._internal import tpu
 import numpy as np
 
 if xr.device_type() == 'TPU':
-  from torch_xla.experimental.custom_kernel import jax_import_guard
+  from torch_xla.experimental.custom_kernel import jax_import_guard, convert_torch_dtype_to_jax
   jax_import_guard()
   import jax
   import jax.numpy as jnp
@@ -130,9 +130,9 @@ class PallasTest(parameterized.TestCase):
     kv_lens = torch.nn.functional.pad(kv_lens,
                                       (0, max_num_seqs - kv_lens.shape[0]),
                                       "constant", 0)
+    # Use float32 for randn because it doesn't support some dtypes like float8
     q = torch.randn((max_num_batched_tokens, num_q_heads, head_dim),
                     dtype=torch.float32).to(q_dtype)
-    # Use float32 for randn because it doesn't support some dtypes like float8
     kv_pages = torch.randn((num_pages, page_size, num_kv_heads * 2, head_dim),
                            dtype=torch.float32).to(kv_dtype)
     page_indices = torch.randint(
@@ -663,8 +663,10 @@ class PallasTest(parameterized.TestCase):
         max_num_seqs=max_num_seqs)
     k_scale = 0.5 if kv_dtype in [torch.float8_e5m2] else None
     v_scale = 0.5 if kv_dtype in [torch.float8_e5m2] else None
-    if num_heads[1] == 1 and kv_dtype in [torch.float8_e5m2]:
-      self.skipTest("attention kernel cannot support ")
+    num_kv_heads = num_heads[1]
+    if num_kv_heads == 1 and kv_dtype in [torch.float8_e5m2]:
+      self.skipTest(
+          "attention kernel cannot support because it is not XLA fully tiled")
     if kv_dtype is torch.float8_e5m2 and tpu.version() <= 4:
       self.skipTest("TPU v4 or older doesn't support fp8")
 
@@ -752,16 +754,14 @@ class PallasTest(parameterized.TestCase):
     self.assertEqual(kernel_output_cpu.shape, nonkernel_output_cpu.shape)
     self.assertEqual(kernel_output_cpu.dtype, nonkernel_output_cpu.dtype)
 
-    jnp_dtype = jnp.float32
-    tol = 0.15
-    if q_dtype == torch.bfloat16:
-      jnp_dtype = jnp.bfloat16
-      tol = 0.3
+    tol = 0.15 if q_dtype == torch.float32 else 0.3
+    q_jnp_dtype = convert_torch_dtype_to_jax(q_dtype)
+    kv_jnp_dtype = convert_torch_dtype_to_jax(kv_dtype)
 
     # Numpy does not support bfloat16 directly. So we convert f32 first.
-    q_jax = jnp.array(q.to(torch.float32).numpy(), dtype=jnp_dtype)
+    q_jax = jnp.array(q.to(torch.float32).numpy(), dtype=q_jnp_dtype)
     kv_pages_jax = jnp.array(
-        kv_pages.to(torch.float32).numpy(), dtype=jnp_dtype)
+        kv_pages.to(torch.float32).numpy(), dtype=kv_jnp_dtype)
     kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
     page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
     cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
