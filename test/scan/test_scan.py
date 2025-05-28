@@ -273,7 +273,7 @@ class ScanTest(TestBase):
     giving wrong results.
     """
     # TODO(yifeit): Modify this test when external in-place mutation is eventually supported.
-    weird_global = torch.tensor([0.0, 0.0], device='xla')
+    weird_global = torch.tensor([0.0, 0.0], device=torch_xla.device())
 
     def step_fn(carry, x):
       new_carry = carry + x
@@ -281,8 +281,9 @@ class ScanTest(TestBase):
       y = new_carry + weird_global
       return new_carry, y
 
-    init = torch.tensor([0.0, 0.0], device='xla')
-    xs = torch.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], device='xla')
+    init = torch.tensor([0.0, 0.0], device=torch_xla.device())
+    xs = torch.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+                      device=torch_xla.device())
 
     with self.assertRaisesRegex(AssertionError, "FakeTensor"):
       scan(step_fn, init, xs)
@@ -350,11 +351,13 @@ class ScanTest(TestBase):
 
     def step_fn(carry, x):
       new_carry = carry + x
-      y = new_carry + torch.rand(2, device='xla')
+      # TODO: figure out why device='xla' doesn't work
+      y = new_carry + torch.rand(2, device=torch_xla.device())
       return new_carry, y
 
-    init = torch.tensor([0.0, 0.0], device='xla')
-    xs = torch.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], device='xla')
+    init = torch.tensor([0.0, 0.0], device=torch_xla.device())
+    xs = torch.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+                      device=torch_xla.device())
     _, ys = scan(step_fn, init, xs)
     # ys should be a 2D tensor with this shape.
     self.assertEqual(ys.shape, (3, 2))
