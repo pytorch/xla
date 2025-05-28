@@ -137,15 +137,20 @@ Execution Analysis: ------------------------------------------------------------
 Execution Analysis: ================================================================================
 ```
 
-Some common causes of Compilation/Executation are 1. User manually call
-`torch_xla.sync()`. 2. [Parallel
+Some common causes of Compilation/Executation are 
+1. User manually call
+`torch_xla.sync()`. 
+2. [Parallel
 loader](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51)
-call `torch_xla.sync()` for every x (configurable) batch. 3. Exiting a
+call `torch_xla.sync()` for every x (configurable) batch. 
+3. Exiting a
 [profiler StepTrace
 region](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/debug/profiler.py#L165-L171).
-4. Dynamo decide to compile/execute the graph. 5. User trying to
+4. Dynamo decide to compile/execute the graph. 
+5. User trying to
 access(often due to logging) the value of a tensor before the
 `torch_xla.sync()`.
+6. User trying to access tensor value before mark_step. See [PyTorch on XLA Devices](https://github.com/pytorch/xla/blob/master/docs/source/learn/pytorch-on-xla-devices.md) for more details.
 
 The execution caused by 1-4 are expected, and we want to avoid 5 by
 either reduce the frequency of accessing tensor values or manually add a
