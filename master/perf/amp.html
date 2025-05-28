@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitaa44bde )
+                  master (2.8.0+git9871aed )
                 </div>
               
             
@@ -462,7 +462,10 @@ document describes how to use AMP on XLA devices and best practices.</p>
 <p>AMP on TPUs automatically casts operations to run in either <code class="docutils literal notranslate"><span class="pre">float32</span></code> or
 <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code> because TPUs natively support bfloat16. A simple TPU AMP
 example is below:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Creates model and optimizer in default precision</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.amp</span><span class="w"> </span><span class="kn">import</span> <span class="n">syncfree</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+
+<span class="c1"># Creates model and optimizer in default precision</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">Net</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
 <span class="c1"># Pytorch/XLA provides sync-free optimizers for improved performance</span>
 <span class="n">optimizer</span> <span class="o">=</span> <span class="n">syncfree</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="o">...</span><span class="p">)</span>
@@ -536,7 +539,10 @@ unlisted ops run if they’re downstream from autocasted ops.</p>
 <p>AMP on XLA:GPU devices reuse Pytorch’s AMP rules. See <a class="reference external" href="https://pytorch.org/docs/stable/amp.html">Pytorch’s AMP
 documentation</a> for CUDA
 specific behavior. A simple CUDA AMP example is below:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Creates model and optimizer in default precision</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.amp</span><span class="w"> </span><span class="kn">import</span> <span class="n">syncfree</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+
+<span class="c1"># Creates model and optimizer in default precision</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">Net</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
 <span class="c1"># Pytorch/XLA provides sync-free optimizers for improved performance</span>
 <span class="n">optimizer</span> <span class="o">=</span> <span class="n">syncfree</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="o">...</span><span class="p">)</span>

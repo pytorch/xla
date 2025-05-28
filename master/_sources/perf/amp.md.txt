@@ -15,6 +15,9 @@ AMP on TPUs automatically casts operations to run in either `float32` or
 example is below:
 
 ``` python
+from torch_xla.amp import syncfree
+import torch_xla.core.xla_model as xm
+
 # Creates model and optimizer in default precision
 model = Net().to(xm.xla_device())
 # Pytorch/XLA provides sync-free optimizers for improved performance
@@ -99,6 +102,9 @@ documentation](https://pytorch.org/docs/stable/amp.html) for CUDA
 specific behavior. A simple CUDA AMP example is below:
 
 ``` python
+from torch_xla.amp import syncfree
+import torch_xla.core.xla_model as xm
+
 # Creates model and optimizer in default precision
 model = Net().to(xm.xla_device())
 # Pytorch/XLA provides sync-free optimizers for improved performance
