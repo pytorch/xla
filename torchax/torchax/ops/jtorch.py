@@ -557,3 +557,8 @@ def functional_interpolate(
     raise torchax.tensor.OperatorNotFound(
         f"JAX does not support interpolation mode: {mode}. Supported modes are: {supported_methods}"
     )
+
+  
+@register_function(torch.Tensor.repeat_interleave)
+def torch_Tensor_repeat_interleave(self, repeats, dim=None, *, output_size=None):
+  return jnp.repeat(self, repeats, axis=dim, total_repeat_length=output_size)

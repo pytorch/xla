@@ -57,6 +57,7 @@ mutation_ops_to_functional = {
     torch.ops.aten.scatter_add_: torch.ops.aten.scatter_add,
     torch.ops.aten.scatter_reduce_.two: torch.ops.aten.scatter_reduce,
     torch.ops.aten.scatter_: torch.ops.aten.scatter,
+    torch.ops.aten.bitwise_or_: torch.ops.aten.bitwise_or,
 }
 
 # Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
@@ -458,7 +459,7 @@ def _aten_resize_as_(x, y):
 
 @op(torch.ops.aten.repeat_interleave.Tensor)
 def repeat_interleave(repeats, dim=0):
-  return jnp.repeat(jnp.arange(repeats.shape[dim]), repeats)
+  return jnp.repeat(np.arange(repeats.shape[dim]), repeats)
 
 
 @op(torch.ops.aten.repeat_interleave.self_int)
@@ -1059,8 +1060,8 @@ def _aten_bucketize(input,
                     out_int32=False,
                     right=False,
                     out=None):
-  assert boundaries[0] < boundaries[
-      -1], "boundaries must contain a strictly increasing sequence"
+  # assert boundaries[0] < boundaries[
+  #     -1], "boundaries must contain a strictly increasing sequence"
   return_type = jnp.int32 if out_int32 else jnp.int64
   return jnp.digitize(input, boundaries, right=not right).astype(return_type)
 
@@ -4888,15 +4889,12 @@ def _aten_multinomial(input,
                       env=None):
   assert num_samples <= input.shape[
       -1] or replacement, "cannot take a larger sample than population when replacement=False"
-  assert jnp.all(input >= 0), "inputs must be non-negative"
+  #assert jnp.all(input >= 0), "inputs must be non-negative"
   key = env.get_and_rotate_prng_key(generator)
   if input.ndim == 1:
-    assert jnp.sum(input) > 0, "rows of input must have non-zero sum"
     return jax.random.choice(
         key, input.shape[-1], (num_samples,), replace=replacement, p=input)
   else:
-    assert jnp.all(
-        jnp.sum(input, axis=1) > 0), "rows of input must have non-zero sum"
     return jnp.array([
         jax.random.choice(
             key,
