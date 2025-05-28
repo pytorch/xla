@@ -663,6 +663,10 @@ class PallasTest(parameterized.TestCase):
         max_num_seqs=max_num_seqs)
     k_scale = 0.5 if kv_dtype in [torch.float8_e5m2] else None
     v_scale = 0.5 if kv_dtype in [torch.float8_e5m2] else None
+    if num_heads[1] == 1 and kv_dtype in [torch.float8_e5m2]:
+      self.skipTest("attention kernel cannot support ")
+    if kv_dtype is torch.float8_e5m2 and tpu.version() <= 4:
+      self.skipTest("TPU v4 or older doesn't support fp8")
 
     q_xla = q.to("xla")
     kv_pages_xla = kv_pages.to("xla")
@@ -778,6 +782,8 @@ class PallasTest(parameterized.TestCase):
                 sm_scale=sm_scale,
                 sliding_window=sliding_window,
                 soft_cap=soft_cap,
+                k_scale=k_scale,
+                v_scale=v_scale,
             )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(q_dtype)
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 

@@ -183,6 +183,12 @@ def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
     return jnp.int8
   elif dtype == torch.uint8:
     return jnp.uint8
+  elif dtype == torch.float8_e5m2:
+    return jnp.float8_e5m2
+  elif dtype == torch.float8_e4m3fn:
+    return jnp.float8_e4m3fn
+  elif dtype == torch.float8_e4m3fnuz:
+    return jnp.float8_e4m3fnuz
   else:
     raise ValueError(f"Unsupported dtype: {dtype}")
 
@@ -930,11 +936,11 @@ def _ragged_paged_attention_nonkernel(
     v = kv_pages[indices, :, 1::2, :].reshape(-1, num_kv_heads,
                                               head_dim)[:kv_len]
     if k_scale is not None:
-      k = k.astype(torch.float32) * k_scale
-      k = k.astype(q.dtype)
+      k = k.to(torch.float32) * k_scale
+      k = k.to(q.dtype)
     if v_scale is not None:
-      v = v.astype(torch.float32) * v_scale
-      v = v.astype(q.dtype)
+      v = v.to(torch.float32) * v_scale
+      v = v.to(q.dtype)
     k = torch.repeat_interleave(k, num_query_per_kv, dim=1)
     v = torch.repeat_interleave(v, num_query_per_kv, dim=1)
     attn = torch.einsum("qhd,khd->hqk", q, k)
