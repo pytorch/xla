@@ -2,6 +2,7 @@ from train_resnet_base import TrainResNetBase
 
 import itertools
 
+import torch_xla
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.core.xla_model as xm
 from torch_xla.amp import autocast

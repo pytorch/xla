@@ -5,6 +5,7 @@ import unittest
 
 import torch
 import torch.nn.functional as F
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_marker
 from torch.utils import _pytree as pytree

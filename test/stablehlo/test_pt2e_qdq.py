@@ -4,6 +4,7 @@ import unittest
 from typing import Callable, Dict, List
 
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torchvision
 from torch.export import export_for_training

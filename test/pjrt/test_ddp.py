@@ -5,6 +5,7 @@ import sys
 import torch.distributed as dist
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 from torch_xla import runtime as xr

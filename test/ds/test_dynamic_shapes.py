@@ -2,6 +2,7 @@ import os
 import sys
 import unittest
 import torch, torch_xla
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 

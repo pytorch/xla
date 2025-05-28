@@ -11,6 +11,7 @@ import torch.nn as nn
 from torch.distributed import DeviceMesh
 from torch.distributed.tensor.placement_types import Placement, Replicate
 
+import torch_xla
 import torch_xla.core.xla_model as xm  # type:ignore[import]  # noqa: F401
 import torch_xla.runtime as xr  # type:ignore[import]
 from torch_xla.distributed.spmd import (  # type:ignore[import]
