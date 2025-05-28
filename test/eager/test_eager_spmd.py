@@ -39,7 +39,7 @@ class Eager(unittest.TestCase):
     return xs.Mesh(device_ids, mesh_shape, axis_names)
 
   def test_eager_spmd_basic(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     mesh = self._get_mesh((self.n_devices,), axis_names=('data',))
     torch.manual_seed(100)
     linear = torch.nn.Linear(10, 20)
@@ -52,7 +52,7 @@ class Eager(unittest.TestCase):
     self.assertTrue(torch.allclose(res, res_xla.cpu(), atol=1e-2))
 
   def test_module_to_empty_sharding(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     mlinear = MultiLinear()
     mlinear.to(device)
     torch_xla._XLAC._get_xla_sharding_spec(mlinear.linear1.weight)

@@ -59,7 +59,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
 
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
-      xm.xla_device(10)
+      torch_xla.device(10)
 
   @parameterized.named_parameters(('default', {}, True), ('no_default', {
       'PJRT_SELECT_DEFAULT_DEVICE': '0'

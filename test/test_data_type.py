@@ -29,8 +29,8 @@ class XlaDataTypeTest(unittest.TestCase):
       os.environ[key] = value
 
   def _test_datatype(self, dtype, expected_type, op):
-    t1 = torch.tensor([2, 3], dtype=dtype, device=xm.xla_device())
-    t2 = torch.tensor([2, 3], dtype=dtype, device=xm.xla_device())
+    t1 = torch.tensor([2, 3], dtype=dtype, device='xla')
+    t2 = torch.tensor([2, 3], dtype=dtype, device='xla')
     t3 = op(t1, t2)
     self.assertEqual(t3.dtype, dtype)
 
@@ -55,7 +55,7 @@ class XlaDataTypeTest(unittest.TestCase):
     self._test_datatype(torch.uint64, 'u32', torch.add)
 
   def test_module_to_dtype(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     linear = torch.nn.Linear(
         5, 10, dtype=torch.float32).to(device).to(torch.bfloat16)
     input = torch.randn(10, 5).to(device).to(torch.bfloat16)

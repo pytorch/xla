@@ -26,7 +26,7 @@ class ScanLayersTest(XlaTestCase):
   def setUp(self):
     super().setUp()
 
-    self.device = torch_xla.device()
+    self.device = torch.device('xla')
 
   def assert_different_tensor(self, a: torch.Tensor, b: torch.Tensor):
     assert a is not b, f"Expected {a} and {b} to be different tensors"
@@ -262,18 +262,16 @@ class ScanLayersTest(XlaTestCase):
     assert checks > 0
 
   def test_heterogenous_layers(self):
-    layer1 = nn.Linear(128, 128).to(torch_xla.device())
-    layer2 = nn.Sequential(nn.Linear(128, 128).to(torch_xla.device()))
+    layer1 = nn.Linear(128, 128).to(torch.device('xla'))
+    layer2 = nn.Sequential(nn.Linear(128, 128).to(torch.device('xla')))
     with self.assertRaisesRegex(ValueError, "mismatched keys"):
-      scan_layers([layer1, layer2],
-                  torch.zeros((128,), device=torch_xla.device()))
+      scan_layers([layer1, layer2], torch.zeros((128,), device='xla'))
 
   def test_mismatched_shapes(self):
-    layer1 = nn.Linear(128, 128).to(torch_xla.device())
-    layer2 = nn.Linear(128, 129).to(torch_xla.device())
+    layer1 = nn.Linear(128, 128).to(torch.device('xla'))
+    layer2 = nn.Linear(128, 129).to(torch.device('xla'))
     with self.assertRaisesRegex(ValueError, "Shape mismatch"):
-      scan_layers([layer1, layer2],
-                  torch.zeros((128,), device=torch_xla.device()))
+      scan_layers([layer1, layer2], torch.zeros((128,), device='xla'))
 
 
 if __name__ == '__main__':

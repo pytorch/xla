@@ -7,7 +7,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla.stablehlo import exported_program_to_stablehlo
 
-device = xm.xla_device()
+device = torch.device('xla')
 
 
 class XLAExportInterpreterTest(unittest.TestCase):

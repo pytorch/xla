@@ -23,7 +23,7 @@ class ScanSpmdTest(unittest.TestCase):
     # Set up a simple SPMD mesh for these tests.
     self.spmd_mesh = get_1d_mesh(axis_name="model")
     set_global_mesh(self.spmd_mesh)
-    self.device = torch_xla.device()
+    self.device = torch.device('xla')
 
   @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
                        "Multiple devices required")

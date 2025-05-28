@@ -32,12 +32,12 @@ class TestPjRtProfiler(absltest.TestCase):
 
   def setUp(self):
     # HACK: ensure libtpu is loaded if using TPU
-    xm.xla_device()
+    torch.device('xla')
 
   def test_profiler_output(self):
     tempdir = self.create_tempdir().full_path
 
-    device = xm.xla_device()
+    device = torch.device('xla')
     ones = torch.ones([5])
     with _profile(tempdir):
       xones = ones.to(device)

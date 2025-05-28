@@ -11,8 +11,8 @@ class TestExperimentalCallback(absltest.TestCase):
   @staticmethod
   @torch_xla.compile
   def executable():
-    a, b = torch.randn((100, 100), device=torch_xla.device()), torch.randn(
-        (100, 100), device=torch_xla.device())
+    a, b = torch.randn((100, 100), device='xla'), torch.randn((100, 100),
+                                                              device='xla')
     return a @ b
 
   def test_callback(self):

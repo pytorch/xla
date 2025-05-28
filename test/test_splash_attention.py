@@ -79,19 +79,19 @@ class SplashAttentionTest(unittest.TestCase):
         self.NUM_Q_HEADS,
         self.SEQ_LEN,
         self.HEAD_DIM,
-    ).to("xla").requires_grad_()
+    ).to('xla').requires_grad_()
     k = torch.randn(
         self.BATCH_SIZE,
         self.NUM_KV_HEADS,
         self.SEQ_LEN,
         self.HEAD_DIM,
-    ).to("xla").requires_grad_()
+    ).to('xla').requires_grad_()
     v = torch.randn(
         self.BATCH_SIZE,
         self.NUM_KV_HEADS,
         self.SEQ_LEN,
         self.HEAD_DIM,
-    ).to("xla").requires_grad_()
+    ).to('xla').requires_grad_()
     q_sa = q.clone().detach().requires_grad_()
     k_sa = k.clone().detach().requires_grad_()
     v_sa = v.clone().detach().requires_grad_()
@@ -118,7 +118,7 @@ class SplashAttentionTest(unittest.TestCase):
   def test_splash_attention_base(self):
     q, k, v, q_sa, k_sa, v_sa = self.ab_comparsion_input_generation()
     attention_mask = torch.triu(
-        torch.ones(self.SEQ_LEN, self.SEQ_LEN), diagonal=1).to("xla")
+        torch.ones(self.SEQ_LEN, self.SEQ_LEN), diagonal=1).to('xla')
     o = self._attention(q, k, v, attn_mask=attention_mask)
     torch_xla.sync()
     loss = torch.sum(o)
@@ -149,13 +149,13 @@ class SplashAttentionTest(unittest.TestCase):
     n_devices = xr.global_runtime_device_count()
     q = (
         torch.randn(self.BATCH_SIZE, self.NUM_HEADS, self.SEQ_LEN,
-                    self.HEAD_DIM).requires_grad_().to("xla"))
+                    self.HEAD_DIM).requires_grad_().to('xla'))
     k = (
         torch.randn(self.BATCH_SIZE, self.NUM_HEADS, self.SEQ_LEN,
-                    self.HEAD_DIM).requires_grad_().to("xla"))
+                    self.HEAD_DIM).requires_grad_().to('xla'))
     v = (
         torch.randn(self.BATCH_SIZE, self.NUM_HEADS, self.SEQ_LEN,
-                    self.HEAD_DIM).requires_grad_().to("xla"))
+                    self.HEAD_DIM).requires_grad_().to('xla'))
     o = splash_attention(q, k, v, self.config.to_json())
     torch_xla.sync()
     self.assertEqual(
@@ -168,7 +168,7 @@ class SplashAttentionTest(unittest.TestCase):
   @with_jax_high_precision
   def test_splash_attention_segment_id(self):
     q, k, v, q_sa, k_sa, v_sa = self.ab_comparsion_input_generation()
-    zeros = torch.zeros(self.BATCH_SIZE, self.SEQ_LEN // 4).to("xla")
+    zeros = torch.zeros(self.BATCH_SIZE, self.SEQ_LEN // 4).to('xla')
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     segment_ids_sa = segment_ids.clone().detach()
 
@@ -225,7 +225,7 @@ class SplashAttentionTest(unittest.TestCase):
         splash_attention, fw_compiler=compiler)
 
     attention_mask = torch.triu(
-        torch.ones(self.SEQ_LEN, self.SEQ_LEN), diagonal=1).to("xla")
+        torch.ones(self.SEQ_LEN, self.SEQ_LEN), diagonal=1).to('xla')
     o = self._attention(q, kk, vv, attn_mask=attention_mask)
     torch_xla.sync()
     loss = torch.sum(o)
@@ -255,14 +255,14 @@ class SplashAttentionTest(unittest.TestCase):
     starting_cache_misses = xb._jax_to_xla_computation_cache_elements()
     q = (
         torch.randn(self.BATCH_SIZE, self.NUM_HEADS, self.SEQ_LEN,
-                    self.HEAD_DIM).requires_grad_().to("xla"))
+                    self.HEAD_DIM).requires_grad_().to('xla'))
     k = (
         torch.randn(self.BATCH_SIZE, self.NUM_HEADS, self.SEQ_LEN,
-                    self.HEAD_DIM).requires_grad_().to("xla"))
+                    self.HEAD_DIM).requires_grad_().to('xla'))
     v = (
         torch.randn(self.BATCH_SIZE, self.NUM_HEADS, self.SEQ_LEN,
-                    self.HEAD_DIM).requires_grad_().to("xla"))
-    segment_ids = torch.zeros(self.BATCH_SIZE, self.SEQ_LEN).to("xla")
+                    self.HEAD_DIM).requires_grad_().to('xla'))
+    segment_ids = torch.zeros(self.BATCH_SIZE, self.SEQ_LEN).to('xla')
     for i in range(self.BATCH_SIZE):
       segment_ids[i, :] = i
 

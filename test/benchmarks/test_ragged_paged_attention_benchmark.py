@@ -161,14 +161,14 @@ def benchmark(args):
 
   if _run_with_torch_xla(args.kernel):
     queries_xla = torch.from_numpy(np.array(queries)).to(
-        torch.bfloat16).to("xla")
+        torch.bfloat16).to('xla')
     k_pages_xla = torch.from_numpy(np.array(k_pages)).to(
-        torch.bfloat16).to("xla")
+        torch.bfloat16).to('xla')
     v_pages_xla = torch.from_numpy(np.array(v_pages)).to(
-        torch.bfloat16).to("xla")
-    kv_lens_xla = torch.from_numpy(np.array(kv_lens_np)).to("xla")
-    page_indices_xla = torch.from_numpy(np.array(page_indices)).to("xla")
-    cu_q_lens_xla = torch.from_numpy(np.array(cu_q_lens)).to("xla")
+        torch.bfloat16).to('xla')
+    kv_lens_xla = torch.from_numpy(np.array(kv_lens_np)).to('xla')
+    page_indices_xla = torch.from_numpy(np.array(page_indices)).to('xla')
+    cu_q_lens_xla = torch.from_numpy(np.array(cu_q_lens)).to('xla')
 
     def ragged_paged_attention_wrapper(q, k_pages, v_pages, kv_lens,
                                        page_indices, cu_q_lens, num_seqs,
