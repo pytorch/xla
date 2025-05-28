@@ -523,6 +523,9 @@ class Environment(contextlib.ContextDecorator):
       if op.is_jax_function:
         res = self.j2t_iso(res)
 
+      if self.config.force_materialize_views and isinstance(res, View):
+        res = res.torch()
+
       if self.config.debug_accuracy_for_each_op:
         debug_accuracy(func, old_args, old_kwargs, res)
       return res
