@@ -348,7 +348,7 @@ future.
 
 ### Tensor Synchronization During Tracing
 
-While tensor synchronization is normal for JIT workflow, it is not expected during traced inference.
+While tensor synchronization is normal for JIT workflow, it is not expected during traced inference (i.e. traced workflow in AWS Neuron).
 When working with traced graphs, developers may encounter issues related to tensor synchronization during tracing, which can lead to additional graphs being compiled and unexpected program behavior.
 Therefore we need to take advantage of PyTorch/XLA's debugging flags to identify when unexpected tensor synchronization happens and make appropriate code changes to avoid tensor synchronization.
 
