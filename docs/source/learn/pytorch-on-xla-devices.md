@@ -346,6 +346,55 @@ device is unavailable the load will fail. PyTorch/XLA, like all of
 PyTorch, is under active development and this behavior may change in the
 future.
 
+### Tensor Synchronization During Tracing
+
+While tensor synchronization is normal for JIT workflow, it is not expected during traced inference.
+When working with traced graphs, developers may encounter issues related to tensor synchronization during tracing, which can lead to additional graphs being compiled and unexpected program behavior.
+Therefore we need to take advantage of PyTorch/XLA's debugging flags to identify when unexpected tensor synchronization happens and make appropriate code changes to avoid tensor synchronization.
+
+
+A common issue occurs when tensor values are evaluated during model compilation (traced inference). Consider this example:
+```
+def forward(self, tensor):
+    if tensor[0] == 1:
+        return tensor
+    else:
+        return tensor * 2
+```
+
+While this code can compile and run, it may lead to unexpected behavior because:
+
+* The tensor value is being accessed during tracing (``tensor[0]``)
+* The resulting graph becomes fixed based on the tensor value available during tracing
+* Developers might incorrectly assume the condition will be evaluated dynamically during inference
+* The solution for the code above is to utilize the debugging flags below to catch the issue and modify the code
+
+#### Debugging Flags
+To help catch tensor synchronization issues, PyTorch/XLA provides two useful approaches:
+
+1. Enable warning messages for tensor synchronization:
+```
+import os
+os.environ['PT_XLA_DEBUG_LEVEL'] = '2'
+```
+
+2. Disable graph execution to catch issues during development:
+```
+import torch_xla
+torch_xla._XLAC._set_allow_execution(False)
+```
+
+#### Recommendations
+
+Using these flags during development can help identify potential issues early in the development cycle. The recommended approach is to:
+
+* Use ``PT_XLA_DEBUG_LEVEL=2`` during initial development to identify potential synchronization points
+* Apply ``_set_allow_execution(False)`` when you want to ensure no tensor synchronization occurs during tracing
+* When seeing warnings or errors related the tensor synchronization, look into the code path and make appropriate changes
+
+For more detailed debugging information, refer to the [XLA troubleshoot](https://github.com/pytorch/xla/blob/master/docs/source/learn/troubleshoot.md#pytorchxla-debugging-tool).
+
+
 ## Compilation Caching
 
 The XLA compiler converts the traced HLO into an executable which runs
