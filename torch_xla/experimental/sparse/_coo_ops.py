@@ -33,8 +33,7 @@ def _flatten_indices(inds, shape):
   # Flatted N-D indices to 1-D indices
   flat_indices = inds.new_zeros(inds.size(1))
   for d, sz in enumerate(shape):
-    flat_indices.mul_(sz)
-    flat_indices.add_(inds[d])
+    flat_indices = (flat_indices * sz) + torch.select_copy(inds, 0, d)
   return flat_indices
 
 
@@ -90,11 +89,12 @@ def coo_sparse_mask(args=(), kwargs=None):
       f"sparse_mask: expected mask and self to have the same shape (self: {self.size()}, mask: {mask.size()})"
   )
   _check_no_kwargs(kwargs, "sparse_mask")
-  mask = mask.coalesce()
-  mask_indices = mask.indices()
+  #mask = mask.coalesce()
+  mask_indices = mask._indices()
   sparse_size = mask.shape[:mask.sparse_dim()]
   flat_indices = _flatten_indices(mask_indices, sparse_size)
   values = self.view(-1)[flat_indices]
+
   return make_sparse(
       mask_indices,
       values,
@@ -150,15 +150,15 @@ def coo_coalesce(args, kwargs=None):
   _check_sparse(self, "coalesce", "self")
   if self.is_coalesced:
     return self
-  return aten.coalesce.default(self)
+  return torch._coalesce(self)
 
 
 @_register_dispatch_func(aten._coalesce)
 def coo__coalesce(args, kwargs=None):
   self = args[0]
 
-  indices = self._i
-  values = self._v
+  indices = self._indices()
+  values = self._values()
   sparse_dim = self.sparse_dim()
   nnz = self._nnz()
   indices_scalar = _flatten_indices(indices, self.shape[:sparse_dim])
@@ -221,7 +221,6 @@ def coo_indices_unsafe(args=(), kwargs=None):
   return self._i
 
 
-@_register_function_func(torch.Tensor._values)
 @_register_dispatch_func(aten._values)
 def coo_values_unsafe(args=(), kwargs=None):
   self = args[0]
@@ -325,3 +324,16 @@ def coo_to(args=(), kwargs=None):
       # if no conversion is needed to returns an alias to this
       ret = self
     return ret
+
+
+def _register_missing_metas():
+  lib = torch.library.Library("aten", "IMPL", "AutogradXLA")
+
+  @torch.library.impl(lib, "sparse_mask")
+  def _(self, mask):
+    breakpoint()
+    return coo_sparse_mask(args=(self, mask))
+
+
+_register_missing_metas()
+del _register_missing_metas
