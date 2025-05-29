@@ -369,6 +369,7 @@ While this code can compile and run, it may lead to unexpected behavior because:
 * Developers might incorrectly assume the condition will be evaluated dynamically during inference
 * The solution for the code above is to utilize the debugging flags below to catch the issue and modify the code. One example is to feed the flag through model configuration
 
+See the updated code without tensor synchronization:
 ```python
 class TestModel(torch.nn.Module):
     def __init__(self, flag=1):
@@ -406,7 +407,7 @@ Using these flags during development can help identify potential issues early in
 
 * Use ``PT_XLA_DEBUG_LEVEL=2`` during initial development to identify potential synchronization points
 * Apply ``_set_allow_execution(False)`` when you want to ensure no tensor synchronization occurs during tracing
-* When seeing warnings or errors related the tensor synchronization, look into the code path and make appropriate changes. The example above moved the flag to the `__init__` function which does not depend on the model input during runtime.
+* When you see warnings or errors related the tensor synchronization, look into the code path and make appropriate changes. The example above moved the flag to the `__init__` function which does not depend on the model input during runtime.
 
 For more detailed debugging information, refer to the [XLA troubleshoot](https://github.com/pytorch/xla/blob/master/docs/source/learn/troubleshoot.md#pytorchxla-debugging-tool).
 
