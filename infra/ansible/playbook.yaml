@@ -85,7 +85,6 @@
             combine(build_env[arch] | default({}, true)) |
             combine(build_env[accelerator] | default({}, true))
           }}"
-        clang_compiler: "{{ clang_compiler }}"
       when: stage == "build"
       tags: build_srcs
 
@@ -95,8 +94,7 @@
         env_vars: "{{
             build_env.common | default({}, true) |
             combine(build_env[arch] | default({}, true)) |
-            combine(build_env[accelerator] | default({}, true)) |
-            combine(clang_compiler)
+            combine(build_env[accelerator] | default({}, true))
           }}"
       when: stage == "build_plugin"
       tags: build_plugin
