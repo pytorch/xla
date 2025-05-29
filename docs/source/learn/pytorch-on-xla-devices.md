@@ -354,7 +354,7 @@ Therefore we need to take advantage of PyTorch/XLA's debugging flags to identify
 
 
 A common issue occurs when tensor values are evaluated during model compilation (traced inference). Consider this example:
-```
+```python
 def forward(self, tensor):
     if tensor[0] == 1:
         return tensor
@@ -364,10 +364,26 @@ def forward(self, tensor):
 
 While this code can compile and run, it may lead to unexpected behavior because:
 
-* The tensor value is being accessed during tracing (``tensor[0]``)
+* The tensor value is being accessed during tracing (``tensor[0]``). 
 * The resulting graph becomes fixed based on the tensor value available during tracing
 * Developers might incorrectly assume the condition will be evaluated dynamically during inference
-* The solution for the code above is to utilize the debugging flags below to catch the issue and modify the code
+* The solution for the code above is to utilize the debugging flags below to catch the issue and modify the code. One example is to feed the flag through model configuration
+
+```python
+class TestModel(torch.nn.Module):
+    def __init__(self, flag=1):
+        super().__init__()
+        # the flag should be pre-determined based on the model configuration
+        # it should not be an input of the model during runtime
+        self.flag = flag
+
+    def forward(self, tensor):
+        if self.flag:
+            return tensor
+        else:
+            return tensor * 2
+```
+
 
 #### Debugging Flags
 To help catch tensor synchronization issues, PyTorch/XLA provides two useful approaches:
@@ -390,7 +406,7 @@ Using these flags during development can help identify potential issues early in
 
 * Use ``PT_XLA_DEBUG_LEVEL=2`` during initial development to identify potential synchronization points
 * Apply ``_set_allow_execution(False)`` when you want to ensure no tensor synchronization occurs during tracing
-* When seeing warnings or errors related the tensor synchronization, look into the code path and make appropriate changes
+* When seeing warnings or errors related the tensor synchronization, look into the code path and make appropriate changes. The example above moved the flag to the `__init__` function which does not depend on the model input during runtime.
 
 For more detailed debugging information, refer to the [XLA troubleshoot](https://github.com/pytorch/xla/blob/master/docs/source/learn/troubleshoot.md#pytorchxla-debugging-tool).
 
