@@ -121,6 +121,10 @@ torch::lazy::NodePtr SoftmaxBackwardOp(const torch::lazy::Value& grad_output,
                                        const torch::lazy::Value& output,
                                        int64_t dim);
 
+torch::lazy::NodePtr Clamp(const torch::lazy::Value& input,
+                           const torch::lazy::Value& min,
+                           const torch::lazy::Value& max);
+
 torch::lazy::NodePtr Celu(const torch::lazy::Value& input,
                           const at::Scalar& alpha);
 
