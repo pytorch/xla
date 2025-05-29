@@ -622,27 +622,26 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
     // Compile the computation to an executible. For better user experience, if
     // the XLA compiler fails for any reason, we raise a Python exception.
-    std::function<absl::StatusOr<std::unique_ptr<xla::PjRtLoadedExecutable>>()>
-        compile;
+    std::unique_ptr<xla::PjRtLoadedExecutable> executable;
     if (runtime::sys_util::GetEnvBool("XLA_STABLEHLO_COMPILE", false)) {
       // Convert HLO to StableHLO for PjRt client compilation.
       mlir::MLIRContext context;
       mlir::ModuleOp mlir_module =
           mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
       ConvertHloToStableHlo(instance.computation.mutable_proto(), &mlir_module);
-      compile = [mlir_module, &compile_options, this] {
-        return client_->CompileAndLoad(mlir_module, compile_options);
-      };
+      executable = util::RaisePythonValueErrorOnFailure([&] {
+        return fake_xla_compile_
+                   ? fake_xla_compile_()
+                   : client_->CompileAndLoad(mlir_module, compile_options);
+      });
       StableHloCompileCounter()->AddValue(1);
     } else {
-      compile = [&] {
-        return client_->CompileAndLoad(instance.computation, compile_options);
-      };
+      executable = util::RaisePythonValueErrorOnFailure([&] {
+        return fake_xla_compile_ ? fake_xla_compile_()
+                                 : client_->CompileAndLoad(instance.computation,
+                                                           compile_options);
+      });
     }
-    std::unique_ptr<xla::PjRtLoadedExecutable> executable =
-        util::RaisePythonValueErrorOnFailure([&] {
-          return fake_xla_compile_ ? fake_xla_compile_() : compile();
-        });
 
     auto memory_stats_status_or = executable->GetCompiledMemoryStats();
     if (memory_stats_status_or.ok()) {
