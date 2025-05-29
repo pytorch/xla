@@ -936,7 +936,7 @@ size_t PjRtComputationClient::GetNumLocalDevices() const {
   return client_->addressable_device_count();
 }
 
-size_t PjRtComputationClient::GetNumGlobalDevices() const {
+size_t PjRtComputationClient::GetNumDevices() const {
   return client_->device_count();
 }
 

@@ -622,11 +622,11 @@ IfrtComputationClient::ExecuteReplicated(
   return data_handles;
 }
 
-size_t IfrtComputationClient::GetNumDevices() const {
+size_t IfrtComputationClient::GetNumLocalDevices() const {
   return client_->addressable_device_count();
 }
 
-size_t PjRtComputationClient::GetNumGlobalDevices() const {
+size_t PjRtComputationClient::GetNumDevices() const {
   return client_->device_count();
 }
 

@@ -81,7 +81,7 @@ class IfrtComputationClient : public ComputationClient {
 
   size_t GetNumLocalDevices() const override;
 
-  size_t GetNumGlobalDevices() const override;
+  size_t GetNumDevices() const override;
 
   std::string GetDefaultDevice() const override;
 
