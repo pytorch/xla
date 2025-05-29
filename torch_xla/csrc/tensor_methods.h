@@ -320,6 +320,13 @@ XLATensorPtr pixel_shuffle(const XLATensorPtr& self, int64_t upscale_factor);
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
 void celu_(XLATensorPtr& input, const at::Scalar& alpha);
 
+XLATensorPtr clamp(const XLATensorPtr& input,
+                   const std::optional<at::Scalar>& min,
+                   const std::optional<at::Scalar>& max);
+XLATensorPtr clamp(const XLATensorPtr& input,
+                   const std::optional<at::Tensor>& min,
+                   const std::optional<at::Tensor>& max);
+
 XLATensorPtr clone(const XLATensorPtr& input);
 
 XLATensorPtr conj(const XLATensorPtr& input);
