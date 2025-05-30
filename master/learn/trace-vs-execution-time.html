@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>SPMD User Guide &mdash; PyTorch/XLA master documentation</title>
+  <title>Tracing Time vs. Execution Time in PyTorch/XLA &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -37,8 +37,8 @@
   <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="SPMD advanced topics" href="spmd_advanced.html" />
-    <link rel="prev" title="Control MXU Floating Point Precision" href="../tutorials/precision_tutorial.html" />
+    <link rel="next" title="Troubleshooting Basics" href="troubleshoot.html" />
+    <link rel="prev" title="Eager Mode + Compile API" href="eager.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -321,46 +321,46 @@
             
               <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xla-overview.html">Pytorch/XLA Overview</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/torch_distributed.html">Support for Torch Distributed</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ddp.html">Distributed Data Parallel (DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">Distributed Data Parallel (DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_collectives.html">Fully Sharded Data Parallel (FSDP) with One Process Per Accelerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp_spmd.html">Fully Sharded Data Parallel (FSDP) using SPMD</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Advanced Techniques</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="amp.html">Automatic Mixed Precision</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic Shapes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dynamo.html">TorchDynamo Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dynamic_shape.html">Dynamic Shapes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize Memory Utilization with <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/assume_pure.html">Speed Up Tracing with <code class="docutils literal notranslate"><span class="pre">&#64;assume_pure</span></code></a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/trace-vs-execution-time.html">Tracing Time vs. Execution Time in PyTorch/XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tracing Time vs. Execution Time in PyTorch/XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshoot.html">Troubleshooting Basics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
-<li class="toctree-l1"><a class="reference internal" href="recompilation.html">Troubleshooting recompilations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Troubleshooting recompilations</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
 <ul>
@@ -372,7 +372,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api-guide.html">PyTorch/XLA API</a></li>
 </ul>
 
             
@@ -413,13 +413,13 @@
       </li>
 
         
-      <li>SPMD User Guide</li>
+      <li>Tracing Time vs. Execution Time in PyTorch/XLA</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/perf/spmd_basic.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/learn/trace-vs-execution-time.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -449,180 +449,158 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="spmd-user-guide">
-<h1>SPMD User Guide<a class="headerlink" href="#spmd-user-guide" title="Permalink to this heading">¶</a></h1>
-<p>In this user guide, you will learn how
-<a class="reference external" href="https://arxiv.org/abs/2105.04663">SPMD</a> is integrated in PyTorch/XLA.</p>
-<p>For a conceptual guide of the SPMD model of computation, refer to the
-<a class="reference external" href="https://jax-ml.github.io/scaling-book/sharding/">Sharded Matrices and How to Multiply Them</a>
-section of the <em>How to Scale Your Model</em> book.</p>
-<section id="what-is-pytorch-xla-spmd">
-<h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
-<p><a class="reference external" href="https://arxiv.org/abs/2105.04663">SPMD</a> is an automatic
-parallelization system for common ML workloads. The XLA compiler will
-transform the single device program into a partitioned one with proper
-collectives, based on the user provided sharding hints. This feature
-allows developers to write PyTorch programs as if they are on a single
-large device without any custom sharded computation ops and/or
-collective communications to scale.</p>
-<p><img alt="Execution strategies" src="../_images/spmd_mode.png" />
-<em><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></em></p>
-</section>
-<section id="how-to-use-pytorch-xla-spmd">
-<h2>How to use PyTorch/XLA SPMD?<a class="headerlink" href="#how-to-use-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
-<p>Here is an example of using SPMD</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xs</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mesh</span>
-
-<span class="c1"># Enable XLA SPMD execution mode.</span>
-<span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
-
-<span class="c1"># Device mesh, this and partition spec as well as the input tensor shape define the individual shard shape.</span>
-<span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
-<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-<span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
-<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
-
-<span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
-
-<span class="c1"># Mesh partitioning, each device holds 1/8-th of the input</span>
-<span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">)</span>
-<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
-</pre></div>
-</div>
-<section id="spmd-mode">
-<h3>SPMD Mode<a class="headerlink" href="#spmd-mode" title="Permalink to this heading">¶</a></h3>
-<p>In order to use SPMD, you need to enable it via <code class="docutils literal notranslate"><span class="pre">xr.use_spmd()</span></code>. In SPMD
-mode there is only one logical device. Distributed computation and
-collective is handled by the <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code>. Note that you can not mix
-SPMD with other distributed libraries.</p>
-</section>
-<section id="mesh">
-<h3>Mesh<a class="headerlink" href="#mesh" title="Permalink to this heading">¶</a></h3>
-<p>The SPMD programming model is built around the concept of a device mesh.
-A device mesh is a logical N-dimensional
-arrangement of compute devices (e.g. TPU cores) where MPI-style collective
-operations may be requested for devices along an axis. The device mesh shape
-shape does not necessarily reflect the physical network layout. You
-can create different device mesh shapes over the same set of physical
-devices. For example, a 512-core TPU slice can be treated as a 3D mesh of
-16×16×2, a 2D mesh of 32×16, or a 1D mesh of 512, depending on how you want to
-partition tensors. Use the <code class="docutils literal notranslate"><span class="pre">Mesh</span></code> class to create a device mesh.</p>
-<p>In the following snippet:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-<span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
-<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
-</pre></div>
-</div>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">mesh_shape</span></code> is a tuple whose elements describe the size of each axis of the
-device mesh. When you multiply the elements of the tuple together, it should
-equal to the total number of physical devices in the environment.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">device_ids</span></code> specifies the ordering of physical devices within the mesh in row
-major order. It is always a flat numpy array of integers ranging from <code class="docutils literal notranslate"><span class="pre">0</span></code> to
-<code class="docutils literal notranslate"><span class="pre">num_devices</span> <span class="pre">-</span> <span class="pre">1</span></code>, where <code class="docutils literal notranslate"><span class="pre">num_devices</span></code> is the total number of devices in the
-environment. Each ID indexes into the list of devices in
-<code class="docutils literal notranslate"><span class="pre">xr.global_runtime_device_attributes()</span></code>.
-The simplest ordering is <code class="docutils literal notranslate"><span class="pre">np.array(range(num_devices))</span></code>, but tuning the
-device ordering and the mesh shape to utilize the underlying physical
-interconnect can improve efficiency.</p></li>
-<li><p>Best practice is to give each mesh axis a name. You can then shard each
-dimension of tensors over specific mesh axes to achieve the desired
-parallelization. In the previous example, the first mesh dimension is the
-<code class="docutils literal notranslate"><span class="pre">data</span></code> dimension and the second mesh dimension is the <code class="docutils literal notranslate"><span class="pre">model</span></code> dimension.</p></li>
-</ul>
-<p>Retrieve more mesh info via:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="o">&gt;&gt;&gt;</span> <span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
-    <span class="n">OrderedDict</span><span class="p">([(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
-
-    <span class="o">&gt;&gt;&gt;</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_logical_mesh</span><span class="p">()</span>
-    <span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">]])</span>
-
-    <span class="c1"># Details about these 4 TPUs</span>
-    <span class="o">&gt;&gt;&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
-    <span class="p">[{</span><span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:0&#39;</span><span class="p">},</span>
-     <span class="p">{</span><span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:1&#39;</span><span class="p">},</span>
-     <span class="p">{</span><span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:2&#39;</span><span class="p">},</span>
-     <span class="p">{</span><span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:3&#39;</span><span class="p">}]</span>
-</pre></div>
-</div>
-<p>If your workload is run on <a class="reference external" href="https://cloud.google.com/tpu/docs/multislice-introduction">multiple TPU slices</a> simultaneously, the
-device attributes will include a <code class="docutils literal notranslate"><span class="pre">slice_index</span></code> indicating the containing slice:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="c1"># Details about 8 TPUs allocated over 2 slices</span>
-    <span class="o">&gt;&gt;&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
-    <span class="p">[{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:0&#39;</span><span class="p">},</span>
-     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:1&#39;</span><span class="p">},</span>
-     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:2&#39;</span><span class="p">},</span>
-     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:3&#39;</span><span class="p">},</span>
-     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:4&#39;</span><span class="p">},</span>
-     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:5&#39;</span><span class="p">},</span>
-     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:6&#39;</span><span class="p">},</span>
-     <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:7&#39;</span><span class="p">}]</span>
-</pre></div>
-</div>
-<p>In this example, a device ID of <code class="docutils literal notranslate"><span class="pre">7</span></code> will refer to the TPU at coordinate
-<code class="docutils literal notranslate"><span class="pre">[1,</span> <span class="pre">1,</span> <span class="pre">0]</span></code> in the second slice.</p>
-</section>
-<section id="partition-spec">
-<h3>Partition spec<a class="headerlink" href="#partition-spec" title="Permalink to this heading">¶</a></h3>
-<p>In the following snippet:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">)</span>
-<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">partition_spec</span></code> has the same rank as the input tensor. Each dimension
-describes how the corresponding input tensor dimension is sharded across
-the device mesh. In the above example, the first dimension of tensor <code class="docutils literal notranslate"><span class="pre">t</span></code> is
-sharded over the <code class="docutils literal notranslate"><span class="pre">data</span></code> dimension and the second dimension is sharded over the
-<code class="docutils literal notranslate"><span class="pre">model</span></code> dimension.</p>
-<p>User can also shard tensor that has a different rank from the mesh shape.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">t1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-<span class="n">t2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-
-<span class="c1"># First dimension is being replicated.</span>
-<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
-
-<span class="c1"># First dimension is being sharded at data dimension.</span>
-<span class="c1"># model dimension is used for replication when omitted.</span>
-<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,))</span>
-
-<span class="c1"># First dimension is sharded across both mesh axes.</span>
-<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">((</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">),))</span>
-</pre></div>
-</div>
-</section>
-<section id="which-device-holds-which-shard">
-<h3>Which device holds which shard?<a class="headerlink" href="#which-device-holds-which-shard" title="Permalink to this heading">¶</a></h3>
-<p>Each dimension of a tensor passed to <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> will be split over the
-devices identified by the corresponding element in the partition spec. For
-example, given a <code class="docutils literal notranslate"><span class="pre">[M,</span> <span class="pre">N]</span></code> shaped tensor <code class="docutils literal notranslate"><span class="pre">t</span></code>, a mesh of shape <code class="docutils literal notranslate"><span class="pre">[X,</span> <span class="pre">Y]</span></code>, and a
-partition spec of <code class="docutils literal notranslate"><span class="pre">('X',</span> <span class="pre">'Y')</span></code>, the first dimension of the tensor will be sharded
-<code class="docutils literal notranslate"><span class="pre">X</span></code>-ways, and the second dimension will be sharded <code class="docutils literal notranslate"><span class="pre">Y</span></code>-ways. The device
-identified by <code class="docutils literal notranslate"><span class="pre">device_ids[i]</span></code> will hold a subset of data that is
-<code class="docutils literal notranslate"><span class="pre">t[a</span> <span class="pre">*</span> <span class="pre">M</span> <span class="pre">/</span> <span class="pre">X</span> <span class="pre">:</span> <span class="pre">(a</span> <span class="pre">+</span> <span class="pre">1)</span> <span class="pre">*</span> <span class="pre">M</span> <span class="pre">/</span> <span class="pre">X,</span> <span class="pre">b</span> <span class="pre">*</span> <span class="pre">N</span> <span class="pre">/</span> <span class="pre">Y</span> <span class="pre">:</span> <span class="pre">(b</span> <span class="pre">+</span> <span class="pre">1)</span> <span class="pre">*</span> <span class="pre">N</span> <span class="pre">/</span> <span class="pre">Y]</span></code>, where <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">=</span> <span class="pre">i</span> <span class="pre">//</span> <span class="pre">Y</span></code>
-and <code class="docutils literal notranslate"><span class="pre">b</span> <span class="pre">=</span> <span class="pre">i</span> <span class="pre">%</span> <span class="pre">Y</span></code>.</p>
-<p>This assumes that <code class="docutils literal notranslate"><span class="pre">M</span></code> and <code class="docutils literal notranslate"><span class="pre">N</span></code> are divisible by <code class="docutils literal notranslate"><span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">Y</span></code>, respectively. If not,
-the last device may hold some padding.</p>
-<p>You can also visualize how a tensor is sharded over devices with our
-SPMD debugging tool at <a class="reference internal" href="spmd_advanced.html#spmd-debugging-tool"><span class="std std-ref">SPMD Debugging Tool</span></a>.</p>
-</section>
-</section>
-<section id="further-reading">
-<h2>Further Reading<a class="headerlink" href="#further-reading" title="Permalink to this heading">¶</a></h2>
+  <section id="tracing-time-vs-execution-time-in-pytorch-xla">
+<h1>Tracing Time vs. Execution Time in PyTorch/XLA<a class="headerlink" href="#tracing-time-vs-execution-time-in-pytorch-xla" title="Permalink to this heading">¶</a></h1>
+<p>When working with PyTorch/XLA, it’s essential to understand that operations on
+XLA tensors are not typically executed immediately in the way they are with
+standard PyTorch tensors on CPU or CUDA devices (which operate in “eager mode”).
+PyTorch/XLA employs a “lazy execution” model. This means that when you write
+PyTorch code using XLA tensors, you are primarily defining or tracing a
+computation graph. The compilation of the currently traced graph and it’s
+subsequent execution on the device are deferred until a specific trigger point.</p>
+<p>This leads to two distinct types of “time” to consider:</p>
 <ol class="arabic simple">
-<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_spmd_data_parallel.py">Example</a>
-to use SPMD to express data parallelism.</p></li>
-<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py">Example</a>
-to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
-<li><p><a class="reference internal" href="spmd_advanced.html"><span class="doc std std-doc">SPMD advanced topics</span></a></p></li>
-<li><p><a class="reference internal" href="spmd_distributed_checkpoint.html"><span class="doc std std-doc">Spmd Distributed Checkpoint</span></a></p></li>
-<li></li>
-<li></li>
+<li><p>Host-Side Time: The period during which your CPU (host) prepares the
+computation. This includes:</p>
+<ul class="simple">
+<li><p><strong>Tracing Time</strong>: The period during which PyTorch/XLA records your
+operations and builds the computation graph.</p></li>
+<li><p><strong>Compilation Time</strong>: The time the host-side XLA compiler takes to
+transform the traced graph into optimized device code. This is most
+significant on the first execution of a new graph or if the graph changes.</p></li>
+</ul>
+</li>
+<li><p>Device Time: This is primarily the <strong>Execution Time</strong>, which is the period
+during which the XLA device (e.g., TPU) spends running the compiled code.</p></li>
 </ol>
+<section id="illustrating-a-common-pitfall-measuring-only-tracing-time">
+<h2>Illustrating a Common Pitfall: Measuring Only Tracing Time<a class="headerlink" href="#illustrating-a-common-pitfall-measuring-only-tracing-time" title="Permalink to this heading">¶</a></h2>
+<p>When you write PyTorch code using XLA tensors (e.g., tensors on a TPU),
+PyTorch/XLA doesn’t execute each operation on the device right away. It traces
+these operations, adding them to an internal computation graph. <strong>If you measure
+the duration of code that only performs XLA operations without an explicit
+instruction to wait for the device, you are primarily measuring this tracing
+time plus Python overhead.</strong></p>
+<p>Consider the following conceptual code:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Assume &#39;a&#39; and &#39;b&#39; are XLA tensors</span>
+<span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+
+<span class="c1"># This operation is recorded in PyTorch/XLA&#39;s graph</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+<span class="c1"># ❌❌❌ !!! INCORRECT PROFILING: compilation and execution are deferred !!! ❌❌❌</span>
+<span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">end_time</span> <span class="o">-</span> <span class="n">start_time</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">elapsed_time</span></code> here would predominantly reflect how long it took PyTorch/XLA
+to trace the matmul operation. The actual matrix multiplication on the XLA
+device, along with its compilation, is not started.</p>
+</section>
+<section id="measuring-end-to-end-performance">
+<h2>Measuring End-to-End Performance<a class="headerlink" href="#measuring-end-to-end-performance" title="Permalink to this heading">¶</a></h2>
+<p>To correctly profile the performance of your code on the XLA device, you must
+ensure that your timing captures host-side compilation and devide execution.
+This involves:</p>
+<ol class="arabic simple">
+<li><p>Ensure the traced computational graph is compiled, if it’s the first time
+this graph is seen or if it is changed, and sent to the device for execution.</p></li>
+<li><p>Make sure the Python script waits until the XLA device has completed all its
+assigned computations before taking the final timestamp.</p></li>
+</ol>
+<p>This is exemplified, using <code class="docutils literal notranslate"><span class="pre">torch_xla.sync(wait=True)</span></code>, in the following
+conceptual code:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Assume &#39;a&#39; and &#39;b&#39; are XLA tensors</span>
+
+<span class="c1"># -- Warm-up Iteration begin ---</span>
+
+<span class="c1"># The first execution of a new graph will include compilation time, as</span>
+<span class="c1"># PyTorch/XLA translates the graph into optimized device code. To isolate the</span>
+<span class="c1"># steady-state device execution time for consistent benchmarking, we perform a</span>
+<span class="c1"># &quot;warm-up&quot; run.</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="c1"># The result isn&#39;t needed, just triggering the op</span>
+<span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># -- Warm-up Iteration end ---</span>
+
+<span class="c1"># ✅✅✅ CORRECT PROFILING</span>
+<span class="c1"># Measure the steady-state execution time, which should exclude</span>
+<span class="c1"># most of the initial compilation overhead.</span>
+<span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+<span class="c1"># Explicitly wait for the XLA device to finish.</span>
+<span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">end_time</span> <span class="o">-</span> <span class="n">start_time</span>
+</pre></div>
+</div>
+<section id="triggering-execution-and-ensuring-completion">
+<h3>Triggering Execution and Ensuring Completion<a class="headerlink" href="#triggering-execution-and-ensuring-completion" title="Permalink to this heading">¶</a></h3>
+<p>Several mechanisms trigger graph execution and/or ensure completion:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">torch_xla.sync(wait=True)</span></code>: This is the most direct method for benchmarking.
+It ensures all pending XLA operations are launched and, crucially, blocks the
+Python script until the device finishes.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Data</span> <span class="pre">Access/Transfer</span></code>: Operations like <code class="docutils literal notranslate"><span class="pre">tensor.cpu()</span></code>, <code class="docutils literal notranslate"><span class="pre">tensor.item()</span></code>, or
+printing an XLA tensor require the actual data. To provide it, PyTorch/XLA must
+execute the graph that produces the tensor and wait for its completion.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">torch_xla.core.xla_model.optimizer_step(optimizer)</span></code>: Reduces gradients,
+applies optimizer updates, and conditionally triggers <code class="docutils literal notranslate"><span class="pre">torch_xla.sync</span></code> via its
+barrier argument (default False, as data loaders often handle the sync).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">torch_xla.core.xla_model.unlazy(tensors)</span></code>: Blocks until specified tensors
+are materialized.</p></li>
+</ol>
+</section>
+</section>
+<section id="case-study-correctly-profiling-loops-with-torch-xla-sync">
+<h2>Case Study: Correctly Profiling Loops with <code class="docutils literal notranslate"><span class="pre">torch_xla.sync</span></code><a class="headerlink" href="#case-study-correctly-profiling-loops-with-torch-xla-sync" title="Permalink to this heading">¶</a></h2>
+<p>A common scenario involves loops, such as in model training, where
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync</span></code> is used. Consider this structure:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run_model</span><span class="p">():</span>
+    <span class="c1">#... XLA tensor operations...</span>
+    <span class="k">pass</span>
+
+<span class="n">start_loop_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_steps</span><span class="p">):</span>
+  <span class="n">run_model</span><span class="p">()</span>  <span class="c1"># Operations are traced</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>    <span class="c1"># Graph for this step is submitted for execution</span>
+
+<span class="c1"># ❌❌❌ !!! INCORRECT PROFILING APPROACH FOR TOTAL TIME !!! ❌❌❌</span>
+<span class="n">end_loop_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="n">elapsed_loop_time</span> <span class="o">=</span> <span class="n">end_loop_time</span> <span class="o">-</span> <span class="n">start_loop_time</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">elapsed_loop_time</span></code> in this case primarily measures the cumulative host-side
+time. This includes:</p>
+<ol class="arabic simple">
+<li><p>The time spent in <code class="docutils literal notranslate"><span class="pre">run_model()</span></code> for each iteration (largly tracing).</p></li>
+<li><p>The time taken by <code class="docutils literal notranslate"><span class="pre">torch_xla.sync</span></code> in each iteration to trigger the host-side
+compilation (if the graph is new or changed) and dispatch the graph for that
+step to the XLA device for execution.</p></li>
+</ol>
+<p>Crucially, the graph submitted by <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> runs asynchronously: The
+Python loop proceed to trace the next step while the device is still performing
+its execution for the current or previous step. Thus, <code class="docutils literal notranslate"><span class="pre">elapsed_loop_time</span></code> does
+not guarantee inclusion of the full device execution time for all <code class="docutils literal notranslate"><span class="pre">num_steps</span></code> if
+the device work lags behind the Python loop.</p>
+<p>In order to measure total loop time (including all device execution),
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync(wait=True)</span></code> has to be added after the loop and before taking the
+final timestamp.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">start_loop_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_steps</span><span class="p">):</span>
+  <span class="n">run_model_step</span><span class="p">()</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
+
+<span class="c1"># ✅✅✅ CORRECT PROFILING: Wait for ALL steps to complete on the device.</span>
+<span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">end_loop_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<span class="n">elapsed_loop_time</span> <span class="o">=</span> <span class="n">end_loop_time</span> <span class="o">-</span> <span class="n">start_loop_time</span>
+</pre></div>
+</div>
 </section>
 </section>
 
@@ -634,10 +612,10 @@ to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="spmd_advanced.html" class="btn btn-neutral float-right" title="SPMD advanced topics" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="troubleshoot.html" class="btn btn-neutral float-right" title="Troubleshooting Basics" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="../tutorials/precision_tutorial.html" class="btn btn-neutral" title="Control MXU Floating Point Precision" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="eager.html" class="btn btn-neutral" title="Eager Mode + Compile API" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -669,16 +647,13 @@ to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">SPMD User Guide</a><ul>
-<li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
-<li><a class="reference internal" href="#how-to-use-pytorch-xla-spmd">How to use PyTorch/XLA SPMD?</a><ul>
-<li><a class="reference internal" href="#spmd-mode">SPMD Mode</a></li>
-<li><a class="reference internal" href="#mesh">Mesh</a></li>
-<li><a class="reference internal" href="#partition-spec">Partition spec</a></li>
-<li><a class="reference internal" href="#which-device-holds-which-shard">Which device holds which shard?</a></li>
+<li><a class="reference internal" href="#">Tracing Time vs. Execution Time in PyTorch/XLA</a><ul>
+<li><a class="reference internal" href="#illustrating-a-common-pitfall-measuring-only-tracing-time">Illustrating a Common Pitfall: Measuring Only Tracing Time</a></li>
+<li><a class="reference internal" href="#measuring-end-to-end-performance">Measuring End-to-End Performance</a><ul>
+<li><a class="reference internal" href="#triggering-execution-and-ensuring-completion">Triggering Execution and Ensuring Completion</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#further-reading">Further Reading</a></li>
+<li><a class="reference internal" href="#case-study-correctly-profiling-loops-with-torch-xla-sync">Case Study: Correctly Profiling Loops with <code class="docutils literal notranslate"><span class="pre">torch_xla.sync</span></code></a></li>
 </ul>
 </li>
 </ul>
