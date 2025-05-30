@@ -13,11 +13,11 @@ Usage:
     - updates JAX to the latest nightly build.
 """
 
+import logging
 import os
+import platform
 import re
 import sys
-import logging
-import platform
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -73,12 +73,10 @@ def update_openxla() -> bool:
     True if the WORKSPACE file was updated, False otherwise.
   """
 
-  # Read the WORKSPACE file into lines.
+  commit, date = get_last_xla_commit_and_date()
+
   with open(_WORKSPACE_PATH, 'r') as f:
     ws_lines = f.readlines()
-
-  # Find the latest openxla commit and date.
-  commit, date = get_last_xla_commit_and_date()
 
   # Update the `xla_hash = ...` line with the latest commit and date.
   found_xla_hash = False
@@ -92,7 +90,6 @@ def update_openxla() -> bool:
     logger.error('Could not find xla_hash in WORKSPACE file.')
     return False
 
-  # Write the updated WORKSPACE file.
   with open(_WORKSPACE_PATH, 'w') as f:
     f.writelines(ws_lines)
 
@@ -211,7 +208,6 @@ def update_libtpu() -> bool:
 
   version, date, suffix = result
 
-  # Read the setup.py file into lines.
   with open(_SETUP_PATH, 'r') as f:
     setup_lines = f.readlines()
 
@@ -241,7 +237,6 @@ def update_libtpu() -> bool:
   if not found_libtpu_wheel:
     logger.error('Could not find _libtpu_wheel_name in setup.py.')
 
-  # Write the updated setup.py file.
   with open(_SETUP_PATH, 'w') as f:
     f.writelines(setup_lines)
 
@@ -264,7 +259,6 @@ def update_jax() -> bool:
 
   jax_version, jaxlib_version, date = result
 
-  # Read the setup.py file into lines.
   with open(_SETUP_PATH, 'r') as f:
     setup_lines = f.readlines()
 
@@ -288,7 +282,6 @@ def update_jax() -> bool:
   if not found_jax_date:
     logger.error('Could not find _jax_date in setup.py.')
 
-  # Write the updated setup.py.
   with open(_SETUP_PATH, 'w') as f:
     f.writelines(setup_lines)
 
