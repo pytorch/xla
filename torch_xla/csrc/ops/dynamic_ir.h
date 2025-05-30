@@ -203,11 +203,11 @@ class SizeError : public XlaNode, public torch::lazy::DimensionNode {
   SizeError();
   int64_t getDynamicValue() const override;
   int64_t getStaticValue() const override {
-    ABSL_LOG(FATAL) << "SizeError shouldn't be called.";
+    ABSL_LOG(FATAL) << "SizeError::getStaticValue() shouldn't be called.";
     return -1;
   }
   bool isSymbolic() const override {
-    ABSL_LOG(FATAL) << "SizeError shouldn't be called.";
+    ABSL_LOG(FATAL) << "SizeError::isSymbolic() shouldn't be called.";
     return true;
   }
   std::string ToString() const override;
