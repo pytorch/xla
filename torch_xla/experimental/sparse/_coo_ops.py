@@ -76,11 +76,17 @@ def coo_sparse_mask(args=(), kwargs=None):
       mask.size() == self.size(), lambda:
       f"sparse_mask: expected mask and self to have the same shape (self: {self.size()}, mask: {mask.size()})"
   )
+  mask = mask.coalesce()
+  assert mask._nnz() == mask._v.shape[0]
+  assert mask._nnz() == mask._i.shape[-1]
   _check_no_kwargs(kwargs, "sparse_mask")
   mask_indices = mask._indices()
   sparse_size = mask.shape[:mask.sparse_dim()]
+  dense_size = mask.shape[mask.sparse_dim():]
   flat_indices = _flatten_indices(mask_indices, sparse_size)
-  values = self.view(-1)[flat_indices]
+  # flatten out the sparse dims, which we use the flattened indices to select along that dimension
+  # leave the dense dims intact so that values has the correct shape
+  values = self.view((-1,) + dense_size)[flat_indices]
 
   return make_sparse(
       mask_indices,
@@ -145,19 +151,20 @@ def coo__coalesce(args, kwargs=None):
 
   indices = self._indices()
   sparse_dim = self.sparse_dim()
-
-  indices_scalar = _flatten_indices(indices, self.shape[:sparse_dim])
-  sorted_indices, indices_perm, counts = indices_scalar.unique(
-      return_counts=True, return_inverse=True)
-  torch._check(
-      counts.eq(1).all().item(),
-      lambda: f"coalesce: Duplicate indices detected!")
-  # Note: Only prevent duplicate indices from passing calls, we do any coalesence.
-  # 1) it is hard to write a functionalization compliant coalescece algorithm which is performant
-  # 2) We don't implement any ordering dependant ops like binary intersection
-  # based pointwise, so index ordering is not important, but unevaluated sums will break autograd.
-  r = self.clone()
-  r._is_coalesced = True
+  torch._check(sparse_dim == 1,
+               lambda: "coalesce: implementation supports sparse_dim=1 only.")
+  sparse_shape = self.shape[:sparse_dim]
+  dense_shape = self.shape[sparse_dim:]
+  indices_scalar = _flatten_indices(indices, sparse_shape)
+  new_indices = indices_scalar.unique()
+  old_values = self._values()
+  new_nnz = new_indices.shape[0]
+  new_val_elements = tuple(old_values[new_indices[i] == indices_scalar].sum(0)
+                           for i in range(new_nnz))
+  r = make_sparse(
+      new_indices.unsqueeze(0), torch.stack(new_val_elements, dim=0),
+      self.shape)
+  r.is_coalesced = True
   return r
 
 

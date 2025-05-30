@@ -86,11 +86,6 @@ class SparseCOOTensor(torch.Tensor):
     warnings.warn(msg)
     return NotImplemented
 
-  @classmethod
-  def create(cls, *args, **kwargs):
-    from ._coo_ops import make_sparse
-    return make_sparse(*args, **kwargs)
-
   @property
   def layout(self):
     return self._layout
