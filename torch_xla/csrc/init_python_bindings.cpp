@@ -1491,7 +1491,7 @@ void InitXlaModuleBindings(py::module m) {
     }
   });
   m.def("_xla_num_devices", []() -> int64_t {
-    return runtime::GetComputationClient()->GetNumGlobalDevices();
+    return runtime::GetComputationClient()->GetNumDevices();
   });
   m.def("_xla_num_global_devices", []() {
     std::vector<std::string> all_devices =

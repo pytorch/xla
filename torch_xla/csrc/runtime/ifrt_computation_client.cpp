@@ -626,7 +626,7 @@ size_t IfrtComputationClient::GetNumLocalDevices() const {
   return client_->addressable_device_count();
 }
 
-size_t PjRtComputationClient::GetNumDevices() const {
+size_t IfrtComputationClient::GetNumDevices() const {
   return client_->device_count();
 }
 
