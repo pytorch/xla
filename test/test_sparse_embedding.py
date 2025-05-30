@@ -100,7 +100,6 @@ class TestEmbeddingBag(TestCase):
     xla_weights = torch_weights.detach().to(xla_device).requires_grad_(True)
     torch_out = F.embedding_bag(torch_input, torch_weights, sparse=True)
     xla_out = xla_embedding_bag(xla_input, xla_weights, sparse=True)
-    xla_embedding_bag(torch_input, torch_weights)
     self.assertEqual(xla_out, torch_out)
     torch_out.max().backward()
     xla_out.max().backward()
@@ -108,8 +107,6 @@ class TestEmbeddingBag(TestCase):
     self.assertEqual(xla_weights.grad, torch_weights.grad)
 
   def test_embedding_bag_optimizer(self):
-    #xla_device = 'cpu'
-    #EmbeddingBag = torch.nn.EmbeddingBag
     context_size = 10
     embedding_dim = 5
     # We will use Shakespeare Sonnet 2, first few lines
