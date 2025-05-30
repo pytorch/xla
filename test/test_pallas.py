@@ -14,7 +14,7 @@ from torch_xla._internal import tpu
 import numpy as np
 
 if xr.device_type() == 'TPU':
-  from torch_xla.experimental.custom_kernel import jax_import_guard
+  from torch_xla.experimental.custom_kernel import jax_import_guard, convert_torch_dtype_to_jax
   jax_import_guard()
   import jax
   import jax.numpy as jnp
@@ -98,7 +98,8 @@ class PallasTest(parameterized.TestCase):
       head_dim,
       page_size,
       num_pages,
-      dtype,
+      q_dtype,
+      kv_dtype,
       *,
       max_num_batched_tokens=None,
       max_num_seqs=16,
@@ -129,10 +130,11 @@ class PallasTest(parameterized.TestCase):
     kv_lens = torch.nn.functional.pad(kv_lens,
                                       (0, max_num_seqs - kv_lens.shape[0]),
                                       "constant", 0)
+    # Use float32 for randn because it doesn't support some dtypes like float8
     q = torch.randn((max_num_batched_tokens, num_q_heads, head_dim),
-                    dtype=dtype)
+                    dtype=torch.float32).to(q_dtype)
     kv_pages = torch.randn((num_pages, page_size, num_kv_heads * 2, head_dim),
-                           dtype=dtype)
+                           dtype=torch.float32).to(kv_dtype)
     page_indices = torch.randint(
         0, num_pages, (max_num_seqs, pages_per_seq), dtype=torch.int32)
     return q, kv_pages, kv_lens, page_indices, cu_q_lens
@@ -632,7 +634,8 @@ class PallasTest(parameterized.TestCase):
       head_dim,
       page_size,
       num_pages,
-      dtype,
+      q_dtype,
+      kv_dtype,
       *,
       sm_scale=1.0,
       sliding_window=None,
@@ -654,9 +657,18 @@ class PallasTest(parameterized.TestCase):
         head_dim,
         page_size,
         num_pages,
-        dtype,
+        q_dtype,
+        kv_dtype,
         max_num_batched_tokens=max_num_batched_tokens,
         max_num_seqs=max_num_seqs)
+    k_scale = 0.5 if kv_dtype in [torch.float8_e5m2] else None
+    v_scale = 0.5 if kv_dtype in [torch.float8_e5m2] else None
+    num_kv_heads = num_heads[1]
+    if num_kv_heads == 1 and kv_dtype in [torch.float8_e5m2]:
+      self.skipTest(
+          "attention kernel cannot support because it is not XLA fully tiled")
+    if kv_dtype is torch.float8_e5m2 and tpu.version() <= 4:
+      self.skipTest("TPU v4 or older doesn't support fp8")
 
     q_xla = q.to("xla")
     kv_pages_xla = kv_pages.to("xla")
@@ -677,6 +689,8 @@ class PallasTest(parameterized.TestCase):
           sm_scale=sm_scale,
           sliding_window=sliding_window,
           soft_cap=soft_cap,
+          k_scale=k_scale,
+          v_scale=v_scale,
           use_kernel=True,
           num_kv_pages_per_block=num_kv_pages_per_block,
           num_queries_per_block=num_queries_per_block,
@@ -691,6 +705,8 @@ class PallasTest(parameterized.TestCase):
             sm_scale=sm_scale,
             sliding_window=sliding_window,
             soft_cap=soft_cap,
+            k_scale=k_scale,
+            v_scale=v_scale,
             use_kernel=use_kernel,
             num_kv_pages_per_block=num_kv_pages_per_block,
             num_queries_per_block=num_queries_per_block,
@@ -711,6 +727,8 @@ class PallasTest(parameterized.TestCase):
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
+        k_scale=k_scale,
+        v_scale=v_scale,
         use_kernel=True,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
@@ -726,6 +744,8 @@ class PallasTest(parameterized.TestCase):
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
+        k_scale=k_scale,
+        v_scale=v_scale,
         use_kernel=False,
     )
 
@@ -734,17 +754,14 @@ class PallasTest(parameterized.TestCase):
     self.assertEqual(kernel_output_cpu.shape, nonkernel_output_cpu.shape)
     self.assertEqual(kernel_output_cpu.dtype, nonkernel_output_cpu.dtype)
 
-    assert dtype == torch.float32 or dtype == torch.bfloat16
-    jnp_dtype = jnp.float32
-    tol = 0.15
-    if dtype == torch.bfloat16:
-      jnp_dtype = jnp.bfloat16
-      tol = 0.3
+    tol = 0.15 if q_dtype == torch.float32 else 0.3
+    q_jnp_dtype = convert_torch_dtype_to_jax(q_dtype)
+    kv_jnp_dtype = convert_torch_dtype_to_jax(kv_dtype)
 
     # Numpy does not support bfloat16 directly. So we convert f32 first.
-    q_jax = jnp.array(q.to(torch.float32).numpy(), dtype=jnp_dtype)
+    q_jax = jnp.array(q.to(torch.float32).numpy(), dtype=q_jnp_dtype)
     kv_pages_jax = jnp.array(
-        kv_pages.to(torch.float32).numpy(), dtype=jnp_dtype)
+        kv_pages.to(torch.float32).numpy(), dtype=kv_jnp_dtype)
     kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
     page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
     cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
@@ -765,7 +782,9 @@ class PallasTest(parameterized.TestCase):
                 sm_scale=sm_scale,
                 sliding_window=sliding_window,
                 soft_cap=soft_cap,
-            )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(dtype)
+                k_scale=k_scale,
+                v_scale=v_scale,
+            )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(q_dtype)
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 
     torch.testing.assert_close(
@@ -776,7 +795,8 @@ class PallasTest(parameterized.TestCase):
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
       num_heads=[(32, 8), (8, 1)],
-      dtype=[torch.float32, torch.bfloat16],
+      dtype=[(torch.bfloat16, torch.bfloat16),
+             (torch.bfloat16, torch.float8_e5m2)],
       sm_scale=[1.0, 0.5],
       sliding_window=[None, 128],
       soft_cap=[None, 10.0],
@@ -796,6 +816,7 @@ class PallasTest(parameterized.TestCase):
     head_dim = 128
     page_size = 16
     num_pages = 1000
+    q_dtype, kv_dtype = dtype
 
     self._test_ragged_paged_attention(
         seq_lens,
@@ -803,7 +824,8 @@ class PallasTest(parameterized.TestCase):
         head_dim,
         page_size,
         num_pages,
-        dtype,
+        q_dtype,
+        kv_dtype,
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
@@ -814,7 +836,8 @@ class PallasTest(parameterized.TestCase):
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
       num_heads=[(32, 8), (8, 1)],
-      dtype=[torch.float32, torch.bfloat16],
+      dtype=[(torch.bfloat16, torch.bfloat16),
+             (torch.bfloat16, torch.float8_e5m2)],
       sm_scale=[1.0, 0.5],
       sliding_window=[None, 128],
       soft_cap=[None, 10.0],
@@ -835,6 +858,7 @@ class PallasTest(parameterized.TestCase):
     head_dim = 128
     page_size = 16
     num_pages = 1000
+    q_dtype, kv_dtype = dtype
 
     self._test_ragged_paged_attention(
         seq_lens,
@@ -842,7 +866,8 @@ class PallasTest(parameterized.TestCase):
         head_dim,
         page_size,
         num_pages,
-        dtype,
+        q_dtype,
+        kv_dtype,
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
