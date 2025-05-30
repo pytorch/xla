@@ -1,8 +1,7 @@
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 
 #include <algorithm>
-#include <future>
-#include <unordered_set>
+#include <stdexcept>
 #include <vector>
 
 #include "absl/status/status.h"
@@ -13,18 +12,15 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_hash.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
-#include "torch_xla/csrc/runtime/operation_manager.h"
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
-#include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
-#include "torch_xla/csrc/thread_pool.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
-#include "xla/layout_util.h"
 #include "xla/literal.h"
 #include "xla/pjrt/c/pjrt_c_api_gpu_extension.h"
 #include "xla/pjrt/c/pjrt_c_api_wrapper_impl.h"
@@ -32,14 +28,13 @@
 #include "xla/pjrt/pjrt_c_api_client.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
-#include "xla/protobuf_util.h"
 #include "xla/service/custom_call_target_registry.h"
 #include "xla/shape.h"
 
-using xla::internal::XlaBuilderFriend;
-
 namespace torch_xla {
 namespace runtime {
+
+using xla::internal::XlaBuilderFriend;
 
 namespace {
 
@@ -625,6 +620,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           device_assignment);
     }
 
+    // Compile the computation to an executible. For better user experience, if
+    // the XLA compiler fails for any reason, we raise a Python exception.
     std::unique_ptr<xla::PjRtLoadedExecutable> executable;
     if (runtime::sys_util::GetEnvBool("XLA_STABLEHLO_COMPILE", false)) {
       // Convert HLO to StableHLO for PjRt client compilation.
@@ -632,13 +629,18 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       mlir::ModuleOp mlir_module =
           mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
       ConvertHloToStableHlo(instance.computation.mutable_proto(), &mlir_module);
-      executable =
-          client_->CompileAndLoad(mlir_module, compile_options).value();
+      executable = util::RaisePythonValueErrorOnFailure([&] {
+        return fake_xla_compile_
+                   ? fake_xla_compile_()
+                   : client_->CompileAndLoad(mlir_module, compile_options);
+      });
       StableHloCompileCounter()->AddValue(1);
     } else {
-      executable =
-          client_->CompileAndLoad(instance.computation, compile_options)
-              .value();
+      executable = util::RaisePythonValueErrorOnFailure([&] {
+        return fake_xla_compile_ ? fake_xla_compile_()
+                                 : client_->CompileAndLoad(instance.computation,
+                                                           compile_options);
+      });
     }
 
     auto memory_stats_status_or = executable->GetCompiledMemoryStats();
