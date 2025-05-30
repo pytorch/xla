@@ -4,7 +4,7 @@ import unittest
 import torch
 from torchax import tensor
 
-from . import test_base
+from . import base_test_util
 from torch.utils import _pytree as pytree
 
 
@@ -4526,4 +4526,4 @@ class TestCoreAtenOps(unittest.TestCase):
 
 
 if __name__ == "__main__":
-  test_base.main()
+  base_test_util.main()

@@ -3,13 +3,13 @@ from torchax import tensor  # pylint: disable=unused-import
 import torchax
 import torchax.export
 
-from .. import test_base
+from .. import base_test_util
 from . import llama_model
 from . import model_exportable
 from torch.utils import _pytree as pytree
 
 
-class LlamaTest(test_base.TestCase):
+class LlamaTest(base_test_util.TestCase):
 
   def test_can_run(self):
     with torchax.default_env():
@@ -109,4 +109,4 @@ class LlamaTest(test_base.TestCase):
 
 
 if __name__ == "__main__":
-  test_base.main()
+  base_test_util.main()

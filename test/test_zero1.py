@@ -106,7 +106,8 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
         torch.optim.SGD,
         lr=0.5,
         momentum=0.5,
-        grad_clipping=True)
+        grad_clipping=True,
+        save_master_weights=True)
 
     opt.step()
 
@@ -127,14 +128,28 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     # is same as what is directly used here.
     reloaded_opt.load_state_dict(orig_opt_state)
 
-    self.assertEqual(reloaded_opt['param_groups'],
+    reloaded_opt_state = reloaded_opt.state_dict()
+
+    self.assertEqual(reloaded_opt_state['param_groups'],
                      orig_opt_state['param_groups'])
 
-    self.assertEqual(reloaded_opt['state'], orig_opt_state['state'])
+    self.assertEqual(reloaded_opt_state['state'], orig_opt_state['state'])
 
-    self.assertEqual(reloaded_opt['base_state'], orig_opt_state['base_state'])
+    self.assertEqual(reloaded_opt_state['base_state'],
+                     orig_opt_state['base_state'])
 
-    self.assertEqual(reloaded_opt['shape_info'], orig_opt_state['shape_info'])
+    self.assertEqual(reloaded_opt_state['shape_info'],
+                     orig_opt_state['shape_info'])
+
+    sharded_master_weights = orig_opt_state['sharded_master_weights']
+
+    for param_group, loaded_param_groups in zip(
+        reloaded_opt.base_optimizer.param_groups,
+        orig_opt_state['param_groups']):
+      for param, loaded_param_idx in zip(param_group['params'],
+                                         loaded_param_groups['params']):
+
+        self.assertEqual(param, sharded_master_weights[loaded_param_idx])
 
 
 def _mp_fn(index):

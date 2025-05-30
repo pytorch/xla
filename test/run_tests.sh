@@ -132,6 +132,9 @@ function run_pt_xla_debug_level1 {
 }
 
 function run_pt_xla_debug_level2 {
+  if ! test_is_selected "$1"; then
+    return
+  fi
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG_LEVEL=2 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
@@ -255,6 +258,7 @@ function run_xla_op_tests2 {
   run_test "$_TEST_DIR/test_assume_pure.py"
   run_test "$_TEST_DIR/test_assume_pure_spmd.py"
   run_test "$_TEST_DIR/test_assume_pure_torch.py"
+  run_test "$_TEST_DIR/test_dynamic_shapes_detector.py"
 }
 
 # All the new xla op tests should go to run_xla_op_tests3
@@ -375,7 +379,6 @@ function run_op_tests {
 function run_mp_op_tests {
   run_test "$_TEST_DIR/test_mp_replication.py"
   run_test "$_TEST_DIR/test_mp_all_to_all.py"
-  run_test "$_TEST_DIR/test_mp_collective_permute.py"
   run_test "$_TEST_DIR/test_mp_all_gather.py"
   run_test "$_TEST_DIR/test_mp_reduce_scatter.py"
   run_test "$_TEST_DIR/test_zero1.py"

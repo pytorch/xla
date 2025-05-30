@@ -502,7 +502,7 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
     torch_xla::ConvertHloToStableHlo(instance.computation.mutable_proto(),
                                      &mlir_module);
     std::shared_ptr<xla::ifrt::LoadedExecutable> executable =
-        ConsumeValue(client_->GetDefaultCompiler()->Compile(
+        ConsumeValue(client_->GetDefaultCompiler()->CompileAndLoad(
             std::make_unique<xla::ifrt::HloProgram>(mlir_module),
             std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options,
                                                            devices_list)));

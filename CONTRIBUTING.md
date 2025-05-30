@@ -193,8 +193,11 @@ commands on your Linux machine directly, outside of the container.
 
 **Subsequent builds**: after building the packages from source code for the
 first time, you may need to build everything again, for example, after a
-`git pull`. You can run `scripts/build_developer.sh` which will rebuild PyTorch,
-TorchVision, and PyTorch/XLA.
+`git pull`. You can:
+
+- run `scripts/build_developer.sh -b pytorch` to rebuild PyTorch, TorchVision,
+  and PyTorch/XLA,
+- run `scripts/build_developer.sh` to rebuild PyTorch/XLA only.
 
 ### Manually build in Docker container
 

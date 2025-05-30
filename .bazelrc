@@ -27,20 +27,26 @@ build --config=short_logs
 # PyTorch/XLA uses exceptions to communicate with Python.
 build --copt=-fexceptions
 
-# Why we use the sandbox mode:
+# Force GCC because clang/bazel has issues.
+build --action_env=CC=gcc
+build --action_env=CXX=g++
+build --spawn_strategy=standalone
+
+###########################################################################
+
+build:clang --action_env=CC=/usr/bin/clang-17
+build:clang --action_env=CXX=/usr/bin/clang++-17
+
+# clang requires the sandbox mode. Without this, `bazel build` generates an
+# error like:
 #
-# 1. it's a good practice that enforces explicit dependency declarations
-#    (see https://bazel.build/docs/user-manual#spawn-strategy).
-# 2. clang requires the sandbox mode. Without this, `bazel build` generates an
-#    error like:
-#
-#    ERROR: .../external/llvm-project/llvm/BUILD.bazel:2006:11: Compiling
-#    llvm/lib/CodeGenTypes/LowLevelType.cpp failed: undeclared inclusion(s) in
-#    rule '@llvm-project//llvm:CodeGenTypes':
-#    this rule is missing dependency declarations for the following files
-#    included by 'llvm/lib/CodeGenTypes/LowLevelType.cpp':
-#      'bazel-out/k8-opt/bin/external/llvm-project/llvm/config.cppmap'
-#      'bazel-out/k8-opt/bin/external/llvm-project/llvm/Demangle.cppmap'
+# ERROR: .../external/llvm-project/llvm/BUILD.bazel:2006:11: Compiling
+# llvm/lib/CodeGenTypes/LowLevelType.cpp failed: undeclared inclusion(s) in
+# rule '@llvm-project//llvm:CodeGenTypes':
+# this rule is missing dependency declarations for the following files
+# included by 'llvm/lib/CodeGenTypes/LowLevelType.cpp':
+#   'bazel-out/k8-opt/bin/external/llvm-project/llvm/config.cppmap'
+#   'bazel-out/k8-opt/bin/external/llvm-project/llvm/Demangle.cppmap'
 #
 # The sandbox mode requires all source files to be readable by others, as
 # inside the docker we build PyTorch/XLA as root, not the original user who
@@ -51,16 +57,7 @@ build --copt=-fexceptions
 #    execute permission to directories, and to files only if they already have
 #    execute permission for the owner (or group or others). This is generally
 #    safer than o+rx.
-build --spawn_strategy=sandboxed
-
-# Use GCC for C/C++ compilation.
-build --action_env=CC=gcc
-build --action_env=CXX=g++
-
-###########################################################################
-
-build:clang --action_env=CC=/usr/bin/clang-17
-build:clang --action_env=CXX=/usr/bin/clang++-17
+build:clang --spawn_strategy=sandboxed
 
 ###########################################################################
 

@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torchax
-from . import test_base
+from . import base_test_util
 
 
 class CustomConv1(torch.nn.Module):
@@ -52,7 +52,7 @@ class CustomConv2(nn.Module):
     return x * ap
 
 
-class ConvTest(test_base.TestCase):
+class ConvTest(base_test_util.TestCase):
 
   def test_conv1(self):
     m = CustomConv1()
@@ -77,4 +77,4 @@ class ConvTest(test_base.TestCase):
 
 
 if __name__ == '__main__':
-  test_base.main()
+  base_test_util.main()
