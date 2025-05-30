@@ -6,12 +6,27 @@
 
 - name: Build PyTorch/XLA CUDA Plugin
   ansible.builtin.command:
-    cmd: pip wheel -w /dist plugins/cuda -v
+    cmd: pip wheel plugins/cuda -v
     chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
   environment: "{{ env_vars }}"
   when: accelerator == "cuda"
 
-- name: Find CUDA plugin wheel pytorch/xla/dist
+- name: Find the built CUDA plugin wheel
+  ansible.builtin.find:
+    paths: "{{ (src_root, 'pytorch/xla') | path_join }}" # Look in the dir where pip saved the wheel
+    patterns: "torch_xla_cuda_plugin-*.whl"
+    recurse: no
+  when: accelerator == "cuda"
+  register: built_plugin_wheel_info
+
+- name: Copy the CUDA plugin wheel to /dist
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "/dist/{{ item.path | basename }}" # Ensure only the filename is used for dest
+  loop: "{{ built_plugin_wheel_info.files }}"
+  when: accelerator == "cuda" and built_plugin_wheel_info.files | length > 0
+
+- name: Find CUDA plugin wheel in /dist
   ansible.builtin.find:
     path: "/dist"
     pattern: "torch_xla_cuda_plugin*.whl"
