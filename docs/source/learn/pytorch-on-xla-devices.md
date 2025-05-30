@@ -346,11 +346,11 @@ device is unavailable the load will fail. PyTorch/XLA, like all of
 PyTorch, is under active development and this behavior may change in the
 future.
 
-### Tensor Synchronization During Tracing
+### Unexpected Tensor Materialization During AOT (ahead of time) Tracing
 
-While tensor synchronization is normal for JIT workflow, it is not expected during traced inference (i.e. traced workflow in AWS Neuron).
-When working with traced graphs, developers may encounter issues related to tensor synchronization during tracing, which can lead to additional graphs being compiled and unexpected program behavior.
-Therefore we need to take advantage of PyTorch/XLA's debugging flags to identify when unexpected tensor synchronization happens and make appropriate code changes to avoid tensor synchronization.
+While tensor materialization is normal for JIT workflow, it is not expected during traced inference (i.e. [AOT model tracing in AWS Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/frameworks/torch/torch-neuronx/programming-guide/inference/trace-vs-xla-lazytensor.html)).
+When working with traced inference, developers may encounter tensor materialization, which leads to graphs being compiled based on example input tensor value and unexpected program behavior.
+Therefore we need to take advantage of PyTorch/XLA's debugging flags to identify when unexpected tensor materialization happens and make appropriate code changes to avoid tensor materialization.
 
 
 A common issue occurs when tensor values are evaluated during model compilation (traced inference). Consider this example:
@@ -369,7 +369,7 @@ While this code can compile and run, it may lead to unexpected behavior because:
 * Developers might incorrectly assume the condition will be evaluated dynamically during inference
 * The solution for the code above is to utilize the debugging flags below to catch the issue and modify the code. One example is to feed the flag through model configuration
 
-See the updated code without tensor synchronization:
+See the updated code without tensor materialization:
 ```python
 class TestModel(torch.nn.Module):
     def __init__(self, flag=1):
@@ -387,9 +387,9 @@ class TestModel(torch.nn.Module):
 
 
 #### Debugging Flags
-To help catch tensor synchronization issues, PyTorch/XLA provides two useful approaches:
+To help catch tensor materialization issues, PyTorch/XLA provides two useful approaches:
 
-1. Enable warning messages for tensor synchronization:
+1. Enable warning messages for tensor materialization:
 ```
 import os
 os.environ['PT_XLA_DEBUG_LEVEL'] = '2'
@@ -405,9 +405,9 @@ torch_xla._XLAC._set_allow_execution(False)
 
 Using these flags during development can help identify potential issues early in the development cycle. The recommended approach is to:
 
-* Use ``PT_XLA_DEBUG_LEVEL=2`` during initial development to identify potential synchronization points
-* Apply ``_set_allow_execution(False)`` when you want to ensure no tensor synchronization occurs during tracing
-* When you see warnings or errors related the tensor synchronization, look into the code path and make appropriate changes. The example above moved the flag to the `__init__` function which does not depend on the model input during runtime.
+* Use ``PT_XLA_DEBUG_LEVEL=2`` during initial development to identify potential materialization points
+* Apply ``_set_allow_execution(False)`` when you want to ensure no tensor materialization occurs during tracing
+* When you see warnings or errors related the tensor materialization, look into the code path and make appropriate changes. The example above moved the flag to the `__init__` function which does not depend on the model input during runtime.
 
 For more detailed debugging information, refer to the [XLA troubleshoot](https://github.com/pytorch/xla/blob/master/docs/source/learn/troubleshoot.md#pytorchxla-debugging-tool).
 
