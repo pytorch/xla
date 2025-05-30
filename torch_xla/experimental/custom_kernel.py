@@ -183,6 +183,12 @@ def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
     return jnp.int8
   elif dtype == torch.uint8:
     return jnp.uint8
+  elif dtype == torch.float8_e5m2:
+    return jnp.float8_e5m2
+  elif dtype == torch.float8_e4m3fn:
+    return jnp.float8_e4m3fn
+  elif dtype == torch.float8_e4m3fnuz:
+    return jnp.float8_e4m3fnuz
   else:
     raise ValueError(f"Unsupported dtype: {dtype}")
 
@@ -901,6 +907,8 @@ def _ragged_paged_attention_nonkernel(
     page_indices,  # i32[max_num_seqs, pages_per_seq]
     cu_q_lens,  # i32[max_num_seqs + 1]
     num_seqs,  # i32[1]
+    k_scale,
+    v_scale,
     *,
     sm_scale=1.0,
     sliding_window: int | None = None,
@@ -927,6 +935,12 @@ def _ragged_paged_attention_nonkernel(
                                               head_dim)[:kv_len]
     v = kv_pages[indices, :, 1::2, :].reshape(-1, num_kv_heads,
                                               head_dim)[:kv_len]
+    if k_scale is not None:
+      k = k.to(torch.float32) * k_scale
+      k = k.to(q.dtype)
+    if v_scale is not None:
+      v = v.to(torch.float32) * v_scale
+      v = v.to(q.dtype)
     k = torch.repeat_interleave(k, num_query_per_kv, dim=1)
     v = torch.repeat_interleave(v, num_query_per_kv, dim=1)
     attn = torch.einsum("qhd,khd->hqk", q, k)
@@ -963,6 +977,8 @@ def ragged_paged_attention(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value=None,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
     use_kernel=True,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
@@ -984,6 +1000,8 @@ def ragged_paged_attention(
         sliding_window=sliding_window,
         soft_cap=soft_cap,
         mask_value=mask_value,
+        k_scale=k_scale,
+        v_scale=v_scale,
     )
 
   # Import JAX within the function such that we don't need to call the jax_import_guard()
@@ -1005,6 +1023,8 @@ def ragged_paged_attention(
       sliding_window=sliding_window,
       soft_cap=soft_cap,
       mask_value=mask_value,
+      k_scale=k_scale,
+      v_scale=v_scale,
       num_kv_pages_per_block=num_kv_pages_per_block,
       num_queries_per_block=num_queries_per_block,
       vmem_limit_bytes=vmem_limit_bytes,
@@ -1016,6 +1036,8 @@ def ragged_paged_attention(
           "num_kv_pages_per_block",
           "num_queries_per_block",
           "vmem_limit_bytes",
+          "k_scale",
+          "v_scale",
       ],
   )
 
@@ -1492,7 +1514,7 @@ def non_xla_ragged_paged_attention(q, kv, attention_type):
 XLA_LIB.define(
     "ragged_paged_attention(Tensor q, Tensor kv_pages, Tensor kv_lens, Tensor page_indices, "
     "Tensor cu_q_lens, Tensor num_seqs, float sm_scale=1, int? sliding_window=None, "
-    "float? soft_cap=None, float? mask_value=None, bool use_kernel=True,"
+    "float? soft_cap=None, float? mask_value=None, float? k_scale=None, float? v_scale=None, bool use_kernel=True,"
     "int? num_kv_pages_per_block=None, int? num_queries_per_block=None, int? vmem_limit_bytes=None) -> Tensor",
 )
 
@@ -1509,6 +1531,8 @@ def ragged_paged_attention_xla(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value=None,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
     use_kernel=True,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
@@ -1526,6 +1550,8 @@ def ragged_paged_attention_xla(
       sliding_window=sliding_window,
       soft_cap=soft_cap,
       mask_value=mask_value,
+      k_scale=k_scale,
+      v_scale=v_scale,
       use_kernel=use_kernel,
       num_kv_pages_per_block=num_kv_pages_per_block,
       num_queries_per_block=num_queries_per_block,
@@ -1544,6 +1570,8 @@ def ragged_paged_attention_non_xla(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value=None,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
     use_kernel=True,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
