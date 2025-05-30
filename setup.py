@@ -74,31 +74,31 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 #
 # Usually we update both at the same time to minimize their version skew.
 #
-# Update libtpu to a new nightly build:
+# 1. Update libtpu to a new nightly build:
 #
-# 1. Find a new version of libtpu on https://storage.googleapis.com/libtpu-wheels/index.html.
-#    Usually we prefer the latest version.
-#    E.g. libtpu/libtpu-0.0.16.dev20250529+nightly-py3-none-manylinux_2_31_x86_64.whl
-# 2. Update _libtpu_version to the libtpu version. E.g. 0.0.16.
-# 3. Update _libtpu_date to the date of the version. E.g. 20250529.
+#    1. Find a new version of libtpu on https://storage.googleapis.com/libtpu-wheels/index.html.
+#       Usually we prefer the latest version.
+#       E.g. libtpu/libtpu-0.0.16.dev20250529+nightly-py3-none-manylinux_2_31_x86_64.whl
+#    2. Update _libtpu_version to the libtpu version. E.g. 0.0.16.
+#    3. Update _libtpu_date to the date of the version. E.g. 20250529.
 #
-# Update JAX to a new nightly build:
+# 2. Update JAX to a new nightly build:
 #
-# 1. Find a new version of jax and jaxlib on https://storage.googleapis.com/jax-releases/jax_nightly_releases.html.
-#    Usually we prefer the latest version.
-#    E.g. jax/jax-0.6.1.dev20250428-py3-none-any.whl and nocuda/jaxlib-0.6.1.dev20250428-*.whl
-#    Both jax and jaxlib should be on the same day. We prefer this date to be
-#    the same as the libtpu build date, but it's not strictly necessary.
-# 2. Update _jax_version and _jaxlib_version to the versions we found. E.g.
-#    0.6.1.
-# 3. Update _jax_date to the date of the new jax and jaxlib build. E.g. 20250428.
+#    1. Find a new version of jax and jaxlib on https://storage.googleapis.com/jax-releases/jax_nightly_releases.html.
+#       Usually we prefer the latest version.
+#       E.g. jax/jax-0.6.1.dev20250428-py3-none-any.whl and nocuda/jaxlib-0.6.1.dev20250428-*.whl
+#       Both jax and jaxlib should be on the same day. We prefer this date to be
+#       the same as the libtpu build date, but it's not strictly necessary.
+#    2. Update _jax_version and _jaxlib_version to the versions we found. E.g.
+#       0.6.1.
+#    3. Update _jax_date to the date of the new jax and jaxlib build. E.g. 20250428.
 #
-# After updating libtpu and JAX, run
-#   scripts/build_developer.sh
-# for a sanity check. Fix the build errors as needed.
+# 3. After updating libtpu and JAX, run
+#      scripts/build_developer.sh
+#    for a sanity check. Fix the build errors as needed.
 #
-# After the local build succeeds, create a PR and wait for the CI result. Fix
-# CI errors as needed until all required checks pass.
+# 4. After the local build succeeds, create a PR and wait for the CI result. Fix
+#    CI errors as needed until all required checks pass.
 
 USE_NIGHTLY = True  # Whether to use nightly or stable libtpu and JAX.
 
