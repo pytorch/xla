@@ -47,7 +47,7 @@ jobs:
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
-      timeout-minutes: 240
+      timeout-minutes: 45  # Takes ~20m as of 2025/5/30.
       has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
       runner: linux.24xlarge
     secrets:
@@ -64,7 +64,7 @@ jobs:
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
       # note that to build a torch wheel with CUDA enabled, we do not need a GPU runner.
       runner: linux.24xlarge
-      timeout-minutes: 120
+      timeout-minutes: 120  # Takes ~66m as of 2025/5/30.
       has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
 
   build-cuda-plugin:
@@ -84,7 +84,7 @@ jobs:
     needs: [build-torch-xla, check_code_changes, get-torch-commit]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
-      timeout-minutes: 120
+      timeout-minutes: 45  # Takes ~26m as of 2025/5/30.
       collect-coverage: false
       runner: linux.24xlarge
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
@@ -124,7 +124,7 @@ jobs:
     uses: ./.github/workflows/_tpu_ci.yml
     needs: [build-torch-xla, check_code_changes]
     with:
-      timeout-minutes: 300
+      timeout-minutes: 75  # Takes ~40m as of 2025/5/30.
       has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
     if: github.event_name == 'push' || github.event_name == 'pull_request'
 
