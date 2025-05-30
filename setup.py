@@ -72,6 +72,12 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 # How to update libtpu and JAX to a new nightly build
 # ===================================================
 #
+# Most of the time, you can just run
+#   scripts/update_deps.py
+# to automatically update the versions of openxla, libtpu, and jax used in
+# torch_xla. In case the script doesn't work and you need to do it manually,
+# follow instructions below.
+#
 # Usually we update both at the same time to minimize their version skew.
 #
 # 1. Update libtpu to a new nightly build:
