@@ -49,6 +49,7 @@ run_test "$_TEST_DIR/test_operations.py" -v
 run_test "$_TEST_DIR/test_xla_graph_execution.py" -v
 run_test "$_TEST_DIR/pjrt/test_runtime_tpu.py"
 run_test "$_TEST_DIR/pjrt/test_collective_ops_tpu.py"
+run_test "$_TEST_DIR/test_mp_collective_permute.py"
 run_test "$_TEST_DIR/spmd/test_mp_input_sharding.py"
 run_test "$_TEST_DIR/test_mp_collective_matmul.py"
 run_save_tensor_hlo run_test "$_TEST_DIR/spmd/test_spmd_lowering_context.py"
