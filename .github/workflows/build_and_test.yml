@@ -64,7 +64,7 @@ jobs:
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
       # note that to build a torch wheel with CUDA enabled, we do not need a GPU runner.
       runner: linux.24xlarge
-      timeout-minutes: 120  # Takes ~66m as of 2025/5/30.
+      timeout-minutes: 100  # Takes ~66m as of 2025/5/30.
       has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
 
   build-cuda-plugin:
