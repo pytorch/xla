@@ -4364,9 +4364,9 @@ at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
 }
 
-//Sparse mask and coalesce are sparse dispatch only. These exist to prevent
-//the functionalization layer from incorrectly applying wrappers when we
-//pass through before hitting python dispatch.
+// Sparse mask and coalesce are sparse dispatch only. These exist to prevent
+// the functionalization layer from incorrectly applying wrappers when we
+// pass through before hitting python dispatch.
 at::Tensor XLANativeFunctions::sparse_mask(const at::Tensor& self,
                                            const at::Tensor& mask) {
   at::AutoDispatchSkipFunctionalize guard;
