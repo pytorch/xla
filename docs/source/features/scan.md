@@ -197,5 +197,5 @@ for details on how to use them.
 [flash-attn-issue]: https://github.com/pytorch/xla/issues/8633
 [retracing-issue]: https://github.com/pytorch/xla/issues/8632
 [jax-lax-scan]: https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html
-[decoder_with_scan]: /examples/scan/decoder_with_scan.py
-[scan_examples]: /examples/scan/scan_examples.py
+[decoder_with_scan]: https://github.com/pytorch/xla/blob/master/examples/scan/decoder_with_scan.py
+[scan_examples]: https://github.com/pytorch/xla/blob/master/examples/scan/scan_examples.py

@@ -183,6 +183,12 @@ def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
     return jnp.int8
   elif dtype == torch.uint8:
     return jnp.uint8
+  elif dtype == torch.float8_e5m2:
+    return jnp.float8_e5m2
+  elif dtype == torch.float8_e4m3fn:
+    return jnp.float8_e4m3fn
+  elif dtype == torch.float8_e4m3fnuz:
+    return jnp.float8_e4m3fnuz
   else:
     raise ValueError(f"Unsupported dtype: {dtype}")
 
@@ -901,6 +907,8 @@ def _ragged_paged_attention_nonkernel(
     page_indices,  # i32[max_num_seqs, pages_per_seq]
     cu_q_lens,  # i32[max_num_seqs + 1]
     num_seqs,  # i32[1]
+    k_scale,
+    v_scale,
     *,
     sm_scale=1.0,
     sliding_window: int | None = None,
@@ -927,6 +935,12 @@ def _ragged_paged_attention_nonkernel(
                                               head_dim)[:kv_len]
     v = kv_pages[indices, :, 1::2, :].reshape(-1, num_kv_heads,
                                               head_dim)[:kv_len]
+    if k_scale is not None:
+      k = k.to(torch.float32) * k_scale
+      k = k.to(q.dtype)
+    if v_scale is not None:
+      v = v.to(torch.float32) * v_scale
+      v = v.to(q.dtype)
     k = torch.repeat_interleave(k, num_query_per_kv, dim=1)
     v = torch.repeat_interleave(v, num_query_per_kv, dim=1)
     attn = torch.einsum("qhd,khd->hqk", q, k)
@@ -963,6 +977,8 @@ def ragged_paged_attention(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value=None,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
     use_kernel=True,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
@@ -984,6 +1000,8 @@ def ragged_paged_attention(
         sliding_window=sliding_window,
         soft_cap=soft_cap,
         mask_value=mask_value,
+        k_scale=k_scale,
+        v_scale=v_scale,
     )
 
   # Import JAX within the function such that we don't need to call the jax_import_guard()
@@ -1005,6 +1023,8 @@ def ragged_paged_attention(
       sliding_window=sliding_window,
       soft_cap=soft_cap,
       mask_value=mask_value,
+      k_scale=k_scale,
+      v_scale=v_scale,
       num_kv_pages_per_block=num_kv_pages_per_block,
       num_queries_per_block=num_queries_per_block,
       vmem_limit_bytes=vmem_limit_bytes,
@@ -1016,6 +1036,8 @@ def ragged_paged_attention(
           "num_kv_pages_per_block",
           "num_queries_per_block",
           "vmem_limit_bytes",
+          "k_scale",
+          "v_scale",
       ],
   )
 
@@ -1289,7 +1311,9 @@ def gmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: Tuple[int, int, int] = (512, 512, 512)
+    tiling: Tuple[int, int, int] = (512, 512, 512),
+    group_offset: torch.Tensor | None = None,
+    transpose_rhs: bool = False,
 ) -> torch.Tensor:
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
 
@@ -1298,7 +1322,9 @@ def gmm(
     rhs: A 3d, torch.Tensor with shape [num_groups, k, n].
     group_sizes: A 1d, torch.Tensor with shape [num_groups] and torch.int32 dtype.
     tiling: 3-tuple of ints. The m, k and n-dimension tile sizes.
-
+    group_offset: The group in group sizes to start computing from. This is
+      particularly useful for when rhs num_groups is sharded.
+    transpose_rhs: True if the rhs needs to be transposed.
   Returns:
     A 2d, torch.Tensor with shape [m, n].
   """
@@ -1310,7 +1336,8 @@ def gmm(
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
   preferred_element_type = lhs.dtype
   return xb.call_jax(gmm, (lhs, rhs, group_sizes, preferred_element_type,
-                           (tm, tk, tn)))
+                           (tm, tk, tn), group_offset),
+                     {"transpose_rhs": transpose_rhs})
 
 
 @requires_jax
@@ -1318,7 +1345,9 @@ def tgmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: Tuple[int, int, int] = (512, 512, 512)
+    tiling: Tuple[int, int, int] = (512, 512, 512),
+    group_offset: torch.Tensor | None = None,
+    num_actual_groups: int | None = None,
 ) -> torch.Tensor:
   """Compute lhs[:, sizes[i-1]:sizes[i]] @ rhs[sizes[i-1]:sizes[i], :].
 
@@ -1340,7 +1369,7 @@ def tgmm(
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
   preferred_element_type = lhs.dtype
   return xb.call_jax(tgmm, (lhs, rhs, group_sizes, preferred_element_type,
-                            (tm, tk, tn)))
+                            (tm, tk, tn), group_offset, num_actual_groups))
 
 
 def gmm_backward(grad, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
@@ -1485,7 +1514,7 @@ def non_xla_ragged_paged_attention(q, kv, attention_type):
 XLA_LIB.define(
     "ragged_paged_attention(Tensor q, Tensor kv_pages, Tensor kv_lens, Tensor page_indices, "
     "Tensor cu_q_lens, Tensor num_seqs, float sm_scale=1, int? sliding_window=None, "
-    "float? soft_cap=None, float? mask_value=None, bool use_kernel=True,"
+    "float? soft_cap=None, float? mask_value=None, float? k_scale=None, float? v_scale=None, bool use_kernel=True,"
     "int? num_kv_pages_per_block=None, int? num_queries_per_block=None, int? vmem_limit_bytes=None) -> Tensor",
 )
 
@@ -1502,6 +1531,8 @@ def ragged_paged_attention_xla(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value=None,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
     use_kernel=True,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
@@ -1519,6 +1550,8 @@ def ragged_paged_attention_xla(
       sliding_window=sliding_window,
       soft_cap=soft_cap,
       mask_value=mask_value,
+      k_scale=k_scale,
+      v_scale=v_scale,
       use_kernel=use_kernel,
       num_kv_pages_per_block=num_kv_pages_per_block,
       num_queries_per_block=num_queries_per_block,
@@ -1537,6 +1570,8 @@ def ragged_paged_attention_non_xla(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value=None,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
     use_kernel=True,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
@@ -1547,7 +1582,7 @@ def ragged_paged_attention_non_xla(
 
 
 XLA_LIB.define(
-    "gmm(Tensor lhs, Tensor rhs, Tensor group_sizes, int[]? tiling=None) -> Tensor",
+    "gmm(Tensor lhs, Tensor rhs, Tensor group_sizes, int[]? tiling=None, Tensor? group_offset=None, bool transpose_rhs=False) -> Tensor",
 )
 
 
@@ -1557,28 +1592,37 @@ def gmm_xla(
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
     # pytorch custom op does not allow tuple type, use list instead
-    tiling: Optional[List[int]] = [512, 512, 512]):
+    tiling: Optional[List[int]] = [512, 512, 512],
+    group_offset: torch.Tensor | None = None,
+    transpose_rhs: bool = False):
+  if tiling is None:
+    tiling = [512, 512, 512]
   assert len(tiling) == 3, "tiling must be a list with 3 integers"
   assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
   assert rhs.dim(
   ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n]"
   tiling = tuple(tiling)
-  return gmm(lhs, rhs, group_sizes, tiling)
+  return gmm(lhs, rhs, group_sizes, tiling, group_offset, transpose_rhs)
 
 
 @impl(XLA_LIB, "gmm", "CompositeExplicitAutograd")
 def gmm_non_xla(lhs: torch.Tensor,
                 rhs: torch.Tensor,
                 group_sizes: torch.Tensor,
-                tiling: Optional[List[int]] = [512, 512, 512]):
+                tiling: Optional[List[int]] = [512, 512, 512],
+                group_offset: torch.Tensor | None = None,
+                transpose_rhs: bool = False):
   # This will be called when dynamo use fake tensor to construct the fake output.
   # We need to make sure output tensor's shape is correct.
   if lhs.device != torch.device("meta"):
     warnings.warn(f'XLA gmm should only be applied to tensors on XLA device')
+  if tiling is None:
+    tiling = [512, 512, 512]
   assert len(tiling) == 3, "tiling must be a list with 3 integers"
   assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
   assert rhs.dim(
-  ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n]"
+  ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n] or [num_groups, n, k] when transpose_rhs is True"
+  rhs_dim_size = rhs.size()[1] if transpose_rhs is True else rhs.size()[2]
 
   # we only need to return the tensor with correct shape for meta tensor.
-  return torch.empty(lhs.size()[0], rhs.size()[2], device=lhs.device)
+  return torch.empty(lhs.size()[0], rhs_dim_size, device=lhs.device)

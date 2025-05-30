@@ -21,6 +21,7 @@ during inference.
 import functools
 import jax
 from jax import lax
+from jax._src import dtypes
 from jax.experimental import pallas as pl
 from jax.experimental.pallas import tpu as pltpu
 import jax.numpy as jnp
@@ -476,18 +477,16 @@ class MultiPageAsyncCopyDescriptor:
       vmem_buf,  # [num_kv_pages_per_blk, page_size, num_combined_kv_heads_per_blk, head_dim]
       sem,
       page_indices_ref,  # i32[max_num_seqs, pages_per_seq]
-      offset,  # [seq_idx, kv_pages_start]
+      metadata,  # [seq_idx, start_page_idx, end_page_idx]
   ):
     self._vmem_buf = vmem_buf
-    seq_id, kv_pages_start = offset
-    pages_per_seq = page_indices_ref.shape[1]
+    seq_id, start_page_idx, end_page_idx = metadata
     self._async_copies = []
     # TODO(jevinjiang): Only fetch dynamic shape in need! This will insert
     # a bunch of if-ops. Check the performance when we have benchmarking setup.
     for i in range(vmem_buf.shape[0]):
-      page_idx = kv_pages_start + i
-      page_idx = jax.lax.select(page_idx < pages_per_seq, page_idx,
-                                pages_per_seq - 1)
+      page_idx = start_page_idx + i
+      page_idx = jax.lax.select(page_idx < end_page_idx, page_idx, 0)
       self._async_copies.append(
           pltpu.make_async_copy(
               pages_hbm_ref.at[page_indices_ref[seq_id, page_idx]],
@@ -519,6 +518,8 @@ def ref_ragged_paged_attention(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value: float | None = DEFAULT_MASK_VALUE,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
 ):
   static_validate_inputs(
       queries,
@@ -528,6 +529,8 @@ def ref_ragged_paged_attention(
       cu_q_lens,
       num_seqs,
       sm_scale=sm_scale,
+      k_scale=k_scale,
+      v_scale=v_scale,
       sliding_window=sliding_window,
       soft_cap=soft_cap,
       mask_value=mask_value,
@@ -552,6 +555,12 @@ def ref_ragged_paged_attention(
                                               head_dim)[:kv_len]
     v = kv_pages[indices, :, 1::2, :].reshape(-1, num_kv_heads,
                                               head_dim)[:kv_len]
+    if k_scale is not None:
+      k = k.astype(jnp.float32) * k_scale
+      k = k.astype(q.dtype)
+    if v_scale is not None:
+      v = v.astype(jnp.float32) * v_scale
+      v = v.astype(q.dtype)
     k = jnp.repeat(k, num_query_per_kv, axis=1)
     v = jnp.repeat(v, num_query_per_kv, axis=1)
     attn = jnp.einsum("qhd,khd->hqk", q, k, preferred_element_type=jnp.float32)
@@ -587,7 +596,9 @@ def dynamic_validate_inputs(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value: float | None = None,
-    # Kernel specific params.
+    k_scale: float | None = None,
+    v_scale: float | None = None,
+    # Kernel tuning params.
     num_kv_pages_per_block: int | None = None,
     num_queries_per_block: int | None = None,
     vmem_limit_bytes: int | None = None,
@@ -603,6 +614,8 @@ def dynamic_validate_inputs(
       sliding_window=sliding_window,
       soft_cap=soft_cap,
       mask_value=mask_value,
+      k_scale=k_scale,
+      v_scale=v_scale,
       num_kv_pages_per_block=num_kv_pages_per_block,
       num_queries_per_block=num_queries_per_block,
       vmem_limit_bytes=vmem_limit_bytes,
@@ -645,7 +658,9 @@ def static_validate_inputs(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value: float | None = None,
-    # Kernel specific params.
+    k_scale: float | None = None,
+    v_scale: float | None = None,
+    # Kernel tuning params.
     num_kv_pages_per_block: int | None = None,
     num_queries_per_block: int | None = None,
     vmem_limit_bytes: int | None = None,
@@ -653,6 +668,8 @@ def static_validate_inputs(
   _, num_q_heads, head_dim = q.shape
   _, _, num_combined_kv_heads, head_dim_k = kv_pages.shape
   assert num_combined_kv_heads % 2 == 0
+  assert isinstance(k_scale, float) or k_scale is None
+  assert isinstance(v_scale, float) or v_scale is None
   num_kv_heads = num_combined_kv_heads // 2
   max_num_seqs, pages_per_seq = page_indices.shape
   if num_seqs.shape != (1,):
@@ -715,10 +732,13 @@ def ragged_paged_attention_kernel(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value: float | None = DEFAULT_MASK_VALUE,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
 ):
   if mask_value is None:
     mask_value = DEFAULT_MASK_VALUE
   num_q_per_blk, num_q_heads_per_blk, head_dim = q_ref.shape
+  pages_per_seq = page_indices_ref.shape[-1]
   num_seqs = num_seqs_ref[0]
   _, num_kv_pages_per_blk, page_size, num_combined_kv_heads_per_blk, _ = (
       kv_bufs.shape)
@@ -737,7 +757,10 @@ def ragged_paged_attention_kernel(
 
   def create_kv_async_copy_descriptors(heads_blk_idx, seq_idx, kv_blk_idx,
                                        buf_idx):
-    offset = (seq_idx, kv_blk_idx * num_kv_pages_per_blk)
+    start_kv_page_idx = kv_blk_idx * num_kv_pages_per_blk
+    end_kv_page_idx = jnp.minimum(pages_per_seq,
+                                  cdiv(kv_lens_ref[seq_idx], page_size))
+    metadata = (seq_idx, start_kv_page_idx, end_kv_page_idx)
     heads_start = heads_blk_idx * num_combined_kv_heads_per_blk
     async_copy_kv = MultiPageAsyncCopyDescriptor(
         kv_pages_hbm_ref.at[:, :,
@@ -746,28 +769,46 @@ def ragged_paged_attention_kernel(
         kv_bufs.at[buf_idx],
         sems.at[buf_idx],
         page_indices_ref,
-        offset,
+        metadata,
     )
     return async_copy_kv
 
   # TODO(jevinjiang): Add these to Mosaic:
-  # 1. Support arbitrary strided load/store for any dtype.
+  # 1. Support arbitrary strided load/store for int4 and int8 dtype.
   # 2. Support arbitrary strided load/store for any last dimension.
   def strided_load_kv(ref, start, step):
-    if ref.dtype == jnp.float32:
-      return ref[start::step, :], ref[start + 1::step, :]
     packing = get_dtype_packing(ref.dtype)
-    assert ref.dtype == jnp.bfloat16
+    if packing == 1:
+      return [ref[start::step, :]], [ref[start + 1::step, :]]
+    assert packing in (2, 4, 8)
     assert step % packing == 0
+    k_list, v_list = [], []
     b_start = start // packing
     b_step = step // packing
     b_ref = ref.bitcast(jnp.uint32)
     b = b_ref[b_start::b_step, :]
-    bk = b << 16
-    bv = b & jnp.uint32(0xffff0000)
-    k = pltpu.bitcast(bk, jnp.float32).astype(jnp.bfloat16)
-    v = pltpu.bitcast(bv, jnp.float32).astype(jnp.bfloat16)
-    return k, v
+
+    # TODO(chengjiyao): use the general strided loading logic for bf16 after
+    # fixing the issue in mosaic's infer vector layout pass
+    if ref.dtype == jnp.bfloat16:
+      bk = b << 16
+      bv = b & jnp.uint32(0xFFFF0000)
+      k = pltpu.bitcast(bk, jnp.float32).astype(jnp.bfloat16)
+      v = pltpu.bitcast(bv, jnp.float32).astype(jnp.bfloat16)
+      k_list.append(k)
+      v_list.append(v)
+    else:
+      bitwidth = 32 // packing
+      bitcast_dst_dtype = jnp.dtype(f"uint{bitwidth}")
+      for i in range(0, packing, 2):
+        bk = b >> (i * bitwidth)
+        k = pltpu.bitcast(bk.astype(bitcast_dst_dtype), ref.dtype)
+        k_list.append(k)
+        bv = b >> ((i + 1) * bitwidth)
+        v = pltpu.bitcast(bv.astype(bitcast_dst_dtype), ref.dtype)
+        v_list.append(v)
+
+    return k_list, v_list
 
   def fold_on_2nd_minor(vec):
     assert vec.dtype == jnp.bfloat16 or vec.dtype == jnp.float32
@@ -841,19 +882,15 @@ def ragged_paged_attention_kernel(
           num_q_per_blk * num_q_heads_per_kv_head,
           head_dim,
       )
-      assert k.shape == (
+      assert (k.shape == v.shape == (
           num_kv_per_blk,
           head_dim,
-      ), f"{k.shape=}, {(num_kv_per_blk, head_dim)=} {k.dtype=}"
-      assert v.shape == (num_kv_per_blk, head_dim)
-      assert head_m_ref.shape == (
+      ))
+      assert k.dtype == v.dtype
+      assert (head_m_ref.shape == head_l_ref.shape == (
           num_q_per_blk * num_q_heads_per_kv_head,
           128,
-      )
-      assert head_l_ref.shape == (
-          num_q_per_blk * num_q_heads_per_kv_head,
-          128,
-      )
+      ))
       assert head_acc_ref.shape == (
           num_q_per_blk,
           num_q_heads_per_kv_head,
@@ -866,6 +903,12 @@ def ragged_paged_attention_kernel(
         mask = jnp.logical_and(iota >= start, iota < end)
         pl.store(
             ref, idx=tuple(slice(None) for _ in ref.shape), val=val, mask=mask)
+
+      # kv lens will be contracting dim, we should mask out the NaNs.
+      kv_mask = (
+          lax.broadcasted_iota(jnp.int32, k.shape, 0) < kv_len - kv_len_start)
+      k = jnp.where(kv_mask, k.astype(jnp.float32), 0).astype(k.dtype)
+      v = jnp.where(kv_mask, v.astype(jnp.float32), 0).astype(v.dtype)
 
       qk = (
           jnp.einsum("nd,md->nm", q, k, preferred_element_type=jnp.float32) *
@@ -989,23 +1032,38 @@ def ragged_paged_attention_kernel(
           num_kv_pages_per_blk * page_size * num_combined_kv_heads_per_blk,
           head_dim,
       )
-      for kv_head_idx in range(num_kv_heads_per_blk):
-        q_head_idx = kv_head_idx * num_q_heads_per_kv_head
-        # TODO(jevinjiang): extra handlig for packed type that can start at
-        # unaligned position!
-        q = fold_on_2nd_minor(q_ref[:, q_head_idx:q_head_idx +
-                                    num_q_heads_per_kv_head, :])
-        k, v = strided_load_kv(kv_ref, kv_head_idx * 2,
-                               num_combined_kv_heads_per_blk)
-        flash_attention(
-            q,
-            k,
-            v,
-            l_ref.at[kv_head_idx],
-            m_ref.at[kv_head_idx],
-            acc_ref.at[:, q_head_idx:q_head_idx + num_q_heads_per_kv_head, :],
-            kv_blk_idx=kv_blk_idx,
-        )
+      kv_packing = get_dtype_packing(kv_ref.dtype)
+      # NOTE: kv_packing is divided by 2 because k and v are packed together.
+      kv_load_step = max(1, kv_packing // 2)
+      for kv_head_chunk_idx in range(0, num_kv_heads_per_blk, kv_load_step):
+        k_list, v_list = strided_load_kv(kv_ref, kv_head_chunk_idx * 2,
+                                         num_combined_kv_heads_per_blk)
+        for step_idx in range(kv_load_step):
+          k = k_list[step_idx]
+          v = v_list[step_idx]
+          if k_scale is not None:
+            # NOTE: Conversion between arbitrary data types is not supported.
+            # That's why it is converted to float32 first.
+            k = k.astype(jnp.float32) * k_scale
+            k = k.astype(q_ref.dtype)
+          if v_scale is not None:
+            v = v.astype(jnp.float32) * v_scale
+            v = v.astype(q_ref.dtype)
+          kv_head_idx = kv_head_chunk_idx + step_idx
+          q_head_idx = kv_head_idx * num_q_heads_per_kv_head
+          # TODO(jevinjiang): extra handlig for packed type that can start at
+          # unaligned position!
+          q = fold_on_2nd_minor(q_ref[:, q_head_idx:q_head_idx +
+                                      num_q_heads_per_kv_head, :])
+          flash_attention(
+              q,
+              k,
+              v,
+              l_ref.at[kv_head_idx],
+              m_ref.at[kv_head_idx],
+              acc_ref.at[:, q_head_idx:q_head_idx + num_q_heads_per_kv_head, :],
+              kv_blk_idx=kv_blk_idx,
+          )
       return kv_blk_idx + 1, next_buf_idx
 
     _, next_buf_idx = lax.while_loop(
@@ -1034,15 +1092,8 @@ def cdiv(a, b):
 
 
 def get_dtype_packing(dtype):
-  if dtype == jnp.float32:
-    return 1
-  if dtype == jnp.bfloat16:
-    return 2
-  if dtype == jnp.int8:
-    return 4
-  if dtype == jnp.int4:
-    return 8
-  raise ValueError(f"Not implemented: unsupported {dtype=}")
+  bits = dtypes.bit_width(dtype)
+  return 32 // bits
 
 
 def get_min_heads_per_blk(num_q_heads, num_combined_kv_heads, q_dtype,
@@ -1087,6 +1138,8 @@ def get_min_heads_per_blk(num_q_heads, num_combined_kv_heads, q_dtype,
         "vmem_limit_bytes",
         "sliding_window",
         "soft_cap",
+        "k_scale",
+        "v_scale",
     ],
 )
 def ragged_paged_attention(
@@ -1103,6 +1156,8 @@ def ragged_paged_attention(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value: float | None = DEFAULT_MASK_VALUE,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
     num_kv_pages_per_block: int | None = None,
     num_queries_per_block: int | None = None,
     vmem_limit_bytes: int | None = None,
@@ -1111,7 +1166,7 @@ def ragged_paged_attention(
 
   Args:
     q: concatenated all sequences' queries.
-    kv_pages: paged K cache. Normally in HBM.
+    kv_pages: paged KV cache. Normally in HBM.
     kv_lens: padded kv lengths. Only the first num_seqs values are valid.
     page_indices: the first index indicates which page to use in the kv cache
       for each sequence. Only the first num_seqs values are valid.
@@ -1122,6 +1177,8 @@ def ragged_paged_attention(
     sliding_window: the sliding window size for the attention.
     soft_cap: the logit soft cap for the attention.
     mask_value: mask value for causal mask.
+    k_scale: the scale for the key cache.
+    v_scale: the scale for the value cache.
     num_kv_pages_per_block: number of kv pages to be processed in one flash
       attention block in the pallas kernel.
     num_queries_per_block: number of kv pages to be processed in one flash
@@ -1185,7 +1242,7 @@ def ragged_paged_attention(
   )
   in_specs = [
       q_block_spec,
-      pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
+      pl.BlockSpec(memory_space=pltpu.ANY),
   ]
   out_specs = q_block_spec
   lm_scratch = pltpu.VMEM(
@@ -1229,6 +1286,8 @@ def ragged_paged_attention(
           sliding_window=sliding_window,
           soft_cap=soft_cap,
           mask_value=mask_value,
+          k_scale=k_scale,
+          v_scale=v_scale,
       ),
       grid_spec=pltpu.PrefetchScalarGridSpec(
           num_scalar_prefetch=len(scalar_prefetches),

@@ -23,6 +23,7 @@ jobs:
           - test/tpu/run_tests.sh
           - test/tpu/run_expensive_test_1.sh
           - test/tpu/run_expensive_test_2.sh
+          - test/tpu/run_pallas_test.sh
     steps:
       - name: Checkout actions
         if: inputs.has_code_changes == 'true'

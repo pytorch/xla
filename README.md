@@ -24,8 +24,14 @@ started:
 ### TPU
 
 To install PyTorch/XLA stable build in a new TPU VM:
+Note: Builds are available for Python 3.8 to 3.11; please use one of the supported versions.
 
 ```sh
+# - for venv
+# python3.11 -m venv py311
+# - for conda
+# conda create -n py311 python=3.11
+
 pip install torch==2.7.0 'torch_xla[tpu]==2.7.0'
 ```
 

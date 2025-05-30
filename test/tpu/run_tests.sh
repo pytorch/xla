@@ -49,6 +49,7 @@ run_test "$_TEST_DIR/test_operations.py" -v
 run_test "$_TEST_DIR/test_xla_graph_execution.py" -v
 run_test "$_TEST_DIR/pjrt/test_runtime_tpu.py"
 run_test "$_TEST_DIR/pjrt/test_collective_ops_tpu.py"
+run_test "$_TEST_DIR/test_mp_collective_permute.py"
 run_test "$_TEST_DIR/spmd/test_mp_input_sharding.py"
 run_test "$_TEST_DIR/test_mp_collective_matmul.py"
 run_save_tensor_hlo run_test "$_TEST_DIR/spmd/test_spmd_lowering_context.py"
@@ -81,9 +82,6 @@ run_test "$_TEST_DIR/test_assume_pure.py"
 run_test "$_TEST_DIR/test_assume_pure_spmd.py"
 run_test "$_TEST_DIR/test_as_stride_use_slice.py"
 run_xla_hlo_debug run_test "$_TEST_DIR/scan/test_scan_debug.py"
-run_test "$_TEST_DIR/test_pallas.py" -v
-run_test "$_TEST_DIR/test_pallas_spmd.py"
-XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$_TEST_DIR/test_pallas_spmd.py"
 run_test "$_TEST_DIR/test_splash_attention.py"
 run_test "$_TEST_DIR/test_profiler_session.py"
 run_test "$_TEST_DIR/test_input_output_aliases.py"

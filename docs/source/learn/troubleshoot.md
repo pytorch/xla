@@ -158,7 +158,7 @@ disable execution analysis by `PT_XLA_DEBUG_LEVEL=1`). To use
 PyTorch/XLA efficiently, we expect the same models code to be run for
 every step and compilation only happen once for every graph. If you keep
 seeing `Compilation Cause`, you should try to dump the IR/HLO following
-[this section](#common-debugging-environment-variables-combinations) and
+{ref}`Common Debugging Environment Variables Combinations` and
 compare the graphs for each step and understand the source of the
 differences.
 
@@ -307,7 +307,7 @@ If your model shows bad performance, keep in mind the following caveats:
     *Solution*:
 
     -   For most ops we can lower them to XLA to fix it. Checkout
-        [metrics report section](#metrics-report) to find out the
+        {ref}`Get A Metrics Report` to find out the
         missing ops and open a feature request on
         [GitHub](https://github.com/pytorch/xla/issues).
 

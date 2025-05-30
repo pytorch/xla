@@ -174,7 +174,7 @@ This assumes that `M` and `N` are divisible by `X` and `Y`, respectively. If not
 the last device may hold some padding.
 
 You can also visualize how a tensor is sharded over devices with our
-[SPMD debugging tool][debug-tool].
+SPMD debugging tool at {ref}`spmd-debugging-tool`.
 
 ## Further Reading
 

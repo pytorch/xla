@@ -289,26 +289,47 @@ class NoneRemover:
 
   def remove_nones(self, value_list):
     """
-    Remove none from value_list. value_list will be inplace updated.
+    Remove none from value_list and return the modified list/tuple.
     The original position of None values are recorded.
     """
-    num = len(value_list)
+    if isinstance(value_list, list):
+      num = len(value_list)
+      for i in reversed(range(num)):
+        if value_list[i] is None:
+          self.none_poslist.append(i)
+          del value_list[i]
 
-    # work in reverse order
-    for i in reversed(range(num)):
-      if value_list[i] is None:
-        self.none_poslist.append(i)
-        del value_list[i]
+      self.none_poslist.reverse()
+      return value_list
 
-    self.none_poslist.reverse()
+    if isinstance(value_list, tuple):
+      non_none_elements = []
+      for i, value in enumerate(value_list):
+        if value is None:
+          self.none_poslist.append(i)
+        else:
+          non_none_elements.append(value)
+      return tuple(non_none_elements)
+
+    raise TypeError("value_list must be a list or a tuple.")
 
   def add_nones(self, value_list):
     """
     Add nones to value_list according to self.none_poslist. value_list
     is inplace updated.
     """
-    for pos in self.none_poslist:
-      value_list.insert(pos, None)
+    if isinstance(value_list, list):
+      for pos in self.none_poslist:
+        value_list.insert(pos, None)
+      return value_list
+
+    if isinstance(value_list, tuple):
+      non_none_elements = list(value_list)
+      for pos in self.none_poslist:
+        non_none_elements.insert(pos, None)
+      return tuple(non_none_elements)
+
+    raise TypeError("value_list must be a list or a tuple.")
 
 
 def is_xla_tensor(tensor: torch.Tensor) -> bool:
@@ -380,7 +401,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
     xla_out = (xla_out,)
 
   none_remover = NoneRemover()
-  none_remover.remove_nones(xla_out)
+  xla_out = none_remover.remove_nones(xla_out)
 
   xla_out_ids = {id(x) for x in xla_out}
 
@@ -596,7 +617,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     # First few elements might be xla_args that needs to be in place updated
     result = res[len(xla_args_need_update):]
 
-    none_remover.add_nones(result)
+    result = none_remover.add_nones(result)
     if is_cuda_args:
       result = _maybe_move_tensors_to_device(tuple(result), original_device)
 

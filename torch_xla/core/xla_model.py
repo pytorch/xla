@@ -433,9 +433,9 @@ def all_reduce(
       Default: 1.0
     groups (list, optional): A list of list, representing the replica groups for
       the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
-        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
-        all the replicas in it.
+      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+      the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+      all the replicas in it.
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
@@ -535,9 +535,9 @@ def all_gather(value: torch.Tensor,
       Default: 0
     groups (list, optional): A list of list, representing the replica groups for
       the `all_gather()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
-        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
-        all the replicas in it.
+      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+      the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+      all the replicas in it.
     output (torch.Tensor): Optional output tensor.
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
@@ -746,9 +746,9 @@ def all_to_all(value: torch.Tensor,
     split_count (int): The split count.
     groups (list, optional): A list of list, representing the replica groups for
       the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
-        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
-        all the replicas in it.
+      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+      the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+      all the replicas in it.
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
@@ -1211,9 +1211,9 @@ def optimizer_step(optimizer: optim.Optimizer,
       `optimizer.step()` call.
     groups (list, optional): A list of list, representing the replica groups for
       the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
-        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
-        all the replicas in it.
+      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+      the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+      all the replicas in it.
     pin_layout (bool, optional): whether to pin the layout when reducing gradients.
       See `xm.all_reduce` for details.
 
