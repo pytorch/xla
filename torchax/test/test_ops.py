@@ -20,7 +20,6 @@ skiplist = {
     "histogram",  # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd",  # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
     "index_reduce",
-    "kthvalue",
     "linalg.ldl_solve",
     "max_pool2d_with_indices_backward",
     "nn.functional.adaptive_max_pool1d",
@@ -176,7 +175,7 @@ ops_to_test = [
 # Sort related ops should ignore index;
 # For example: sort( [1, 0, 0]) -> [0, 0, 1]
 # the correct index can be [1, 2, 0] or [2, 1, 0]
-should_ignore_indexes = {"topk", "mode"}
+should_ignore_indexes = {"topk", "mode", "kthvalue"}
 
 
 class TestOpInfo(TestCase):
