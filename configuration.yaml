@@ -387,7 +387,7 @@ variables:
           flag is experimental. The default_value will be set to true when
           StableHLO workflow is mature.
       type: bool
-      default_value: false
+      default_value: true
     XLA_DUMP_POST_OPTIMIZATIONS:
       description:
         - Dump the HLO graph after optimizations. You need to use it together
