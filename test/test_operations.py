@@ -2209,7 +2209,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     def fn(inp, s):
       return inp.mul_(s)
 
-    inp = torch.rand(10, dtype=torch.half)
+    inp = torch.arange(10, dtype=torch.half)
     s = torch.tensor(7, dtype=torch.double)
 
     Xinp = inp.to(xm.xla_device())

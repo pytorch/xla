@@ -56,7 +56,6 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
-        "//openxla_patches:gpu_nvml.diff",
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:count_down.diff",
     ],
@@ -134,17 +133,49 @@ load("@xla//:workspace0.bzl", "xla_workspace0")
 
 xla_workspace0()
 
+load(
+   "@xla//third_party/gpus/cuda/hermetic:cuda_json_init_repository.bzl",
+   "cuda_json_init_repository",
+)
+
+cuda_json_init_repository()
 
 load(
-    "@xla//third_party/gpus:cuda_configure.bzl",
-    "cuda_configure",
+   "@cuda_redist_json//:distributions.bzl",
+   "CUDA_REDISTRIBUTIONS",
+   "CUDNN_REDISTRIBUTIONS",
+)
+load(
+   "@xla//third_party/gpus/cuda/hermetic:cuda_redist_init_repositories.bzl",
+   "cuda_redist_init_repositories",
+   "cudnn_redist_init_repository",
+)
+
+cuda_redist_init_repositories(
+   cuda_redistributions = CUDA_REDISTRIBUTIONS,
+)
+
+cudnn_redist_init_repository(
+   cudnn_redistributions = CUDNN_REDISTRIBUTIONS,
+)
+
+load(
+   "@xla//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
+   "cuda_configure",
 )
 
 cuda_configure(name = "local_config_cuda")
 
 load(
-    "@xla//third_party/nccl:nccl_configure.bzl",
-    "nccl_configure",
+   "@xla//third_party/nccl/hermetic:nccl_redist_init_repository.bzl",
+   "nccl_redist_init_repository",
+)
+
+nccl_redist_init_repository()
+
+load(
+   "@xla//third_party/nccl/hermetic:nccl_configure.bzl",
+   "nccl_configure",
 )
 
 nccl_configure(name = "local_config_nccl")

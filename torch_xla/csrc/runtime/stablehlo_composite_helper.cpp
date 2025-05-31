@@ -16,8 +16,6 @@
 namespace torch_xla {
 namespace runtime {
 
-namespace {
-
 using nlohmann::json;
 
 static bool IsXlaMarkTensorOp(mlir::Operation* op) {
@@ -528,8 +526,6 @@ class RemoveXlaMarkTensorOpsPass
     return std::make_unique<RemoveXlaMarkTensorOpsPass>(*this);
   }
 };
-
-}  // namespace
 
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 CreateBuildStableHLOCompositePass() {
