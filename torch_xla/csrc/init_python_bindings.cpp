@@ -1490,10 +1490,10 @@ void InitXlaModuleBindings(py::module m) {
       return runtime::GetComputationClient()->GetNumLocalDevices();
     }
   });
-  m.def("_xla_num_devices", []() -> int64_t {
+  m.def("_xla_num_global_devices", []() -> int64_t {
     return runtime::GetComputationClient()->GetNumDevices();
   });
-  m.def("_xla_num_global_devices", []() {
+  m.def("_xla_get_all_devices", []() {
     std::vector<std::string> all_devices =
         runtime::GetComputationClient()->GetAllDevices();
     if (UseVirtualDevice()) {
