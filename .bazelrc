@@ -11,13 +11,6 @@ build --enable_platform_specific_config
 
 build --experimental_cc_shared_library
 
-# Disable enabled-by-default TensorFlow features that we don't care about.
-build --define=no_aws_support=true
-build --define=no_hdfs_support=true
-build --define=no_hdfs_support=true
-build --define=no_kafka_support=true
-build --define=no_ignite_support=true
-
 build --define=grpc_no_ares=true
 
 build -c opt
@@ -74,9 +67,6 @@ build:avx_linux --host_copt=-mavx
 build:native_arch_posix --copt=-march=native
 build:native_arch_posix --host_copt=-march=native
 
-build:mkl_open_source_only --define=tensorflow_mkldnn_contraction_kernel=1
-
-build:cuda --repo_env TF_NEED_CUDA=1
 # "sm" means we emit only cubin, which is forward compatible within a GPU generation.
 # "compute" means we emit both cubin and PTX, which is larger but also forward compatible to future GPU generations.
 build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain
@@ -88,16 +78,11 @@ build:cuda --cxxopt=-DXLA_CUDA=1
 coverage:cuda --per_file_copt=third_party/.*,torch_xla/.*@--coverage
 coverage:cuda --linkopt=-lgcov
 
-build:acl --define==build_with_acl=true
-
-build:nonccl --define=no_nccl_support=true
-
 build:linux --config=posix
 
 # Suppress all warning messages.
 build:short_logs --output_filter=DONT_MATCH_ANYTHING
 
-#build:tpu --@xla//xla/python:enable_tpu=true
 build:tpu --define=with_tpu_support=true
 
 # Run tests serially with TPU and GPU (only 1 device is available).
@@ -172,34 +157,10 @@ build:coverage --test_tag_filters=-nocoverage
 ############## TensorFlow .bazelrc greatest hits ###########################
 ############################################################################
 
-# Modular TF build options
-build:dynamic_kernels --define=dynamic_loaded_kernels=true
-build:dynamic_kernels --copt=-DAUTOLOAD_DYNAMIC_KERNELS
-build --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
-
 # Default paths for TF_SYSTEM_LIBS
 build:linux --define=PREFIX=/usr
 build:linux --define=LIBDIR=$(PREFIX)/lib
 build:linux --define=INCLUDEDIR=$(PREFIX)/include
-build:linux --define=PROTOBUF_INCLUDE_PATH=$(PREFIX)/include
-
-build:linux --define=build_with_onednn_v2=true
-
-# On linux, we dynamically link small amount of kernels
-build:linux --config=dynamic_kernels
-
-# For projects which use TensorFlow as part of a Bazel build process, putting
-# nothing in a bazelrc will default to a monolithic build. Here we force
-# the monolitih build because otherwise there are missing dependencies and
-# linking fails.
-build --define framework_shared_object=false
-build --define tsl_protobuf_header_only=false
-
-build --define=use_fast_cpp_protos=true
-build --define=allow_oversize_protos=true
-
-# Enable XLA support by default.
-build --define=with_xla_support=true
 
 # Disable some xnnpack compilation flags which are not supported before gcc-13.
 build:linux --define=xnn_enable_avxvnni=false
@@ -221,9 +182,6 @@ build:linux --define=xnn_enable_avx512fp16=false
 # TODO: Remove this line once TF doesn't depend on Bazel wrapping all library
 # archives in -whole_archive -no_whole_archive.
 build --noincompatible_remove_legacy_whole_archive
-
-# cc_shared_library ensures no library is linked statically more than once.
-build --experimental_link_static_libraries_once=false
 
 # On linux, don't cross compile by default
 build:linux --distinct_host_configuration=false
