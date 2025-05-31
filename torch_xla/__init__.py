@@ -48,6 +48,13 @@ def _setup_xla_flags():
 
 def _setup_libtpu_flags():
   flags = os.environ.get('LIBTPU_INIT_ARGS', '').split(' ')
+
+  # Temporary hack to fix the TPU test hanging.
+  # TODO(https://github.com/pytorch/xla/issues/9084): implement a proper fix
+  # and remove this.
+  flags = _set_missing_flags(
+      flags, (('xla_tpu_use_enhanced_launch_barrier', 'false'),))
+
   # This flag will rerun the latency hidding scheduler if the default
   # shared memory limit 95% leads to OOM. Each rerun will choose a value
   # 0.9x of the previous run, and the number of rerun is set to 1 now.
