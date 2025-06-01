@@ -396,7 +396,7 @@ def _get_jax_install_requirements():
   # Install nightly JAX libraries from the JAX package registries.
   jax = f'jax @ https://storage.googleapis.com/jax-releases/nightly/jax/jax-{_jax_version}-py3-none-any.whl'
   jaxlib = []
-  for python_minor_version in [9, 10, 11]:
+  for python_minor_version in [9, 10, 11, 12]:
     jaxlib.append(
         f'jaxlib @ https://storage.googleapis.com/jax-releases/nightly/nocuda/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
     )
