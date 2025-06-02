@@ -68,7 +68,7 @@ You can also pass a numpy array here.
 
 You can inline some or all of your model's weights into the StableHLO graph as constants by exporting a separate function that calls your model.
 
-The convention used in `jax.jit` is  all the input of the `jit`ed Python
+The convention used in `jax.jit` is all the input of the `jit`ed Python
 functions are exported as parameters, everything else are inlined as constants.
 
 So as above, the function we exported `jfunc` takes `weights` and `args` as input, so
