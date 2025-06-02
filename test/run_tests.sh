@@ -50,29 +50,8 @@ function run_test {
     return
   fi
   echo "Running in PjRt runtime: $@"
-  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
-    PJRT_DEVICE=CUDA run_coverage "$@"
-  else
-    # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
-    PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$@"
-  fi
-}
-
-function run_device_detection_test {
-  if ! test_is_selected "$1"; then
-    return
-  fi
-  echo "Running in PjRt runtime: $@"
-  current_device=$PJRT_DEVICE
-  current_num_gpu_devices=$GPU_NUM_DEVICES
-
-  unset PJRT_DEVICE
-  unset GPU_NUM_DEVICES
-
-  run_coverage $@
-
-  export GPU_NUM_DEVICES=$current_num_gpu_devices
-  export PJRT_DEVICE=$current_device
+  # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
+  PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$@"
 }
 
 function run_test_without_functionalization {
@@ -139,17 +118,6 @@ function run_pt_xla_debug_level2 {
   PT_XLA_DEBUG_LEVEL=2 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
-function run_torchrun {
-  if ! test_is_selected "$1"; then
-    return
-  fi
-  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
-    echo "Running torchrun test for GPU $@"
-    num_devices=$(nvidia-smi --list-gpus | wc -l)
-    PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node $num_devices $@
-  fi
-}
-
 function run_torch_op_tests {
   run_dynamic "$_TEST_DIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test_without_functionalization "$_TEST_DIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
@@ -189,21 +157,10 @@ function run_xla_op_tests1 {
   # run_test "$_TEST_DIR/test_profiler.py"
   run_test "$_TEST_DIR/test_profiler_session.py"
   run_test "$_TEST_DIR/pjrt/test_runtime.py"
-  run_test "$_TEST_DIR/pjrt/test_runtime_single_proc_gpu.py"
-
-  # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-  # Re-enable this test on GPU.
-  # run_test "$_TEST_DIR/pjrt/test_runtime_multi_gpu.py"
-
   run_test "$_TEST_DIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$_TEST_DIR/pjrt/test_internal_tpu.py"
 
-  # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-  # Re-enable this test on GPU.
   PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/pjrt/test_ddp.py"
-
-  # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-  # Re-enable this test on GPU.
   PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/pjrt/test_mesh_service.py"
 
   run_test "$_TEST_DIR/test_python_ops.py"
@@ -247,8 +204,6 @@ function run_xla_op_tests2 {
   run_test "$_TEST_DIR/eager/test_eager_with_xla_compile.py"
   run_test "$_TEST_DIR/eager/test_eager_with_torch_compile.py"
 
-  # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-  # Re-enable this test on GPU.
   PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/eager/test_eager_all_reduce_in_place.py"
 
   run_test "$_TEST_DIR/eager/test_eager_spmd.py"
@@ -295,15 +250,9 @@ function run_xla_op_tests3 {
   run_test "$_TEST_DIR/test_input_output_aliases.py"
   run_test_without_functionalization "$_TEST_DIR/test_input_output_aliases.py"
   run_test "$_TEST_DIR/test_torch_distributed_xla_backend.py"
-
-  # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-  # Re-enable this test on GPU.
-  PJRT_DEVICE=CPU XLA_CUDA=0 run_torchrun "$_TEST_DIR/pjrt/test_torchrun.py"
-
   run_test "$_TEST_DIR/test_compilation_cache_utils.py"
   run_test "$_TEST_DIR/test_persistent_cache.py"
   run_test "$_TEST_DIR/test_devices.py"
-  run_device_detection_test "$_TEST_DIR/test_gpu_device_detection.py"
   run_test "$_TEST_DIR/test_manual_xla_registration.py"
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$_TEST_DIR/test_core_aten_ops.py"
@@ -312,59 +261,6 @@ function run_xla_op_tests3 {
 
   # Test examples
   run_test "$_TEST_DIR/../examples/scan/scan_examples.py"
-
-  # CUDA tests
-  if [ -x "$(command -v nvidia-smi)" ]; then
-    # Please keep PJRT_DEVICE and GPU_NUM_DEVICES explicit in the following test commands.
-    echo "single-host-single-process"
-    PJRT_DEVICE=CUDA GPU_NUM_DEVICES=1 python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_cores=1 --num_steps=25 --model=resnet18
-    PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1 --num_steps=25 --model=resnet18
-
-    echo "single-host-multi-process"
-    num_devices=$(nvidia-smi --list-gpus | wc -l)
-    # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-    # Re-enable this test on GPU.
-    # PJRT_DEVICE=CUDA GPU_NUM_DEVICES=$num_devices python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_steps=25 --model=resnet18
-    # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-    # Re-enable this test on GPU.
-    # PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=$num_devices test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1  --num_steps=25 --model=resnet18
-
-    echo "single-host-SPMD"
-    # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
-    XLA_USE_SPMD=1 PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/spmd/test_train_spmd_imagenet.py --fake_data --batch_size 8 --sharding=batch --num_epochs=1 --num_steps=25 --model=resnet18
-
-    # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-    # Re-enable this test on GPU.
-    # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
-    # PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1 --batch_size 32 --test_set_batch_size 32
-    # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-    # Re-enable this test on GPU.
-    # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
-    # PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1 --batch_size 32 --test_set_batch_size 32
-    # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-    # Re-enable this test on GPU.
-    # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
-    # XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
-
-    # Syncfree SGD optimizer tests
-    if [ -d ./torch_xla/amp/syncfree ]; then
-      echo "Running Syncfree Optimizer Test"
-      PJRT_DEVICE=CUDA python test/test_syncfree_optimizers.py
-
-      # Following test scripts are mainly useful for
-      # performance evaluation & comparison among different
-      # amp optimizers.
-      # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-      # Re-enable this test on GPU.
-      # echo "Running ImageNet Test"
-      # PJRT_DEVICE=CUDA GPU_NUM_DEVICES=$num_devices python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1 --batch_size 64 --num_steps=25 --model=resnet18
-
-      # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-      # Re-enable this test on GPU.
-      # echo "Running MNIST Test"
-      # PJRT_DEVICE=CUDA GPU_NUM_DEVICES=$num_devices python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1 --batch_size 64 --num_steps=25
-    fi
-  fi
 }
 
 #######################################################################################
@@ -389,7 +285,6 @@ function run_mp_op_tests {
   # TODO(JackCaoG): enable this
   run_test "$_TEST_DIR/dynamo/test_traceable_collectives.py"
   run_test "$_TEST_DIR/test_fsdp_auto_wrap.py"
-  # run_torchrun "$_TEST_DIR/test_mp_early_exit.py"
   run_pt_xla_debug "$_TEST_DIR/debug_tool/test_mp_pt_xla_debug.py"
   run_test "$_TEST_DIR/torch_distributed/test_torch_distributed_all_gather_xla_backend.py"
   run_test "$_TEST_DIR/torch_distributed/test_torch_distributed_all_reduce_xla_backend.py"
@@ -415,8 +310,6 @@ function run_tests {
     echo "Running torch op tests..."
     run_torch_op_tests
 
-    # TODO(https://github.com/pytorch/xla/issues/9066): GPU testing disabled to unblock pin update.
-    # Re-enable this test on GPU.
     PJRT_DEVICE=CPU XLA_CUDA=0 run_mp_op_tests
   else
     # Run full tests without sharding, respects XLA_SKIP_*
