@@ -148,9 +148,9 @@ call `torch_xla.sync()` for every x (configurable) batch.
 region](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/debug/profiler.py#L165-L171).
 4. Dynamo decides to compile/execute the graph. 
 5. User tries to
-access(often due to logging) the value of a tensor before the
+access (often due to logging) the value of a tensor before the
 `torch_xla.sync()`.
-6. User tries to a tensor value before calling `mark_step`. See [PyTorch on XLA Devices](https://github.com/pytorch/xla/blob/master/docs/source/learn/pytorch-on-xla-devices.md) for more details.
+6. User tries to access a tensor value before calling `mark_step`. See [PyTorch on XLA Devices](https://github.com/pytorch/xla/blob/master/docs/source/learn/pytorch-on-xla-devices.md) for more details.
 
 The op executions caused by items 1-4 are expected, and we want to avoid item 5 by
 either reducing the frequency of accessing tensor values or manually adding a call to
