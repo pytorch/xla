@@ -63,7 +63,7 @@ class XlaBackendTest(parameterized.TestCase):
     self.assertIsNotNone(pg_xla_creator)
 
   def test_allreduce(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     all_reduce_pattern = r'%all\-reduce\.\d+ = .+ all\-reduce\('
     dist.all_reduce(tensor)
@@ -72,7 +72,7 @@ class XlaBackendTest(parameterized.TestCase):
 
   @patch_world(rank=3, size=6)
   def test_allreduce_with_mesh(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
 
     pg_options = {'xla_pg_options': {'spmd': True}}
@@ -89,7 +89,7 @@ class XlaBackendTest(parameterized.TestCase):
 
   @patch_world(rank=3, size=8)
   def test_allgather(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     output_tensors = [torch.zeros_like(tensor, device=device) for _ in range(8)]
     all_gather_pattern = r'%all\-gather\.\d+ = .+ all\-gather\('
@@ -99,7 +99,7 @@ class XlaBackendTest(parameterized.TestCase):
 
   @patch_world(rank=3, size=8)
   def test_all_scalar_allgather(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.zeros((), device=device) + 1 + 2 * dist.get_rank()
     output_tensors = [torch.zeros_like(tensor, device=device) for _ in range(8)]
     all_gather_pattern = r'%all\-gather\.\d+ = .+ all\-gather\('
@@ -109,7 +109,7 @@ class XlaBackendTest(parameterized.TestCase):
 
   @patch_world(rank=3, size=8)
   def test_allgather_coalesced(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     tensor2 = torch.arange(5, device=device) + 1 + 2 * dist.get_rank()
     pg_xla = get_process_group_xla(rank=3, size=8)
@@ -127,7 +127,7 @@ class XlaBackendTest(parameterized.TestCase):
     hlo_matches(hlo, all_gather_pattern)
 
   def test_broadcast(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     all_reduce_pattern = r'%all\-reduce\.\d+ = .+ all\-reduce\('
     dist.broadcast(tensor, 0)
@@ -136,7 +136,7 @@ class XlaBackendTest(parameterized.TestCase):
 
   # Needed for ZeRO stage 1
   def test_reduce_scatter(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     input_list = [tensor]
     output = torch.zeros_like(tensor)
@@ -148,7 +148,7 @@ class XlaBackendTest(parameterized.TestCase):
   @skipIf(xr.device_type() == 'CPU',
           "UNIMPLEMENTED: ReduceScatter is not implemented on CPU.")
   def test_reduce_scatter_coalesced(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     tensor2 = torch.arange(5, device=device) + 1 + 2 * dist.get_rank()
     input_tensors_list = [[tensor, tensor], [tensor2, tensor2]]
@@ -168,7 +168,7 @@ class XlaBackendTest(parameterized.TestCase):
 
   @patch_world(0, 6)
   def test_send(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     input_list = [tensor]
 
@@ -185,11 +185,11 @@ class XlaBackendTest(parameterized.TestCase):
     hlo_matches(hlo, senddone_pattern)
 
     # Don't try to run Send on CPU because it's not implemented
-    torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+    torch_xla._XLAC._clear_pending_irs(str(torch_xla.device()))
 
   @patch_world(0, 6)
   def test_recv(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
 
     with mock.patch.object(
@@ -205,7 +205,7 @@ class XlaBackendTest(parameterized.TestCase):
     hlo_matches(hlo, recvdone_pattern)
 
     # Don't try to run Recv on CPU because it's not implemented
-    torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+    torch_xla._XLAC._clear_pending_irs(str(torch_xla.device()))
 
   @patch_world(rank=0, size=12)
   def test_new_group_no_ranks(self):
@@ -365,7 +365,7 @@ class XlaBackendTest(parameterized.TestCase):
       'monitored_barrier',
   )
   def test_unimplemented_op(self, op):
-    device = xm.xla_device()
+    device = torch_xla.device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     pg_xla = dist.group.WORLD
     self.assertIsInstance(pg_xla,

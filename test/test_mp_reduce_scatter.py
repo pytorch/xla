@@ -6,7 +6,7 @@ import torch_xla.runtime as xr
 
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
   world_size = xr.world_size()
   scale = 1 / world_size
   scatter_dim = 1

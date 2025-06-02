@@ -4,6 +4,7 @@ import unittest
 from typing import Callable, Dict, List
 
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torchvision
 from torch.export import export_for_training
@@ -54,7 +55,7 @@ def count_qdq_ops(g: torch.fx.Graph):
 class PT2EExportTest(unittest.TestCase):
 
   def test_per_tensor_qdq(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     x = torch.randn(2, 3, 4, 5).to(device)
     x = torch.ops.quantized_decomposed.quantize_per_tensor(
         x, 0.4, 2, -128, 127, torch.int8)
@@ -68,7 +69,7 @@ class PT2EExportTest(unittest.TestCase):
     self.assertEqual(stablehlo_txt.count("stablehlo.uniform_dequantize"), 1)
 
   def test_per_channel_qdq(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     x = torch.randn(2, 3, 4, 5).to(device)
     scale = torch.tensor([3.2, 5.3, 0.1, 10]).to(device)
     zero_point = torch.tensor([1, 2, -1, -2], dtype=torch.int64).to(device)

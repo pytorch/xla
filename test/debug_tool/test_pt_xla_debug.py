@@ -31,7 +31,7 @@ class PtXLADebugTest(unittest.TestCase):
 
   def test_eager_sync(self):
     with torch_xla.experimental.eager_mode_context(True):
-      device = xm.xla_device()
+      device = torch_xla.device()
       t1 = torch.randn(5, 9, device=device)
       torch_xla.sync()
       with open(self.debug_file_name, 'rb') as f:
@@ -41,7 +41,7 @@ class PtXLADebugTest(unittest.TestCase):
       open(self.debug_file_name, 'w').close()
 
   def test_user_sync(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t1 = torch.randn(2, 2, device=device)
     torch_xla.sync()
     with open(self.debug_file_name, 'rb') as f:
@@ -79,7 +79,7 @@ class PtXLADebugTest(unittest.TestCase):
     open(self.debug_file_name, 'w').close()
 
   def test_step_trace(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     with xp.StepTrace('train_pt_xla_debug'):
       t1 = torch.randn(3, 3, device=device)
     with open(self.debug_file_name, 'rb') as f:
@@ -111,7 +111,7 @@ class PtXLADebugTest(unittest.TestCase):
     open(self.debug_file_name, 'w').close()
 
   def test_dynamo(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t1 = torch.randn(4, 4, device=device)
 
     def toy_program(t1):
@@ -161,7 +161,7 @@ class PtXLADebugTest(unittest.TestCase):
     open(self.debug_file_name, 'w').close()
 
   def test_torch_xla_compile(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t1 = torch.randn(12, 4, device=device)
 
     def toy_program(t1):
@@ -209,7 +209,7 @@ class PtXLADebugTest(unittest.TestCase):
     open(self.debug_file_name, 'w').close()
 
   def test_torch_xla_compile_custom_name(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t1 = torch.randn(18, 4, device=device)
 
     def toy_program2(t1):
@@ -239,7 +239,7 @@ class PtXLADebugTest(unittest.TestCase):
     open(self.debug_file_name, 'w').close()
 
   def test_parallel_loader(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     train_dataset_len = 100
     batch_size = 10
@@ -287,7 +287,7 @@ class PtXLADebugTest(unittest.TestCase):
     open(self.debug_file_name, 'w').close()
 
   def test_print(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t1 = torch.randn(5, 5, device=device)
     print(t1)
     with open(self.debug_file_name, 'rb') as f:
@@ -315,7 +315,7 @@ class PtXLADebugTest(unittest.TestCase):
     open(self.debug_file_name, 'w').close()
 
   def test_frame(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t1 = torch.randn(6, 6, device=device)
     torch_xla.sync()
     with open(self.debug_file_name, 'rb') as f:

@@ -34,7 +34,7 @@ class MpInputShardingTest(unittest.TestCase):
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        "Multiple devices required for tupled partition spec")
   def test_multiple_inputs(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     batch = {'x': torch.randn((16, 128)), 'y': torch.randn((16, 128, 128))}
     train_loader = self.fake_dataloader(batch)
     num_devices = xr.global_runtime_device_count()
@@ -61,7 +61,7 @@ class MpInputShardingTest(unittest.TestCase):
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        "Multiple devices required for tupled partition spec")
   def test_single_tensor(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     batch = torch.randn((16, 128))
     train_loader = self.fake_dataloader(batch)
     num_devices = xr.global_runtime_device_count()
@@ -78,7 +78,7 @@ class MpInputShardingTest(unittest.TestCase):
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        "Multiple devices required for tupled partition spec")
   def test_error_single_tensor_with_input_sharding_dict(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     batch = torch.randn((16, 128))
     train_loader = self.fake_dataloader(batch)
     num_devices = xr.global_runtime_device_count()
@@ -95,7 +95,7 @@ class MpInputShardingTest(unittest.TestCase):
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        "Multiple devices required for tupled partition spec")
   def test_input_sharding_none(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     batch = {'x': torch.randn((16, 128)), 'y': torch.randn((16, 128, 128))}
     train_loader = self.fake_dataloader(batch)
     num_devices = xr.global_runtime_device_count()
@@ -112,7 +112,7 @@ class MpInputShardingTest(unittest.TestCase):
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        "Multiple devices required for tupled partition spec")
   def test_error_missing_keys(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     batch = {'x': torch.randn((16, 128)), 'y': torch.randn((16, 128, 128))}
     train_loader = self.fake_dataloader(batch)
     mesh = xs.get_1d_mesh('x')
@@ -127,7 +127,7 @@ class MpInputShardingTest(unittest.TestCase):
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        "Multiple devices required for tupled partition spec")
   def test_input_sharding_not_dict(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     num_devices = xr.global_runtime_device_count()
     batch = {'x': torch.randn((16, 128)), 'y': torch.randn((16, 128))}
     train_loader = self.fake_dataloader(batch)

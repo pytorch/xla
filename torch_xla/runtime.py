@@ -97,34 +97,10 @@ def is_bf16_supported():
   """Returns whether torch.bfloat16 is supported on this environment.
   """
   try:
-    torch.tensor([1.], dtype=torch.bfloat16, device=xm.xla_device())
+    torch.tensor([1.], dtype=torch.bfloat16, device='xla')
     return True
   except Exception as e:
     return False
-
-
-def xla_device(n: Optional[int] = None,
-               devkind: Optional[str] = None) -> torch.device:
-  """Returns an XLA device.
-
-  Args:
-    n: Index of XLA device within visibible devices. If not set, use local
-      ordinal (default 0) to select an addressable device.
-    devkind: Type of device to return. Should match `device_type()`.
-
-  Returns:
-    A `torch.device` representing an XLA device.
-  """
-  if n is None:
-    return torch.device(torch_xla._XLAC._xla_get_default_device())
-
-  devices = xm.get_xla_supported_devices(devkind=devkind)
-  if n > len(devices):
-    raise IndexError('Device index {} out of range in {}'.format(n, devices))
-
-  device = devices[n]
-  torch_xla._XLAC._xla_set_default_device(device)
-  return torch.device(device)
 
 
 def local_process_count() -> int:
@@ -180,7 +156,7 @@ def local_ordinal() -> int:
   Local ordinal is in range [0, local_device_count)."""
   local_rank = xu.getenv_as(xenv.PJRT_LOCAL_PROCESS_RANK, int, 0)
   devices_per_process = addressable_device_count()
-  return local_rank * devices_per_process + xla_device().index
+  return local_rank * devices_per_process + torch_xla.device().index
 
 
 def process_index() -> int:

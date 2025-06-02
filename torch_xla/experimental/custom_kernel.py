@@ -1041,7 +1041,7 @@ def ragged_paged_attention(
       ],
   )
 
-  seq_buf_idx = torch.tensor([0, 0], dtype=torch.int32).to("xla")
+  seq_buf_idx = torch.tensor([0, 0], dtype=torch.int32).to('xla')
   output = torch_xla._XLAC._xla_tpu_custom_call(
       [
           kv_lens,
@@ -1174,8 +1174,8 @@ def multi_queries_paged_attention(
 
   q_dtype_for_kernel_launch = q.dtype
   page_indices_reshaped = page_indices.reshape(-1)
-  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
-  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to('xla')
+  step = torch.zeros((1,), dtype=torch.int32).to('xla')
   q = q.permute(0, 2, 1, 3)
   MIN_BLOCK_SIZE = 128
   output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
@@ -1236,8 +1236,8 @@ def paged_attention(q,
     q_dtype_for_kernel_launch = torch.float32
 
   page_indices_reshaped = page_indices.reshape(-1)
-  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
-  step = torch.ones((1,), dtype=torch.int32).to("xla")
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to('xla')
+  step = torch.ones((1,), dtype=torch.int32).to('xla')
   output_shape = torch.Size(list(q.shape[:-1]) + [1])
 
   output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(

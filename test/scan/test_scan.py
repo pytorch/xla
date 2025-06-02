@@ -351,6 +351,7 @@ class ScanTest(TestBase):
 
     def step_fn(carry, x):
       new_carry = carry + x
+      # TODO: figure out why device='xla' doesn't work
       y = new_carry + torch.rand(2, device=torch_xla.device())
       return new_carry, y
 
