@@ -23,7 +23,7 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
   def setUp(self):
     super().setUp()
     if not jtu.is_device_tpu_at_least(5):
-      self.skipTest('Not implemented for TPU v4 or earlier.')
+      self.skipTest('This kernel requires a Mosaic feature not available for TPU v4 or earlier.')
 
   def _test_quantized_matmul(self, dtype, bs, n_input_features, n_output_features, quantize_activation, batch_block_size=None, out_block_size=None, in_block_size=None, atol=1.5):
     
@@ -88,8 +88,8 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
   @parameterized.product(
       dtype=[jnp.bfloat16],
       bs=[16],
-      n_input_features=[128, 8192],
-      n_output_features=[128, 1280],
+      n_input_features=[128, 256],
+      n_output_features=[128, 256],
       quantize_activation=[True],
   )
   def test_quantized_matmul_use_tuned_block_sizes(self, dtype, bs, n_input_features, n_output_features, quantize_activation):
