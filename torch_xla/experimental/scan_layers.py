@@ -47,7 +47,6 @@ def scan_layers(layers: Iterable[torch.nn.Module],
 
   Example:
 
-    >>> import torch_xla.core.xla_model as xm
     >>> import torch
     >>> import torch.nn as nn
     >>> from torch_xla.experimental.scan_layers import scan_layers
