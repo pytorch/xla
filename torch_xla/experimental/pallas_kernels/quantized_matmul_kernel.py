@@ -93,7 +93,7 @@ def quantized_matmul(
     int4_weight: bool = False,
     quantize_activation: bool = False,
     *,
-    # All 3 block sizes have to be multiples of 128 because they are used as the minormost dimension in the block.
+    # All 3 block sizes, if provided, have to be multiples of 128 because they are used as the minormost dimension in the block.
     batch_block_size: int | None = None,
     out_block_size: int | None = None,
     in_block_size: int | None = None,
@@ -105,7 +105,6 @@ def quantized_matmul(
 
   # x_max_val cannot be [bs, 128] because it'll be costly to send
   # [bs_block_size, 128] to VMEM each time.
-  # cast to f32 because "INTERNAL: Mosaic failed to compile TPU kernel: Insertion of minor dim that is not a no-op only supported for 32-bit types"
   # We need the global max values to be computed before the kernel.
   x_max_val = jnp.max(jnp.abs(x), axis=-1, keepdims=False)  # [bs]
   x_max_val = jnp.expand_dims(x_max_val, axis=0)  # [1, bs]
@@ -115,7 +114,6 @@ def quantized_matmul(
   orig_out_features, _ = w.shape
   if batch_block_size is None or out_block_size is None or in_block_size is None:
     batch_block_size, out_block_size, in_block_size = get_tuned_block_sizes(orig_bs, orig_out_features, orig_in_features, jnp.dtype(x.dtype).name, quantize_activation)
-    print(f"Using tuned block sizes: {batch_block_size}, {out_block_size}, {in_block_size}")
 
   padded_bs = _next_multiple(orig_bs, batch_block_size)
   if orig_bs < padded_bs:
@@ -130,6 +128,8 @@ def quantized_matmul(
     x = jnp.pad(x, ((0, 0), (0, padded_in_features-orig_in_features)))
     w = jnp.pad(w, ((0, 0), (0, padded_in_features-orig_in_features)))
 
+  if scalar.dtype != jnp.float32:
+    scalar = scalar.astype(jnp.float32)
   scalar = jnp.expand_dims(scalar, axis=0)  # [1, n_output_features]
 
   assert x.shape[1] == w.shape[1], f"x.shape[1] ({x.shape[1]}) must be equal to w.shape[1] ({w.shape[1]})"
@@ -147,8 +147,8 @@ def quantized_matmul(
           in_specs=[
               pl.BlockSpec((batch_block_size, in_block_size), lambda b, o, i: (b, i)),
               pl.BlockSpec((out_block_size, in_block_size), lambda b, o, i: (o, i)),
-              pl.BlockSpec((1, out_block_size), lambda b, o, i: (0, o)),
-              pl.BlockSpec((1, batch_block_size), lambda b, o, i: (0, b)),
+              pl.BlockSpec((1, out_block_size), lambda b, o, i: (0, o)),  # scalar
+              pl.BlockSpec((1, batch_block_size), lambda b, o, i: (0, b)),  # x_max_val
           ],
           out_specs=pl.BlockSpec((batch_block_size, out_block_size), lambda b, o, i: (b, o)),
           scratch_shapes=[pltpu.VMEM((batch_block_size, out_block_size), acc_dtype)],
