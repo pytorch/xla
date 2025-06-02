@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git9c21366 )
+                  master (2.8.0+gita159c9c )
                 </div>
               
             
@@ -466,8 +466,8 @@ to stablehlo</p></li>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">export</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torchvision</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla2</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tx</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla2.export</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchax</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchax.export</span>
 
 <span class="n">resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span>
 <span class="c1"># Sample input is a tuple</span>
@@ -511,6 +511,24 @@ for more details on how to use the MLIR code generated from it.</p>
 </div>
 <p>The second to last line we used <code class="docutils literal notranslate"><span class="pre">jax.ShapedDtypeStruct</span></code> to specify the input shape.
 You can also pass a numpy array here.</p>
+<section id="inline-some-weights-in-generated-stablehlo">
+<h3>Inline some weights in generated stablehlo<a class="headerlink" href="#inline-some-weights-in-generated-stablehlo" title="Permalink to this heading">¶</a></h3>
+<p>You can inline some or all of your model’s weights into the StableHLO graph as constants by exporting a separate function that calls your model.</p>
+<p>The convention used in <code class="docutils literal notranslate"><span class="pre">jax.jit</span></code> is all the input of the <code class="docutils literal notranslate"><span class="pre">jit</span></code>ed Python
+functions are exported as parameters, everything else are inlined as constants.</p>
+<p>So as above, the function we exported <code class="docutils literal notranslate"><span class="pre">jfunc</span></code> takes <code class="docutils literal notranslate"><span class="pre">weights</span></code> and <code class="docutils literal notranslate"><span class="pre">args</span></code> as input, so
+they appear as paramters.</p>
+<p>If you do this instead:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">jfunc_inlined</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">jfunc</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>and export / print out stablehlo for that:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">jfunc_inlined</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">((</span><span class="n">jax</span><span class="o">.</span><span class="n">ShapedDtypeStruct</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">float32</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="p">))))</span>
+</pre></div>
+</div>
+<p>Then, you will see inlined constants.</p>
+</section>
 </section>
 <section id="preserving-high-level-pytorch-operations-in-stablehlo-by-generating-stablehlo-composite">
 <h2>Preserving High-Level PyTorch Operations in StableHLO by generating <code class="docutils literal notranslate"><span class="pre">stablehlo.composite</span></code><a class="headerlink" href="#preserving-high-level-pytorch-operations-in-stablehlo-by-generating-stablehlo-composite" title="Permalink to this heading">¶</a></h2>
@@ -665,7 +683,10 @@ outlined stablehlo functions.</p>
               <ul>
 <li><a class="reference internal" href="#">Torch Export to StableHLO</a><ul>
 <li><a class="reference internal" href="#using-torch-export">Using <code class="docutils literal notranslate"><span class="pre">torch.export</span></code></a></li>
-<li><a class="reference internal" href="#using-extract-jax">Using <code class="docutils literal notranslate"><span class="pre">extract_jax</span></code></a></li>
+<li><a class="reference internal" href="#using-extract-jax">Using <code class="docutils literal notranslate"><span class="pre">extract_jax</span></code></a><ul>
+<li><a class="reference internal" href="#inline-some-weights-in-generated-stablehlo">Inline some weights in generated stablehlo</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#preserving-high-level-pytorch-operations-in-stablehlo-by-generating-stablehlo-composite">Preserving High-Level PyTorch Operations in StableHLO by generating <code class="docutils literal notranslate"><span class="pre">stablehlo.composite</span></code></a></li>
 </ul>
 </li>
