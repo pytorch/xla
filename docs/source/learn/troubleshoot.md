@@ -142,8 +142,8 @@ Some common causes of compilation/executation are
 `torch_xla.sync()`. 
 2. [Parallel
 loader](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51)
-call `torch_xla.sync()` for every x (configurable) batch. 
-3. Exiting a
+cals `torch_xla.sync()` for every x (configurable) batch. 
+3. Exit a
 [profiler StepTrace
 region](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/debug/profiler.py#L165-L171).
 4. Dynamo decides to compile/execute the graph. 
