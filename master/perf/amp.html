@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita159c9c )
+                  master (2.8.0+git022ecde )
                 </div>
               
             
@@ -467,7 +467,7 @@ example is below:</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
 <span class="c1"># Creates model and optimizer in default precision</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">Net</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Net</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
 <span class="c1"># Pytorch/XLA provides sync-free optimizers for improved performance</span>
 <span class="n">optimizer</span> <span class="o">=</span> <span class="n">syncfree</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="o">...</span><span class="p">)</span>
 
@@ -475,7 +475,7 @@ example is below:</p>
     <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
 
     <span class="c1"># Enables autocasting for the forward pass</span>
-    <span class="k">with</span> <span class="n">autocast</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()):</span>
+    <span class="k">with</span> <span class="n">autocast</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()):</span>
         <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
         <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
 
@@ -484,7 +484,7 @@ example is below:</p>
     <span class="n">xm</span><span class="o">.</span><span class="n">optimizer_step</span><span class="o">.</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">autocast(xm.xla_device())</span></code> aliases <code class="docutils literal notranslate"><span class="pre">torch.autocast('xla')</span></code> when the XLA
+<p><code class="docutils literal notranslate"><span class="pre">autocast(torch_xla.device())</span></code> aliases <code class="docutils literal notranslate"><span class="pre">torch.autocast('xla')</span></code> when the XLA
 Device is a TPU. Alternatively, if a script is only used with TPUs, then
 <code class="docutils literal notranslate"><span class="pre">torch.autocast('xla',</span> <span class="pre">dtype=torch.bfloat16)</span></code> can be directly used.</p>
 <p>Please file an issue or submit a pull request if there is an operator
@@ -544,7 +544,7 @@ specific behavior. A simple CUDA AMP example is below:</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
 <span class="c1"># Creates model and optimizer in default precision</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">Net</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Net</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
 <span class="c1"># Pytorch/XLA provides sync-free optimizers for improved performance</span>
 <span class="n">optimizer</span> <span class="o">=</span> <span class="n">syncfree</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="o">...</span><span class="p">)</span>
 <span class="n">scaler</span> <span class="o">=</span> <span class="n">GradScaler</span><span class="p">()</span>
@@ -553,7 +553,7 @@ specific behavior. A simple CUDA AMP example is below:</p>
     <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
 
     <span class="c1"># Enables autocasting for the forward pass</span>
-    <span class="k">with</span> <span class="n">autocast</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()):</span>
+    <span class="k">with</span> <span class="n">autocast</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()):</span>
         <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
         <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
 
@@ -565,12 +565,12 @@ specific behavior. A simple CUDA AMP example is below:</p>
     <span class="n">scaler</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">autocast(xm.xla_device())</span></code> aliases <code class="docutils literal notranslate"><span class="pre">torch.cuda.amp.autocast()</span></code> when the
+<p><code class="docutils literal notranslate"><span class="pre">autocast(torch_xla.device())</span></code> aliases <code class="docutils literal notranslate"><span class="pre">torch.cuda.amp.autocast()</span></code> when the
 XLA Device is a CUDA device (XLA:GPU). Alternatively, if a script is
 only used with CUDA devices, then <code class="docutils literal notranslate"><span class="pre">torch.cuda.amp.autocast</span></code> can be
 directly used, but requires <code class="docutils literal notranslate"><span class="pre">torch</span></code> is compiled with <code class="docutils literal notranslate"><span class="pre">cuda</span></code> support for
 datatype of <code class="docutils literal notranslate"><span class="pre">torch.bfloat16</span></code>. We recommend using
-<code class="docutils literal notranslate"><span class="pre">autocast(xm.xla_device())</span></code> on XLA:GPU as it does not require
+<code class="docutils literal notranslate"><span class="pre">autocast(torch_xla.device())</span></code> on XLA:GPU as it does not require
 <code class="docutils literal notranslate"><span class="pre">torch.cuda</span></code> support for any datatypes, including <code class="docutils literal notranslate"><span class="pre">torch.bfloat16</span></code>.</p>
 <section id="amp-for-xla-gpu-best-practices">
 <h3>AMP for XLA:GPU Best Practices<a class="headerlink" href="#amp-for-xla-gpu-best-practices" title="Permalink to this heading">¶</a></h3>

@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita159c9c )
+                  master (2.8.0+git022ecde )
                 </div>
               
             
@@ -470,8 +470,8 @@ compiled function.</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-  <span class="n">a_xla</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
-  <span class="n">b_xla</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+  <span class="n">a_xla</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
+  <span class="n">b_xla</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
   <span class="k">return</span> <span class="n">a_xla</span> <span class="o">+</span> <span class="n">b_xla</span>
 
 <span class="n">compiled_code</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;openxla&#39;</span><span class="p">)</span>
@@ -487,7 +487,7 @@ compiled function.</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">eval_model</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
-  <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+  <span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
   <span class="n">xla_resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
   <span class="n">xla_resnet18</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
   <span class="n">dynamo_resnet18</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
@@ -572,7 +572,7 @@ implementation. Here is an example of training a ResNet-18 with
   <span class="k">return</span> <span class="n">pred</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">train_model_main</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
-  <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+  <span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
   <span class="n">xla_resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
   <span class="n">xla_resnet18</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
   <span class="n">dynamo_train_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>

@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita159c9c )
+                  master (2.8.0+git022ecde )
                 </div>
               
             
@@ -781,7 +781,7 @@
 <span class="sd">        A np.ndarray of device logical ordinals with shape [global_x, global_y, global_z]. On</span>
 <span class="sd">          v2 and v3, global_z is instead cores_per_chip (i.e., 2).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">assert</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device_hw</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span>
+    <span class="k">assert</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device_hw</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span>
     <span class="c1"># coords is a 3-dims tuple representing the device in physical mesh</span>
     <span class="n">device_coords</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="p">[</span><span class="n">d</span><span class="p">][</span><span class="s1">&#39;coords&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
     <span class="n">dims</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">d</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">max</span><span class="p">(</span><span class="n">device_coords</span><span class="p">))</span>
@@ -1042,9 +1042,9 @@
 <span class="sd">      &gt;&gt;&gt; num_devices = xr.global_runtime_device_count()</span>
 <span class="sd">      &gt;&gt;&gt; device_ids = np.array(range(num_devices))</span>
 <span class="sd">      &gt;&gt;&gt; mesh = Mesh(device_ids, mesh_shape, (&#39;x&#39;, &#39;y&#39;))</span>
-<span class="sd">      &gt;&gt;&gt; input = torch.randn(8, 32).to(xm.xla_device())</span>
+<span class="sd">      &gt;&gt;&gt; input = torch.randn(8, 32).to(torch_xla.device())</span>
 <span class="sd">      &gt;&gt;&gt; xs.mark_sharding(input, mesh, (0, None)) # 4-way data parallel</span>
-<span class="sd">      &gt;&gt;&gt; linear = nn.Linear(32, 10).to(xm.xla_device())</span>
+<span class="sd">      &gt;&gt;&gt; linear = nn.Linear(32, 10).to(torch_xla.device())</span>
 <span class="sd">      &gt;&gt;&gt; xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="c1"># We only allow fully specified `partition_spec` to be applicable, as opposed</span>
@@ -1240,7 +1240,7 @@
 
   <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
     <span class="c1"># TODO(yeounoh) use virtual device interface when available.</span>
-    <span class="k">assert</span> <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">device</span> <span class="o">==</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">device</span> <span class="o">==</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
     <span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_spec</span><span class="p">)</span>
 
 

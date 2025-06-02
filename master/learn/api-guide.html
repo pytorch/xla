@@ -290,7 +290,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita159c9c )
+                  master (2.8.0+git022ecde )
                 </div>
               
             
@@ -456,12 +456,12 @@
 <dt class="sig sig-object py" id="torch_xla.device">
 <span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">device</span></span></span><a class="reference internal" href="../_modules/torch_xla/torch_xla.html#device"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.device" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a given instance of an XLA device.</p>
-<p>If SPMD enables, returns a virtual device that wraps all devices available
+<p>If SPMD is enabled, returns a virtual device that wraps all devices available
 to this process.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>index</strong> – index of the XLA device to be returned. Corresponds to index in
-<cite>torch_xla.devices()</cite>.</p>
+<cite>torch_xla.devices()</cite>. By default, get the first device.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>An XLA <cite>torch.device</cite>.</p>
@@ -747,13 +747,13 @@ before any computations have been performed.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The specific instance (ordinal) to be returned. If
 specified, the specific XLA device instance will be returned. Otherwise
-the first device of <cite>devkind</cite> will be returned.</p></li>
+the first device (default 0) will be returned.</p></li>
 <li><p><strong>devkind</strong> (<em>string</em><em>...</em><em>, </em><em>optional</em>) – If specified, device type such as <cite>TPU</cite>,
 <cite>CUDA</cite>, <cite>CPU</cite>, or custom PJRT device. Deprecated.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A <cite>torch.device</cite> with the requested instance.</p>
+<dd class="field-even"><p>A <cite>torch.device</cite> with the requested instance of an XLA device.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1246,9 +1246,9 @@ will impact the resulting sharding.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="c1"># 4-way data parallel</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">linear</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">linear</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">linear</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="c1"># 2-way model parallel</span>
 </pre></div>
 </div>

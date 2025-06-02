@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita159c9c )
+                  master (2.8.0+git022ecde )
                 </div>
               
             
@@ -462,14 +462,14 @@ create and print an XLA tensor:</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
-<span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>This code should look familiar. PyTorch/XLA uses the same interface as
 regular PyTorch with a few additions. Importing <code class="docutils literal notranslate"><span class="pre">torch_xla</span></code> initializes
-PyTorch/XLA, and <code class="docutils literal notranslate"><span class="pre">xm.xla_device()</span></code> returns the current XLA device. This
+PyTorch/XLA, and <code class="docutils literal notranslate"><span class="pre">torch_xla.device()</span></code> returns the current XLA device. This
 may be a CPU or TPU depending on your environment.</p>
 </section>
 <section id="xla-tensors-are-pytorch-tensors">
@@ -477,8 +477,8 @@ may be a CPU or TPU depending on your environment.</p>
 <p>PyTorch operations can be performed on XLA tensors just like CPU or CUDA
 tensors.</p>
 <p>For example, XLA tensors can be added together:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
-<span class="n">t1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">t1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">t0</span> <span class="o">+</span> <span class="n">t1</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -487,15 +487,15 @@ tensors.</p>
 </pre></div>
 </div>
 <p>Or used with neural network modules:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">l_in</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
-<span class="n">linear</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">l_in</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">linear</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
 <span class="n">l_out</span> <span class="o">=</span> <span class="n">linear</span><span class="p">(</span><span class="n">l_in</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">l_out</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Like other device types, XLA tensors only work with other XLA tensors on
 the same device. So code like</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">l_in</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">l_in</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
 <span class="n">linear</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
 <span class="n">l_out</span> <span class="o">=</span> <span class="n">linear</span><span class="p">(</span><span class="n">l_in</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">l_out</span><span class="p">)</span>
@@ -515,7 +515,7 @@ and multiple devices with XLA multi-processing.</p>
 <p>The following snippet shows a network training on a single XLA device:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
-<span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+<span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">MNIST</span><span class="p">()</span><span class="o">.</span><span class="n">train</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">NLLLoss</span><span class="p">()</span>
 <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">)</span>
@@ -550,7 +550,7 @@ XLA devices. The following snippet shows how:</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.parallel_loader</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_mp_fn</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
-  <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+  <span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
   <span class="n">mp_device_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span><span class="n">train_loader</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
 
   <span class="n">model</span> <span class="o">=</span> <span class="n">MNIST</span><span class="p">()</span><span class="o">.</span><span class="n">train</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
@@ -579,7 +579,7 @@ run the script with torchrun command line also. Each process
 will only be able to access the device assigned to the current
 process. For example on a TPU v4-8, there will be 4 processes
 being spawn up and each process will own a TPU device.</p></li>
-<li><p>Note that if you print the <code class="docutils literal notranslate"><span class="pre">xm.xla_device()</span></code> on each process you
+<li><p>Note that if you print the <code class="docutils literal notranslate"><span class="pre">torch_xla.device()</span></code> on each process you
 will see <code class="docutils literal notranslate"><span class="pre">xla:0</span></code> on all devices. This is because each process
 can only see one device. This does not mean multi-process is not
 functioning. The only execution is with PJRT runtime on TPU v2
@@ -714,7 +714,7 @@ following snippet:</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
-<span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+<span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
 
 <span class="n">t0</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
 <span class="n">t1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>

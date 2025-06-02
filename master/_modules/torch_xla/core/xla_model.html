@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita159c9c )
+                  master (2.8.0+git022ecde )
                 </div>
               
             
@@ -582,28 +582,23 @@
     <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">fd</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="n">flush</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="xla_device"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.xla_device">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<div class="viewcode-block" id="xla_device"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.xla_device">[docs]</a><span class="nd">@deprecated</span><span class="p">(</span><span class="s2">&quot;Use torch_xla.device instead&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">devkind</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a given instance of an XLA device.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    n (int, optional): The specific instance (ordinal) to be returned. If</span>
 <span class="sd">      specified, the specific XLA device instance will be returned. Otherwise</span>
-<span class="sd">      the first device of `devkind` will be returned.</span>
+<span class="sd">      the first device (default 0) will be returned.</span>
 <span class="sd">    devkind (string..., optional): If specified, device type such as `TPU`,</span>
 <span class="sd">      `CUDA`, `CPU`, or custom PJRT device. Deprecated.</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    A `torch.device` with the requested instance.</span>
+<span class="sd">    A `torch.device` with the requested instance of an XLA device.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="c1"># When SPMD is enabled, we always return `xla:0` to the user, and</span>
-  <span class="c1"># under the hood we use virtual device logic for every xla tensor</span>
-  <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">check_env_flag</span><span class="p">(</span><span class="s1">&#39;XLA_USE_SPMD&#39;</span><span class="p">):</span>
-    <span class="n">device</span> <span class="o">=</span> <span class="s1">&#39;xla:0&#39;</span>
-    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-
-  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">devkind</span><span class="p">)</span></div>
+  <span class="k">del</span> <span class="n">devkind</span>
+  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></div>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>

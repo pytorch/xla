@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita159c9c )
+                  master (2.8.0+git022ecde )
                 </div>
               
             
@@ -610,7 +610,7 @@ repo. contains examples for training and serving many LLM and diffusion models.<
 <h2>Converting code to PyTorch XLA<a class="headerlink" href="#converting-code-to-pytorch-xla" title="Permalink to this heading">¶</a></h2>
 <p>General guidelines to modify your code:</p>
 <ul class="simple">
-<li><p>Replace <code class="docutils literal notranslate"><span class="pre">cuda</span></code> with <code class="docutils literal notranslate"><span class="pre">xm.xla_device()</span></code></p></li>
+<li><p>Replace <code class="docutils literal notranslate"><span class="pre">cuda</span></code> with <code class="docutils literal notranslate"><span class="pre">torch_xla.device()</span></code></p></li>
 <li><p>Remove progress bar, printing that would access the XLA tensor
 values</p></li>
 <li><p>Reduce logging and callbacks that would access the XLA tensor values</p></li>
@@ -647,7 +647,7 @@ with the <code class="docutils literal notranslate"><span class="pre">xla</span>
 as well. For simplicity we will directly define the <code class="docutils literal notranslate"><span class="pre">device</span></code> in this
 tutorial, but you can pass the <code class="docutils literal notranslate"><span class="pre">device</span></code> value to the function as well.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>Another place in the code that has cuda specific code is DDIM scheduler.
@@ -660,7 +660,7 @@ lines</p>
 </pre></div>
 </div>
 <p>with</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
 <span class="n">attr</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -743,7 +743,7 @@ GPUs. To run it on TPUs, the first step is to change the CUDA device to
 an XLA device. This can be done by replacing the line <code class="docutils literal notranslate"><span class="pre">pipe.to(&quot;cuda&quot;)</span></code>
 with the following lines:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
-<span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+<span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
 <span class="n">pipe</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 </pre></div>
 </div>

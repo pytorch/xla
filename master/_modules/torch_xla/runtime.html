@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita159c9c )
+                  master (2.8.0+git022ecde )
                 </div>
               
             
@@ -544,34 +544,10 @@
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns whether torch.bfloat16 is supported on this environment.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">try</span><span class="p">:</span>
-    <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1.</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1.</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
     <span class="k">return</span> <span class="kc">True</span>
   <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
     <span class="k">return</span> <span class="kc">False</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-               <span class="n">devkind</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns an XLA device.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    n: Index of XLA device within visibible devices. If not set, use local</span>
-<span class="sd">      ordinal (default 0) to select an addressable device.</span>
-<span class="sd">    devkind: Type of device to return. Should match `device_type()`.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    A `torch.device` representing an XLA device.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">())</span>
-
-  <span class="n">devices</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="n">devkind</span><span class="p">)</span>
-  <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
-    <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s1">&#39;Device index </span><span class="si">{}</span><span class="s1"> out of range in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">devices</span><span class="p">))</span>
-
-  <span class="n">device</span> <span class="o">=</span> <span class="n">devices</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
-  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="local_process_count"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.runtime.local_process_count">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">local_process_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -627,7 +603,7 @@
 <span class="sd">  Local ordinal is in range [0, local_device_count).&quot;&quot;&quot;</span>
   <span class="n">local_rank</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">PJRT_LOCAL_PROCESS_RANK</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
   <span class="n">devices_per_process</span> <span class="o">=</span> <span class="n">addressable_device_count</span><span class="p">()</span>
-  <span class="k">return</span> <span class="n">local_rank</span> <span class="o">*</span> <span class="n">devices_per_process</span> <span class="o">+</span> <span class="n">xla_device</span><span class="p">()</span><span class="o">.</span><span class="n">index</span></div>
+  <span class="k">return</span> <span class="n">local_rank</span> <span class="o">*</span> <span class="n">devices_per_process</span> <span class="o">+</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span><span class="o">.</span><span class="n">index</span></div>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">process_index</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>

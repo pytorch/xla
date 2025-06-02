@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gita159c9c )
+                  master (2.8.0+git022ecde )
                 </div>
               
             
@@ -466,18 +466,34 @@
 <div class="viewcode-block" id="device"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.device">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">device</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a given instance of an XLA device.</span>
 
-<span class="sd">  If SPMD enables, returns a virtual device that wraps all devices available</span>
+<span class="sd">  If SPMD is enabled, returns a virtual device that wraps all devices available</span>
 <span class="sd">  to this process.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    index: index of the XLA device to be returned. Corresponds to index in</span>
-<span class="sd">      `torch_xla.devices()`.</span>
+<span class="sd">      `torch_xla.devices()`. By default, get the first device.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    An XLA `torch.device`.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># When SPMD is enabled, we always return `xla:0` to the user, and</span>
+  <span class="c1"># under the hood we use virtual device logic for every xla tensor</span>
+  <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">check_env_flag</span><span class="p">(</span><span class="s1">&#39;XLA_USE_SPMD&#39;</span><span class="p">):</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="s1">&#39;xla:0&#39;</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
-  <span class="k">return</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">(</span><span class="n">index</span><span class="p">)</span></div>
+  <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">())</span>
+
+  <span class="n">devices</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_xla_supported_devices</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">index</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s1">&#39;Device index </span><span class="si">{}</span><span class="s1"> out of range in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">index</span><span class="p">,</span> <span class="n">devices</span><span class="p">))</span>
+
+  <span class="n">device</span> <span class="o">=</span> <span class="n">devices</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="devices"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.devices">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">devices</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]:</span>
