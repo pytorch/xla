@@ -59,7 +59,7 @@ jobs:
     needs: [build-torch-xla, check_code_changes, get-torch-commit]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
-      timeout-minutes: 45  # Takes ~26m as of 2025/5/30..
+      timeout-minutes: 45  # Takes ~26m as of 2025/5/30.
       collect-coverage: false
       runner: linux.24xlarge
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
