@@ -25,7 +25,7 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
     if not jtu.is_device_tpu_at_least(5):
       self.skipTest('Not implemented for TPU v4 or earlier.')
 
-  def _test_quantized_matmul(self, dtype, bs, n_input_features, n_output_features, quantize_activation, batch_block_size=None, out_block_size=None, in_block_size=None):
+  def _test_quantized_matmul(self, dtype, bs, n_input_features, n_output_features, quantize_activation, batch_block_size=None, out_block_size=None, in_block_size=None, atol=1.5):
     
     prng_key = jax.random.key(1234)
     k0, k1 = jax.random.split(prng_key, 2)
@@ -47,7 +47,7 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
 
     self.assertEqual(output.dtype, expected.dtype)
     self.assertEqual(output.shape, expected.shape)
-    self.assertAllClose(output, expected, atol=1.5)
+    self.assertAllClose(output, expected, atol=atol)
 
   @parameterized.product(
       dtype=[jnp.bfloat16, jnp.float32],
