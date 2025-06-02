@@ -1,13 +1,16 @@
 from typing import List, Optional, Tuple
 import unittest
+from unittest.mock import patch
 
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax
 from jax._src import test_util as jtu
-from torch_xla.experimental.pallas_kernels.quantized_matmul.kernel import (
+from torch_xla.experimental.pallas_kernels.quantized_matmul_kernel import (
   quantized_matmul,
   quantize_array,
+  get_tuned_block_sizes,
+  TUNED_BLOCK_SIZES,
 )
 import jax.numpy as jnp
 import numpy as np
@@ -22,7 +25,7 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
     if not jtu.is_device_tpu_at_least(5):
       self.skipTest('Not implemented for TPU v4 or earlier.')
 
-  def _test_quantized_matmul(self, dtype, bs, n_input_features, n_output_features, quantize_activation, batch_block_size=128, out_block_size=128, in_block_size=128):
+  def _test_quantized_matmul(self, dtype, bs, n_input_features, n_output_features, quantize_activation, batch_block_size=None, out_block_size=None, in_block_size=None):
     
     prng_key = jax.random.key(1234)
     k0, k1 = jax.random.split(prng_key, 2)
@@ -55,7 +58,7 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
   )
   def test_quantized_matmul_various_input_shapes(self, dtype, bs, n_input_features, n_output_features, quantize_activation):
     self._test_quantized_matmul(
-        dtype, bs, n_input_features, n_output_features, quantize_activation=quantize_activation)
+        dtype, bs, n_input_features, n_output_features, quantize_activation=quantize_activation, batch_block_size=128, out_block_size=128, in_block_size=128)
 
   @parameterized.product(
       dtype=[jnp.bfloat16, jnp.float32],
@@ -67,6 +70,31 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
   def test_quantized_matmul_unaligned_input_shapes(self, dtype, bs, n_input_features, n_output_features, quantize_activation):
     self._test_quantized_matmul(
         dtype, bs, n_input_features, n_output_features, quantize_activation=quantize_activation, batch_block_size=128, out_block_size=128, in_block_size=128)
+
+  @patch('torch_xla.experimental.pallas_kernels.quantized_matmul_kernel.get_tpu_version')
+  def test_quantized_matmul_retrieve_block_sizes(self, get_tpu_version):
+    tpu_version_to_use = 6
+    get_tpu_version.return_value = tpu_version_to_use
+    key0 = None
+    for key, expected_block_sizes in TUNED_BLOCK_SIZES.items():
+      if key[0] == tpu_version_to_use:
+        key0 = key
+        break
+    expected_block_sizes = TUNED_BLOCK_SIZES[key0]
+    _, bs, n_output_features, n_input_features, activation_dtype, quantize_activation = key0
+    actual_block_sizes = get_tuned_block_sizes(bs, n_output_features, n_input_features, activation_dtype, quantize_activation)
+    assert actual_block_sizes == expected_block_sizes, f"Expected block sizes {expected_block_sizes}, but got {actual_block_sizes} for key {key0}"
+
+  @parameterized.product(
+      dtype=[jnp.bfloat16],
+      bs=[16],
+      n_input_features=[128, 8192],
+      n_output_features=[128, 1280],
+      quantize_activation=[True],
+  )
+  def test_quantized_matmul_use_tuned_block_sizes(self, dtype, bs, n_input_features, n_output_features, quantize_activation):
+    self._test_quantized_matmul(
+        dtype, bs, n_input_features, n_output_features, quantize_activation=quantize_activation)
 
 
 if __name__ == "__main__":

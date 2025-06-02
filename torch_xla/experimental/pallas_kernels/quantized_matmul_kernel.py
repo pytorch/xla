@@ -94,9 +94,9 @@ def quantized_matmul(
     quantize_activation: bool = False,
     *,
     # All 3 block sizes have to be multiples of 128 because they are used as the minormost dimension in the block.
-    batch_block_size: int = 128,
-    out_block_size: int = 128,
-    in_block_size: int = 128,
+    batch_block_size: int | None = None,
+    out_block_size: int | None = None,
+    in_block_size: int | None = None,
     vmem_limit_bytes: int | None = 64 * 1024 * 1024,
 ):
   assert zero_point is None, "Not implemented: zero_point is not supported."
@@ -113,6 +113,10 @@ def quantized_matmul(
 
   orig_bs, orig_in_features = x.shape
   orig_out_features, _ = w.shape
+  if batch_block_size is None or out_block_size is None or in_block_size is None:
+    batch_block_size, out_block_size, in_block_size = get_tuned_block_sizes(orig_bs, orig_out_features, orig_in_features, jnp.dtype(x.dtype).name, quantize_activation)
+    print(f"Using tuned block sizes: {batch_block_size}, {out_block_size}, {in_block_size}")
+
   padded_bs = _next_multiple(orig_bs, batch_block_size)
   if orig_bs < padded_bs:
     x = jnp.pad(x, ((0, padded_bs-orig_bs), (0, 0)))
@@ -168,3 +172,111 @@ def quantize_array(x, n_bits: int = 8, dim: int = -1):
   scale = max_val / int_max
   x_int = jnp.clip(jnp.round((x / scale)), int_min, int_max).astype(jnp.int8)
   return x_int, scale.astype(x.dtype)
+
+# Below are tuned block sizes.
+
+# key:
+#    - tpu_version
+#    - batch_size
+#    - n_output_features
+#    - n_input_features
+#    - activation_dtype
+#    - quantize_activation
+# value:
+#    - batch_block_size
+#    - out_block_size
+#    - in_block_size
+TUNED_BLOCK_SIZES = {
+    (6, 16, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
+    (6, 16, 4096, 4096, 'bfloat16', True): (128, 2048, 2048),
+    (6, 16, 28672, 4096, 'bfloat16', True): (128, 1792, 2048),
+    (6, 16, 4096, 14336, 'bfloat16', True): (128, 512, 7168),
+    (6, 16, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 16, 8192, 1024, 'bfloat16', True): (128, 8192, 256),
+    (6, 16, 7168, 8192, 'bfloat16', True): (128, 512, 8192),
+    (6, 16, 8192, 3584, 'bfloat16', True): (128, 2048, 3584),
+    (6, 32, 6144, 4096, 'bfloat16', True): (128, 1536, 4096),
+    (6, 32, 4096, 4096, 'bfloat16', True): (128, 4096, 2048),
+    (6, 32, 28672, 4096, 'bfloat16', True): (128, 2048, 2048),
+    (6, 32, 4096, 14336, 'bfloat16', True): (128, 256, 14336),
+    (6, 32, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 32, 8192, 1024, 'bfloat16', True): (128, 1024, 1024),
+    (6, 32, 7168, 8192, 'bfloat16', True): (128, 3584, 2048),
+    (6, 32, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 64, 6144, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 64, 4096, 4096, 'bfloat16', True): (128, 2048, 2048),
+    (6, 64, 28672, 4096, 'bfloat16', True): (128, 1792, 2048),
+    (6, 64, 4096, 14336, 'bfloat16', True): (128, 4096, 1024),
+    (6, 64, 1280, 8192, 'bfloat16', True): (128, 1280, 4096),
+    (6, 64, 8192, 1024, 'bfloat16', True): (128, 4096, 1024),
+    (6, 64, 7168, 8192, 'bfloat16', True): (128, 512, 8192),
+    (6, 64, 8192, 3584, 'bfloat16', True): (128, 2048, 1792),
+    (6, 128, 6144, 4096, 'bfloat16', True): (128, 1536, 4096),
+    (6, 128, 4096, 4096, 'bfloat16', True): (128, 1024, 4096),
+    (6, 128, 28672, 4096, 'bfloat16', True): (128, 1024, 4096),
+    (6, 128, 4096, 14336, 'bfloat16', True): (128, 2048, 2048),
+    (6, 128, 1280, 8192, 'bfloat16', True): (128, 640, 4096),
+    (6, 128, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 128, 7168, 8192, 'bfloat16', True): (128, 896, 8192),
+    (6, 128, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 256, 6144, 4096, 'bfloat16', True): (256, 1536, 4096),
+    (6, 256, 4096, 4096, 'bfloat16', True): (256, 512, 4096),
+    (6, 256, 28672, 4096, 'bfloat16', True): (256, 896, 4096),
+    (6, 256, 4096, 14336, 'bfloat16', True): (256, 4096, 2048),
+    (6, 256, 1280, 8192, 'bfloat16', True): (256, 1280, 4096),
+    (6, 256, 8192, 1024, 'bfloat16', True): (256, 2048, 1024),
+    (6, 256, 7168, 8192, 'bfloat16', True): (256, 512, 8192),
+    (6, 256, 8192, 3584, 'bfloat16', True): (256, 1024, 3584),
+    (6, 512, 6144, 4096, 'bfloat16', True): (512, 2048, 4096),
+    (6, 512, 4096, 4096, 'bfloat16', True): (512, 1024, 4096),
+    (6, 512, 28672, 4096, 'bfloat16', True): (512, 1792, 4096),
+    (6, 512, 4096, 14336, 'bfloat16', True): (512, 4096, 1792),
+    (6, 512, 1280, 8192, 'bfloat16', True): (512, 1280, 2048),
+    (6, 512, 8192, 1024, 'bfloat16', True): (512, 4096, 1024),
+    (6, 512, 7168, 8192, 'bfloat16', True): (512, 1792, 4096),
+    (6, 512, 8192, 3584, 'bfloat16', True): (512, 2048, 3584),
+    (6, 1024, 6144, 4096, 'bfloat16', True): (1024, 1024, 4096),
+    (6, 1024, 4096, 4096, 'bfloat16', True): (1024, 2048, 4096),
+    (6, 1024, 28672, 4096, 'bfloat16', True): (1024, 3584, 4096),
+    (6, 1024, 4096, 14336, 'bfloat16', True): (1024, 2048, 2048),
+    (6, 1024, 1280, 8192, 'bfloat16', True): (1024, 1280, 2048),
+    (6, 1024, 8192, 1024, 'bfloat16', True): (256, 8192, 1024),
+    (6, 1024, 7168, 8192, 'bfloat16', True): (1024, 1792, 8192),
+    (6, 1024, 8192, 3584, 'bfloat16', True): (1024, 2048, 3584),
+    (6, 2048, 6144, 4096, 'bfloat16', True): (256, 6144, 4096),
+    (6, 2048, 4096, 4096, 'bfloat16', True): (1024, 2048, 4096),
+    (6, 2048, 28672, 4096, 'bfloat16', True): (1024, 4096, 4096),
+    (6, 2048, 4096, 14336, 'bfloat16', True): (1024, 4096, 1024),
+    (6, 2048, 1280, 8192, 'bfloat16', True): (512, 1280, 8192),
+    (6, 2048, 8192, 1024, 'bfloat16', True): (256, 8192, 1024),
+    (6, 2048, 7168, 8192, 'bfloat16', True): (1024, 1792, 8192),
+    (6, 2048, 8192, 3584, 'bfloat16', True): (2048, 2048, 3584),
+}
+
+def get_tpu_version() -> int:
+  """Returns the numeric version of the TPU, or -1 if not on TPU."""
+  kind = jax.devices()[0].device_kind
+  if 'TPU' not in kind:
+    return -1
+  if kind.endswith(' lite'):
+    kind = kind[: -len(' lite')]
+  assert kind[:-1] == 'TPU v', kind
+  return int(kind[-1])
+
+def get_tuned_block_sizes(batch_size, n_output_features, n_input_features, activation_dtype, quantize_activation):
+    """
+    Retrieve the tuned block sizes for the given parameters.
+    
+    Args:
+        batch_size (int): The batch size.
+        n_output_features (int): The number of output features.
+        n_input_features (int): The number of input features.
+        activation_dtype (str): The data type of the activation ('bfloat16' or 'float32').
+        quantize_activation (bool): Whether to quantize the activation.
+        
+    Returns:
+        tuple: A tuple containing the batch_block_size, out_block_size, and in_block_size.
+    """
+    key = (get_tpu_version(), batch_size, n_output_features, n_input_features, activation_dtype, quantize_activation)
+    print(f'{key=}')
+    return TUNED_BLOCK_SIZES.get(key, (128, 128, 128))
