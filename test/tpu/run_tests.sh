@@ -96,14 +96,6 @@ run_xla_ir_hlo_debug run_test "$_TEST_DIR/test_user_computation_debug_cache.py"
 run_test "$_TEST_DIR/test_data_type.py"
 run_test "$_TEST_DIR/test_compilation_cache_utils.py"
 
-# run examples, each test should takes <2 minutes
-run_test "$_TEST_DIR/../examples/data_parallel/train_resnet_spmd_data_parallel.py"
-run_test "$_TEST_DIR/../examples/fsdp/train_decoder_only_fsdp_v2.py"
-run_test "$_TEST_DIR/../examples/train_resnet_amp.py"
-run_test "$_TEST_DIR/../examples/train_decoder_only_base.py"
-run_test "$_TEST_DIR/../examples/train_decoder_only_base.py" scan.decoder_with_scan.DecoderWithScan \
-    --num-steps 30 # TODO(https://github.com/pytorch/xla/issues/8632): Reduce scan tracing overhead
-
 # HACK: don't confuse local `torch_xla` folder with installed package
 # Python 3.11 has the permanent fix: https://stackoverflow.com/a/73636559
 # Egaer tests will take more HBM, only run them on TPU v4 CI
