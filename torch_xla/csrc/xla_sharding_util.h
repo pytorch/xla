@@ -120,9 +120,18 @@ class ShardingUtil {
       const std::vector<std::string>& devices,
       const XLATensor::ShardingSpecPtr& sharding_spec);
 
+  static runtime::ComputationClient::DataPtr CreateGlobalShardedData(
+    const std::vector<at::Tensor>& shards,
+    const std::vector<std::string>& devices,
+    const XLATensor::ShardingSpecPtr& sharding_spec,
+    xla::Shape local_shape);
+
   static void XlaMarkSharding(const at::Tensor& input,
                               xla::OpSharding sharding);
 
+  static void XlaGlobalTensorFromLocalProcessData(const at::Tensor& input,
+                                                  xla::OpSharding sharding,
+                                                  const std::vector<int64_t>& local_shape);
   //////////////////////////// Auto-Sharding ////////////////////////////
 
   // Construct a device mesh for auto-sharding pass. Returns a tuple of mesh

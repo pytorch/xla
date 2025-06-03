@@ -2240,6 +2240,10 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& input, xla::OpSharding sharding) {
           ShardingUtil::XlaMarkSharding(input, sharding);
         });
+  m.def("_load_global_tensor_to_local_shards",
+        [](const at::Tensor& input, xla::OpSharding sharding, const std::vector<int64_t>& local_shape) {
+          ShardingUtil::XlaGlobalTensorFromLocalProcessData(input, sharding, local_shape);
+        });
   m.def("_mark_manual_sharding",
         [](const at::Tensor& input, xla::OpSharding sharding) {
           XLA_CHECK(IsNonDeviceDataIR(input))
