@@ -89,7 +89,6 @@ def _next_multiple(x, multiple):
 @functools.partial(
     jax.jit,
     static_argnames=[
-        'int4_weight',
         'quantize_activation',
         'batch_block_size',
         'out_block_size',
@@ -102,7 +101,6 @@ def quantized_matmul(
     scalar: jax.Array,  # [n_output_features]
     zero_point: jax.Array | None = None,
     block_size: jax.Array | None = None,  # i32[1]
-    int4_weight: bool = False,
     quantize_activation: bool = False,
     *,
     # All 3 block sizes, if provided, have to be multiples of 128 because they are used as the minormost dimension in the block.
@@ -113,7 +111,6 @@ def quantized_matmul(
 ):
   assert zero_point is None, "Not implemented: zero_point is not supported."
   assert block_size is None, "Not implemented: block_size is not supported."
-  assert not int4_weight, "Not implemented: int4_weight is not supported."
 
   # x_max_val cannot be [bs, 128] because it'll be costly to send
   # [bs_block_size, 128] to VMEM each time.
