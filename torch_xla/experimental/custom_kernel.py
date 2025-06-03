@@ -1061,6 +1061,27 @@ def ragged_paged_attention(
       ])
   return output[0]
 
+@requires_jax
+def quantized_matmul(
+  x: torch.Tensor,
+  w: torch.Tensor,
+  scalar: torch.Tensor,
+  zero_point: torch.Tensor | None = None,
+  block_size: torch.Tensor | None = None,
+  int4_weight: bool = False,
+  quantize_activation: bool = False,
+  batch_block_size: int | None = None,
+  out_block_size: int | None = None,
+  in_block_size: int | None = None,
+  vmem_limit_bytes: int | None = 64 * 1024 * 1024,
+) -> torch.Tensor:
+  from torch_xla.experimental.pallas_kernels.quantized_matmul_kernel import quantized_matmul
+  return xb.call_jax(
+    quantized_matmul, 
+    (x, w, scalar, zero_point, block_size, int4_weight, quantize_activation), 
+    {"batch_block_size": batch_block_size, "out_block_size": out_block_size, "in_block_size": in_block_size, "vmem_limit_bytes": vmem_limit_bytes}
+  )
+  
 
 def _multi_queries_paged_attention_nonkernel(
     q,  # [batch_size, query_len, num_heads, head_size]
