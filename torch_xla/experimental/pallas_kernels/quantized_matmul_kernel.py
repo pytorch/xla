@@ -112,8 +112,8 @@ def quantized_matmul(
   assert zero_point is None, "Not implemented: zero_point is not supported."
   assert block_size is None, "Not implemented: block_size is not supported."
 
-  # x_max_val cannot be [bs, 128] because it'll be costly to send
-  # [bs_block_size, 128] to VMEM each time.
+  # x_max_val cannot be [bs, 128] where 128 is the minormost dimension of the vreg because it'll be costly to store
+  # [bs_block_size, 128] in VMEM ([bs_balock_size, 1:] will be padding).
   # We need the global max values to be computed before the kernel.
   x_max_val = jnp.max(jnp.abs(x), axis=-1, keepdims=False)  # [bs]
   x_max_val = jnp.expand_dims(x_max_val, axis=0)  # [1, bs]

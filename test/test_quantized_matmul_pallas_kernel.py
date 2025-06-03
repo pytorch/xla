@@ -60,11 +60,6 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
         in_block_size=in_block_size).block_until_ready()
     expected = jax.lax.dot_general(
         x_copy, w_copy, dimension_numbers=(((1,), (1,)), ((), ())))
-    # print(
-    #     f'Output max diff: {jnp.max(jnp.abs(expected - output))}')
-    # print(
-    #     f'Output mean diff: {jnp.mean(jnp.abs(expected - output))}'
-    # )
 
     self.assertEqual(output.dtype, expected.dtype)
     self.assertEqual(output.shape, expected.shape)
