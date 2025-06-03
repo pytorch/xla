@@ -1068,7 +1068,6 @@ def quantized_matmul(
   scalar: torch.Tensor,
   zero_point: torch.Tensor | None = None,
   block_size: torch.Tensor | None = None,
-  int4_weight: bool = False,
   quantize_activation: bool = False,
   batch_block_size: int | None = None,
   out_block_size: int | None = None,
@@ -1078,7 +1077,7 @@ def quantized_matmul(
   from torch_xla.experimental.pallas_kernels.quantized_matmul_kernel import quantized_matmul
   return xb.call_jax(
     quantized_matmul, 
-    (x, w, scalar, zero_point, block_size, int4_weight, quantize_activation), 
+    (x, w, scalar, zero_point, block_size, quantize_activation), 
     {"batch_block_size": batch_block_size, "out_block_size": out_block_size, "in_block_size": in_block_size, "vmem_limit_bytes": vmem_limit_bytes}
   )
   

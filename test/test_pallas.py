@@ -939,8 +939,9 @@ class PallasTest(parameterized.TestCase):
     
     self.assertEqual(actual.shape, expected.shape)
     self.assertEqual(actual.dtype, expected.dtype)
-    torch.testing.assert_close(
-        actual, expected, atol=1.5)
+    self.assertTrue(
+        torch.allclose(
+            actual, expected, atol=atol))
 
 
   @parameterized.product(
@@ -967,19 +968,19 @@ class PallasTest(parameterized.TestCase):
     ...
 
   # @parameterized.product(
-  #     dtype=[torch.bfloat16, torch.float32],
-  #     bs=[128, 256],
-  #     n_input_features=[128, 256],
-  #     n_output_features=[128, 256],
+  #     dtype=[torch.bfloat16],
+  #     bs=[128],
+  #     n_input_features=[128],
+  #     n_output_features=[128],
   #     quantize_activation=[True],
   #     # block_sizes=[(None, None, None), (128, 128, 128)],
-  #     block_sizes=[(128, 128, 128)],
+  #     kernel_block_sizes=[(128, 128, 128)],
   # )
   @parameterized.product(
-      dtype=[torch.bfloat16],
-      bs=[128],
-      n_input_features=[128],
-      n_output_features=[128],
+      dtype=[torch.bfloat16, torch.float32],
+      bs=[128, 256],
+      n_input_features=[128, 256],
+      n_output_features=[128, 256],
       quantize_activation=[True],
       # block_sizes=[(None, None, None), (128, 128, 128)],
       kernel_block_sizes=[(128, 128, 128)],
