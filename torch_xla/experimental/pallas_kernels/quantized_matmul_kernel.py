@@ -94,6 +94,7 @@ def _next_multiple(x, multiple):
         'batch_block_size',
         'out_block_size',
         'in_block_size',
+        'vmem_limit_bytes',
     ])
 def quantized_matmul(
     x: jax.Array,  # [bs, n_input_features]
