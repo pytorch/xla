@@ -400,6 +400,9 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
   if not isinstance(xla_out, (tuple, list)):
     xla_out = (xla_out,)
 
+  if isinstance(xla_out, tuple):
+    xla_out = list(xla_out)
+
   none_remover = NoneRemover()
   xla_out = none_remover.remove_nones(xla_out)
 
