@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Updates the default branches of local and forked repos to match upstream.
 
-Before using this script for the first time, please set up a `git sync` alias
+Before using this script for the first time, please set up a `git sync-main` alias
 by running this once:
 
-  git config alias.sync '!scripts/git_sync.py'
+  git config alias.sync-main '!scripts/git_sync_main.py'
 """
 
 import argparse
@@ -137,7 +137,7 @@ def main() -> None:
     sys.exit(1)
 
   arg_parser = argparse.ArgumentParser(
-      prog='git sync', description=__doc__)
+      prog='git sync-main', description=__doc__)
   arg_parser.add_argument(
       '--base_repo',
       '-b',

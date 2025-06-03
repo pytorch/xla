@@ -338,7 +338,7 @@ or by manually running `git` commands.
 This is the easiest way to update the forked repos. Please run the following
 commands on your Linux machine (not inside the dev container).
 
-First, create a `git sync` alias to run the `scripts/git_sync.py` script
+First, create a `git sync-main` alias to run the `scripts/git_sync.py` script
 (you only need to do it once):
 
 ```bash
@@ -350,13 +350,13 @@ After that, you can (in the `$WORKSPACE_DIR/pytorch/xla` directory) run:
 
 ```bash
 # Update the pytorch/xla repo.
-git sync
+git sync-main
 # Update the vision and pytorch/xla repos.
-git sync -b vision
+git sync-main -b vision
 # Update the pytorch, vision, and pytorch/xla repos.
-git sync -b pytorch
+git sync-main -b pytorch
 # See the usage of the command.
-git sync -h
+git sync-main -h
 ```
 
 ### Running git Manually
