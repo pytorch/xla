@@ -330,8 +330,8 @@ the PR.
 ## Updating Forked Repos
 
 From time to time, you'll need to bring your forked repos up to date with
-the original (aka upstream) repos. You can do this either by using a
-convenience script, or by manually running `git` commands.
+the upstream repos. You can do this either by using a convenience script,
+or by manually running `git` commands.
 
 ### Using the Convenience Script
 
