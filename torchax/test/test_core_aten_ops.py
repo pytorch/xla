@@ -4528,8 +4528,11 @@ class TestCoreAtenOps(unittest.TestCase):
     cpu_tensor = torch.tensor([1, 2, 3])
 
     with self.env:
-      xla_tensor = torch.tensor([0, 0, 0])
+      xla_tensor = torch.tensor([0, 0, 0], device='jax')
       xla_tensor.copy_(cpu_tensor)
+      self.assertEqual(xla_tensor.tolist(), cpu_tensor.tolist())
+      self.assertIsInstance(xla_tensor, tensor.Tensor)
+      self.assertEqual(xla_tensor.device.type, 'jax')
 
 
 if __name__ == "__main__":
