@@ -1248,7 +1248,15 @@ def _aten_relu(self):
 
 @op(torch.ops.aten.cat)
 def _aten_cat(tensors, dims=0):
-  return jnp.concatenate(tensors, dims)
+  # handle empty tensors as a special case.
+  # torch.cat will ignore the empty tensor, while jnp.concatenate
+  # will error if the dims > 0.
+  filtered_tensors = [
+      t for t in tensors if not (t.ndim == 1 and t.shape[0] == 0)
+  ]
+  if filtered_tensors:
+    return jnp.concatenate(filtered_tensors, dims)
+  return tensors[0]
 
 
 def _ceil_mode_padding(
