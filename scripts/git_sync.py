@@ -60,9 +60,10 @@ def sync_repo(repo: str) -> bool:
   # If there are untracked files, ask the user to commit/stash them and retry.
   untracked_files = os.popen(
       'git ls-files --others --exclude-standard').read().strip().split('\n')
+  untracked_files = ', '.join(sorted(untracked_files))
   if untracked_files:
     logger.error(
-        f'The local {repo} repo has untracked files ({", ".join(sorted(untracked_files))}). Do you want to commit/stash them and retry?'
+        f'The local {repo} repo has untracked files ({untracked_files}). Do you want to commit/stash them and retry?'
     )
     return False
 
