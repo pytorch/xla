@@ -5453,6 +5453,7 @@ def linear(input, weight, bias=None):
     res += bias
   return res
 
+
 @op(torch.ops.aten.kthvalue)
 def kthvalue(input, k, dim=None, keepdim=False, *, out=None):
   if input.ndim == 0:
@@ -5463,11 +5464,8 @@ def kthvalue(input, k, dim=None, keepdim=False, *, out=None):
   while dimension < 0:
     dimension = dimension + input.ndim
   values = jax.lax.index_in_dim(
-    jnp.partition(input, k-1, dimension), k-1, dimension, keepdim
-  )
+      jnp.partition(input, k - 1, dimension), k - 1, dimension, keepdim)
   indices = jax.lax.index_in_dim(
-    jnp.argpartition(input, k-1, dimension).astype('int64'),
-    k-1, dimension, keepdim
-  )
+      jnp.argpartition(input, k - 1, dimension).astype('int64'), k - 1,
+      dimension, keepdim)
   return values, indices
-
