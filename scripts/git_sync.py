@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Updates the default branches of local git repos to match upstream.
+"""Updates the default branches of local and forked repos to match upstream.
 
-For convenience, you can set up a `git sync` alias to run this script by:
+Before using this script for the first time, please set up a `git sync` alias
+by running this once:
 
   git config alias.sync '!scripts/git_sync.py'
-
-(you only need to do this once).
 """
 
 import argparse
@@ -24,9 +23,6 @@ _TORCH_XLA_REPO = 'torch_xla'
 _PTXLA_DIR = os.path.abspath(os.path.dirname(__file__) + '/..')
 _PYTORCH_DIR = os.path.abspath(_PTXLA_DIR + '/..')
 _VISION_DIR = os.path.abspath(_PYTORCH_DIR + '/../vision')
-
-# Path of this script, relative to the torch_xla repo root.
-_SCRIPT_REL_PATH = os.path.abspath(__file__)[len(_PTXLA_DIR) + 1:]
 
 
 def sync_repo(repo: str) -> bool:
@@ -106,7 +102,7 @@ def sync_repo(repo: str) -> bool:
     # the fork to make it in sync with the official repo.
     if official_repo_remote != 'origin':
       logger.info(
-          f'Pushing the changes to the "origin" remote of the {repo} repo. Please touch the security key when prompted...'
+          f'Pushing the changes to the "origin" remote of the {repo} repo...'
       )
       if os.system(f'git push origin {default_branch}') != 0:
         logger.error(
@@ -141,7 +137,7 @@ def main() -> None:
     sys.exit(1)
 
   arg_parser = argparse.ArgumentParser(
-      prog=_SCRIPT_REL_PATH, description=__doc__)
+      prog='git sync', description=__doc__)
   arg_parser.add_argument(
       '--base_repo',
       '-b',
