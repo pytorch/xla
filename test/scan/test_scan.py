@@ -16,6 +16,7 @@ from torch_xla.experimental.scan import scan, value_and_grad_partitioned, tree_f
 parent_folder = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(parent_folder)
 from test_utils import XlaTestCase  # type:ignore
+from absl.testing import parameterized
 
 
 def _loopy_scan(fn, init, xs):
@@ -45,6 +46,8 @@ class TestBase(XlaTestCase):
   def setUp(self):
     super().setUp()
     self.device = torch_xla.device()
+    # Clear the scan computation cache before each test to avoid cross-test contamination.
+    scan_module._SCAN_COMPUTATION_CACHE.clear()
 
   def compare_pytree(self, expected_pytree, actual_pytree):
     flat_expected_pytree, expected_spec = tree_flatten(expected_pytree)
@@ -60,13 +63,14 @@ class TestBase(XlaTestCase):
     super().compareResults(flat_expected_pytree, flat_actual_pytree)
 
 
-class ScanTest(TestBase):
+class ScanTest(TestBase, parameterized.TestCase):
 
   def run_test(self,
                fn,
                init: PyTree,
                xs: PyTree,
-               partition_fn=default_partition):
+               partition_fn=default_partition,
+               is_fn_pure: bool = True):
     """Compares the result of scanning with `fn` with our optimized HLO implementation
     against a for loop implementation. Checks both output values and gradients.
     """
@@ -79,7 +83,12 @@ class ScanTest(TestBase):
     # Actual output
     init_scan = tree_map(dupe, init)
     xs_scan = tree_map(dupe, xs)
-    final_carry, ys = scan(fn, init_scan, xs_scan, partition_fn=partition_fn)
+    final_carry, ys = scan(
+        fn,
+        init_scan,
+        xs_scan,
+        partition_fn=partition_fn,
+        is_fn_pure=is_fn_pure)
     # Add up all leaves and `backward()` once.
     (squish(final_carry) + squish(ys)).backward()
     torch_xla.sync()
@@ -106,7 +115,8 @@ class ScanTest(TestBase):
 
     return final_carry, ys
 
-  def test_scan_simple(self):
+  @parameterized.parameters(True, False)
+  def test_scan_simple(self, is_fn_pure: bool):
     """This test uses `scan` to implement `torch.cumsum`."""
 
     def step_fn(carry, x):
@@ -118,7 +128,7 @@ class ScanTest(TestBase):
     xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
                       requires_grad=True,
                       device=self.device)
-    final_carry, ys = self.run_test(step_fn, init, xs)
+    final_carry, ys = self.run_test(step_fn, init, xs, is_fn_pure=is_fn_pure)
 
     # Also ensure that our loop-based scan is correct, with manual checks
     # that replicate the step_fn.
@@ -141,7 +151,8 @@ class ScanTest(TestBase):
     with self.assertRaises(ValueError):
       scan(lambda a, b: (a, b), init, (xs_1, xs_2))
 
-  def test_scan_tuples(self):
+  @parameterized.parameters(True, False)
+  def test_scan_tuples(self, is_fn_pure: bool):
     """Test scanning over the leading axis of a tuple of tensors simultaneously,
     which is a simple PyTree."""
 
@@ -164,9 +175,10 @@ class ScanTest(TestBase):
                        requires_grad=True,
                        device=self.device))
 
-    self.run_test(fn, init, xs)
+    self.run_test(fn, init, xs, is_fn_pure=is_fn_pure)
 
-  def test_scan_create_tensors(self):
+  @parameterized.parameters(True, False)
+  def test_scan_create_tensors(self, is_fn_pure: bool):
     """Test scanning over a function that internally creates tensors."""
 
     def fn(carry, x):
@@ -178,7 +190,7 @@ class ScanTest(TestBase):
     xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
                       requires_grad=True,
                       device=self.device)
-    self.run_test(fn, init, xs)
+    self.run_test(fn, init, xs, is_fn_pure=is_fn_pure)
 
   def test_scan_create_tensors_no_transfers_from_device(self):
     """Test that scanning over a function that internally creates tensors
@@ -221,7 +233,8 @@ class ScanTest(TestBase):
                       device=self.device)
     self.run_test(fn, init, xs)
 
-  def test_scan_input_output_aliases_carry(self):
+  @parameterized.parameters(True, False)
+  def test_scan_input_output_aliases_carry(self, is_fn_pure: bool):
     """
     Test scan still works when a fn output aliases its carry input.
     """
@@ -233,9 +246,10 @@ class ScanTest(TestBase):
     xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
                       requires_grad=True,
                       device=self.device)
-    self.run_test(fn, init, xs)
+    self.run_test(fn, init, xs, is_fn_pure=is_fn_pure)
 
-  def test_scan_input_output_aliases_x(self):
+  @parameterized.parameters(True, False)
+  def test_scan_input_output_aliases_x(self, is_fn_pure: bool):
     """
     Test scan still works when a fn output aliases its x input.
     """
@@ -247,7 +261,7 @@ class ScanTest(TestBase):
     xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
                       requires_grad=True,
                       device=self.device)
-    self.run_test(fn, init, xs)
+    self.run_test(fn, init, xs, is_fn_pure=is_fn_pure)
 
   def test_scan_input_in_place_mutation(self):
     """
@@ -289,7 +303,8 @@ class ScanTest(TestBase):
     with self.assertRaisesRegex(AssertionError, "FakeTensor"):
       scan(step_fn, init, xs)
 
-  def test_scan_gradness(self):
+  @parameterized.parameters(True, False)
+  def test_scan_gradness(self, is_fn_pure: bool):
     """
     Test the gradient output of `scan` when various inputs require or doesn't
     require gradients.
@@ -308,7 +323,7 @@ class ScanTest(TestBase):
       xs = torch.tensor([[2.0, 3.0], [4.0, 5.0], [6.0, 7.0]],
                         requires_grad=xs_requires_grad,
                         device=self.device)
-      self.run_test(fn, init, xs)
+      self.run_test(fn, init, xs, is_fn_pure=is_fn_pure)
 
     test_case(True, True)
     test_case(True, False)
@@ -445,7 +460,8 @@ class ScanTest(TestBase):
     self.assertEqual(bf16_ys.dtype, torch.bfloat16)
     self.assertEqual(f32_ys.dtype, torch.float32)
 
-  def test_scan_activation_aliases_input(self):
+  @parameterized.parameters(True, False)
+  def test_scan_activation_aliases_input(self, is_fn_pure: bool):
     """Test that if an intermediate activation of fn aliases an input,
     we directly save the input tensor into the context object, instead of
     indexing into the leading dimension during the while loop and copying
@@ -470,7 +486,7 @@ class ScanTest(TestBase):
 
     # Intercept the tensors stored in the context object.
     with torch.autograd.graph.saved_tensors_hooks(pack, unpack):
-      final_carry, ys = scan(fn, carry, xs)
+      final_carry, ys = scan(fn, carry, xs, is_fn_pure=is_fn_pure)
       ys.sum().backward()
       torch_xla.sync()
 
@@ -491,15 +507,20 @@ class ScanTest(TestBase):
     """
     Test that the computation cache is populated correctly.
     """
+    fn1_call_count = 0
 
     def fn1(carry, x):
+      nonlocal fn1_call_count
+      fn1_call_count += 1
       return carry + x, x
 
     init = torch.tensor([0.0, 0.0], device=self.device)
     xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
                       device=self.device,
                       requires_grad=True)
-    scan(fn1, init, xs)
+
+    for _ in range(10):
+      scan(fn1, init, xs)
 
     cache = scan_module._SCAN_COMPUTATION_CACHE
 
@@ -509,6 +530,10 @@ class ScanTest(TestBase):
     # Inspect the second-level cache for my_scan_fn
     second_level_cache = cache[fn1]
     assert len(second_level_cache) > 0, "Second-level cache should not be empty"
+
+    # Check if the number of calls to fn1 is 1.
+    assert fn1_call_count == 2, \
+        "fn1 should be called only twice (one for constructing forward graph and one for constructing backward graph), but was called " + str(fn1_call_count)
 
     # You can further inspect the contents of the second-level cache if needed
     for key, value in second_level_cache.items():
