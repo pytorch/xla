@@ -1,6 +1,7 @@
 from train_resnet_base import TrainResNetBase
 
 import itertools
+import time
 
 import torch_xla
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -33,4 +34,8 @@ class TrainResNetXLAAMP(TrainResNetBase):
 
 if __name__ == '__main__':
   xla_amp = TrainResNetXLAAMP()
+
+  start_time = time.time()
   xla_amp.start_training()
+  end_time = time.time()
+  print(f"Finished training in {end_time - start_time:.3f}s")

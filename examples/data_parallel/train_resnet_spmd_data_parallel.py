@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 example_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(example_folder)
 from train_resnet_base import TrainResNetBase
@@ -46,4 +47,8 @@ class TrainResNetXLASpmdDDP(TrainResNetBase):
 
 if __name__ == '__main__':
   spmd_ddp = TrainResNetXLASpmdDDP()
+
+  start_time = time.time()
   spmd_ddp.start_training()
+  end_time = time.time()
+  print(f"Finished training in {end_time - start_time:.3f}s")
