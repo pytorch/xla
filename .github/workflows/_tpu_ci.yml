@@ -6,7 +6,7 @@ on:
         required: false
         type: number
         description: Timeout in minutes for the job run
-        default: 120
+        default: 75  # Takes ~40m as of 2025/5/30.
       has_code_changes:
         required: false
         type: string
@@ -24,6 +24,7 @@ jobs:
           - test/tpu/run_expensive_test_1.sh
           - test/tpu/run_expensive_test_2.sh
           - test/tpu/run_pallas_test.sh
+          - test/tpu/run_training_tests.sh
     steps:
       - name: Checkout actions
         if: inputs.has_code_changes == 'true'

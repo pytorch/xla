@@ -53,7 +53,7 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
                       syncfree_optim_cls,
                       ref_optim_cls,
                       optim_kwargs={'lr': 1e-2}):
-    device = xm.xla_device()
+    device = torch_xla.device()
     loss_fn = nn.NLLLoss()
     # syncfree model
     torch.manual_seed(0)

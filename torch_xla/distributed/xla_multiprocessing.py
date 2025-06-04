@@ -56,7 +56,7 @@ class MpModelWrapper(object):
     WRAPPED_MODEL = xmp.MpModelWrapper(MyNetwork())
 
     def _mp_fn(index, ...):
-      device = xm.xla_device()
+      device = torch_xla.device()
       model = WRAPPED_MODEL.to(device)
       ...
 

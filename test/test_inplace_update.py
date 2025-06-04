@@ -11,7 +11,7 @@ from test_utils import temporary_env
 class InplaceUpdateTest(unittest.TestCase):
 
   def test_aten_op_after_full_update(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t = torch.ones(2, 1, device=device)
     w = torch.ones(1, 2, device=device)
     t.zero_()
@@ -21,7 +21,7 @@ class InplaceUpdateTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(y, expected)))
 
   def test_aten_op_after_partial_update(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t = torch.ones(2, 1, device=device)
     w = torch.ones(1, 2, device=device)
     t[0][0] = 0
@@ -31,7 +31,7 @@ class InplaceUpdateTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(y, expected)))
 
   def test_non_aten_op_after_full_update(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t = torch.ones(2, 1, device=device)
     w = torch.ones(1, 2, device=device)
     t.zero_()
@@ -41,7 +41,7 @@ class InplaceUpdateTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(y, expected)))
 
   def test_non_aten_op_after_partial_update(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t = torch.ones(2, 1, device=device)
     w = torch.ones(1, 2, device=device)
     t[0][0] = 0
@@ -53,7 +53,7 @@ class InplaceUpdateTest(unittest.TestCase):
   def test_xm_save(self):
     with temporary_env(
         XLA_DISABLE_FUNCTIONALIZATION="0", XLA_ENABLE_PARAM_ALIASING="0"):
-      xla_device = xm.xla_device()
+      xla_device = torch_xla.device()
       t1 = torch.tensor([1], device=xla_device)
       t2 = t1.detach()
       torch_xla.sync()

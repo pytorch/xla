@@ -1232,7 +1232,7 @@ void BuildLoweringContextSubmodule(py::module* m) {
    *     import torch_xla
    *     import torch_xla.core.xla_model as xm
    *
-   *     device = xm.xla_device()
+   *     device = torch_xla.device()
    *     example = torch.tensor([1.0, 2.0, 3.0, 4.0], device=device)
    *
    *     def network(x):
@@ -1487,8 +1487,11 @@ void InitXlaModuleBindings(py::module m) {
     if (UseVirtualDevice()) {
       return 1;
     } else {
-      return runtime::GetComputationClient()->GetNumDevices();
+      return runtime::GetComputationClient()->GetNumLocalDevices();
     }
+  });
+  m.def("_xla_num_global_devices", []() -> int64_t {
+    return runtime::GetComputationClient()->GetNumDevices();
   });
   m.def("_xla_get_all_devices", []() {
     std::vector<std::string> all_devices =
@@ -1505,7 +1508,7 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_runtime_devices",
         []() { return runtime::GetComputationClient()->GetLocalDevices(); });
   m.def("_xla_num_runtime_devices", []() -> int64_t {
-    return runtime::GetComputationClient()->GetNumDevices();
+    return runtime::GetComputationClient()->GetNumLocalDevices();
   });
   m.def("_xla_get_all_runtime_devices", []() {
     std::vector<std::string> all_devices =

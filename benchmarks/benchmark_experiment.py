@@ -208,7 +208,7 @@ class BenchmarkExperiment:
   def get_device(self):
     if self.torch_xla2:
       # Initiate the model in CPU first for xla2. We will move the model to jax device later.
-      # This is because we don't have xm.xla_device() function in torch_xla2.
+      # This is because we don't have torch_xla.device() function in torch_xla2.
       return torch.device("cpu")
     if self.xla:
       return xm.xla_device(devkind=self.accelerator.upper())

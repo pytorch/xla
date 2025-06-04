@@ -55,7 +55,7 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
       drop_last=True,
       generator=rng)
 
-  device = xm.xla_device()
+  device = torch_xla.device()
   model = AutoModelForSequenceClassification.from_pretrained(
       'google-bert/bert-base-cased', num_labels=5)
   model.to(device)

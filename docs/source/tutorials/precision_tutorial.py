@@ -168,9 +168,9 @@ def fp32_to_binary_fraction(fp32_float: float) -> str:
 
 def get_rand_matrix():
   """Returns a diagonal matrix of shape 1024, 1024, values between 0.999 and 1.111"""
-  eye = torch.eye(1024, dtype=torch.float32, device="xla")
+  eye = torch.eye(1024, dtype=torch.float32, device='xla')
   rand_ = torch.rand(
-      (1024, 1024), dtype=torch.float32, device="xla") * 0.2 + 0.9
+      (1024, 1024), dtype=torch.float32, device='xla') * 0.2 + 0.9
   result = eye * rand_
   assert torch.nonzero(result).size(0) == 1024, torch.nonzero(result).size(0)
   return result

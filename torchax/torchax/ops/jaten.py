@@ -125,8 +125,14 @@ def _aten_add(x, y, *, alpha=1):
   return res
 
 
-@op(torch.ops.aten.copy_, is_jax_function=False, is_view_op=True)
-def _aten_copy(x, y, memory_format=None):
+@op(torch.ops.aten.copy_,
+    is_jax_function=False,
+    is_view_op=True,
+    needs_env=True)
+def _aten_copy(x, y, memory_format=None, env=None):
+
+  if y.device.type == 'cpu':
+    y = env.to_xla(y)
 
   if isinstance(x, View):
     x.update(y)
@@ -1248,7 +1254,15 @@ def _aten_relu(self):
 
 @op(torch.ops.aten.cat)
 def _aten_cat(tensors, dims=0):
-  return jnp.concatenate(tensors, dims)
+  # handle empty tensors as a special case.
+  # torch.cat will ignore the empty tensor, while jnp.concatenate
+  # will error if the dims > 0.
+  filtered_tensors = [
+      t for t in tensors if not (t.ndim == 1 and t.shape[0] == 0)
+  ]
+  if filtered_tensors:
+    return jnp.concatenate(filtered_tensors, dims)
+  return tensors[0]
 
 
 def _ceil_mode_padding(

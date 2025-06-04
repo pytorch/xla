@@ -282,7 +282,7 @@ class TestAutocastBase(unittest.TestCase):
       add_kwargs = {}
 
     self.assertFalse(self.is_autocast_enabled())
-    with autocast(xm.xla_device(), dtype=autocast_dtype):
+    with autocast(torch_xla.device(), dtype=autocast_dtype):
       self.assertTrue(self.is_autocast_enabled())
 
       out_type = out_type if out_type is not None else run_as_type
@@ -332,7 +332,7 @@ class TestAutocastBase(unittest.TestCase):
       # Compare numerics to Python-side "autocasting" that (we expect) does the same thing
       # as the C++-side autocasting, and should be bitwise accurate.
       output_to_compare = output if output is not None else output_method
-      with autocast(xm.xla_device(), enabled=False):
+      with autocast(torch_xla.device(), enabled=False):
         self.assertFalse(self.is_autocast_enabled())
 
         if module is not None and hasattr(module, op):
@@ -348,98 +348,13 @@ class TestAutocastBase(unittest.TestCase):
     self.assertFalse(self.is_autocast_enabled())
 
 
-@unittest.skipIf(not xm.get_xla_supported_devices("CUDA"),
-                 f"CUDA autocast test.")
-class TestAutocastCuda(TestAutocastBase):
-
-  @classmethod
-  def setUpClass(cls):
-    super().setUpClass()
-    cls.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
-    cls.autocast_lists_extra = AutocastCudaTestExtraLists(
-        torch.device(xm.xla_device()))
-    cls.autocast_unsupported_lists = AutocastCudaTestUnsupportedLists()
-
-  def setUp(self):
-    super(TestAutocastCuda, self).setUp()
-    self.is_autocast_enabled = torch.is_autocast_xla_enabled
-
-  def test_autocast_nn_fp16(self):
-    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
-      for op, args in TestAutocastCuda.get_autocast_list('nn_fp16'):
-        self._run_autocast_outofplace(
-            op, args, torch.float16, module=torch._C._nn)
-
-  def test_autocast_linalg_fp16(self):
-    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
-      for op, args in TestAutocastCuda.get_autocast_list('linalg_fp16'):
-        self._run_autocast_outofplace(
-            op, args, torch.float16, module=torch._C._linalg)
-
-  def test_autocast_methods_fp16(self):
-    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
-      for op, args in TestAutocastCuda.get_autocast_list('methods_fp16'):
-        self._run_autocast_outofplace(op, args, torch.float16, module=None)
-
-  def test_autocast_banned(self):
-    with torch.cuda.amp.autocast():
-      for op, args, module in TestAutocastCuda.get_autocast_list('banned'):
-        with self.assertRaises(RuntimeError):
-          getattr(module, op)(*args)
-
-  def test_autocast_torch_fp32(self):
-    for op_with_args in TestAutocastCuda.get_autocast_list('torch_fp32'):
-      op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
-      self._run_autocast_outofplace(
-          op, args, torch.float32, add_kwargs=maybe_kwargs)
-
-  def test_autocast_torch_bf16(self):
-    bf16_test_list = [
-        tp
-        for tp in getattr(TestAutocastCuda.autocast_lists_extra, 'torch_bf16')
-    ]
-    for op_with_args in bf16_test_list:
-      op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
-      self._run_autocast_outofplace(
-          op,
-          args,
-          torch.bfloat16,
-          add_kwargs=maybe_kwargs,
-          autocast_dtype=torch.bfloat16)
-
-  def test_autocast_torch_need_autocast_promote(self):
-    for op, args in TestAutocastCuda.get_autocast_list(
-        'torch_need_autocast_promote'):
-      self._run_autocast_outofplace(op, args, torch.float32)
-
-  def test_autocast_torch_expect_builtin_promote(self):
-    for op, args, out_type in TestAutocastCuda.get_autocast_list(
-        'torch_expect_builtin_promote'):
-      self._run_autocast_outofplace(op, args, torch.float32, out_type=out_type)
-
-  def test_autocast_nn_fp32(self):
-    for op, args in TestAutocastCuda.get_autocast_list('nn_fp32'):
-      self._run_autocast_outofplace(
-          op, args, torch.float32, module=torch._C._nn)
-
-  def test_autocast_methods_fp32(self):
-    for op, args in TestAutocastCuda.get_autocast_list('methods_fp32'):
-      self._run_autocast_outofplace(op, args, torch.float32, module=None)
-
-  def test_autocast_methods_expect_builtin_promote(self):
-    for op, args, out_type in TestAutocastCuda.get_autocast_list(
-        'methods_expect_builtin_promote'):
-      self._run_autocast_outofplace(
-          op, args, torch.float32, module=None, out_type=out_type)
-
-
 @unittest.skipIf(not xm.get_xla_supported_devices("TPU"), f"TPU autocast test.")
 class TestAutocastTPU(TestAutocastBase):
 
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
-    cls.autocast_lists = AutocastTPUTestLists(torch.device(xm.xla_device()))
+    cls.autocast_lists = AutocastTPUTestLists(torch.device(torch_xla.device()))
 
   def setUp(self):
     super(TestAutocastTPU, self).setUp()
@@ -481,30 +396,18 @@ class TestAutocastTPU(TestAutocastBase):
           op, args, torch.float32, module=None, out_type=out_type)
 
   def test_autocast_tpu_check_dtype(self):
-    with autocast(xm.xla_device(), dtype=torch.float16):
+    with autocast(torch_xla.device(), dtype=torch.float16):
       assert not torch.is_autocast_xla_enabled()
 
 
 class TestOtherOps(unittest.TestCase):
-
-  @unittest.skipIf(
-      not xm.get_xla_supported_devices("GPU"),
-      "the behavior of batch_norm autocast on GPU is different from others")
-  def test_batch_norm_gpu(self):
-    device = xm.xla_device()
-    data = torch.randn(4, 16, 32, 32, device=device, dtype=torch.bfloat16)
-    batch_norm = torch.nn.BatchNorm2d(16)
-    with autocast(device, dtype=torch.bfloat16):
-      output = batch_norm(data)
-    torch_xla.sync()
-    self.assertEqual(output.dtype, torch.bfloat16)
 
   # On TPU, the input of batch norm is casted into fp32, see torch_xla/csrc/autocast_mode.cpp
   @unittest.skipIf(
       not xm.get_xla_supported_devices("TPU"),
       "the behavior of batch_norm autocast on TPU is different from others")
   def test_batch_norm_tpu(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     data = torch.randn(4, 16, 32, 32, device=device, dtype=torch.bfloat16)
     batch_norm = torch.nn.BatchNorm2d(16)
     with autocast(device, dtype=torch.bfloat16):

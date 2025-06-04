@@ -5,6 +5,7 @@ import unittest
 
 import torch
 import torch.nn.functional as F
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_marker
 from torch.utils import _pytree as pytree
@@ -70,7 +71,7 @@ class XlaMarkPatternTest(unittest.TestCase):
 
   def run_func_get_stablehlo(self, f, input_args):
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     input_args = pytree.tree_map_only(torch.Tensor,
                                       lambda x: x.to(device=device), input_args)
     exported = torch.export.export(AsModule(f), input_args)

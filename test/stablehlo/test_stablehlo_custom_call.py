@@ -118,7 +118,7 @@ class StableHLOCustomCallExportTest(unittest.TestCase):
     # self.assertTrue("api_version = 1" in shlo_text)
 
   def test_place_to_host_device(self):
-    dev = xm.xla_device()
+    dev = torch_xla.device()
     a = torch.ones(10, device=dev)
     b = place_to_host(a)
     shlo_text = xm.get_stablehlo([b])
@@ -137,7 +137,7 @@ class StableHLOCustomCallExportTest(unittest.TestCase):
 
   def test_place_to_host_device_autograd(self):
     # Test that gradient can flow through place_to_host and place_to_device ops.
-    dev = xm.xla_device()
+    dev = torch_xla.device()
     a = torch.ones(10, device=dev, requires_grad=True)
     b = place_to_host(a)
     c = b.sum()
@@ -155,7 +155,7 @@ class StableHLOCustomCallExportTest(unittest.TestCase):
     # specifically `aot_function`.
     from functorch.compile import aot_function, make_boxed_func  # type: ignore
 
-    dev = xm.xla_device()
+    dev = torch_xla.device()
     a = torch.ones(10, device=dev, requires_grad=True)
 
     def my_fn(x):
