@@ -32,6 +32,28 @@ def get_uncommitted_changed_added_files() -> set[str]:
   return files
 
 
+def get_committed_changed_added_files() -> set[str]:
+  """Gets the list of changed or added files that are committed locally.
+   
+  These are the files that are committed in the local branch but not jyet
+  merged to the origin/master branch.
+  """
+
+  # Each line is a filepath.
+  lines = os.popen(
+      # --name-only : include filepaths only in the output.
+      # --diff-filter=AM : include only added (A) or modified (M) files.
+      # --no-renames : if a file is renamed, treat it as a deleted file and
+      #     an added file, so that the added file will be included in the
+      #     result.
+      # origin/master...HEAD : compare the local branch HEAD with
+      #     origin/master, showing changes that exist on your local branch
+      #     but not on origin/master.
+      'git diff --name-only --diff-filter=AM --no-renames origin/master...HEAD'
+  ).read().strip().split('\n')
+  return set(lines)
+
+
 def get_cplusplus_files(files: set[str]) -> set[str]:
   """Filters the given list of files and returns the C++ files."""
 
@@ -125,7 +147,8 @@ def format_python_files(files: set[str]) -> bool:
 
 def main() -> None:
   os.chdir(_PTXLA_DIR)
-  files = get_uncommitted_changed_added_files()
+  files = get_uncommitted_changed_added_files(
+  ) | get_committed_changed_added_files()
 
   # We don't use `format_cplusplus_files(...) and format_python_files(...)` as
   # we don't want shortcircuiting.
