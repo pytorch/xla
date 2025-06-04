@@ -877,7 +877,7 @@ class PallasTest(parameterized.TestCase):
         use_dynamo=False,
     )
 
-  def _test_quantized_matmul(
+  def _test_quantized_matmul_int8(
       self,
       dtype,
       bs,
@@ -918,10 +918,10 @@ class PallasTest(parameterized.TestCase):
     scalar_xla = scalar.to("xla")
     if use_dynamo:
 
-      def quantized_matmul_wrapper(x, w_int, scalar, quantize_activation,
-                                   batch_block_size, out_block_size,
-                                   in_block_size):
-        return torch.ops.xla.quantized_matmul(
+      def quantized_matmul_int8_wrapper(x, w_int, scalar, quantize_activation,
+                                        batch_block_size, out_block_size,
+                                        in_block_size):
+        return torch.ops.xla.quantized_matmul_int8(
             x,
             w_int,
             scalar,
@@ -930,13 +930,13 @@ class PallasTest(parameterized.TestCase):
             out_block_size=out_block_size,
             in_block_size=in_block_size)
 
-      quantized_matmul = torch.compile(
-          quantized_matmul_wrapper, backend="openxla")
+      quantized_matmul_int8 = torch.compile(
+          quantized_matmul_int8_wrapper, backend="openxla")
     else:
-      from torch_xla.experimental.custom_kernel import quantized_matmul
-      quantized_matmul = quantized_matmul
+      from torch_xla.experimental.custom_kernel import quantized_matmul_int8
+      quantized_matmul_int8 = quantized_matmul_int8
 
-    actual = quantized_matmul(
+    actual = quantized_matmul_int8(
         x_xla,
         w_int_xla,
         scalar_xla,
@@ -960,7 +960,7 @@ class PallasTest(parameterized.TestCase):
   )
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 5,
                    "This test only works on TPUv5+.")
-  def test_quantized_matmul_wrapper(
+  def test_quantized_matmul_int8_wrapper(
       self,
       dtype,
       bs,
@@ -971,7 +971,7 @@ class PallasTest(parameterized.TestCase):
       use_dynamo,
   ):
     batch_block_size, out_block_size, in_block_size = kernel_block_sizes
-    self._test_quantized_matmul(
+    self._test_quantized_matmul_int8(
         dtype,
         bs,
         n_input_features,
