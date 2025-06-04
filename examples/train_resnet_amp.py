@@ -1,7 +1,9 @@
 from train_resnet_base import TrainResNetBase
 
 import itertools
+import time
 
+import torch_xla
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.core.xla_model as xm
 from torch_xla.amp import autocast
@@ -17,7 +19,7 @@ class TrainResNetXLAAMP(TrainResNetBase):
     for step, (data, target) in enumerate(loader):
       self.optimizer.zero_grad()
       # Enables autocasting for the forward pass
-      with autocast(xm.xla_device()):
+      with autocast(torch_xla.device()):
         output = self.model(data)
         loss = self.loss_fn(output, target)
       # TPU amp uses bf16 hence gradient scaling is not necessary. If runnign with XLA:GPU
@@ -32,4 +34,8 @@ class TrainResNetXLAAMP(TrainResNetBase):
 
 if __name__ == '__main__':
   xla_amp = TrainResNetXLAAMP()
+
+  start_time = time.time()
   xla_amp.start_training()
+  end_time = time.time()
+  print(f"Finished training in {end_time - start_time:.3f}s")

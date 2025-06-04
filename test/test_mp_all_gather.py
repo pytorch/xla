@@ -11,14 +11,14 @@ def all_gather(tensor, dim):
 
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
   world_size = xr.world_size()
   input_list_size = 5
   if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):
     # Testing with a single replica group
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = xm.all_gather(ordinal_tensor, dim=0)
-    xm.mark_step()
+    torch_xla.sync()
 
     cpu_result = result.cpu()
     expected = torch.arange(0, world_size, dtype=torch.float)

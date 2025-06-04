@@ -54,23 +54,17 @@ jobs:
         shell: bash
         run: |
           export JAX_PLATFORMS=cpu
-          pytest test/test_conv.py
-          pytest test/test_unbounded_dynamism.py
-          pytest test/test_interop.py
-          pytest test/test_ops.py
-          pytest test/test_context.py
-          pytest test/test_train.py
-          pytest test/test_mutations.py
-          # pytest test/test_tf_integration.py # TODO(8770)
-          pytest test/gemma/test_gemma.py
-          pytest test/llama/test_llama.py
-          pytest test/test_core_aten_ops.py
-          pytest test/test_functions.py
-          pytest test/test_libraries.py
-          pytest test/test_symbolic_shapes.py
-          pytest test/test_exports.py
-          pytest test/test_view.py
-          pytest test/test_util.py
+          # Find all Python test files recursively
+          find ./test -name "test_*.py" -type f | while IFS= read -r test_file; do
+            # Skip tests with known issues
+            if [[ "$test_file" == *"test_tf_integration.py"* ]]; then
+              echo "Skipping ${test_file}. TODO(https://github.com/pytorch/xla/issues/8770): Investigate"
+              continue
+            fi
+            echo "Running tests for $test_file"
+            pytest "$test_file"
+          done
+          # Run distributed tests.
           XLA_FLAGS=--xla_force_host_platform_device_count=4 pytest -n 0 test_dist/
           echo "Tests completed."
       - name: Report no code changes

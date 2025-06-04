@@ -14,6 +14,7 @@ from torch_xla._internal.jax_workarounds import requires_jax
 from torch_xla._internal.jax_workarounds import jax_import_guard  # noqa: F401, pylint: disable=unused-import
 
 from typing import Any, List, Callable, Optional, Tuple, Dict
+import torch_xla.core.xla_builder as xb
 from torch_xla.core.xla_model import XLA_LIB
 
 _XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
@@ -182,6 +183,12 @@ def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
     return jnp.int8
   elif dtype == torch.uint8:
     return jnp.uint8
+  elif dtype == torch.float8_e5m2:
+    return jnp.float8_e5m2
+  elif dtype == torch.float8_e4m3fn:
+    return jnp.float8_e4m3fn
+  elif dtype == torch.float8_e4m3fnuz:
+    return jnp.float8_e4m3fnuz
   else:
     raise ValueError(f"Unsupported dtype: {dtype}")
 
@@ -900,6 +907,8 @@ def _ragged_paged_attention_nonkernel(
     page_indices,  # i32[max_num_seqs, pages_per_seq]
     cu_q_lens,  # i32[max_num_seqs + 1]
     num_seqs,  # i32[1]
+    k_scale,
+    v_scale,
     *,
     sm_scale=1.0,
     sliding_window: int | None = None,
@@ -926,6 +935,12 @@ def _ragged_paged_attention_nonkernel(
                                               head_dim)[:kv_len]
     v = kv_pages[indices, :, 1::2, :].reshape(-1, num_kv_heads,
                                               head_dim)[:kv_len]
+    if k_scale is not None:
+      k = k.to(torch.float32) * k_scale
+      k = k.to(q.dtype)
+    if v_scale is not None:
+      v = v.to(torch.float32) * v_scale
+      v = v.to(q.dtype)
     k = torch.repeat_interleave(k, num_query_per_kv, dim=1)
     v = torch.repeat_interleave(v, num_query_per_kv, dim=1)
     attn = torch.einsum("qhd,khd->hqk", q, k)
@@ -962,6 +977,8 @@ def ragged_paged_attention(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value=None,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
     use_kernel=True,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
@@ -983,6 +1000,8 @@ def ragged_paged_attention(
         sliding_window=sliding_window,
         soft_cap=soft_cap,
         mask_value=mask_value,
+        k_scale=k_scale,
+        v_scale=v_scale,
     )
 
   # Import JAX within the function such that we don't need to call the jax_import_guard()
@@ -1004,6 +1023,8 @@ def ragged_paged_attention(
       sliding_window=sliding_window,
       soft_cap=soft_cap,
       mask_value=mask_value,
+      k_scale=k_scale,
+      v_scale=v_scale,
       num_kv_pages_per_block=num_kv_pages_per_block,
       num_queries_per_block=num_queries_per_block,
       vmem_limit_bytes=vmem_limit_bytes,
@@ -1015,10 +1036,12 @@ def ragged_paged_attention(
           "num_kv_pages_per_block",
           "num_queries_per_block",
           "vmem_limit_bytes",
+          "k_scale",
+          "v_scale",
       ],
   )
 
-  seq_buf_idx = torch.tensor([0, 0], dtype=torch.int32).to("xla")
+  seq_buf_idx = torch.tensor([0, 0], dtype=torch.int32).to('xla')
   output = torch_xla._XLAC._xla_tpu_custom_call(
       [
           kv_lens,
@@ -1151,8 +1174,8 @@ def multi_queries_paged_attention(
 
   q_dtype_for_kernel_launch = q.dtype
   page_indices_reshaped = page_indices.reshape(-1)
-  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
-  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to('xla')
+  step = torch.zeros((1,), dtype=torch.int32).to('xla')
   q = q.permute(0, 2, 1, 3)
   MIN_BLOCK_SIZE = 128
   output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
@@ -1213,8 +1236,8 @@ def paged_attention(q,
     q_dtype_for_kernel_launch = torch.float32
 
   page_indices_reshaped = page_indices.reshape(-1)
-  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
-  step = torch.ones((1,), dtype=torch.int32).to("xla")
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to('xla')
+  step = torch.ones((1,), dtype=torch.int32).to('xla')
   output_shape = torch.Size(list(q.shape[:-1]) + [1])
 
   output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
@@ -1231,182 +1254,6 @@ def paged_attention(q,
 
   return output.reshape(batch_size, num_heads,
                         head_dim).to(q_dtype_for_kernel_launch)
-
-
-def _calculate_num_tiles(x: int, tx: int) -> int:
-  tiles, rem = divmod(x, tx)
-  if rem:
-    raise ValueError(f"{x} must be divisible by x-dimension tile size ({tx}).")
-  return tiles
-
-
-def _histogram(input: torch.Tensor, min: int, max: int) -> torch.Tensor:
-  """
-  Compute the histogram of a int32 tensor. The bin edges are defined by the min and max values, with step = 1.
-  """
-  assert input.dtype == torch.int32, "input must be of torch.int32 dtype."
-  assert min <= max, "min must be less than or equal to max."
-
-  def searchsorted(sorted_sequence: torch.Tensor,
-                   values_to_search: torch.Tensor) -> torch.Tensor:
-    return (sorted_sequence.unsqueeze(1) == values_to_search).sum(dim=1)
-
-  bin_edges = torch.linspace(
-      min, max, max - min + 1, dtype=input.dtype).to(input.device)
-  return searchsorted(bin_edges, input).to(torch.int32)
-
-
-# Refence: https://github.com/google/jax/blob/main/jax/experimental/pallas/ops/tpu/megablox/gmm.py#L78
-def _make_group_metadata(
-    *,
-    group_sizes: torch.Tensor,
-    m: int,
-    tm: int,
-    visit_empty_groups: bool,
-) -> Any:
-  """Create the metadata needed for grouped matmul computation.
-
-  Args:
-    group_sizes: A 1d, torch.Tensor with shape [num_groups] and torch.int32 dtype.
-    m: The number of rows in lhs.
-    tm: The m-dimension tile size being used.
-    visit_empty_groups: If True, do not squeeze tiles for empty groups out of
-      the metadata. This is necessary for tgmm, where we at least need to zero
-      the output for each group.
-
-  Returns:
-    tuple of:
-      group_offsets: A 1d, torch.Tensor with shape [num_groups + 1] and torch.int32
-        dtype. group_offsets[i] indicates the row at which group [i] starts in
-        the lhs matrix and group_offsets[i-1] = m.
-      group_ids: A 1d, torch.Tensor with shape [m_tiles + num_groups - 1] and
-        torch.int32 dtype. group_ids[i] indicates which group grid index 'i' will
-        work on.
-      m_tile_ids: A 1d, torch.Tensor with shape [m_tiles + num_groups - 1] and
-        torch.int32. m_tile_ids[i] indicates which m-dimension tile grid index 'i'
-        will work on.
-    num_tiles: The number of m-dimension tiles to execute including overlapping
-      executions. And don't confuse this with m_tiles which is m // tm.
-  """
-  assert group_sizes.dtype == torch.int32, "group_sizes must be of torch.int32 dtype."
-
-  device = group_sizes.device
-  num_groups = group_sizes.shape[0]
-
-  # Calculate the offset of each group, starting at zero. This metadata is
-  # similar to row offsets in a CSR matrix. The following properties hold:
-  #
-  # group_offsets.shape = [num_groups + 1]
-  # group_offsets[0] = 0
-  # group_offsets[num_groups] = m
-  #
-  # The row at which group 'i' starts is group_offsets[i].
-  group_ends = torch.cumsum(group_sizes, dim=0, dtype=torch.int32)
-  group_offsets = torch.cat(
-      [torch.zeros(1, dtype=torch.int32).to(device), group_ends])
-
-  # Assign a group id to each grid index.
-  #
-  # If a group starts somewhere other than the start of a tile or ends somewhere
-  # other than the end of a tile we need to compute that full tile. Calculate
-  # the number of tiles for each group by rounding their end up to the nearest
-  # 'tm' and their start down to the nearest 'tm'.
-
-  # (1) Round the group_ends up to the nearest multiple of 'tm'.
-  #
-  # NOTE: This does not change group_offsets[num_groups], which is m
-  # (because we enforce m is divisible by tm).
-  rounded_group_ends = ((group_ends + tm - 1) // tm * tm).to(torch.int32)
-
-  # (2) Round the group_starts down to the nearest multiple of 'tm'.
-  group_starts = torch.cat(
-      [torch.zeros(1, dtype=torch.int32).to(device), group_ends[:-1]])
-  rounded_group_starts = group_starts // tm * tm
-
-  # (3) Calculate the number of rows in each group.
-  #
-  # NOTE: Handle zero-sized groups as a special case. If the start for a
-  # zero-sized group is not divisible by 'tm' its start will be rounded down and
-  # its end will be rounded up such that its size will become 1 tile here.
-  rounded_group_sizes = rounded_group_ends - rounded_group_starts
-  rounded_group_sizes = torch.where(group_sizes == 0, 0, rounded_group_sizes)
-
-  # (4) Convert the group sizes from units of rows to unit of 'tm' sized tiles.
-  #
-  # An m-dimension tile is 'owned' by group 'i' if the first row of the tile
-  # belongs to group 'i'. In addition to owned tiles, each group can have 0 or 1
-  # initial partial tiles if it's first row does not occur in the first row of a
-  # tile. The '0-th' group never has a partial tile because it always starts at
-  # the 0-th row.
-  #
-  # If no group has a partial tile, the total number of tiles is equal to
-  # 'm // tm'. If every group has a partial except the 0-th group, the total
-  # number of tiles is equal to 'm // tm + num_groups - 1'. Thus we know that
-  #
-  # tiles_m <= group_tiles.sum() <= tiles_m + num_groups - 1
-  #
-  # Where tiles_m = m // tm.
-  #
-  # NOTE: All group sizes are divisible by 'tm' because of the rounding in steps
-  # (1) and (2) so this division is exact.
-  group_tiles = rounded_group_sizes // tm
-
-  if visit_empty_groups:
-    # Insert one tile for empty groups.
-    group_tiles = torch.where(group_sizes == 0, 1, group_tiles)
-
-  # Create the group ids for each grid index based on the tile counts for each
-  # group.
-  #
-  # NOTE: This repeat(...) will pad group_ids with the final group id if
-  # group_tiles.sum() < tiles_m + num_groups - 1. The kernel grid will be sized
-  # such that we only execute the necessary number of tiles.
-  tiles_m = _calculate_num_tiles(m, tm)
-
-  group_ids = repeat_with_fixed_output_size(
-      torch.arange(num_groups, dtype=torch.int32).to(device), group_tiles,
-      tiles_m + num_groups - 1)
-
-  # Assign an m-dimension tile id to each grid index.
-  #
-  # NOTE: Output tiles can only be re-visited consecutively. The following
-  # procedure guarantees that m-dimension tile indices respect this.
-
-  # (1) Calculate how many times each m-dimension tile will be visited.
-  #
-  # Each tile is guaranteed to be visited once by the group that owns the tile.
-  # The remaining possible visits occur when a group starts inside of a tile at
-  # a position other than the first row. We can calculate which m-dimension tile
-  # each group starts in by floor-dividing its offset with `tm` and then count
-  # tile visits with a histogram.
-  #
-  # To avoid double counting tile visits from the group that owns the tile,
-  # filter these out by assigning their tile id to `tile_m` (one beyond the max)
-  # such that they're ignored by the subsequent histogram. Also filter out any
-  # group which is empty.
-  #
-  # TODO(tgale): Invert the 'partial_tile_mask' predicates to be more clear.
-  partial_tile_mask = torch.logical_or((group_offsets[:-1] % tm) == 0,
-                                       group_sizes == 0)
-
-  # Explicitly enable tiles for zero sized groups, if specified. This covers
-  # zero sized groups that start on a tile-aligned row and those that do not.
-  if visit_empty_groups:
-    partial_tile_mask = torch.where(group_sizes == 0, False, partial_tile_mask)
-
-  partial_tile_ids = torch.where(partial_tile_mask, tiles_m,
-                                 group_offsets[:-1] // tm)
-
-  tile_visits = (_histogram(partial_tile_ids, min=0, max=tiles_m - 1) + 1)
-
-  # Create the m-dimension tile ids for each grid index based on the visit
-  # counts for each tile.
-  m_tile_ids = repeat_with_fixed_output_size(
-      torch.arange(tiles_m, dtype=torch.int32).to(device), tile_visits,
-      tiles_m + num_groups - 1)
-
-  num_tiles = group_tiles.sum(dtype=torch.int32)
-  return group_offsets, group_ids, m_tile_ids, num_tiles
 
 
 # Repeat the `input` tensor `repeats` number of times. We expect `input` and
@@ -1464,7 +1311,9 @@ def gmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: Tuple[int, int, int] = (512, 512, 512)
+    tiling: Tuple[int, int, int] = (512, 512, 512),
+    group_offset: torch.Tensor | None = None,
+    transpose_rhs: bool = False,
 ) -> torch.Tensor:
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
 
@@ -1473,7 +1322,9 @@ def gmm(
     rhs: A 3d, torch.Tensor with shape [num_groups, k, n].
     group_sizes: A 1d, torch.Tensor with shape [num_groups] and torch.int32 dtype.
     tiling: 3-tuple of ints. The m, k and n-dimension tile sizes.
-
+    group_offset: The group in group sizes to start computing from. This is
+      particularly useful for when rhs num_groups is sharded.
+    transpose_rhs: True if the rhs needs to be transposed.
   Returns:
     A 2d, torch.Tensor with shape [m, n].
   """
@@ -1484,31 +1335,9 @@ def gmm(
   m, k, n = lhs.shape[0], lhs.shape[1], rhs.shape[2]
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
   preferred_element_type = lhs.dtype
-
-  payload, _ = trace_pallas(
-      gmm,
-      lhs,
-      rhs,
-      group_sizes,
-      static_argnames=["tiling", "preferred_element_type"],
-      use_cache=True,
-      preferred_element_type=convert_torch_dtype_to_jax(preferred_element_type),
-      tiling=(tm, tk, tn))
-
-  # Create the metadata we need for computation, and that's why need to separate
-  # the tracing and execution part.
-  group_offsets, group_ids, m_tile_ids, num_tiles = _make_group_metadata(
-      group_sizes=group_sizes,
-      m=m,
-      tm=tm,
-      visit_empty_groups=False,
-  )
-  group_offset_torch = torch.tensor([0], dtype=torch.int32).to(lhs.device)
-
-  return torch_xla._XLAC._xla_tpu_custom_call([
-      num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch, lhs,
-      rhs
-  ], payload, [torch.Size([m, n])], [preferred_element_type])[0]
+  return xb.call_jax(gmm, (lhs, rhs, group_sizes, preferred_element_type,
+                           (tm, tk, tn), group_offset),
+                     {"transpose_rhs": transpose_rhs})
 
 
 @requires_jax
@@ -1516,7 +1345,9 @@ def tgmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: Tuple[int, int, int] = (512, 512, 512)
+    tiling: Tuple[int, int, int] = (512, 512, 512),
+    group_offset: torch.Tensor | None = None,
+    num_actual_groups: int | None = None,
 ) -> torch.Tensor:
   """Compute lhs[:, sizes[i-1]:sizes[i]] @ rhs[sizes[i-1]:sizes[i], :].
 
@@ -1537,31 +1368,8 @@ def tgmm(
       1], group_sizes.shape[0]
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
   preferred_element_type = lhs.dtype
-
-  payload, _ = trace_pallas(
-      tgmm,
-      lhs,
-      rhs,
-      group_sizes,
-      static_argnames=["tiling", "preferred_element_type"],
-      use_cache=True,
-      preferred_element_type=convert_torch_dtype_to_jax(preferred_element_type),
-      tiling=(tm, tk, tn))
-
-  # Create the metadata we need for computation, and that's why need to separate
-  # the tracing and execution part.
-  group_offsets, group_ids, m_tile_ids, num_tiles = _make_group_metadata(
-      group_sizes=group_sizes,
-      m=m,
-      tm=tm,
-      visit_empty_groups=True,
-  )
-  group_offset_torch = torch.tensor([0], dtype=torch.int32).to(lhs.device)
-
-  return torch_xla._XLAC._xla_tpu_custom_call([
-      num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch,
-      lhs.t(), rhs
-  ], payload, [torch.Size([num_groups, k, n])], [preferred_element_type])[0]
+  return xb.call_jax(tgmm, (lhs, rhs, group_sizes, preferred_element_type,
+                            (tm, tk, tn), group_offset, num_actual_groups))
 
 
 def gmm_backward(grad, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
@@ -1706,7 +1514,7 @@ def non_xla_ragged_paged_attention(q, kv, attention_type):
 XLA_LIB.define(
     "ragged_paged_attention(Tensor q, Tensor kv_pages, Tensor kv_lens, Tensor page_indices, "
     "Tensor cu_q_lens, Tensor num_seqs, float sm_scale=1, int? sliding_window=None, "
-    "float? soft_cap=None, float? mask_value=None, bool use_kernel=True,"
+    "float? soft_cap=None, float? mask_value=None, float? k_scale=None, float? v_scale=None, bool use_kernel=True,"
     "int? num_kv_pages_per_block=None, int? num_queries_per_block=None, int? vmem_limit_bytes=None) -> Tensor",
 )
 
@@ -1723,6 +1531,8 @@ def ragged_paged_attention_xla(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value=None,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
     use_kernel=True,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
@@ -1740,6 +1550,8 @@ def ragged_paged_attention_xla(
       sliding_window=sliding_window,
       soft_cap=soft_cap,
       mask_value=mask_value,
+      k_scale=k_scale,
+      v_scale=v_scale,
       use_kernel=use_kernel,
       num_kv_pages_per_block=num_kv_pages_per_block,
       num_queries_per_block=num_queries_per_block,
@@ -1758,6 +1570,8 @@ def ragged_paged_attention_non_xla(
     sliding_window: int | None = None,
     soft_cap: float | None = None,
     mask_value=None,
+    k_scale: float | None = None,
+    v_scale: float | None = None,
     use_kernel=True,
     # kernel tuning parameters
     num_kv_pages_per_block=None,
@@ -1768,7 +1582,7 @@ def ragged_paged_attention_non_xla(
 
 
 XLA_LIB.define(
-    "gmm(Tensor lhs, Tensor rhs, Tensor group_sizes, int[]? tiling=None) -> Tensor",
+    "gmm(Tensor lhs, Tensor rhs, Tensor group_sizes, int[]? tiling=None, Tensor? group_offset=None, bool transpose_rhs=False) -> Tensor",
 )
 
 
@@ -1778,28 +1592,37 @@ def gmm_xla(
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
     # pytorch custom op does not allow tuple type, use list instead
-    tiling: Optional[List[int]] = [512, 512, 512]):
+    tiling: Optional[List[int]] = [512, 512, 512],
+    group_offset: torch.Tensor | None = None,
+    transpose_rhs: bool = False):
+  if tiling is None:
+    tiling = [512, 512, 512]
   assert len(tiling) == 3, "tiling must be a list with 3 integers"
   assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
   assert rhs.dim(
   ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n]"
   tiling = tuple(tiling)
-  return gmm(lhs, rhs, group_sizes, tiling)
+  return gmm(lhs, rhs, group_sizes, tiling, group_offset, transpose_rhs)
 
 
 @impl(XLA_LIB, "gmm", "CompositeExplicitAutograd")
 def gmm_non_xla(lhs: torch.Tensor,
                 rhs: torch.Tensor,
                 group_sizes: torch.Tensor,
-                tiling: Optional[List[int]] = [512, 512, 512]):
+                tiling: Optional[List[int]] = [512, 512, 512],
+                group_offset: torch.Tensor | None = None,
+                transpose_rhs: bool = False):
   # This will be called when dynamo use fake tensor to construct the fake output.
   # We need to make sure output tensor's shape is correct.
   if lhs.device != torch.device("meta"):
     warnings.warn(f'XLA gmm should only be applied to tensors on XLA device')
+  if tiling is None:
+    tiling = [512, 512, 512]
   assert len(tiling) == 3, "tiling must be a list with 3 integers"
   assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
   assert rhs.dim(
-  ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n]"
+  ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n] or [num_groups, n, k] when transpose_rhs is True"
+  rhs_dim_size = rhs.size()[1] if transpose_rhs is True else rhs.size()[2]
 
   # we only need to return the tensor with correct shape for meta tensor.
-  return torch.empty(lhs.size()[0], rhs.size()[2], device=lhs.device)
+  return torch.empty(lhs.size()[0], rhs_dim_size, device=lhs.device)

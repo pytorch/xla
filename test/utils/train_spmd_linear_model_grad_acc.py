@@ -77,7 +77,7 @@ class SimpleLinear(nn.Module):
 
 
 def train():
-  device = xm.xla_device()
+  device = torch_xla.device()
   num_devices = xr.global_runtime_device_count()
   print(f'num_devices: {num_devices}')
   # Define a mesh with all devices along one axis
@@ -154,7 +154,7 @@ def train():
           running_loss = train_loop_fn(data, target, running_loss)
           training_step += FLAGS.gradient_accumulation_steps
       optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
       losses.append(running_loss.clone().detach())
       if training_step % FLAGS.log_steps == 0:
         print(
@@ -182,6 +182,6 @@ def train_and_evaluate_grad_acc():
   xr.use_spmd(auto=FLAGS.auto_spmd)
   print('Start training loop...')
   losses, m = train()
-  t = torch.randn(10, FLAGS.input_dim).to(xm.xla_device())
+  t = torch.randn(10, FLAGS.input_dim).to(torch_xla.device())
   m(t).cpu()
   return [loss.cpu() for loss in losses]

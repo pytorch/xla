@@ -9,7 +9,7 @@ import torch.distributed as dist
 
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
   if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):
     world_size = xr.world_size()
     dist.init_process_group('xla', init_method='xla://')
@@ -20,7 +20,7 @@ def _mp_fn(index):
     xla_rank_tensor = rank_tensor.to(device)
     dist.all_reduce(xla_rank_tensor)
     expected = torch.tensor([(world_size - 1) * world_size / 2])
-    xm.mark_step()
+    torch_xla.sync()
     assert torch.all(
         xla_rank_tensor.cpu() == expected), f'{xla_rank_tensor} != {expected}'
   else:

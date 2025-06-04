@@ -16,7 +16,7 @@ from torch._higher_order_ops.utils import _has_potential_branch_input_mutation
 
 def fori_loop(lower, upper, body_fun, *input_value):
 
-  device = xm.xla_device()
+  device = torch_xla.device()
   if (upper < lower):
     print("ERROR: upper should be a larger number than lower")
   iteri = upper - lower

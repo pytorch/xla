@@ -24,12 +24,12 @@ class M(nn.Module):
 class TestGraphInputMatcher(unittest.TestCase):
 
   def test_no_cache_fx_gragh_inputs(self):
-    xla_dev = xm.xla_device()
+    xla_dev = torch_xla.device()
     model = M().to(device=xla_dev)
     inputs = tree_map_only(torch.Tensor, lambda x: x.to(device=xla_dev),
                            model.get_example_inputs())
 
-    xm.mark_step()
+    torch_xla.sync()
     args_tensor_ids = [
         torch_xla._XLAC._xla_get_tensor_id(xla_arg) for xla_arg in inputs
     ]

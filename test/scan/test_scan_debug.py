@@ -36,12 +36,10 @@ class ScanDebugTest(XlaTestCase):
       y = x + 42
       return carry, y
 
-    init = torch.tensor([0.0, 0.0],
-                        requires_grad=True,
-                        device=torch_xla.device())
+    init = torch.tensor([0.0, 0.0], requires_grad=True, device='xla')
     xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
                       requires_grad=True,
-                      device=torch_xla.device())
+                      device='xla')
 
     # Run some graph involving a scan operation two times.
     for i in range(2):

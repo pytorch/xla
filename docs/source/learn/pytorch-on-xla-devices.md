@@ -14,14 +14,14 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-t = torch.randn(2, 2, device=xm.xla_device())
+t = torch.randn(2, 2, device='xla')
 print(t.device)
 print(t)
 ```
 
 This code should look familiar. PyTorch/XLA uses the same interface as
 regular PyTorch with a few additions. Importing `torch_xla` initializes
-PyTorch/XLA, and `xm.xla_device()` returns the current XLA device. This
+PyTorch/XLA, and `torch_xla.device()` returns the current XLA device. This
 may be a CPU or TPU depending on your environment.
 
 ## XLA Tensors are PyTorch Tensors
@@ -32,8 +32,8 @@ tensors.
 For example, XLA tensors can be added together:
 
 ``` python
-t0 = torch.randn(2, 2, device=xm.xla_device())
-t1 = torch.randn(2, 2, device=xm.xla_device())
+t0 = torch.randn(2, 2, device='xla')
+t1 = torch.randn(2, 2, device='xla')
 print(t0 + t1)
 ```
 
@@ -46,8 +46,8 @@ print(t0.mm(t1))
 Or used with neural network modules:
 
 ``` python
-l_in = torch.randn(10, device=xm.xla_device())
-linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+l_in = torch.randn(10, device='xla')
+linear = torch.nn.Linear(10, 20).to(torch_xla.device())
 l_out = linear(l_in)
 print(l_out)
 ```
@@ -56,7 +56,7 @@ Like other device types, XLA tensors only work with other XLA tensors on
 the same device. So code like
 
 ``` python
-l_in = torch.randn(10, device=xm.xla_device())
+l_in = torch.randn(10, device='xla')
 linear = torch.nn.Linear(10, 20)
 l_out = linear(l_in)
 print(l_out)
@@ -72,6 +72,8 @@ XLA devices requires only a few lines of XLA-specific code. The
 following snippets highlight these lines when running on a single device
 and multiple devices with XLA multi-processing.
 
+(running-on-a-single-xla-device)=
+
 ### Running on a Single XLA Device
 
 The following snippet shows a network training on a single XLA device:
@@ -79,7 +81,7 @@ The following snippet shows a network training on a single XLA device:
 ``` python
 import torch_xla.core.xla_model as xm
 
-device = xm.xla_device()
+device = torch_xla.device()
 model = MNIST().train().to(device)
 loss_fn = nn.NLLLoss()
 optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
@@ -93,17 +95,19 @@ for data, target in train_loader:
   loss.backward()
 
   optimizer.step()
-  xm.mark_step()
+  torch_xla.sync()
 ```
 
 This snippet highlights how easy it is to switch your model to run on
 XLA. The model definition, dataloader, optimizer and training loop can
 work on any device. The only XLA-specific code is a couple lines that
-acquire the XLA device and mark the step. Calling `xm.mark_step()` at
-the end of each training iteration causes XLA to execute its current
-graph and update the model's parameters. See [XLA Tensor Deep
-Dive](#xla-tensor-deep-dive) for more on how XLA creates graphs and runs
+acquire the XLA device and materializing the tensors. Calling `torch_xla.sync()`
+at the end of each training iteration causes XLA to execute its current
+graph and update the model's parameters. See {ref}`XLA Tensor Deep Dive`
+for more on how XLA creates graphs and runs
 operations.
+
+(running-on-multiple-xla-devices-with-multi-processing)=
 
 ### Running on Multiple XLA Devices with Multi-processing
 
@@ -116,7 +120,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
   mp_device_loader = pl.MpDeviceLoader(train_loader, device)
 
   model = MNIST().train().to(device)
@@ -144,7 +148,7 @@ previous single device snippet. Let's go over then one by one.
         will only be able to access the device assigned to the current
         process. For example on a TPU v4-8, there will be 4 processes
         being spawn up and each process will own a TPU device.
-    -   Note that if you print the `xm.xla_device()` on each process you
+    -   Note that if you print the `torch_xla.device()` on each process you
         will see `xla:0` on all devices. This is because each process
         can only see one device. This does not mean multi-process is not
         functioning. The only execution is with PJRT runtime on TPU v2
@@ -157,13 +161,13 @@ previous single device snippet. Let's go over then one by one.
     -   `MpDeviceLoader` can wrap on a torch dataloader. It can preload
         the data to the device and overlap the dataloading with device
         execution to improve the performance.
-    -   `MpDeviceLoader` also call `xm.mark_step` for you every
+    -   `MpDeviceLoader` also call `torch_xla.sync()` for you every
         `batches_per_execution`(default to 1) batch being yield.
 -   `xm.optimizer_step(optimizer)`
     -   Consolidates the gradients between devices and issues the XLA
         device step computation.
     -   It is pretty much a `all_reduce_gradients` +
-        `optimizer.step()` + `mark_step` and returns the loss being
+        `optimizer.step()` + `torch_xla.sync()` and returns the loss being
         reduced.
 
 The model definition, optimizer definition and training loop remain the
@@ -279,7 +283,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-device = xm.xla_device()
+device = torch_xla.device()
 
 t0 = torch.randn(2, 2, device=device)
 t1 = torch.randn(2, 2, device=device)

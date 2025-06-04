@@ -156,7 +156,11 @@ if __name__ == '__main__':
   if decoder_cls is not None:
     params.append(decoder_cls)
   base = TrainDecoderOnlyBase(*params, num_steps=args.num_steps, config=config)
+
+  start_time = time.time()
   base.start_training()
+  end_time = time.time()
+  print(f"Finished training in {end_time - start_time:.3f}s")
 
   if args.print_metrics:
     print(torch_xla._XLAC._xla_metrics_report())

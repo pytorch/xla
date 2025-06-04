@@ -17,12 +17,12 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
   @staticmethod
   def _broadcast(sync):
     torch.manual_seed(xr.global_ordinal())
-    device = xm.xla_device()
+    device = torch_xla.device()
     model = nn.Linear(5, 5).to(device)
     if sync:
       xm.broadcast_master_param(model)
 
-    xm.mark_step()
+    torch_xla.sync()
     return next(model.parameters()).detach().cpu().numpy()
 
   @absltest.skipUnless(tpu.num_tpu_workers() == 1,
@@ -41,7 +41,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _all_reduce(pin_layout):
-    device = xm.xla_device()
+    device = torch_xla.device()
     # Prevent 0 and 1 from being converted to constants
     ordinal = xm.send_cpu_data_to_device(
         torch.tensor(
@@ -49,7 +49,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
         device=device)
     out = xm.all_reduce(xm.REDUCE_SUM, ordinal, pin_layout=pin_layout)[0]
     assert out.requires_grad
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().detach().numpy()
 
@@ -63,10 +63,10 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _all_gather(pin_layout):
-    device = xm.xla_device()
+    device = torch_xla.device()
     ordinal = torch.tensor([xr.global_ordinal()], device=device)
     out = xm.all_gather(ordinal, pin_layout=pin_layout)
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().numpy()
 
@@ -80,7 +80,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _reduce_scatter(pin_layout):
-    device = xm.xla_device()
+    device = torch_xla.device()
     world_size = xr.world_size()
     tensor = -torch.arange(world_size, dtype=torch.float32).to(device)
 
@@ -92,7 +92,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
         shard_count=world_size,
         pin_layout=pin_layout,
     )
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().numpy()
 
@@ -105,7 +105,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _all_to_all(pin_layout):
-    device = xm.xla_device()
+    device = torch_xla.device()
     world_size = xr.world_size()
 
     tensor = torch.cat(
@@ -115,7 +115,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
         ],
         dim=1,
     ).to(device)
-    xm.mark_step()
+    torch_xla.sync()
 
     out = xm.all_to_all(
         tensor,
@@ -151,7 +151,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       return input
 
     dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
     input = torch.tensor([xr.global_ordinal()],
                          dtype=torch.float,
                          device=device)
@@ -175,7 +175,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       return output_tensor
 
     dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
     input = torch.tensor([xr.global_ordinal()],
                          dtype=torch.float,
                          device=device)
@@ -194,7 +194,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _all_gather(use_dynamo: bool):
     met.clear_all()
     dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     def callable(input):
       output_tensor = [
@@ -223,7 +223,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _reduce_scatter(use_dynamo: bool):
     met.clear_all()
     dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     def callable(output, input):
       dist.reduce_scatter_tensor(output, input)
@@ -248,7 +248,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _all_to_all_single(use_dynamo: bool, split_size: int = 1):
     met.clear_all()
     dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     def callable(output, input):
       dist.all_to_all_single(output, input)
