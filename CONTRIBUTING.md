@@ -251,9 +251,9 @@ If your PR touches the C++ source files, please run the following command before
 
 ```Shell
 # How to install: sudo apt install clang-format-11
-# If your PR only changes foo.cpp, run the following in xla/ folder
+# If your PR only changes foo.cpp, run the following in the xla/ folder.
 clang-format-11 -i -style=file /PATH/TO/foo.cpp
-# To format all cpp files, run the following in xla/ folder
+# To format all cpp files, run the following in the xla/ folder.
 find -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format-11 -i -style=file
 ```
 
