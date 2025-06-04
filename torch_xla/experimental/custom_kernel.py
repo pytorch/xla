@@ -1361,7 +1361,7 @@ def _get_tiling_size_for_gmm_kernel(m: int, k: int, n: int,
   # NOTE: In average each expert has m // g tokens, but as it might be unbalanced,
   # here we doubled the token size when choosing tiling size of m. 2m//g can be
   # either greater or less than 512. If there are 32 tokens and topk=2,
-  # m=topknum_tokens=64, in this case, 2*m//g will be less than 512.
+  # m=topk * num_tokens=64, in this case, 2*m//g will be less than 512.
   tm = _round_up_to_multiple_of_128_within_limit(2 * m // g, 512)
   tm = min(tm, m)  # there's a requirement that m % tm == 0
   # k/n correspond to n_input_features/n_output_features in the matmul so they are
