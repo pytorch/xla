@@ -890,11 +890,10 @@ class PallasTest(parameterized.TestCase):
       in_block_size=None,
       atol=1.5,
       n_bits=8,
-    ):
+  ):
     x = torch.randn((bs, n_input_features), dtype=dtype)
     w = torch.randn((n_output_features, n_input_features), dtype=dtype)
-    min_val, max_val = torch.aminmax(
-        w, dim=1)  # min_val, max_val [out_dim]
+    min_val, max_val = torch.aminmax(w, dim=1)  # min_val, max_val [out_dim]
     int_min = -2**(n_bits - 1)
     int_max = 2**(n_bits - 1) - 1
     scalar, zero_point = determine_qparams(
@@ -913,21 +912,30 @@ class PallasTest(parameterized.TestCase):
     x_copy = x.clone()
     w_copy = w.clone()
     expected = F.linear(x_copy, w_copy)
-    
+
     x_xla = x.to("xla")
     w_int_xla = w_int.to("xla")
     scalar_xla = scalar.to("xla")
     if use_dynamo:
-      def quantized_matmul_wrapper(x, w_int, scalar):
-        return torch.ops.xla.quantized_matmul(
-            x, w_int, scalar, quantize_activation=quantize_activation, batch_block_size=batch_block_size,
-            out_block_size=out_block_size, in_block_size=in_block_size)
 
-      quantized_matmul = torch.compile(quantized_matmul_wrapper, backend="openxla")
+      def quantized_matmul_wrapper(x, w_int, scalar, quantize_activation,
+                                   batch_block_size, out_block_size,
+                                   in_block_size):
+        return torch.ops.xla.quantized_matmul(
+            x,
+            w_int,
+            scalar,
+            quantize_activation=quantize_activation,
+            batch_block_size=batch_block_size,
+            out_block_size=out_block_size,
+            in_block_size=in_block_size)
+
+      quantized_matmul = torch.compile(
+          quantized_matmul_wrapper, backend="openxla")
     else:
       from torch_xla.experimental.custom_kernel import quantized_matmul
       quantized_matmul = quantized_matmul
-    
+
     actual = quantized_matmul(
         x_xla,
         w_int_xla,
@@ -936,58 +944,23 @@ class PallasTest(parameterized.TestCase):
         batch_block_size=batch_block_size,
         out_block_size=out_block_size,
         in_block_size=in_block_size).cpu()
-    
+
     self.assertEqual(actual.shape, expected.shape)
     self.assertEqual(actual.dtype, expected.dtype)
-    self.assertTrue(
-        torch.allclose(
-            actual, expected, atol=atol))
+    self.assertTrue(torch.allclose(actual, expected, atol=atol))
 
-
-  @parameterized.product(
-      seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
-      num_heads=[(32, 8), (8, 1)],
-      dtype=[(torch.bfloat16, torch.bfloat16),
-             (torch.bfloat16, torch.float8_e5m2)],
-      sm_scale=[1.0, 0.5],
-      sliding_window=[None, 128],
-      soft_cap=[None, 10.0],
-      pad_tokens_and_seqs=[False, True])
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
-                   "This test only works on TPUv4+.")
-  def test_quantized_matmul_with_dynamo(
-      self,
-      seq_lens,
-      num_heads,
-      dtype,
-      sm_scale,
-      sliding_window,
-      soft_cap,
-      pad_tokens_and_seqs,
-  ):
-    ...
-
-  # @parameterized.product(
-  #     dtype=[torch.bfloat16],
-  #     bs=[128],
-  #     n_input_features=[128],
-  #     n_output_features=[128],
-  #     quantize_activation=[True],
-  #     # block_sizes=[(None, None, None), (128, 128, 128)],
-  #     kernel_block_sizes=[(128, 128, 128)],
-  # )
   @parameterized.product(
       dtype=[torch.bfloat16, torch.float32],
-      bs=[128, 256],
-      n_input_features=[128, 256],
-      n_output_features=[128, 256],
+      bs=[256, 512],
+      n_input_features=[256, 512],
+      n_output_features=[256, 512],
       quantize_activation=[True],
-      # block_sizes=[(None, None, None), (128, 128, 128)],
-      kernel_block_sizes=[(128, 128, 128)],
+      kernel_block_sizes=[(None, None, None), (256, 256, 256)],
+      use_dynamo=[True, False],
   )
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 5,
                    "This test only works on TPUv5+.")
-  def test_quantized_matmul_wrapper_without_dynamo(
+  def test_quantized_matmul_wrapper(
       self,
       dtype,
       bs,
@@ -995,9 +968,19 @@ class PallasTest(parameterized.TestCase):
       n_output_features,
       quantize_activation,
       kernel_block_sizes,
+      use_dynamo,
   ):
     batch_block_size, out_block_size, in_block_size = kernel_block_sizes
-    self._test_quantized_matmul(dtype, bs, n_input_features, n_output_features, quantize_activation, use_dynamo=False, batch_block_size=batch_block_size, out_block_size=out_block_size, in_block_size=in_block_size)
+    self._test_quantized_matmul(
+        dtype,
+        bs,
+        n_input_features,
+        n_output_features,
+        quantize_activation,
+        use_dynamo=use_dynamo,
+        batch_block_size=batch_block_size,
+        out_block_size=out_block_size,
+        in_block_size=in_block_size)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
