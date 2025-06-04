@@ -147,8 +147,9 @@ def format_python_files(files: set[str]) -> bool:
 
 def main() -> None:
   os.chdir(_PTXLA_DIR)
-  files = get_uncommitted_changed_added_files(
-  ) | get_committed_changed_added_files()
+  files = (
+      get_uncommitted_changed_added_files() |
+      get_committed_changed_added_files())
 
   # We don't use `format_cplusplus_files(...) and format_python_files(...)` as
   # we don't want shortcircuiting.
