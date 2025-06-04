@@ -685,8 +685,9 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
     # Restore this metric counter
     torch_xla._XLAC._xla_increment_counter(
         'DynamoExtractCompiledGraph', dynamo_extract_graph_helper_metric_count)
-    torch_xla._XLAC._xla_increment_counter('UncachedCompile',
-                                           uncached_compile_metric_count)
+    if uncached_compile_metric_count is not None:
+      torch_xla._XLAC._xla_increment_counter('UncachedCompile',
+                                             uncached_compile_metric_count)
 
     return result
 
@@ -731,7 +732,6 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   torch_xla._XLAC._xla_increment_counter('DynamoExtractCompiledGraph', 1)
-  torch_xla._XLAC._xla_increment_counter('UncachedCompile', 1)
 
   with torch_xla.experimental.eager_mode_context(False):
     return extract_compiled_graph_helper(xla_model, xla_args)
