@@ -199,28 +199,28 @@ class SizeMod : public XlaNode, public torch::lazy::DimensionNode {
 };
 
 class SizeMin : public XlaNode, public torch::lazy::DimensionNode {
-  public:
-   SizeMin(torch::lazy::Value a, torch::lazy::Value b);
-   int64_t getDynamicValue() const override;
-   int64_t getStaticValue() const override { return upper_bound_; }
-   bool isSymbolic() const override { return true; }
-   std::string ToString() const override;
-   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
- 
-private:
+ public:
+  SizeMin(torch::lazy::Value a, torch::lazy::Value b);
+  int64_t getDynamicValue() const override;
+  int64_t getStaticValue() const override { return upper_bound_; }
+  bool isSymbolic() const override { return true; }
+  std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override;
+
+ private:
   int64_t upper_bound_;
 };
 
 class SizeMax : public XlaNode, public torch::lazy::DimensionNode {
-  public:
-   SizeMax(torch::lazy::Value a, torch::lazy::Value b);
-   int64_t getDynamicValue() const override;
-   int64_t getStaticValue() const override { return upper_bound_; }
-   bool isSymbolic() const override { return true; }
-   std::string ToString() const override;
-   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
- 
-private:
+ public:
+  SizeMax(torch::lazy::Value a, torch::lazy::Value b);
+  int64_t getDynamicValue() const override;
+  int64_t getStaticValue() const override { return upper_bound_; }
+  bool isSymbolic() const override { return true; }
+  std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override;
+
+ private:
   int64_t upper_bound_;
 };
 

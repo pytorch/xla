@@ -366,7 +366,8 @@ SizeMin::SizeMin(torch::lazy::Value a, torch::lazy::Value b)
   XLA_CHECK(dim_node_1);
   // We don't need to hash upper_bound_ and because it is computed
   // from input shapes and input Node already hash its shape.
-  upper_bound_ = std::min(dim_node_0->getStaticValue(), dim_node_1->getStaticValue());
+  upper_bound_ =
+      std::min(dim_node_0->getStaticValue(), dim_node_1->getStaticValue());
 };
 
 int64_t SizeMin::getDynamicValue() const {
@@ -398,7 +399,8 @@ SizeMax::SizeMax(torch::lazy::Value a, torch::lazy::Value b)
   XLA_CHECK(dim_node_1);
   // We don't need to hash upper_bound_ and because it is computed
   // from input shapes and input Node already hash its shape.
-  upper_bound_ = std::max(dim_node_0->getStaticValue(), dim_node_1->getStaticValue());
+  upper_bound_ =
+      std::max(dim_node_0->getStaticValue(), dim_node_1->getStaticValue());
 };
 
 int64_t SizeMax::getDynamicValue() const {
