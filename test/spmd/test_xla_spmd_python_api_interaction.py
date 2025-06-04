@@ -22,8 +22,7 @@ class BasicXMAPITest(test_xla_sharding_base.XlaShardingTest):
     super().setUpClass()
 
   def test_get_xla_supported_devices(self):
-    device_type = os.environ['PJRT_DEVICE']
-    devices = xm.get_xla_supported_devices(device_type)
+    devices = xm.get_xla_supported_devices()
     self.assertEqual(len(devices), 1)
 
   def test_world_size(self):

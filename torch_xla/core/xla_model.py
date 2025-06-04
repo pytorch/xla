@@ -66,38 +66,21 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
   return tensor.device.type == 'xla'
 
 
-def get_xla_supported_devices(devkind: Optional[str] = None,
-                              max_devices: Optional[int] = None) -> List[str]:
+def get_xla_supported_devices(max_devices: Optional[int] = None) -> List[str]:
   """Returns a list of supported devices of a given kind.
 
   Args:
-    devkind (string..., optional): If specified, a device type such as `TPU`,
-      `CUDA`, `CPU`, or name of custom PJRT device.
     max_devices (int, optional): The maximum number of devices to be returned of
       that kind.
 
   Returns:
     The list of device strings such as ['xla:0', 'xla:1', ...]
   """
-  # TODO(wcromar): Remove `devkind` after 2.3 release cut. We no longer support
-  # multiple device types.
-  if not devkind:
-    devices = torch_xla._XLAC._xla_get_devices()
-    return [
-        f'xla:{i}'
-        for i, _ in enumerate(devices[:max_devices] if max_devices else devices)
-    ]
-  else:
-    warnings.warn("`devkind` argument is deprecated and will be removed in a "
-                  "future release.")
-
-  xla_devices = _DEVICES.value
-  kind_devices = []
-  for i, device in enumerate(xla_devices):
-    if re.match(devkind + r':\d+$', device):
-      kind_devices.append('xla:{}'.format(i))
-  if kind_devices:
-    return kind_devices[:max_devices] if max_devices else kind_devices
+  devices = torch_xla._XLAC._xla_get_devices()
+  return [
+      f'xla:{i}'
+      for i, _ in enumerate(devices[:max_devices] if max_devices else devices)
+  ]
 
 
 def get_local_ordinal() -> int:
