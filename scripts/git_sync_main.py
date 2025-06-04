@@ -102,8 +102,7 @@ def sync_repo(repo: str) -> bool:
     # the fork to make it in sync with the official repo.
     if official_repo_remote != 'origin':
       logger.info(
-          f'Pushing the changes to the "origin" remote of the {repo} repo...'
-      )
+          f'Pushing the changes to the "origin" remote of the {repo} repo...')
       if os.system(f'git push origin {default_branch}') != 0:
         logger.error(
             'Failed to push the changes to the "origin" remote of the {repo} repo.'
