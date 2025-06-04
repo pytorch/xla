@@ -1399,6 +1399,7 @@ def gmm(
     tm, tk, tn = _get_tiling_size_for_gmm_kernel(m, k, n, g)
   else:
     tm, tk, tn = tiling
+    tm = min(tm, m)
   preferred_element_type = lhs.dtype
   return xb.call_jax(
       gmm,
