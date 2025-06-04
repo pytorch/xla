@@ -129,7 +129,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   def test_default_xla_devices(self):
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as e:
-      f = e.submit(xm.get_xla_supported_devices, 'TPU')
+      f = e.submit(xm.get_xla_supported_devices)
       devices = [torch.device(d) for d in f.result()]
 
     self.assertListEqual(
