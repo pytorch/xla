@@ -348,7 +348,7 @@ class TestAutocastBase(unittest.TestCase):
     self.assertFalse(self.is_autocast_enabled())
 
 
-@unittest.skipIf(not xm.get_xla_supported_devices("TPU"), f"TPU autocast test.")
+@unittest.skipIf(not xm.get_xla_supported_devices(), f"TPU autocast test.")
 class TestAutocastTPU(TestAutocastBase):
 
   @classmethod
@@ -404,7 +404,7 @@ class TestOtherOps(unittest.TestCase):
 
   # On TPU, the input of batch norm is casted into fp32, see torch_xla/csrc/autocast_mode.cpp
   @unittest.skipIf(
-      not xm.get_xla_supported_devices("TPU"),
+      not xm.get_xla_supported_devices(),
       "the behavior of batch_norm autocast on TPU is different from others")
   def test_batch_norm_tpu(self):
     device = torch_xla.device()

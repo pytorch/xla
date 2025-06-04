@@ -20,7 +20,7 @@ class TestDynamicTpuPlugin(absltest.TestCase):
   @staticmethod
   def _assert_tpus_exist(index=0):
     del index
-    assert len(xm.get_xla_supported_devices('TPU')) > 0
+    assert len(xm.get_xla_supported_devices()) > 0
 
   def test_single_process(self):
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:

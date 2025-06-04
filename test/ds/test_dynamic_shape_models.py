@@ -44,7 +44,7 @@ class Feedforward(torch.nn.Module):
 
 
 @unittest.skipIf(
-    not xm.get_xla_supported_devices("TPU"),
+    not xm.get_xla_supported_devices(),
     f"The tests fail on CPU. See https://github.com/pytorch/xla/issues/4298 for more detail."
 )
 class TestDynamicShapeModels(unittest.TestCase):
