@@ -7,8 +7,7 @@ from absl.testing import parameterized
 import jax
 from jax._src import test_util as jtu
 from torch_xla.experimental.pallas_kernels.quantized_matmul_kernel import (
-    quantized_matmul,
-    quantize_array,
+    quantized_matmul_int8,
     get_tuned_block_sizes,
     TUNED_BLOCK_SIZES,
 )
@@ -16,6 +15,15 @@ import jax.numpy as jnp
 import numpy as np
 
 jax.config.parse_flags_with_absl()
+
+
+def quantize_array(x, n_bits: int = 8, dim: int = -1):
+  max_val = jnp.max(jnp.abs(x), axis=dim, keepdims=True)
+  int_min = -2**(n_bits - 1)
+  int_max = 2**(n_bits - 1) - 1
+  scale = max_val / int_max
+  x_int = jnp.clip(jnp.round((x / scale)), int_min, int_max).astype(jnp.int8)
+  return x_int, scale.astype(x.dtype)
 
 
 @jtu.with_config(jax_numpy_dtype_promotion="standard")
@@ -50,7 +58,7 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
     scalar_w = jnp.squeeze(scalar_w)
     assert scalar_w.shape == (n_output_features,)
 
-    output = quantized_matmul(
+    output = quantized_matmul_int8(
         x,
         q_w,
         scalar_w,

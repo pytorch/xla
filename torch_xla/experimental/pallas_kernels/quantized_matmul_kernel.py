@@ -9,12 +9,12 @@ import jax.numpy as jnp
 
 def _quantize_array(
     x: jax.Array,  # [bs_block_size, in_block_size]
-    x_max_val: jax.Array,  # [1, bs_block_size]
-    n_bits: int = 8,
+    x_abs_max_val: jax.Array,  # [1, bs_block_size]
 ):
+  n_bits = 8
   int_min = -2**(n_bits - 1)
   int_max = 2**(n_bits - 1) - 1
-  scale = (x_max_val / int_max).T  # [bs_block_size, 1]
+  scale = (x_abs_max_val / int_max).T  # [bs_block_size, 1]
   # Need to explicitly cast to f32 because Mosaic can't directly jnp.round a
   # bf16 array.
   # It seems x/0 in Pallas generates inf/-inf instead of an exception.
@@ -28,7 +28,7 @@ def matmul_kernel(
     x_ref,  # (batch_block_size, in_block_size)
     w_ref,  # (out_block_size, in_block_size)
     scalar_ref,  # (1, out_block_size)
-    x_max_val,  # (1, batch_block_size)
+    x_abs_max_val,  # (1, batch_block_size)
     out_ref,  # (batch_block_size, out_block_size)
     acc_ref,  # (batch_block_size, out_block_size)
     *,
@@ -46,8 +46,8 @@ def matmul_kernel(
                          in_block_size), "w_ref shape is not correct"
   assert scalar_ref.shape == (1,
                               out_block_size), "scalar_ref shape is not correct"
-  assert x_max_val.shape == (1,
-                             batch_block_size), "x_max_val shape is not correct"
+  assert x_abs_max_val.shape == (
+      1, batch_block_size), "x_max_val shape is not correct"
   assert out_ref.shape == (batch_block_size,
                            out_block_size), "out_ref shape is not correct"
   assert acc_ref.shape == (batch_block_size,
@@ -58,7 +58,7 @@ def matmul_kernel(
     acc_ref[...] = jnp.zeros_like(acc_ref)
 
   if quantize_activation:
-    x, x_scale = _quantize_array(x_ref[...], x_max_val[...])
+    x, x_scale = _quantize_array(x_ref[...], x_abs_max_val[...])
     acc_ref[...] += jax.lax.dot_general(
         x,
         w_ref[...],
@@ -95,12 +95,12 @@ def _next_multiple(x, multiple):
         'in_block_size',
         'vmem_limit_bytes',
     ])
-def quantized_matmul(
+def quantized_matmul_int8(
     x: jax.Array,  # [bs, n_input_features]
     w: jax.Array,  # [n_output_features, n_input_features]
     scalar: jax.Array,  # [n_output_features]
     zero_point: jax.Array | None = None,
-    block_size: jax.Array | None = None,  # i32[1]
+    quant_block_size: jax.Array | None = None,  # i32[1]
     quantize_activation: bool = False,
     *,
     # All 3 block sizes, if provided, have to be multiples of 128 because they are used as the minormost dimension in the block.
@@ -110,14 +110,14 @@ def quantized_matmul(
     vmem_limit_bytes: int | None = 64 * 1024 * 1024,
 ):
   assert zero_point is None, "Not implemented: zero_point is not supported."
-  assert block_size is None, "Not implemented: block_size is not supported."
+  assert quant_block_size is None, "Not implemented: quant_block_size is not supported."
 
   # x_max_val cannot be [bs, 128] where 128 is the minormost dimension of the vreg because it'll be costly to store
   # [bs_block_size, 128] in VMEM ([bs_balock_size, 1:] will be padding).
   # We need the global max values to be computed before the kernel.
-  x_max_val = jnp.max(jnp.abs(x), axis=-1, keepdims=False)  # [bs]
-  x_max_val = jnp.expand_dims(x_max_val, axis=0)  # [1, bs]
-  assert x_max_val.shape == (1, x.shape[0])
+  x_abs_max_val = jnp.max(jnp.abs(x), axis=-1, keepdims=False)  # [bs]
+  x_abs_max_val = jnp.expand_dims(x_abs_max_val, axis=0)  # [1, bs]
+  assert x_abs_max_val.shape == (1, x.shape[0])
 
   orig_bs, orig_in_features = x.shape
   orig_out_features, _ = w.shape
@@ -129,7 +129,7 @@ def quantized_matmul(
   padded_bs = _next_multiple(orig_bs, batch_block_size)
   if orig_bs < padded_bs:
     x = jnp.pad(x, ((0, padded_bs - orig_bs), (0, 0)))
-    x_max_val = jnp.pad(x_max_val, ((0, 0), (0, padded_bs - orig_bs)))
+    x_abs_max_val = jnp.pad(x_abs_max_val, ((0, 0), (0, padded_bs - orig_bs)))
   padded_out_features = _next_multiple(orig_out_features, out_block_size)
   if orig_out_features < padded_out_features:
     w = jnp.pad(w, ((0, padded_out_features - orig_out_features), (0, 0)))
@@ -147,9 +147,9 @@ def quantized_matmul(
       1], f"x.shape[1] ({x.shape[1]}) must be equal to w.shape[1] ({w.shape[1]})"
   assert w.shape[0] == scalar.shape[
       1], f"w.shape[0] ({w.shape[0]}) must be equal to scalar.shape[1] ({scalar.shape[1]})"
-  assert x_max_val.shape == (
+  assert x_abs_max_val.shape == (
       1, x.shape[0]
-  ), f"x_max_val.shape ({x_max_val.shape}) must be equal to (1, x.shape[0]) ({1, {x.shape[0]}})"
+  ), f"x_max_val.shape ({x_abs_max_val.shape}) must be equal to (1, x.shape[0]) ({1, {x.shape[0]}})"
   assert x.shape[
       0] % batch_block_size == 0, f"x.shape[0] ({x.shape[0]}) must be a multiple of block size ({batch_block_size})"
   assert w.shape[
@@ -175,7 +175,7 @@ def quantized_matmul(
               pl.BlockSpec((1, out_block_size), lambda b, o, i:
                            (0, o)),  # scalar
               pl.BlockSpec((1, batch_block_size), lambda b, o, i:
-                           (0, b)),  # x_max_val
+                           (0, b)),  # x_abs_max_val
           ],
           out_specs=pl.BlockSpec((batch_block_size, out_block_size),
                                  lambda b, o, i: (b, o)),
@@ -193,18 +193,9 @@ def quantized_matmul(
       ),
   )
 
-  out = kernel(x, w, scalar, x_max_val)
+  out = kernel(x, w, scalar, x_abs_max_val)
 
   return out[:orig_bs, :orig_out_features]
-
-
-def quantize_array(x, n_bits: int = 8, dim: int = -1):
-  max_val = jnp.max(jnp.abs(x), axis=dim, keepdims=True)
-  int_min = -2**(n_bits - 1)
-  int_max = 2**(n_bits - 1) - 1
-  scale = max_val / int_max
-  x_int = jnp.clip(jnp.round((x / scale)), int_min, int_max).astype(jnp.int8)
-  return x_int, scale.astype(x.dtype)
 
 
 # Below are tuned block sizes.
