@@ -9,6 +9,8 @@ class Configuration:
   debug_print_each_op_operands: bool = False
 
   use_int32_for_index: bool = False
+
+  # If true, we will convert Views into torchax.Tensors eagerly
   force_materialize_views: bool = False
 
   # Flash attention
