@@ -67,8 +67,6 @@ jobs:
             run_torch_mp_op_tests: 'torch_mp_op'
           - run_cpp_tests: 'cpp_tests'
             run_cpp_tests1: 'cpp_tests1'
-          - run_cpp_tests: 'cpp_tests'
-            run_cpp_tests2: 'cpp_tests2'
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
@@ -83,7 +81,6 @@ jobs:
       RUN_XLA_OP_TESTS5: ${{ matrix.run_xla_op_tests5 }}
       RUN_TORCH_MP_OP_TESTS: ${{ matrix.run_torch_mp_op_tests }}
       RUN_CPP_TESTS1: ${{ matrix.run_cpp_tests1 }}
-      RUN_CPP_TESTS2: ${{ matrix.run_cpp_tests2 }}
       BAZEL_JOBS: ''  # Let bazel decide the parallelism based on the number of CPUs.
       BAZEL_REMOTE_CACHE: 1
     steps:
@@ -160,7 +157,7 @@ jobs:
           CIRCLE_BUILD_NUM: ${{ github.run_number }}
           BENCHMARK_TEST_NAME: ${{ env.RUN_BENCHMARK_TESTS }}
           PYTHON_TEST_NAME: ${{ env.RUN_PYTHON_TESTS }}${{ env.RUN_XLA_OP_TESTS1 }}${{ env.RUN_XLA_OP_TESTS2 }}${{ env.RUN_XLA_OP_TESTS3 }}${{ env.RUN_XLA_OP_TESTS4 }}${{ env.RUN_XLA_OP_TESTS5 }}${{ env.RUN_TORCH_MP_OP_TESTS }}
-          CPP_TEST_NAME: ${{ env.RUN_CPP_TESTS1 }}${{ env.RUN_CPP_TESTS2 }}
+          CPP_TEST_NAME: ${{ env.RUN_CPP_TESTS1 }}
         run: |
             # TODO(yeounoh) collect coverage report as needed.
             if [ -n "${BENCHMARK_TEST_NAME}" ]; then

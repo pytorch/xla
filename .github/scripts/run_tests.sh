@@ -44,10 +44,10 @@ function run_torch_xla_cpp_tests() {
                "test_aten_xla_tensor_2"
                "test_aten_xla_tensor_3"
                "test_aten_xla_tensor_4"
-               "pjrt_computation_client_test")
+               "pjrt_computation_client_test"
                # Disable IFRT test as it currently crashes
                #"ifrt_computation_client_test")
-  test_names2=("test_aten_xla_tensor_5"
+               "test_aten_xla_tensor_5"
                "test_aten_xla_tensor_6"
                "test_ir"
                "test_lazy"
@@ -58,10 +58,6 @@ function run_torch_xla_cpp_tests() {
                "test_xla_sharding")
   if [[ "$RUN_CPP_TESTS1" == "cpp_tests1" ]]; then
     test_names=("${test_names1[@]}")
-  elif [[ "$RUN_CPP_TESTS2" == "cpp_tests2" ]]; then
-    test_names=("${test_names2[@]}")
-  else
-    test_names=("${test_names1[@]}" "${test_names2[@]}")
   fi
 
   for name in "${test_names[@]}"; do
@@ -95,7 +91,7 @@ fi
 export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 
-if [[ -z "$RUN_BENCHMARK_TESTS" && -z "$RUN_CPP_TESTS1" && -z "$RUN_CPP_TESTS2" && -z "$RUN_PYTHON_TESTS" ]]; then
+if [[ -z "$RUN_BENCHMARK_TESTS" && -z "$RUN_CPP_TESTS1" && -z "$RUN_PYTHON_TESTS" ]]; then
   run_torch_xla_python_tests $XLA_DIR $USE_COVERAGE
   run_torch_xla_cpp_tests $XLA_DIR $USE_COVERAGE
   run_torch_xla_benchmark_tests $XLA_DIR
