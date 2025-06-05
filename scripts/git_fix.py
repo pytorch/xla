@@ -170,17 +170,21 @@ def set_git_push_hook() -> bool:
       print('Skipping git pre-push hook setup.', file=sys.stderr)
       return False
 
-  # Write the current script to the git pre-push hook.
+  # Create a git pre-push hook to run this script.
   with open(_GIT_PRE_PUSH_HOOK_PATH, 'w') as f:
     f.write(f'''#!/bin/bash
 # This hook is automatically set by `{_SCRIPT_PATH } --set_git_push_hook`.)
-{_SCRIPT_PATH}
+# We ignore any errors, as file formatting is best effort.
+{_SCRIPT_PATH} || true
 ''')
+
+  # Make the hook executable.
+  os.system(f'chmod +x {_GIT_PRE_PUSH_HOOK_PATH}')
+  return True
 
 
 def main() -> None:
-  arg_parser = argparse.ArgumentParser(
-      prog=_SCRIPT_PATH, description=__doc__)
+  arg_parser = argparse.ArgumentParser(prog=_SCRIPT_PATH, description=__doc__)
   arg_parser.add_argument(
       '--set_git_push_hook',
       action='store_true',
