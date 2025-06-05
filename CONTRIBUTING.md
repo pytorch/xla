@@ -425,3 +425,15 @@ git rebase upstream/master
 # update the PR.
 git push --force-with-lease origin your-branch-name
 ```
+
+## Fixing Git Metadata File Permissions
+
+Normally we run `git` commands outside of the dev container. If we run
+a mutating `git` command inside the dev container, it may change the owner
+of some files inside the `.git` directory to `root`, which will prevent us from
+running `git` commands outside of the dev container. To fix this, run the
+following commands *outside of the dev container* to fix the file owners:
+
+```Shell
+sudo chown -R $USER .git
+```
