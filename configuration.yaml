@@ -363,7 +363,7 @@ variables:
       description:
         - If set to true in case of a compilation or execution error the
           offending HLO graph will be dumped as part of the runtime error
-          raised by xla_util.cc.
+          raised by xla_util.cpp.
       type: bool
       default_value: false
     XLA_DUMP_FATAL_STACK:

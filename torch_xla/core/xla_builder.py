@@ -873,6 +873,13 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
 
     flattened_inputs, spec = jax.tree.flatten((args, kwargs))
 
+    def convert_arg_to_jax(a):
+      if a is None:
+        return None
+      elif isinstance(a, torch.dtype):
+        return tx.ops.mappings.t2j_dtype(a)
+      return a
+
     def abstractify(a):  # make a pytree leaf abstract
       if a is None:
         return None
@@ -881,6 +888,7 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
         return jax.ShapeDtypeStruct(a.shape, tx.ops.mappings.t2j_dtype(a.dtype))
       return a
 
+    flattened_inputs = list(convert_arg_to_jax(a) for a in flattened_inputs)
     sample_inputs = tuple(abstractify(a) for a in flattened_inputs)
 
     # Pick out the non-static args.

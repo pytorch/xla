@@ -139,7 +139,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       module (nn.Module):
           module to be wrapped with FSDP. If the input module's parameters
           and buffers are not already on XLA device, they will be cast to
-          ``xm.xla_device()`` (after sharding) during FSDP initialization.
+          ``torch_xla.device()`` (after sharding) during FSDP initialization.
       reshard_after_forward (bool, Optional):
           if ``True``, reshard parameters after the forward pass. This saves
           memory but slows training. This is only relevant when resharding
@@ -153,7 +153,7 @@ class XlaFullyShardedDataParallel(nn.Module):
           original parameters now become a single concatenated vector.
       execute_sharding_on_init (bool, Optional):
           if ``True``, immediately execute the parameter sharding via
-          `xm.mark_step` to free up the memory of the full parameters.
+          `torch_xla.sync()` to free up the memory of the full parameters.
       optimization_barrier_in_forward (bool, Optional):
           if ``True``, apply `xm.optimization_barrier_` on the FSDP module's
           inputs and outputs. This avoids XLA fusion with other forward pass
@@ -163,10 +163,10 @@ class XlaFullyShardedDataParallel(nn.Module):
           backward incoming gradients. This avoids XLA fusion with other
           backward pass computation outside the FSDP module and could save
           additional memory.
-      mark_step_on_finalization (bool, Optional):
-          if ``True``, call `xm.mark_step` upon finalizing gradients in the
-          root FSDP module. Here in `xm.mark_step` is only called once for the
-          entire backward pass and should therefore only moderately increase
+      sync_on_finalization (bool, Optional):
+          if ``True``, call `torch_xla.sync()` upon finalizing gradients in the
+          root FSDP module. Here in `torch_xla.sync()` is only called once for
+          the entire backward pass and should therefore only moderately increase
           the execution time. When setting to ``True``, this option may help
           prevent undesired fusion in backward pass and save more memory.
       disable_reshard_on_root (bool, Optional):
@@ -295,7 +295,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       execute_sharding_on_init: bool = True,
       optimization_barrier_in_forward: bool = True,
       optimization_barrier_in_backward: bool = True,
-      mark_step_on_finalization: bool = False,
+      sync_on_finalization: bool = False,
       disable_reshard_on_root: bool = True,
       compute_dtype: Optional[torch.dtype] = None,
       buffer_dtype: Optional[torch.dtype] = None,
@@ -356,7 +356,7 @@ class XlaFullyShardedDataParallel(nn.Module):
           execute_sharding_on_init=execute_sharding_on_init,
           optimization_barrier_in_forward=optimization_barrier_in_forward,
           optimization_barrier_in_backward=optimization_barrier_in_backward,
-          mark_step_on_finalization=mark_step_on_finalization,
+          sync_on_finalization=sync_on_finalization,
           disable_reshard_on_root=disable_reshard_on_root,
           compute_dtype=compute_dtype,
           buffer_dtype=buffer_dtype,
@@ -386,7 +386,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     self.flatten_parameters = flatten_parameters
     self.optimization_barrier_in_forward = optimization_barrier_in_forward
     self.optimization_barrier_in_backward = optimization_barrier_in_backward
-    self.mark_step_on_finalization = mark_step_on_finalization
+    self.sync_on_finalization = sync_on_finalization
 
     if compute_dtype is not None and compute_dtype not in FLOAT_DTYPES:
       raise ValueError(
@@ -527,7 +527,7 @@ class XlaFullyShardedDataParallel(nn.Module):
         List[Parameter],
         self._fsdp_wrapped_module.flat_params) + non_flatten_params
 
-    self.xla_device = xm.xla_device()
+    self.xla_device = torch_xla.device()
     # Shard module parameters in place
     self._shard_parameters_(params_to_shard)
     # Cast the module buffers to the specified buffer_dtype
@@ -557,7 +557,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     if execute_sharding_on_init:
       # Execute the parameter sharding immediately and free up the memory
       gc.collect()
-      xm.mark_step()
+      torch_xla.sync()
 
   def _get_gradient_predivide_factor(self, world_size: int) -> float:
     factor: int = 1
@@ -1014,7 +1014,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     A dummy forward pass with minimal computation that sums all inputs and
     full parameters, e.g. to debug parameter memory consumption.
     """
-    outputs = torch.zeros(1, device=xm.xla_device())
+    outputs = torch.zeros(1, device='xla')
     for t in chain(args, kwargs.values(), self.full_params):
       if isinstance(t, torch.Tensor) and t.dtype == torch.float32:
         outputs = outputs + t.mean()
@@ -1411,18 +1411,19 @@ class XlaFullyShardedDataParallel(nn.Module):
             self.optimization_barrier_op(dependency_tensors)
           self._clear_backward_opt_barrier_lists()
 
-    if self.mark_step_on_finalization:
-      # Forcing an execution at the end of backward pass to avoid any XLA compiler
-      # fusion between backward and optimizer (e.g. AdamW and SGD) step.
-      # Here `xm.mark_step` is only called once for the entire backward pass and
-      # should therefore only moderately increase the execution time.
-      # It may help prevent undesired fusion in backward pass and save more memory.
+    if self.sync_on_finalization:
+      # Forcing an execution at the end of backward pass to avoid any XLA
+      # compiler fusion between backward and optimizer (e.g. AdamW and SGD)
+      # step. Here `torch_xla.sync()` is only called once for the entire
+      # backward pass and should therefore only moderately increase the
+      # execution time. It may help prevent undesired fusion in backward pass
+      # and save more memory.
       if self._debug_print:
         xm.master_print(
-            f"mark_step called in FSDP _wait_for_post_backward (_debug_msg: {self._debug_msg})",
+            f"`torch_xla.sync()` called in FSDP _wait_for_post_backward (_debug_msg: {self._debug_msg})",
             flush=True,
         )
-      xm.mark_step()
+      torch_xla.sync()
 
   @torch.no_grad()
   def _rebuild_full_params(self,
@@ -1645,7 +1646,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     if restart:
       self._tstart = time.time()
     if self.rank == 0:
-      memory_info = xm.get_memory_info(xm.xla_device())
+      memory_info = xm.get_memory_info(torch_xla.device())
       gb_free = memory_info["kb_free"] / 1024 / 1024
       gb_total = memory_info["kb_total"] / 1024 / 1024
       logging.info(

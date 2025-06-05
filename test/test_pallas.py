@@ -5,6 +5,8 @@ from absl.testing import parameterized
 
 import torch
 from torch import nn as nn
+import torch.nn.functional as F
+from torch.ao.quantization.utils import determine_qparams
 
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -14,7 +16,7 @@ from torch_xla._internal import tpu
 import numpy as np
 
 if xr.device_type() == 'TPU':
-  from torch_xla.experimental.custom_kernel import jax_import_guard
+  from torch_xla.experimental.custom_kernel import jax_import_guard, convert_torch_dtype_to_jax
   jax_import_guard()
   import jax
   import jax.numpy as jnp
@@ -98,7 +100,8 @@ class PallasTest(parameterized.TestCase):
       head_dim,
       page_size,
       num_pages,
-      dtype,
+      q_dtype,
+      kv_dtype,
       *,
       max_num_batched_tokens=None,
       max_num_seqs=16,
@@ -129,10 +132,11 @@ class PallasTest(parameterized.TestCase):
     kv_lens = torch.nn.functional.pad(kv_lens,
                                       (0, max_num_seqs - kv_lens.shape[0]),
                                       "constant", 0)
+    # Use float32 for randn because it doesn't support some dtypes like float8
     q = torch.randn((max_num_batched_tokens, num_q_heads, head_dim),
-                    dtype=dtype)
+                    dtype=torch.float32).to(q_dtype)
     kv_pages = torch.randn((num_pages, page_size, num_kv_heads * 2, head_dim),
-                           dtype=dtype)
+                           dtype=torch.float32).to(kv_dtype)
     page_indices = torch.randint(
         0, num_pages, (max_num_seqs, pages_per_seq), dtype=torch.int32)
     return q, kv_pages, kv_lens, page_indices, cu_q_lens
@@ -145,8 +149,8 @@ class PallasTest(parameterized.TestCase):
     #   o_ref[...] = x + y
     payload = "{\"custom_call_config\": {\"body\": \"TUzvUgFNTElSMTguMC4wZ2l0AAErCwEDBQcJAQMLAwUDDQcFDxEJBRMVA2lNDQFLBw8LEw8PDwsPMwsLCwtlCwsLCwsPCw8PEwsTDwsTDwsPDxMLDwUDYQENGwcTDxsPAsICHx0rLQUXAwMnKRURNx1HSRELAQUZHTM1AwsVFxkbHw0hDSMlBRsBAQUdDQlhZmZpbmVfbWFwPChkMCkgLT4gKGQwKT4ABR8FIQUjBSUFJxEDAQUpFS8JHQ8xFwUTAQUrFwUdAR05OwUtFwUlAR0/QQUvFUMJHQ9FFwUVAQUxFREJI3RwdS5tZW1vcnlfc3BhY2U8dm1lbT4AF0sDIQcdAycDIQcBAgIFBwEBAQEBAgQEpwUBEAEHAwEFAxEBEwcDFScHAQEBAQEBBwMDBwMDCwYDAwUFAQcHAwMHAwMLBgMDBQUDCwkGPQMFBQkNBwMLBwMDCwYLAwUFBRENBAsHDwURBQABBgMBBQEAdgcz2wsTGdkNCxMjIR0pJ0MNCwsTDw8PDQkLEWJ1aWx0aW4AZnVuYwB0cHUAYXJpdGgAdmVjdG9yAG1vZHVsZQByZXR1cm4AY29uc3RhbnQAYWRkaQBsb2FkAHN0b3JlAC9ob21lL2p3dGFuL3BhbGxhcy9wYWxsYXNfYWRkLnB5AGFkZF92ZWN0b3JzX2tlcm5lbABkaW1lbnNpb25fc2VtYW50aWNzAGZ1bmN0aW9uX3R5cGUAc2NhbGFyX3ByZWZldGNoAHNjcmF0Y2hfb3BlcmFuZHMAc3ltX25hbWUAbWFpbgB2YWx1ZQAvZ2V0W3RyZWU9UHlUcmVlRGVmKChDdXN0b21Ob2RlKE5ESW5kZXhlclsoUHlUcmVlRGVmKChDdXN0b21Ob2RlKFNsaWNlWygwLCA4KV0sIFtdKSwpKSwgKDgsKSwgKCkpXSwgW10pLCkpXQBhZGRfdmVjdG9ycwA8bW9kdWxlPgAvYWRkAC9zd2FwW3RyZWU9UHlUcmVlRGVmKChDdXN0b21Ob2RlKE5ESW5kZXhlclsoUHlUcmVlRGVmKChDdXN0b21Ob2RlKFNsaWNlWygwLCA4KV0sIFtdKSwpKSwgKDgsKSwgKCkpXSwgW10pLCkpXQA=\", \"needs_layout_passes\": true}}"
 
-    x = torch.arange(8, dtype=torch.int).to("xla")
-    y = torch.arange(8, dtype=torch.int).to("xla")
+    x = torch.arange(8, dtype=torch.int).to('xla')
+    y = torch.arange(8, dtype=torch.int).to('xla')
     expected_output = x + y
 
     output = torch_xla._XLAC._xla_tpu_custom_call([x, y], payload, [x.shape],
@@ -160,7 +164,7 @@ class PallasTest(parameterized.TestCase):
     #   o_ref[...] = x_ref[...] + 1
     payload = "{\"custom_call_config\": {\"body\": \"TUzvUgFNTElSMTguMC4wZ2l0AAEtCwEDBQcJAQMLAwUDDQcFDxEJBxMVFwNlSQ0BRwcPCw8PDxMLDzMLCwsLZQsLCwsPCw8LEw8PCxMPCxMTDwsLBQNhAQ0bDxMHFw8CpgIfFSsxBRkdQwMdRQMRCwEDAw8nBRsdKQMDCxUXGRsfCyELIyUFHQEBBR8NCWFmZmluZV9tYXA8KGQwKSAtPiAoZDApPgAFIQUjBSUFJxEHAQUpHS0vBSsXBRsBFTM5HTU3BS0XBS8BHTs9BS8XBUUBAwMPQREDBQUxBTMjdHB1Lm1lbW9yeV9zcGFjZTx2bWVtPgAXRwMhAx0BAgInAyEDAwUFAQEBAQIEBKEFARABBwMBBQMRARMHAxMnBQEBAQEHAxENAwcLBhEDBQUBBQcDBz8DAw0GBwMFAwkJBgcDBQUHCwcDCQ0DBwsGCQMFBQMPDwQJBw0DDwUAAQYDAQUBAMIHNdsLEyEv2QsTIyEdKQ1DDRULCxMPDw8NCQsRYnVpbHRpbgBmdW5jAHRwdQBhcml0aAB2ZWN0b3IAbW9kdWxlAHJldHVybgBjb25zdGFudABhZGRpAGxvYWQAYnJvYWRjYXN0AHN0b3JlAC9ob21lL2p3dGFuL3BhbGxhcy9wYWxsYXNfYWRkLnB5AHZhbHVlAGRpbWVuc2lvbl9zZW1hbnRpY3MAZnVuY3Rpb25fdHlwZQBzY2FsYXJfcHJlZmV0Y2gAc2NyYXRjaF9vcGVyYW5kcwBzeW1fbmFtZQBtYWluAC9nZXRbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAGFkZF9vbmVfdmVjdG9yc19rZXJuZWwAYWRkX3ZlY3RvcnNfb25lADxtb2R1bGU+AC9hZGQAL3N3YXBbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAA==\", \"needs_layout_passes\": true}}"
 
-    x = torch.arange(8, dtype=torch.int).to("xla")
+    x = torch.arange(8, dtype=torch.int).to('xla')
     expected_output = x + 1
 
     output = torch_xla._XLAC._xla_tpu_custom_call([x], payload, [x.shape],
@@ -189,9 +193,9 @@ class PallasTest(parameterized.TestCase):
     q_mini = torch.arange(128 * 4, dtype=torch.float32).reshape(128, 4) / 13
     k_mini = torch.arange(
         1000, 1000 + 128 * 4, dtype=torch.float32).reshape(128, 4) / 13
-    q = q_mini.broadcast_to(3, 2, 128, 4).to("xla")
-    k = k_mini.broadcast_to(3, 2, 128, 4).to("xla")
-    v = torch.ones(3, 2, 128, 4).to("xla")
+    q = q_mini.broadcast_to(3, 2, 128, 4).to('xla')
+    k = k_mini.broadcast_to(3, 2, 128, 4).to('xla')
+    v = torch.ones(3, 2, 128, 4).to('xla')
 
     expected_o = self._attention(q, k, v)
 
@@ -242,8 +246,8 @@ class PallasTest(parameterized.TestCase):
         torch.float32, torch.float
     ]  # Add doesn't support torch.float64, torch.bfloat16, torch.float16.
     for i in range(len(dtypes)):
-      x = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
-      y = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
+      x = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to('xla')
+      y = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to('xla')
       expected_output = x + y
       output = pt_kernel(x, y)
       self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
@@ -252,8 +256,8 @@ class PallasTest(parameterized.TestCase):
         torch.int32, torch.int
     ]  # Add doesn't support torch.int64, torch.int16, torch.int8, torch.uint8.
     for i in range(len(dtypes)):
-      x = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
-      y = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
+      x = torch.arange(i + 1, dtype=dtypes[i]).to('xla')
+      y = torch.arange(i + 1, dtype=dtypes[i]).to('xla')
       expected_output = x + y
       output = pt_kernel(x, y)
       self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
@@ -269,9 +273,9 @@ class PallasTest(parameterized.TestCase):
     q_mini = torch.arange(128 * 4, dtype=torch.bfloat16).reshape(128, 4) / 13
     k_mini = torch.arange(
         1000, 1000 + 128 * 4, dtype=torch.bfloat16).reshape(128, 4) / 13
-    q = q_mini.broadcast_to(3, 2, 128, 4).to("xla")
-    k = k_mini.broadcast_to(3, 2, 128, 4).to("xla")
-    v = torch.ones(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+    q = q_mini.broadcast_to(3, 2, 128, 4).to('xla')
+    k = k_mini.broadcast_to(3, 2, 128, 4).to('xla')
+    v = torch.ones(3, 2, 128, 4, dtype=torch.bfloat16).to('xla')
 
     o = flash_attention_kernel(q, k, v)
     expected_o = self._attention(q, k, v)
@@ -284,9 +288,9 @@ class PallasTest(parameterized.TestCase):
   def test_flash_attention_wrapper(self):
     from torch_xla.experimental.custom_kernel import flash_attention
 
-    q = torch.randn(3, 2, 128, 4).to("xla")
-    k = torch.randn(3, 2, 128, 4).to("xla")
-    v = torch.randn(3, 2, 128, 4).to("xla")
+    q = torch.randn(3, 2, 128, 4).to('xla')
+    k = torch.randn(3, 2, 128, 4).to('xla')
+    v = torch.randn(3, 2, 128, 4).to('xla')
 
     o = flash_attention(q, k, v)
     expected_o = self._attention(q, k, v)
@@ -298,10 +302,10 @@ class PallasTest(parameterized.TestCase):
   def test_flash_attention_wrapper_kv_and_ab_padding(self):
     from torch_xla.experimental.custom_kernel import flash_attention
 
-    q = torch.randn(1, 2, 513, 4).to("xla")
-    k = torch.randn(1, 2, 513, 4).to("xla")
-    v = torch.randn(1, 2, 513, 4).to("xla")
-    ab = torch.randn(1, 2, 513, 513).to("xla")
+    q = torch.randn(1, 2, 513, 4).to('xla')
+    k = torch.randn(1, 2, 513, 4).to('xla')
+    v = torch.randn(1, 2, 513, 4).to('xla')
+    ab = torch.randn(1, 2, 513, 513).to('xla')
 
     o = flash_attention(q, k, v, ab=ab)
     expected_o = self._attention(q, k, v, ab=ab)
@@ -316,9 +320,9 @@ class PallasTest(parameterized.TestCase):
     def flash_attention_wrapper(q, k, v, causal=False):
       return torch.ops.xla.flash_attention(q, k, v, causal)
 
-    q = torch.randn(3, 2, 128, 4).to("xla")
-    k = torch.randn(3, 2, 128, 4).to("xla")
-    v = torch.randn(3, 2, 128, 4).to("xla")
+    q = torch.randn(3, 2, 128, 4).to('xla')
+    k = torch.randn(3, 2, 128, 4).to('xla')
+    v = torch.randn(3, 2, 128, 4).to('xla')
 
     compiled_flash_attention = torch.compile(
         flash_attention_wrapper, backend="openxla")
@@ -338,9 +342,9 @@ class PallasTest(parameterized.TestCase):
   def test_flash_attention_wrapper_causal(self):
     from torch_xla.experimental.custom_kernel import flash_attention
 
-    q = torch.randn(3, 2, 128, 4).to("xla")
-    k = torch.randn(3, 2, 128, 4).to("xla")
-    v = torch.randn(3, 2, 128, 4).to("xla")
+    q = torch.randn(3, 2, 128, 4).to('xla')
+    k = torch.randn(3, 2, 128, 4).to('xla')
+    v = torch.randn(3, 2, 128, 4).to('xla')
 
     # The causal mask is turned on by default in the wrapper.
     # It masks out the top right triangle of the attention matrix, therefore it speeds up the compute but also changes the output.
@@ -367,7 +371,7 @@ class PallasTest(parameterized.TestCase):
     pt_kernel = make_kernel_from_pallas(
         add_minus_vectors, lambda x, y: [(x.shape, x.dtype),
                                          (x.shape, x.dtype)])
-    x = torch.arange(8, device="xla", dtype=torch.float)
+    x = torch.arange(8, device='xla', dtype=torch.float)
     o = pt_kernel(x, x)
     self.assertEqual(len(o), 2)
 
@@ -392,9 +396,9 @@ class PallasTest(parameterized.TestCase):
     flash_attention_kernel = make_kernel_from_pallas(_flash_attention_impl,
                                                      shape_dtype)
 
-    q = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
-    k = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
-    v = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+    q = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to('xla')
+    k = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to('xla')
+    v = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to('xla')
 
     o, l, m = flash_attention_kernel(
         q,
@@ -411,7 +415,7 @@ class PallasTest(parameterized.TestCase):
         128,
         False,
         static_argnums=range(5, 13))
-    xm.mark_step()
+    torch_xla.sync()
 
     # TODO: I don't really know how to test the value. Let's do the shape check for now.
     self.assertEqual(l.shape, (3, 2, 128, MIN_BLOCK_SIZE))
@@ -427,13 +431,13 @@ class PallasTest(parameterized.TestCase):
     MIN_BLOCK_SIZE = 128
     DEFAULT_MASK_VALUE = -0.7 * float(torch.finfo(torch.float32).max)
 
-    q = torch.randn(3, 2, 128, 4).to("xla")
-    k = torch.randn(3, 2, 128, 4).to("xla")
-    v = torch.randn(3, 2, 128, 4).to("xla")
-    l = torch.randn(3, 2, 128).to("xla")
-    m = torch.randn(3, 2, 128).to("xla")
-    grad_i = torch.randn(3, 2, 128, dtype=torch.float32).to("xla")
-    grad_o = torch.randn(3, 2, 128, 4).to("xla")
+    q = torch.randn(3, 2, 128, 4).to('xla')
+    k = torch.randn(3, 2, 128, 4).to('xla')
+    v = torch.randn(3, 2, 128, 4).to('xla')
+    l = torch.randn(3, 2, 128).to('xla')
+    m = torch.randn(3, 2, 128).to('xla')
+    grad_i = torch.randn(3, 2, 128, dtype=torch.float32).to('xla')
+    grad_o = torch.randn(3, 2, 128, 4).to('xla')
 
     payload, _ = trace_pallas(
         _flash_attention_bwd_dkv,
@@ -467,7 +471,7 @@ class PallasTest(parameterized.TestCase):
         [q, k, v, l, m, grad_o, grad_i], payload, [k.shape, v.shape],
         [k.dtype, v.dtype])
 
-    xm.mark_step()
+    torch_xla.sync()
 
     # TODO: I don't really know how to test the value. Let's do the shape check for now.
     self.assertEqual(output[0].shape, (3, 2, 128, 4))
@@ -481,13 +485,13 @@ class PallasTest(parameterized.TestCase):
     MIN_BLOCK_SIZE = 128
     DEFAULT_MASK_VALUE = -0.7 * float(torch.finfo(torch.float32).max)
 
-    q = torch.randn(3, 2, 128, 4).to("xla")
-    k = torch.randn(3, 2, 128, 4).to("xla")
-    v = torch.randn(3, 2, 128, 4).to("xla")
-    l = torch.randn(3, 2, 128).to("xla")
-    m = torch.randn(3, 2, 128).to("xla")
-    grad_i = torch.randn(3, 2, 128, dtype=torch.float32).to("xla")
-    grad_o = torch.randn(3, 2, 128, 4).to("xla")
+    q = torch.randn(3, 2, 128, 4).to('xla')
+    k = torch.randn(3, 2, 128, 4).to('xla')
+    v = torch.randn(3, 2, 128, 4).to('xla')
+    l = torch.randn(3, 2, 128).to('xla')
+    m = torch.randn(3, 2, 128).to('xla')
+    grad_i = torch.randn(3, 2, 128, dtype=torch.float32).to('xla')
+    grad_o = torch.randn(3, 2, 128, 4).to('xla')
 
     payload, _ = trace_pallas(
         _flash_attention_bwd_dq,
@@ -519,7 +523,7 @@ class PallasTest(parameterized.TestCase):
     output = torch_xla._XLAC._xla_tpu_custom_call(
         [q, k, v, l, m, grad_o, grad_i], payload, [q.shape], [q.dtype])
 
-    xm.mark_step()
+    torch_xla.sync()
 
     # TODO: I don't really know how to test the value. Let's do the shape check for now.
     self.assertEqual(output[0].shape, (3, 2, 128, 4))
@@ -531,9 +535,9 @@ class PallasTest(parameterized.TestCase):
     from torch_xla.experimental.custom_kernel import flash_attention
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -541,16 +545,16 @@ class PallasTest(parameterized.TestCase):
     o = flash_attention(q, k, v)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -558,7 +562,7 @@ class PallasTest(parameterized.TestCase):
     o = self._attention(q, k, v)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
@@ -587,11 +591,11 @@ class PallasTest(parameterized.TestCase):
         head_dim,
     )
 
-    q_xla = q.to("xla")
-    k_pages_xla = k_pages.to("xla")
-    v_pages_xla = v_pages.to("xla")
-    seq_lens_xla = seq_lens.to("xla")
-    page_indices_xla = page_indices.to("xla")
+    q_xla = q.to('xla')
+    k_pages_xla = k_pages.to('xla')
+    v_pages_xla = v_pages.to('xla')
+    seq_lens_xla = seq_lens.to('xla')
+    page_indices_xla = page_indices.to('xla')
 
     output = paged_attention(
         q_xla,
@@ -632,7 +636,8 @@ class PallasTest(parameterized.TestCase):
       head_dim,
       page_size,
       num_pages,
-      dtype,
+      q_dtype,
+      kv_dtype,
       *,
       sm_scale=1.0,
       sliding_window=None,
@@ -654,16 +659,25 @@ class PallasTest(parameterized.TestCase):
         head_dim,
         page_size,
         num_pages,
-        dtype,
+        q_dtype,
+        kv_dtype,
         max_num_batched_tokens=max_num_batched_tokens,
         max_num_seqs=max_num_seqs)
+    k_scale = 0.5 if kv_dtype in [torch.float8_e5m2] else None
+    v_scale = 0.5 if kv_dtype in [torch.float8_e5m2] else None
+    num_kv_heads = num_heads[1]
+    if num_kv_heads == 1 and kv_dtype in [torch.float8_e5m2]:
+      self.skipTest(
+          "attention kernel cannot support because it is not XLA fully tiled")
+    if kv_dtype is torch.float8_e5m2 and tpu.version() <= 4:
+      self.skipTest("TPU v4 or older doesn't support fp8")
 
-    q_xla = q.to("xla")
-    kv_pages_xla = kv_pages.to("xla")
-    kv_lens_xla = kv_lens.to("xla")
-    page_indices_xla = page_indices.to("xla")
-    cu_q_lens_xla = cu_q_lens.to("xla")
-    num_seqs_xla = torch.tensor([num_seqs], dtype=torch.int32).to("xla")
+    q_xla = q.to('xla')
+    kv_pages_xla = kv_pages.to('xla')
+    kv_lens_xla = kv_lens.to('xla')
+    page_indices_xla = page_indices.to('xla')
+    cu_q_lens_xla = cu_q_lens.to('xla')
+    num_seqs_xla = torch.tensor([num_seqs], dtype=torch.int32).to('xla')
 
     if use_dynamo:
 
@@ -677,6 +691,8 @@ class PallasTest(parameterized.TestCase):
           sm_scale=sm_scale,
           sliding_window=sliding_window,
           soft_cap=soft_cap,
+          k_scale=k_scale,
+          v_scale=v_scale,
           use_kernel=True,
           num_kv_pages_per_block=num_kv_pages_per_block,
           num_queries_per_block=num_queries_per_block,
@@ -691,6 +707,8 @@ class PallasTest(parameterized.TestCase):
             sm_scale=sm_scale,
             sliding_window=sliding_window,
             soft_cap=soft_cap,
+            k_scale=k_scale,
+            v_scale=v_scale,
             use_kernel=use_kernel,
             num_kv_pages_per_block=num_kv_pages_per_block,
             num_queries_per_block=num_queries_per_block,
@@ -711,6 +729,8 @@ class PallasTest(parameterized.TestCase):
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
+        k_scale=k_scale,
+        v_scale=v_scale,
         use_kernel=True,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
@@ -726,6 +746,8 @@ class PallasTest(parameterized.TestCase):
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
+        k_scale=k_scale,
+        v_scale=v_scale,
         use_kernel=False,
     )
 
@@ -734,17 +756,14 @@ class PallasTest(parameterized.TestCase):
     self.assertEqual(kernel_output_cpu.shape, nonkernel_output_cpu.shape)
     self.assertEqual(kernel_output_cpu.dtype, nonkernel_output_cpu.dtype)
 
-    assert dtype == torch.float32 or dtype == torch.bfloat16
-    jnp_dtype = jnp.float32
-    tol = 0.15
-    if dtype == torch.bfloat16:
-      jnp_dtype = jnp.bfloat16
-      tol = 0.3
+    tol = 0.15 if q_dtype == torch.float32 else 0.3
+    q_jnp_dtype = convert_torch_dtype_to_jax(q_dtype)
+    kv_jnp_dtype = convert_torch_dtype_to_jax(kv_dtype)
 
     # Numpy does not support bfloat16 directly. So we convert f32 first.
-    q_jax = jnp.array(q.to(torch.float32).numpy(), dtype=jnp_dtype)
+    q_jax = jnp.array(q.to(torch.float32).numpy(), dtype=q_jnp_dtype)
     kv_pages_jax = jnp.array(
-        kv_pages.to(torch.float32).numpy(), dtype=jnp_dtype)
+        kv_pages.to(torch.float32).numpy(), dtype=kv_jnp_dtype)
     kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
     page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
     cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
@@ -765,7 +784,9 @@ class PallasTest(parameterized.TestCase):
                 sm_scale=sm_scale,
                 sliding_window=sliding_window,
                 soft_cap=soft_cap,
-            )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(dtype)
+                k_scale=k_scale,
+                v_scale=v_scale,
+            )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(q_dtype)
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 
     torch.testing.assert_close(
@@ -776,7 +797,8 @@ class PallasTest(parameterized.TestCase):
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
       num_heads=[(32, 8), (8, 1)],
-      dtype=[torch.float32, torch.bfloat16],
+      dtype=[(torch.bfloat16, torch.bfloat16),
+             (torch.bfloat16, torch.float8_e5m2)],
       sm_scale=[1.0, 0.5],
       sliding_window=[None, 128],
       soft_cap=[None, 10.0],
@@ -796,6 +818,7 @@ class PallasTest(parameterized.TestCase):
     head_dim = 128
     page_size = 16
     num_pages = 1000
+    q_dtype, kv_dtype = dtype
 
     self._test_ragged_paged_attention(
         seq_lens,
@@ -803,7 +826,8 @@ class PallasTest(parameterized.TestCase):
         head_dim,
         page_size,
         num_pages,
-        dtype,
+        q_dtype,
+        kv_dtype,
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
@@ -814,7 +838,8 @@ class PallasTest(parameterized.TestCase):
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
       num_heads=[(32, 8), (8, 1)],
-      dtype=[torch.float32, torch.bfloat16],
+      dtype=[(torch.bfloat16, torch.bfloat16),
+             (torch.bfloat16, torch.float8_e5m2)],
       sm_scale=[1.0, 0.5],
       sliding_window=[None, 128],
       soft_cap=[None, 10.0],
@@ -835,6 +860,7 @@ class PallasTest(parameterized.TestCase):
     head_dim = 128
     page_size = 16
     num_pages = 1000
+    q_dtype, kv_dtype = dtype
 
     self._test_ragged_paged_attention(
         seq_lens,
@@ -842,13 +868,119 @@ class PallasTest(parameterized.TestCase):
         head_dim,
         page_size,
         num_pages,
-        dtype,
+        q_dtype,
+        kv_dtype,
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
         pad_tokens_and_seqs=pad_tokens_and_seqs,
         use_dynamo=False,
     )
+
+  def _test_quantized_matmul_int8(
+      self,
+      dtype,
+      bs,
+      n_input_features,
+      n_output_features,
+      quantize_activation,
+      use_dynamo,
+      batch_block_size=None,
+      out_block_size=None,
+      in_block_size=None,
+      atol=1.5,
+      n_bits=8,
+  ):
+    x = torch.randn((bs, n_input_features), dtype=dtype)
+    w = torch.randn((n_output_features, n_input_features), dtype=dtype)
+    min_val, max_val = torch.aminmax(w, dim=1)  # min_val, max_val [out_dim]
+    int_min = -2**(n_bits - 1)
+    int_max = 2**(n_bits - 1) - 1
+    scalar, zero_point = determine_qparams(
+        min_val,
+        max_val,
+        int_min,
+        int_max,
+        dtype=torch.int8,
+        eps=torch.Tensor([1e-5]),
+        has_customized_qrange=False,
+        qscheme=torch.per_channel_symmetric)
+    w_int = torch.ops.quantized_decomposed.quantize_per_channel(
+        w, scalar, zero_point, 0, int_min, int_max, torch.int8)
+    scalar = scalar.to(w.dtype)
+
+    x_copy = x.clone()
+    w_copy = w.clone()
+    expected = F.linear(x_copy, w_copy)
+
+    x_xla = x.to("xla")
+    w_int_xla = w_int.to("xla")
+    scalar_xla = scalar.to("xla")
+    if use_dynamo:
+
+      def quantized_matmul_int8_wrapper(x, w_int, scalar, quantize_activation,
+                                        batch_block_size, out_block_size,
+                                        in_block_size):
+        return torch.ops.xla.quantized_matmul_int8(
+            x,
+            w_int,
+            scalar,
+            quantize_activation=quantize_activation,
+            batch_block_size=batch_block_size,
+            out_block_size=out_block_size,
+            in_block_size=in_block_size)
+
+      quantized_matmul_int8 = torch.compile(
+          quantized_matmul_int8_wrapper, backend="openxla")
+    else:
+      from torch_xla.experimental.custom_kernel import quantized_matmul_int8
+      quantized_matmul_int8 = quantized_matmul_int8
+
+    actual = quantized_matmul_int8(
+        x_xla,
+        w_int_xla,
+        scalar_xla,
+        quantize_activation=quantize_activation,
+        batch_block_size=batch_block_size,
+        out_block_size=out_block_size,
+        in_block_size=in_block_size).cpu()
+
+    self.assertEqual(actual.shape, expected.shape)
+    self.assertEqual(actual.dtype, expected.dtype)
+    self.assertTrue(torch.allclose(actual, expected, atol=atol))
+
+  @parameterized.product(
+      dtype=[torch.bfloat16, torch.float32],
+      bs=[256, 512],
+      n_input_features=[256, 512],
+      n_output_features=[256, 512],
+      quantize_activation=[True],
+      kernel_block_sizes=[(None, None, None), (256, 256, 256)],
+      use_dynamo=[True, False],
+  )
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 5,
+                   "This test only works on TPUv5+.")
+  def test_quantized_matmul_int8_wrapper(
+      self,
+      dtype,
+      bs,
+      n_input_features,
+      n_output_features,
+      quantize_activation,
+      kernel_block_sizes,
+      use_dynamo,
+  ):
+    batch_block_size, out_block_size, in_block_size = kernel_block_sizes
+    self._test_quantized_matmul_int8(
+        dtype,
+        bs,
+        n_input_features,
+        n_output_features,
+        quantize_activation,
+        use_dynamo=use_dynamo,
+        batch_block_size=batch_block_size,
+        out_block_size=out_block_size,
+        in_block_size=in_block_size)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
@@ -889,12 +1021,12 @@ class PallasTest(parameterized.TestCase):
         query_len=query_len,
     )
 
-    q_xla = q.to("xla")
-    k_pages_xla = k_pages.to("xla")
-    v_pages_xla = v_pages.to("xla")
-    kv_seq_lens_xla = kv_seq_lens.to("xla")
-    page_indices_xla = page_indices.to("xla")
-    effective_q_lens_xla = effective_q_lens.to("xla")
+    q_xla = q.to('xla')
+    k_pages_xla = k_pages.to('xla')
+    v_pages_xla = v_pages.to('xla')
+    kv_seq_lens_xla = kv_seq_lens.to('xla')
+    page_indices_xla = page_indices.to('xla')
+    effective_q_lens_xla = effective_q_lens.to('xla')
 
     output_no_cap = multi_queries_paged_attention(
         q_xla,
@@ -1015,12 +1147,12 @@ class PallasTest(parameterized.TestCase):
         query_len=query_len,
     )
 
-    q_xla = q.to("xla")
-    k_pages_xla = k_pages.to("xla")
-    v_pages_xla = v_pages.to("xla")
-    kv_seq_lens_xla = kv_seq_lens.to("xla")
-    page_indices_xla = page_indices.to("xla")
-    effective_q_lens_xla = effective_q_lens.to("xla")
+    q_xla = q.to('xla')
+    k_pages_xla = k_pages.to('xla')
+    v_pages_xla = v_pages.to('xla')
+    kv_seq_lens_xla = kv_seq_lens.to('xla')
+    page_indices_xla = page_indices.to('xla')
+    effective_q_lens_xla = effective_q_lens.to('xla')
 
     def multi_queries_paged_attention_wrapper(q, k_pages, v_pages, kv_seq_lens,
                                               page_indices, effective_q_lens,
@@ -1099,11 +1231,11 @@ class PallasTest(parameterized.TestCase):
         head_dim,
     )
 
-    q_xla = q.to("xla")
-    k_pages_xla = k_pages.to("xla")
-    v_pages_xla = v_pages.to("xla")
-    seq_lens_xla = seq_lens.to("xla")
-    page_indices_xla = page_indices.to("xla")
+    q_xla = q.to('xla')
+    k_pages_xla = k_pages.to('xla')
+    v_pages_xla = v_pages.to('xla')
+    seq_lens_xla = seq_lens.to('xla')
+    page_indices_xla = page_indices.to('xla')
 
     outputs = []
     for megacore_mode in ['kv_head', 'batch', None]:
@@ -1166,11 +1298,11 @@ class PallasTest(parameterized.TestCase):
         head_dim,
     )
 
-    q_xla = q.to("xla")
-    k_pages_xla = k_pages.to("xla")
-    v_pages_xla = v_pages.to("xla")
-    seq_lens_xla = seq_lens.to("xla")
-    page_indices_xla = page_indices.to("xla")
+    q_xla = q.to('xla')
+    k_pages_xla = k_pages.to('xla')
+    v_pages_xla = v_pages.to('xla')
+    seq_lens_xla = seq_lens.to('xla')
+    page_indices_xla = page_indices.to('xla')
 
     def paged_attention_wrapper(q, k, v, seq_lens, page_indices,
                                 pages_per_compute_block, attn_logits_soft_cap):
@@ -1246,11 +1378,11 @@ class PallasTest(parameterized.TestCase):
         head_dim,
     )
 
-    q_xla = q.to("xla")
-    k_pages_xla = k_pages.to("xla")
-    v_pages_xla = v_pages.to("xla")
-    seq_lens_xla = seq_lens.to("xla")
-    page_indices_xla = page_indices.to("xla")
+    q_xla = q.to('xla')
+    k_pages_xla = k_pages.to('xla')
+    v_pages_xla = v_pages.to('xla')
+    seq_lens_xla = seq_lens.to('xla')
+    page_indices_xla = page_indices.to('xla')
 
     outputs = []
     for attn_logits_soft_cap in [1.0, None]:
@@ -1303,8 +1435,8 @@ class PallasTest(parameterized.TestCase):
     zeros = torch.zeros(3, 32)
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     o = flash_attention(
-        q.to("xla"), k.to("xla"), v.to("xla"), False, segment_ids.to("xla"),
-        segment_ids.to("xla"))
+        q.to('xla'), k.to('xla'), v.to('xla'), False, segment_ids.to('xla'),
+        segment_ids.to('xla'))
 
     jax_q = jnp.array(q.numpy(), dtype=jnp.float32)
     jax_k = jnp.array(k.numpy(), dtype=jnp.float32)
@@ -1327,10 +1459,10 @@ class PallasTest(parameterized.TestCase):
   def test_flash_attention_wrapper_segment_ids_2(self):
     from torch_xla.experimental.custom_kernel import flash_attention
 
-    q = torch.randn(3, 2, 128, 4).to("xla")
-    k = torch.randn(3, 2, 128, 4).to("xla")
-    v = torch.randn(3, 2, 128, 4).to("xla")
-    zeros = torch.zeros(3, 32).to("xla")
+    q = torch.randn(3, 2, 128, 4).to('xla')
+    k = torch.randn(3, 2, 128, 4).to('xla')
+    v = torch.randn(3, 2, 128, 4).to('xla')
+    zeros = torch.zeros(3, 32).to('xla')
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     o = flash_attention(q, k, v, False, segment_ids, segment_ids)
 
@@ -1350,10 +1482,10 @@ class PallasTest(parameterized.TestCase):
     from torch_xla.experimental.custom_kernel import flash_attention
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    zeros = torch.zeros(4, 32).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    zeros = torch.zeros(4, 32).to('xla')
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     q.retain_grad()
     k.retain_grad()
@@ -1362,17 +1494,17 @@ class PallasTest(parameterized.TestCase):
     o = flash_attention(q, k, v, False, segment_ids, segment_ids)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    zeros = torch.zeros(4, 32).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    zeros = torch.zeros(4, 32).to('xla')
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     q.retain_grad()
     k.retain_grad()
@@ -1386,7 +1518,7 @@ class PallasTest(parameterized.TestCase):
             segment_ids, segment_ids))
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
@@ -1397,9 +1529,9 @@ class PallasTest(parameterized.TestCase):
   def test_flash_attention_wrapper_sm_scale(self):
     from torch_xla.experimental.custom_kernel import flash_attention
 
-    q = torch.randn(3, 2, 128, 4).to("xla")
-    k = torch.randn(3, 2, 128, 4).to("xla")
-    v = torch.randn(3, 2, 128, 4).to("xla")
+    q = torch.randn(3, 2, 128, 4).to('xla')
+    k = torch.randn(3, 2, 128, 4).to('xla')
+    v = torch.randn(3, 2, 128, 4).to('xla')
     sm_scale = 0.7
     o = flash_attention(q, k, v, False, None, None, sm_scale)
 
@@ -1413,9 +1545,9 @@ class PallasTest(parameterized.TestCase):
     from torch_xla.experimental.custom_kernel import flash_attention
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
     sm_scale = 0.7
     q.retain_grad()
     k.retain_grad()
@@ -1424,16 +1556,16 @@ class PallasTest(parameterized.TestCase):
     o = flash_attention(q, k, v, False, None, None, sm_scale)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -1441,7 +1573,7 @@ class PallasTest(parameterized.TestCase):
     o = self._attention(q * sm_scale, k, v)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     # Hmm, the gradients are the same even the autograd graph seems different.
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
@@ -1453,11 +1585,11 @@ class PallasTest(parameterized.TestCase):
   def test_flash_attention_ab(self):
     from torch_xla.experimental.custom_kernel import flash_attention
 
-    q = torch.randn(3, 2, 128, 4).to("xla")
-    k = torch.randn(3, 2, 128, 4).to("xla")
-    v = torch.randn(3, 2, 128, 4).to("xla")
-    mask = (torch.rand(3, 2, 128, 128) > 0.5).to("xla")
-    ab = torch.ones(3, 2, 128, 128).to("xla")
+    q = torch.randn(3, 2, 128, 4).to('xla')
+    k = torch.randn(3, 2, 128, 4).to('xla')
+    v = torch.randn(3, 2, 128, 4).to('xla')
+    mask = (torch.rand(3, 2, 128, 128) > 0.5).to('xla')
+    ab = torch.ones(3, 2, 128, 128).to('xla')
     ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min)
     o = flash_attention(q, k, v, ab=ab)
 
@@ -1472,11 +1604,11 @@ class PallasTest(parameterized.TestCase):
     from torch_xla.experimental.custom_kernel import flash_attention
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    mask = (torch.rand(4, 2, 128, 128) > 0.5).to("xla")
-    ab = torch.ones(4, 2, 128, 128).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    mask = (torch.rand(4, 2, 128, 128) > 0.5).to('xla')
+    ab = torch.ones(4, 2, 128, 128).to('xla')
     ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min)
     q.retain_grad()
     k.retain_grad()
@@ -1485,7 +1617,7 @@ class PallasTest(parameterized.TestCase):
     o = flash_attention(q, k, v, ab=ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
@@ -1498,7 +1630,7 @@ class PallasTest(parameterized.TestCase):
     o = self._attention(q, k, v, ab=ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
@@ -1510,11 +1642,11 @@ class PallasTest(parameterized.TestCase):
     from torch_xla.experimental.custom_kernel import flash_attention
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    mask = (torch.rand(4, 2, 128, 128) > 0.5).to("xla")
-    ab = torch.ones(4, 2, 128, 128).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    mask = (torch.rand(4, 2, 128, 128) > 0.5).to('xla')
+    ab = torch.ones(4, 2, 128, 128).to('xla')
     ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min)
     ab.requires_grad = True
     q.retain_grad()
@@ -1525,7 +1657,7 @@ class PallasTest(parameterized.TestCase):
     o = flash_attention(q, k, v, ab=ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     q_grad = q.grad
     k_grad = k.grad
@@ -1540,7 +1672,7 @@ class PallasTest(parameterized.TestCase):
     o = self._attention(q, k, v, ab=ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad), (ab, ab_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
@@ -1558,9 +1690,9 @@ class PallasTest(parameterized.TestCase):
       return make_boxed_func(gm)
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -1573,14 +1705,14 @@ class PallasTest(parameterized.TestCase):
         flash_attention, fw_compiler=compiler)
     o_actual = compiled_flash_attention(q, k, v, causal, q_segment_ids,
                                         kv_segment_ids, sm_scale)
-    xm.mark_step()
+    torch_xla.sync()
     if causal:
-      attention_mask = torch.triu(torch.ones(SEQ, SEQ), diagonal=1).to("xla")
+      attention_mask = torch.triu(torch.ones(SEQ, SEQ), diagonal=1).to('xla')
     else:
       attention_mask = None
 
     expected_output = self._attention(q, k, v, attn_mask=attention_mask)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(
         torch.allclose(o_actual.cpu(), expected_output.cpu(), atol=1e-5))
 
@@ -1596,26 +1728,26 @@ class PallasTest(parameterized.TestCase):
       return make_boxed_func(gm)
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8).to("xla")
-    k = torch.randn(4, 2, 128, 8).to("xla")
-    v = torch.randn(4, 2, 128, 8).to("xla")
+    q = torch.randn(4, 2, 128, 8).to('xla')
+    k = torch.randn(4, 2, 128, 8).to('xla')
+    v = torch.randn(4, 2, 128, 8).to('xla')
     B, N, SEQ, H = q.size()
     causal = False
     q_segment_ids = None
     kv_segment_ids = None
     sm_scale = 1.0
-    mask = (torch.rand(4, 2, 128, 128) > 0.5).to("xla")
-    ab = torch.ones(4, 2, 128, 128).to("xla")
+    mask = (torch.rand(4, 2, 128, 128) > 0.5).to('xla')
+    ab = torch.ones(4, 2, 128, 128).to('xla')
     ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min)
 
     compiled_flash_attention = aot_function(
         flash_attention, fw_compiler=compiler)
     o_actual = compiled_flash_attention(
         q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale, ab=ab)
-    xm.mark_step()
+    torch_xla.sync()
 
     expected_output = self._attention(q, k, v, ab=ab)
-    xm.mark_step()
+    torch_xla.sync()
     self.assertTrue(
         torch.allclose(o_actual.cpu(), expected_output.cpu(), atol=1e-5))
 
@@ -1631,15 +1763,15 @@ class PallasTest(parameterized.TestCase):
       return make_boxed_func(gm)
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
     B, N, SEQ, H = q.size()
-    mask = (torch.rand(4, 2, 128, 128) > 0.5).to("xla")
-    ab = torch.ones(4, 2, 128, 128).to("xla")
+    mask = (torch.rand(4, 2, 128, 128) > 0.5).to('xla')
+    ab = torch.ones(4, 2, 128, 128).to('xla')
     ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min).requires_grad_()
     ab.retain_grad()
 
@@ -1653,20 +1785,20 @@ class PallasTest(parameterized.TestCase):
         q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale, ab=ab)
     loss = o_actual.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
     ab_grad = ab.grad
 
     torch.manual_seed(42)
-    expected_q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    expected_k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    expected_v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    expected_q = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    expected_k = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
+    expected_v = torch.randn(4, 2, 128, 8, requires_grad=True).to('xla')
     expected_q.retain_grad()
     expected_k.retain_grad()
     expected_v.retain_grad()
-    expected_ab = torch.ones(4, 2, 128, 128).to("xla")
+    expected_ab = torch.ones(4, 2, 128, 128).to('xla')
     expected_ab = expected_ab.masked_fill(mask,
                                           torch.finfo(
                                               ab.dtype).min).requires_grad_()
@@ -1674,7 +1806,7 @@ class PallasTest(parameterized.TestCase):
     o = self._attention(expected_q, expected_k, expected_v, ab=expected_ab)
     loss = o.sum()
     loss.backward()
-    xm.mark_step()
+    torch_xla.sync()
 
     for expected_tensor, actual_tensor_grad in [(expected_q, q_grad),
                                                 (expected_k, k_grad),

@@ -19,7 +19,7 @@ on:
       timeout-minutes:
         required: false
         type: number
-        default: 270
+        default: 180  # Takes ~105m as of 2025/5/30.
         description: |
           Set the maximum (in minutes) how long the workflow should take to finish
             timeout-minutes:
@@ -78,7 +78,7 @@ jobs:
       RUN_TORCH_MP_OP_TESTS: ${{ matrix.run_torch_mp_op_tests }}
       RUN_CPP_TESTS1: ${{ matrix.run_cpp_tests1 }}
       RUN_CPP_TESTS2: ${{ matrix.run_cpp_tests2 }}
-      BAZEL_JOBS: 16
+      BAZEL_JOBS: ''  # Let bazel decide the parallelism based on the number of CPUs.
       BAZEL_REMOTE_CACHE: 1
     steps:
       - name: Checkout actions

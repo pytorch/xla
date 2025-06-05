@@ -60,7 +60,7 @@ def _init_with_reset_params(module):
     """
   is_meta = any(t.is_meta for t in module.parameters())
   if is_meta:
-    module.to_empty(device=xm.xla_device())
+    module.to_empty(device='xla')
   with torch.no_grad():
     module.reset_parameters()
 
@@ -87,7 +87,7 @@ class TestFSDPWithMetaDevice():
   def _test_simple_model_with_meta_device(self, meta_module_fn, init_fn=None):
     # Create model on meta device and wrap with FSDP.
     model = meta_module_fn()
-    inp = torch.randn(10, 2, device=xm.xla_device())
+    inp = torch.randn(10, 2, device='xla')
 
     fsdp_meta = XlaFullyShardedDataParallel(
         model,
@@ -97,15 +97,15 @@ class TestFSDPWithMetaDevice():
     meta_opt = torch.optim.SGD(fsdp_meta.parameters(), lr=1e-3)
     fsdp_meta(inp).sum().backward()
     meta_opt.step()
-    xm.mark_step()
+    torch_xla.sync()
 
-    regular = MyModel(device=xm.xla_device())
+    regular = MyModel(device='xla')
     fsdp_regular = XlaFullyShardedDataParallel(
         regular, auto_wrap_policy=always_wrap)
     regular_opt = torch.optim.SGD(fsdp_regular.parameters(), lr=1e-3)
     fsdp_regular(inp).sum().backward()
     regular_opt.step()
-    xm.mark_step()
+    torch_xla.sync()
 
     self._compare_fsdp(fsdp_meta, fsdp_regular)
 
@@ -127,7 +127,7 @@ class TestFSDPWithMetaDevice():
   def test_simple_model_with_torchdistX_init_fn(self):
 
     def meta_module_fn():
-      return deferred_init.deferred_init(MyModel, device=xm.xla_device())
+      return deferred_init.deferred_init(MyModel, device='xla')
 
     self._test_simple_model_with_meta_device(
         meta_module_fn, init_fn=_init_with_torchdistX)
@@ -135,13 +135,13 @@ class TestFSDPWithMetaDevice():
   def test_simple_model_with_default_torchdistX(self):
 
     def meta_module_fn():
-      return deferred_init.deferred_init(MyModel, device=xm.xla_device())
+      return deferred_init.deferred_init(MyModel, device='xla')
 
     self._test_simple_model_with_meta_device(meta_module_fn)
 
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
   # This test fails on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)
   if xm.xla_device_hw(device) in ('TPU', 'NEURON'):
     dist.init_process_group('xla', init_method='xla://')

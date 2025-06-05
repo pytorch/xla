@@ -7,6 +7,7 @@ import threading
 
 from absl.testing import absltest
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 import torch_xla.runtime as xr
@@ -32,17 +33,17 @@ class TestPjRtProfiler(absltest.TestCase):
 
   def setUp(self):
     # HACK: ensure libtpu is loaded if using TPU
-    xm.xla_device()
+    torch_xla.device()
 
   def test_profiler_output(self):
     tempdir = self.create_tempdir().full_path
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     ones = torch.ones([5])
     with _profile(tempdir):
       xones = ones.to(device)
       xtwos = xones + xones
-      xm.mark_step()
+      torch_xla.sync()
 
     profiles = glob.glob(os.path.join(tempdir, "plugins/profile/*/*.xplane.pb"))
     self.assertLen(profiles, 1, "one .xplane.pb file expected")

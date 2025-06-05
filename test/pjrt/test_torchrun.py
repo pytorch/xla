@@ -26,13 +26,11 @@ class TestTorchrun(absltest.TestCase):
 
     expected_world_size = dist_world_size * devices_per_thread
 
-    rank = torch.tensor([dist.get_rank()],
-                        dtype=torch.float32,
-                        device=xm.xla_device())
+    rank = torch.tensor([dist.get_rank()], dtype=torch.float32, device='xla')
     output = [rank.clone() for _ in range(expected_world_size)]
     dist.all_gather(output, rank)
     result = torch.concat(output)
-    xm.mark_step()
+    torch_xla.sync()
 
     expected = torch.arange(0, expected_world_size, step=1, dtype=torch.float32)
     torch.testing.assert_close(result.cpu(), expected)
@@ -52,9 +50,9 @@ class TestTorchrun(absltest.TestCase):
     expected = sum(tensors)
 
     xla_tensor = torch.arange(
-        2, dtype=torch.int64, device=xm.xla_device()) + 1 + 2 * dist.get_rank()
+        2, dtype=torch.int64, device='xla') + 1 + 2 * dist.get_rank()
     dist.all_reduce(xla_tensor, op=dist.ReduceOp.SUM)
-    xm.mark_step()
+    torch_xla.sync()
 
     torch.testing.assert_close(xla_tensor.cpu(), expected)
 
@@ -69,12 +67,11 @@ class TestTorchrun(absltest.TestCase):
         world_size * world_size, dtype=torch.int64)
     expected = torch.split(tensor, world_size)[dist.get_rank()]
 
-    tensor_out = torch.zeros(
-        world_size, dtype=torch.int64, device=xm.xla_device())
+    tensor_out = torch.zeros(world_size, dtype=torch.int64, device='xla')
     tensor_in = torch.arange(
-        world_size * world_size, dtype=torch.int64, device=xm.xla_device())
+        world_size * world_size, dtype=torch.int64, device='xla')
     dist.reduce_scatter(tensor_out, [tensor_in], op=dist.ReduceOp.SUM)
-    xm.mark_step()
+    torch_xla.sync()
 
     torch.testing.assert_close(tensor_out.cpu(), expected)
 

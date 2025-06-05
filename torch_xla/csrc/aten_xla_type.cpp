@@ -2888,7 +2888,7 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
     x = torch.randn(5,5).to(xla_device())
     // x.tensor_id = 2, x.alias_id should be 1
     x += 1
-    xm.mark_step()
+    torch_xla.sync()
     // x.tensor_id =3, x.alias_id should be 2 since input tensor id will be 2
     // for this graph
     x *= 1 of 1
@@ -2904,7 +2904,7 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
     x += 1
     // x.tensor_id = 3, x.alias_id should still be 1
     x * = 2
-    xm.mark_step()
+    torch_xla.sync()
     */
     output_tensor->data()->alias_id = input_tensor->data()->alias_id;
   }

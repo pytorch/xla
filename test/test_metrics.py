@@ -24,7 +24,7 @@ def check_metrics_file():
 class MetricsTest(unittest.TestCase):
 
   def test_clear_counters(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.tensor(100, device=xla_device)
     t1 += 2
     self.assertIn("xla::add", met.metrics_report())
@@ -39,7 +39,7 @@ class MetricsTest(unittest.TestCase):
     assert (len(met.counter_names()) > 0)
 
   def test_clear_metrics(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.tensor(156, device=xla_device)
     self.assertIn("TensorToData", met.metrics_report())
     assert (len(met.metric_names()) > 0)
@@ -52,7 +52,7 @@ class MetricsTest(unittest.TestCase):
     assert (len(met.metric_names()) > 0)
 
   def test_tracing_time_metrics(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     met.clear_all()
     t1 = torch.tensor(156, device=xla_device)
     t2 = t1 + 100
@@ -61,7 +61,7 @@ class MetricsTest(unittest.TestCase):
 
   def test_eager_metrics(self):
     with torch_xla.experimental.eager_mode_context(True):
-      xla_device = xm.xla_device()
+      xla_device = torch_xla.device()
       met.clear_all()
       t1 = torch.tensor(156, device=xla_device)
       t2 = t1 + 100
@@ -72,16 +72,16 @@ class MetricsTest(unittest.TestCase):
       self.assertIn('EagerOpExecuteTime', met.metric_names())
       # one for add
       self.assertEqual(met.metric_data('EagerOpExecuteTime')[0], 2)
-      # mark_step should be a no-op
-      xm.mark_step()
+      # `torch_xla.sync()` should be a no-op
+      torch_xla.sync()
       self.assertNotIn('CompileTime', met.metric_names())
       self.assertNotIn('ExecuteTime', met.metric_names())
 
   def test_short_metrics_report_default_list(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.tensor(1456, device=xla_device)
     t2 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     t2_cpu = t2.cpu()
     short_report = met.short_metrics_report()
     self.assertNotIn("TensorToData", short_report)
@@ -92,19 +92,19 @@ class MetricsTest(unittest.TestCase):
     self.assertIn("MarkStep", short_report)
     # repeat the same computation and expect to see the CachedCompile counter
     t3 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     t4 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     short_report = met.short_metrics_report()
     self.assertIn("CachedCompile", short_report)
     assert check_metrics_file()
 
   def test_short_metrics_report_custom_list(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.tensor(100, device=xla_device)
     t2 = t1 * 2
     t1 += 2
-    xm.mark_step()
+    torch_xla.sync()
     t2_cpu = t2.cpu()
     short_report = met.short_metrics_report(
         counter_names=['CreateCompileHandles'])
@@ -120,7 +120,7 @@ class MetricsTest(unittest.TestCase):
     self.assertIn('InputOutputAliasCount', short_report)
 
   def test_short_metrics_fallback_counter(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.tensor(100, device=xla_device)
     t2 = t1 * 2
     # this will trigger a aten::_local_scalar_dense which is the same as fallback counter
@@ -135,10 +135,10 @@ class MetricsTest(unittest.TestCase):
 
   def test_metrics_report(self):
     # TODO(jwtan): Add test to cover TrimIrGraph, SyncTensorsToData, TransferToDeviceAsync, IrValueTensorToXlaData
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.tensor(2077, device=xla_device)
     t2 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     t2_cpu = t2.cpu()
     report = met.metrics_report()
 
@@ -198,23 +198,23 @@ class MetricsTest(unittest.TestCase):
 
     # repeat the same computation and expect to see the CachedCompile counter
     t3 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     t4 = t1 * 2
-    xm.mark_step()
+    torch_xla.sync()
     report = met.metrics_report()
     self.assertIn("CachedCompile", report)
 
   @unittest.skipIf(xr.device_type() != "CPU", f"This test only works on CPU.")
   def test_execute_time_metric(self):
     # Initialize the client before starting the timer.
-    xm.xla_device()
+    torch_xla.device()
 
     begin = time.perf_counter_ns()
     value = torch.randn(
-        10000, 10000, device=xm.xla_device()) * torch.randn(
-            10000, 10000, device=xm.xla_device())
+        10000, 10000, device='xla') * torch.randn(
+            10000, 10000, device='xla')
     value_mean = value.mean()
-    xm.mark_step()
+    torch_xla.sync()
     cpu_value = value_mean.cpu()
     wall_time_ns = time.perf_counter_ns() - begin
     self.assertIn("ExecuteTime", met.metric_names())
@@ -226,7 +226,7 @@ class MetricsTest(unittest.TestCase):
 
   def test_pybind_increment_counter(self):
     met.clear_all()
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.tensor(2077, device=xla_device)
     self.assertEqual(met.counter_value('CreateXlaTensor'), 1)
     torch_xla._XLAC._xla_increment_counter('CreateXlaTensor', 3)
@@ -254,10 +254,10 @@ class MetricsTest(unittest.TestCase):
     # Create N boxes in the format XYXY.
     # This should not run any fallback ops.
     N = 10
-    x = torch.rand(N, 1).to(xm.xla_device())
-    y = torch.rand(N, 1).to(xm.xla_device())
-    width = torch.rand(N, 1).to(xm.xla_device())
-    height = torch.rand(N, 1).to(xm.xla_device())
+    x = torch.rand(N, 1).to(torch_xla.device())
+    y = torch.rand(N, 1).to(torch_xla.device())
+    width = torch.rand(N, 1).to(torch_xla.device())
+    height = torch.rand(N, 1).to(torch_xla.device())
     xys = torch.cat((x, x + width, y, y - height), dim=1)
     getAndAssertFallbackOpsLenEquals(0)
 
@@ -274,7 +274,7 @@ class MetricsTest(unittest.TestCase):
     if not XLAExperimentalContains("nms"):
       # Run torchvision operations as fallback.
       import torchvision
-      scores = torch.rand(N).to(xm.xla_device())
+      scores = torch.rand(N).to(torch_xla.device())
       # NMS doesn't have a PyTorch/XLA implementation without dynamic shapes.
       torchvision.ops.nms(xys, scores, 0.5)
       # remove_small_boxes is not implemented in C++. It calls other PyTorch

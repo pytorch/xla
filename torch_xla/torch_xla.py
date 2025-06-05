@@ -19,18 +19,34 @@ import torch_xla.utils.utils as xu
 def device(index: int = None) -> torch.device:
   """Returns a given instance of an XLA device.
 
-  If SPMD enables, returns a virtual device that wraps all devices available
+  If SPMD is enabled, returns a virtual device that wraps all devices available
   to this process.
 
   Args:
     index: index of the XLA device to be returned. Corresponds to index in
-      `torch_xla.devices()`.
+      `torch_xla.devices()`. By default, get the first device.
 
   Returns:
     An XLA `torch.device`.
   """
+  # When SPMD is enabled, we always return `xla:0` to the user, and
+  # under the hood we use virtual device logic for every xla tensor
+  if xu.check_env_flag('XLA_USE_SPMD'):
+    device = 'xla:0'
+    torch_xla._XLAC._xla_set_default_device(device)
+    return torch.device(device)
 
-  return xm.xla_device(index)
+  if index is None:
+    return torch.device(torch_xla._XLAC._xla_get_default_device())
+
+  devices = xm.get_xla_supported_devices()
+  if index > len(devices):
+    raise IndexError('Device index {} out of range in {}'.format(
+        index, devices))
+
+  device = devices[index]
+  torch_xla._XLAC._xla_set_default_device(device)
+  return torch.device(device)
 
 
 def devices() -> List[torch.device]:
@@ -59,18 +75,23 @@ def device_count() -> int:
   return len(real_devices())
 
 
-def sync(wait: bool = False):
+def sync(wait: bool = False, reset_scope: bool = True):
   """Launches all pending graph operations.
 
   Args:
     wait (bool): whether to block the current process until the execution finished.
-
+    reset_scope (bool): whether to reset the torch::lazy::ScopeContext of the IR Nodes.
   """
+  if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False):
+    print('torch_xla.torch_xla::sync\n', end='', file=sys.stderr, flush=True)
   torch_xla._XLAC._xla_step_marker(
-      torch_xla._XLAC._xla_get_default_device(),
-      [],
-      wait=wait,
-  )
+      torch_xla._XLAC._xla_get_default_device(), [],
+      wait=xu.getenv_as('XLA_SYNC_WAIT', bool, wait),
+      reset_scope=reset_scope)
+  # Only emit metrics from the first local device index, to avoid emitting the
+  # same values from different threads.
+  if xm.is_master_ordinal():
+    xm.ms.save_metrics()
   devctx = xm._run_step_closures()
   torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
@@ -94,7 +115,7 @@ def compile(
     f: Optional[Callable] = None,
     full_graph: Optional[bool] = False,
     name: Optional[str] = None,
-    num_different_graphs_allowed: Optional[int] = None,
+    max_different_graphs: Optional[int] = None,
 ):
   """
   Optimizes given model/function using torch_xla's LazyTensor tracing mode.
@@ -112,7 +133,7 @@ def compile(
       name (Optional[name]): Name of the compiled program. The name of the function `f` will be used
         if not specified. This name will be used in the `PT_XLA_DEBUG` messages as well as HLO/IR dump
         file.
-      num_different_graphs_allowed (Optional[int]): number of different traced graphs of the given
+      max_different_graphs (Optional[int]): number of different traced graphs of the given
         model/function that we are allowed to have. An error will be raised in case this limit
         is exceeded.
 
@@ -177,16 +198,16 @@ def compile(
     # if full_graph sets to true execution can not happen before the sync below
     torch_xla._XLAC._set_allow_execution(not full_graph)
 
-    if num_different_graphs_allowed is not None:
-      torch_xla._XLAC._dynamic_shape_detector_set_max_num_different_graphs_allowed(
-          num_different_graphs_allowed)
+    if max_different_graphs is not None:
+      torch_xla._XLAC._dynamic_shape_detector_set_max_different_graphs(
+          max_different_graphs)
       torch_xla._XLAC._dynamic_shape_detector_start_session(current_id)
 
     try:
       yield
     finally:
       torch_xla._XLAC._set_allow_execution(saved_allow_execution)
-      if num_different_graphs_allowed is not None:
+      if max_different_graphs is not None:
         torch_xla._XLAC._dynamic_shape_detector_end_session()
       # Collect the traced graph after running the target function and
       # execute the graph.

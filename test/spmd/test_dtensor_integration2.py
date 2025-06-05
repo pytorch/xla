@@ -38,8 +38,8 @@ class DTensorIntegrationTest2(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch_xla._XLAC._xla_get_auto_sharding())
 
     optimizer = optim.SGD(sharded_model.parameters(), lr=0.1)
-    data = torch.randn(128, 128).to(xm.xla_device())
-    target = torch.zeros(128).to(xm.xla_device())
+    data = torch.randn(128, 128).to(torch_xla.device())
+    target = torch.zeros(128).to(torch_xla.device())
     loss_fn = nn.CrossEntropyLoss()
     for _ in range(5):
       optimizer.zero_grad()
@@ -47,7 +47,7 @@ class DTensorIntegrationTest2(test_xla_sharding_base.XlaShardingTest):
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
     # Should compile with auto-sharding, we expect up to 3 times
     cnt = met.counter_value("CompileWithAutoSharding")
     self.assertTrue((cnt is not None) and (cnt <= 3))

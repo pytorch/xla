@@ -144,7 +144,7 @@ def train_mnist(flags,
   # Scale learning rate to num cores
   lr = flags.lr * xr.world_size()
 
-  device = xm.xla_device()
+  device = torch_xla.device()
   model = MNIST().to(device)
   writer = None
   if xm.is_master_ordinal():

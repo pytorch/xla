@@ -82,8 +82,8 @@ class GraphInputMatcher:
           str_device = str(traced_xla_value.device)
           inp = torch_xla._XLAC._get_base_seed_as_tensor(str_device)
           # update random seed here to avoid random operations always return
-          # the same result. The seed update logic is the same as `mark_step` in
-          # https://github.com/pytorch/pytorch/blob/6af6b8f728426fb7551630e28148c0017fa501bc/torch/csrc/lazy/core/lazy_graph_executor.cpp#L144C18-L144C51
+          # the same result. The seed update logic is the same as
+          # `torch_xla.sync()` in https://github.com/pytorch/pytorch/blob/6af6b8f728426fb7551630e28148c0017fa501bc/torch/csrc/lazy/core/lazy_graph_executor.cpp#L144C18-L144C51
           # Note: don't do `inp.item()` here since it will trigger a transferFromDevice
           xm.set_rng_state(
               (1012031 + torch_xla._XLAC._xla_get_rng_seed() * 7012063) %
@@ -153,8 +153,8 @@ def _maybe_move_tensors_to_device(tensors: tuple,
       # If the input cuda tensor requires gradient, we need to call detach. Otherwise, we'd get the error "RuntimeError: Can't export tensors that require gradient, use tensor.detach()"
       moved_tensor = torch_xla_dlpack.from_dlpack(tensor.detach())
     elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
-      # mark_step is need to make sure the pjrt buffer is valid.
-      xm.mark_step()
+      # `torch_xla.sync()` is need to make sure the pjrt buffer is valid.
+      torch_xla.sync()
       moved_tensor = torch_xla_dlpack.from_xla_cuda_to_cuda(tensor)
     else:
       # Have to move to CPU before moving it to target device.
@@ -289,26 +289,47 @@ class NoneRemover:
 
   def remove_nones(self, value_list):
     """
-    Remove none from value_list. value_list will be inplace updated.
+    Remove none from value_list and return the modified list/tuple.
     The original position of None values are recorded.
     """
-    num = len(value_list)
+    if isinstance(value_list, list):
+      num = len(value_list)
+      for i in reversed(range(num)):
+        if value_list[i] is None:
+          self.none_poslist.append(i)
+          del value_list[i]
 
-    # work in reverse order
-    for i in reversed(range(num)):
-      if value_list[i] is None:
-        self.none_poslist.append(i)
-        del value_list[i]
+      self.none_poslist.reverse()
+      return value_list
 
-    self.none_poslist.reverse()
+    if isinstance(value_list, tuple):
+      non_none_elements = []
+      for i, value in enumerate(value_list):
+        if value is None:
+          self.none_poslist.append(i)
+        else:
+          non_none_elements.append(value)
+      return tuple(non_none_elements)
+
+    raise TypeError("value_list must be a list or a tuple.")
 
   def add_nones(self, value_list):
     """
     Add nones to value_list according to self.none_poslist. value_list
     is inplace updated.
     """
-    for pos in self.none_poslist:
-      value_list.insert(pos, None)
+    if isinstance(value_list, list):
+      for pos in self.none_poslist:
+        value_list.insert(pos, None)
+      return value_list
+
+    if isinstance(value_list, tuple):
+      non_none_elements = list(value_list)
+      for pos in self.none_poslist:
+        non_none_elements.insert(pos, None)
+      return tuple(non_none_elements)
+
+    raise TypeError("value_list must be a list or a tuple.")
 
 
 def is_xla_tensor(tensor: torch.Tensor) -> bool:
@@ -321,7 +342,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
                                                                  ...],
                                                            Tuple[Any, ...]]):
   # Don't reset the scope as we might be under some profiler trace scope.
-  xm.mark_step(reset_scope=False)
+  torch_xla.sync(reset_scope=False)
   # FX Graph inputs passed from Dynamo. xla_args are XLA Tensors.
   xla_args = xla_model.xla_args
   # check [Note: Dynamo real-time input-shape cache look-up]
@@ -379,8 +400,11 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
   if not isinstance(xla_out, (tuple, list)):
     xla_out = (xla_out,)
 
+  if isinstance(xla_out, tuple):
+    xla_out = list(xla_out)
+
   none_remover = NoneRemover()
-  none_remover.remove_nones(xla_out)
+  xla_out = none_remover.remove_nones(xla_out)
 
   xla_out_ids = {id(x) for x in xla_out}
 
@@ -416,7 +440,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
                                                 xla_args_need_update_bool,
                                                 constant_outputs_and_indexes)
 
-  # There is a `mark_step` in the beginning of this function call, we need to wait
+  # There is a `torch_xla.sync()` in the beginning of this function call, we need to wait
   # for that to finish before retriving the device data nodes.
   xm.wait_device_ops()
   # Collect all device data nodes that is needed to compute the args_and_out_tensor_only
@@ -469,12 +493,12 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
       xla_args_tensor_only[i].copy_(cloned_xla_args[i])
 
   # Remove all of the pending IR from all live tensors. The assumptions are
-  # 1. With the  `xm.mark_step` in the beginning of this call, every XLATensor
-  # should be materialized
+  # 1. With the `torch_xla.sync()` in the beginning of this call, every
+  # XLATensor should be materialized.
   # 2. All of the pending IRs are result of our warm up cache tracing and they
   # should be removed to avoid extra computation executed and in place updates op
   # mistakenlly update the input tensors.
-  torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+  torch_xla._XLAC._clear_pending_irs(str(torch_xla.device()))
 
   vars_to_return = (xla_args_sharding_spec, args_and_out, graph_hash,
                     arg_index_to_need_update_index, none_remover,
@@ -543,11 +567,11 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       is_cuda_args = original_device.type == "cuda"
 
     if is_cuda_args:
-      args = _maybe_move_tensors_to_device(args, xm.xla_device())
+      args = _maybe_move_tensors_to_device(args, torch_xla.device())
 
     if not config.skip_input_data_check:
-      # mark_step needs to be blocking since we want to access args's XLADatas
-      # and they can't be placeholder.
+      # `torch_xla.sync()` needs to be blocking since we want to access args's
+      # XLADatas and they can't be placeholder.
       input_tensors_to_sync = [
           xla_args_tensor_only[i] for i, x in enumerate(
               torch_xla._XLAC._check_tensor_need_materialization(
@@ -596,7 +620,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     # First few elements might be xla_args that needs to be in place updated
     result = res[len(xla_args_need_update):]
 
-    none_remover.add_nones(result)
+    result = none_remover.add_nones(result)
     if is_cuda_args:
       result = _maybe_move_tensors_to_device(tuple(result), original_device)
 
@@ -740,7 +764,7 @@ def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
   # UnsupportedNodesCollector might trigger in place ops, need to clear them here.
   _clear_pending_irs_on_args(all_xla_args_tensor_only, cloned_args)
 
-  torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+  torch_xla._XLAC._clear_pending_irs(str(torch_xla.device()))
 
   class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
 
@@ -784,7 +808,8 @@ def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
 
 def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
   if _args_on_cuda(xla_args):
-    xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
+    xla_args = tuple(
+        _maybe_move_tensors_to_device(xla_args, torch_xla.device()))
 
   # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
   # value reference before actually computing it.
@@ -794,7 +819,7 @@ def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
 
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids.
   # Don't reset the scope as we might be under some profiler trace scope.
-  xm.mark_step(reset_scope=False)
+  torch_xla.sync(reset_scope=False)
 
   # Find tensor constructor nodes that create CPU tensors, and make
   # them create XLA tensors, where possible, instead. i.e. replace the

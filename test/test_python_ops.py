@@ -19,7 +19,8 @@ from torch.testing._internal.common_dtype import (all_types_and_complex_and)
 # work. The randperm op generates a random tensor. Every iteration of the test
 # recompiles the randperm op thus generating a different random tensor which
 # makes the test non-deterministic. To force determinism, this test has to
-# call PyTorch/XLA mark_step() to materialize the tensor rather than recompile.
+# call PyTorch/XLA `torch_xla.sync()` to materialize the tensor rather than
+# recompile.
 class TestPythonOps(pytorch_test_base.XLATestBase):
 
   @dtypes(*all_types_and_complex_and(torch.half, torch.bfloat16))
@@ -28,8 +29,8 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
       raise unittest.SkipTest("Dtype {0} is unsupported by XLA".format(
           str(dtype)))
 
-    device = xm.xla_device()
-    real_device_type = xm.xla_device_hw(str(xm.xla_device()))
+    device = torch_xla.device()
+    real_device_type = xm.xla_device_hw(str(torch_xla.device()))
     if real_device_type == "TPU":
       raise unittest.SkipTest("TestPut is too slow on TPU. Skipped")
 
@@ -64,7 +65,7 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
           idx = idx.reshape(2, 2)
         out = torch.put(dst, idx, src, accumulate)
 
-        xm.mark_step()
+        torch_xla.sync()
 
         # out-place
         reference = ref_put(dst, idx, src, accumulate)
@@ -107,7 +108,7 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
       raise unittest.SkipTest("Dtype {0} is unsupported by XLA".format(
           str(dtype)))
 
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     # We just test for num_copy <= num_dest, as otherwise there are repeated indices
     # and the behavior is undefined
@@ -142,7 +143,7 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
             idx = torch.repeat_interleave(idx, 2, dim=-1)
             idx = idx[..., ::2]
 
-          xm.mark_step()
+          torch_xla.sync()
 
           dest2 = dest.clone()
           dest.index_copy_(dim, idx, src)

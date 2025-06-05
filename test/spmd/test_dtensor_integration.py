@@ -30,10 +30,7 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
 
     for requires_grad in [True, False]:
       tensor_to_shard = torch.randn(
-          3 * device_count,
-          3,
-          requires_grad=requires_grad,
-          device=xm.xla_device())
+          3 * device_count, 3, requires_grad=requires_grad, device='xla')
       dist_tensor = distribute_tensor(tensor_to_shard, device_mesh, shard_spec)
       # TODO(yeounoh) switch to DTensor API when XLAShardedTensor inherits DTensor
       assert type(dist_tensor).__name__ == "XLAShardedTensor"
@@ -49,7 +46,7 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_optimizer_step_with_sharding(self):
     # Use simple linear model to test model parameter sharding
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to(torch_xla.device())
 
     # Running the same mark_sharding test with xla_distribute_tensor instead
     device_count = xr.global_runtime_device_count()
@@ -60,8 +57,8 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
 
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
-    data = torch.randn(128, 128).to(xm.xla_device())
-    target = torch.zeros(128).to(xm.xla_device())
+    data = torch.randn(128, 128).to(torch_xla.device())
+    target = torch.zeros(128).to(torch_xla.device())
     loss_fn = nn.CrossEntropyLoss()
     for _ in range(3):
       optimizer.zero_grad()
@@ -69,14 +66,14 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
-      xm.mark_step()
-      # Sharding is persisted across mark_step calls, and test if the sharded computation
-      # can repeat more than once without crashing.
+      torch_xla.sync()
+      # Sharding is persisted across `torch_xla.sync()` calls, and test if the
+      # sharded computation can repeat more than once without crashing.
       self.assertEqual(sharding_spec,
                        torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
   def test_xla_distribute_module(self):
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to(torch_xla.device())
 
     device_count = xr.global_runtime_device_count()
     device_mesh = init_device_mesh("xla", mesh_shape=(device_count,))
@@ -96,8 +93,8 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
 
     sharded_model.train()
     optimizer = optim.SGD(sharded_model.parameters(), lr=0.1)
-    data = torch.randn(128, 128).to(xm.xla_device())
-    target = torch.zeros(128).to(xm.xla_device())
+    data = torch.randn(128, 128).to(torch_xla.device())
+    target = torch.zeros(128).to(torch_xla.device())
     loss_fn = nn.CrossEntropyLoss()
     for _ in range(3):
       optimizer.zero_grad()
@@ -105,7 +102,7 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
     # Should run with SPMD mode, ExecuteReplicated.
     self.assertTrue(met.counter_value("ExecuteReplicated") > 0)
     self.assertTrue(met.counter_value("ExecuteComputation") is None)

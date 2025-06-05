@@ -24,7 +24,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     super().setUpClass()
 
   def test_fsdp_v2_basic(self):
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to(torch_xla.device())
     mesh = self._get_mesh((self.n_devices, 1), None, ('fsdp', 'tensor'))
     model.fc1 = FSDPv2(model.fc1, mesh=mesh)
     model.fc2 = FSDPv2(model.fc2, mesh=mesh)
@@ -39,7 +39,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
       self.assertEqual(annotation,
                        torch_xla._XLAC._get_xla_sharding_spec(model.fc2.weight))
 
-    x = torch.randn(16, 128).to(xm.xla_device())
+    x = torch.randn(16, 128).to(torch_xla.device())
     xs.mark_sharding(x, mesh, ('fsdp', None))
     output = model(x)
     # Make sure output are sharded.
@@ -59,11 +59,11 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
         hlo)
 
     # Make sure the model can execute without error.
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
 
   def test_fsdp_v2_output_correctness(self):
-    model_expected = self.SimpleLinear().to(xm.xla_device())
+    model_expected = self.SimpleLinear().to(torch_xla.device())
 
     model = copy.deepcopy(model_expected)
     mesh = self._get_mesh((self.n_devices, 1), None, ('fsdp', 'tensor'))
@@ -71,7 +71,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     model.fc2 = FSDPv2(model.fc2, mesh=mesh)
     model = FSDPv2(model, mesh=mesh)
 
-    x_expected = torch.randn(16, 128).to(xm.xla_device())
+    x_expected = torch.randn(16, 128).to(torch_xla.device())
 
     x = copy.deepcopy(x_expected)
     xs.mark_sharding(x, mesh, ('fsdp', None))
@@ -81,7 +81,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(output_expected.cpu(), output.cpu()))
 
   def test_fsdp_v2_auto_wrap_basic(self):
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to(torch_xla.device())
     mesh = self._get_mesh((self.n_devices, 1), None, ('fsdp', 'tensor'))
     auto_wrap_policy = functools.partial(
         transformer_auto_wrap_policy,
@@ -93,7 +93,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(isinstance(model.fc2, FSDPv2))
 
   def test_fsdp_v2_auto_wrap_callable(self):
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to(torch_xla.device())
     mesh = self._get_mesh((self.n_devices, 1), None, ('fsdp', 'tensor'))
     auto_wrap_policy = functools.partial(
         transformer_auto_wrap_policy,
@@ -115,7 +115,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     self.assertFalse(isinstance(model.fc2, FSDPv2))
 
   def test_fsdp_v2_global_mesh(self):
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to(torch_xla.device())
     mesh = self._get_mesh((self.n_devices, 1), None, ('fsdp', 'tensor'))
     xs.set_global_mesh(mesh)
 
@@ -123,7 +123,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(id(model._mesh), id(mesh))
 
   def test_fsdp_v2_global_mesh_error(self):
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to(torch_xla.device())
     xs.set_global_mesh(None)
 
     with self.assertRaises(ValueError):
@@ -141,7 +141,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_fsdp_v2_multi_slice(self):
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to(torch_xla.device())
     mesh = self._get_mesh((2, self.n_devices // 2, 1), None,
                           ('data', 'fsdp', 'tensor'))
     model = FSDPv2(model, mesh=mesh, extra_data_axis="data")
@@ -155,7 +155,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(annotation,
                      torch_xla._XLAC._get_xla_sharding_spec(model.fc2.weight))
 
-    x = torch.randn(16, 128).to(xm.xla_device())
+    x = torch.randn(16, 128).to(torch_xla.device())
     xs.mark_sharding(x, mesh, (('data', 'fsdp'), None))
     output = model(x)
     # Make sure output are sharded.
@@ -166,19 +166,19 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(output))
 
     # Make sure the model can execute without error.
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_fsdp_v2_multi_slice_output_correctness(self):
-    model_expected = self.SimpleLinear().to(xm.xla_device())
+    model_expected = self.SimpleLinear().to(torch_xla.device())
 
     model = copy.deepcopy(model_expected)
     mesh = self._get_mesh((2, self.n_devices // 2, 1), None,
                           ('data', 'fsdp', 'tensor'))
     model = FSDPv2(model, mesh=mesh, extra_data_axis="data")
 
-    x_expected = torch.randn(16, 128).to(xm.xla_device())
+    x_expected = torch.randn(16, 128).to(torch_xla.device())
 
     x = copy.deepcopy(x_expected)
     xs.mark_sharding(x, mesh, (('data', 'fsdp'), None))
@@ -188,7 +188,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(output_expected.cpu(), output.cpu()))
 
   def test_fsdp_v2_multi_slice_error(self):
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to(torch_xla.device())
     xs.set_global_mesh(
         self._get_mesh((2, self.n_devices // 2, 1), None,
                        ('data', 'fsdp', 'tensor')))

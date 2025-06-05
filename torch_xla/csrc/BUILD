@@ -126,10 +126,12 @@ ptxla_cc_library(
         ":shape_builder",
         ":shape_helper",
         ":version",
+        "//torch_xla/csrc:thread_pool",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:stablehlo_helper",
         "//torch_xla/csrc/runtime:xla_util",
         "@com_google_absl//absl/hash",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
@@ -322,7 +324,7 @@ cc_library(
 
 cc_library(
     name = "thread_pool",
-    srcs = ["thread_pool.cc"],
+    srcs = ["thread_pool.cpp"],
     hdrs = ["thread_pool.h"],
     deps = [
         "//torch_xla/csrc/runtime:sys_util",

@@ -5,7 +5,7 @@ load(
 
 cc_library(
     name = "test_cpu_plugin",
-    srcs = ["test_cpu_plugin.cc"],
+    srcs = ["test_cpu_plugin.cpp"],
     hdrs = ["test_cpu_plugin.h"],
     visibility = ["//visibility:public"],
     deps = [

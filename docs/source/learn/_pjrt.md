@@ -73,7 +73,7 @@ import torch_xla.distributed.xla_backend
 
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
 -  dist.init_process_group('xla', rank=xr.global_ordinal(), world_size=xr.world_size())
 +  dist.init_process_group('xla', init_method='xla://')
 
@@ -96,7 +96,7 @@ def _mp_fn(index):
     loss.backward()
 
     optimizer.step()
-    xm.mark_step()
+    torch_xla.sync()
 
   # Print mean parameters so we can confirm they're the same across replicas
   print([p.mean() for p in model.parameters()])
@@ -325,10 +325,10 @@ communication, which is much more stable and well-tested on large TPU
 pods. This imposes two new constraints compared to the XRT
 implementation:
 
--   Because the payload has to become part of the XLA graph,
-    `xm.mark_step` is called both before and after the data is
-    transferred. Calling `xm.rendezvous` in the middle of model code may
-    force an unwanted compilation.
+-   Because the payload has to become part of the XLA graph, `torch_xla.sync()`
+    is called both before and after the data is transferred. Calling
+    `xm.rendezvous` in the middle of model code may force an unwanted
+    compilation.
 -   Because XLA does not permit collective operations to run on a subset
     of workers, all workers must participate in the `rendezvous`.
 
@@ -377,11 +377,11 @@ def _all_gather(index: int):
   # No need to pass in `rank` or `world_size`
   dist.init_process_group('xla', init_method='xla://')
 
-  t = torch.tensor([index], dtype=torch.int32, device=xm.xla_device())
+  t = torch.tensor([index], dtype=torch.int32, device='xla')
   output = [torch.zeros_like(t) for _ in range(dist.get_world_size())]
   dist.all_gather(output, t)
 
-  xm.mark_step()
+  torch_xla.sync()
   print(output)
 
 if __name__ == '__main__':

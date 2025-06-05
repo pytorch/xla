@@ -1,6 +1,7 @@
 import copy
 
 import torch
+import torch_xla
 
 import torch._dynamo.test_case
 import torch._dynamo.testing
@@ -115,7 +116,7 @@ def allclose(expected, actual):
 def make_reuse_graph_test(module_class, niter=100):
 
   def test_wrapper(self):
-    xla_dev = xm.xla_device()
+    xla_dev = torch_xla.device()
     xla_module = module_class().to(device=xla_dev)
     inputs = tuple(x.to(device=xla_dev) for x in xla_module.get_random_inputs())
     metrics.clear_counters()
@@ -129,7 +130,7 @@ def make_reuse_graph_test(module_class, niter=100):
 
       expected = xla_module(*xla_inputs)
       # make sure above lazy computation is executed.
-      xm.mark_step()
+      torch_xla.sync()
 
       actual = optimized_mod(*xla_inputs_copy)
 
@@ -186,7 +187,7 @@ def make_training_test(model_cls):
   def test_wrapper(self):
     import torch_xla.core.xla_model as xm
 
-    xla_dev = xm.xla_device()
+    xla_dev = torch_xla.device()
     model = model_cls()
     inputs = model.get_random_inputs()
 
@@ -224,11 +225,11 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
 
   def _compile_and_check(self, fn, args, backend="openxla"):
     r = fn(*args)
-    xm.mark_step()
+    torch_xla.sync()
 
     compiled_fn = torch.compile(backend=backend)(fn)
     compiled_r = compiled_fn(*args)
-    xm.mark_step()
+    torch_xla.sync()
 
     self.assertEqual(r, compiled_r)
 
@@ -239,7 +240,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
       def __init__(self):
         super().__init__(num_embeddings=10, embedding_dim=10, padding_idx=0)
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     module = Emb()
     module.to(device)
 
@@ -254,7 +255,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     def foo(x):
       return x * 2
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     x = torch.rand(5, device=device)
     x = x.unsqueeze(dim=-1)
     self._compile_and_check(foo, (x,))
@@ -264,7 +265,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     def foo(device):
       return torch.arange(5, device="cpu").to(device)
 
-    self._compile_and_check(foo, (xm.xla_device(),))
+    self._compile_and_check(foo, (torch_xla.device(),))
 
   def test_index_flag_unsupported(self):
     # The indices of the index operation are represented as
@@ -276,7 +277,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     def foo(xt, t):
       return xt[t]
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     xt = torch.rand(5, device=device)
     t = torch.randint(0, 5, (3,))
     self._compile_and_check(foo, (xt, t))
@@ -298,7 +299,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     def foo(t):
       return t.cpu()
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     t = torch.randint(0, 5, (3,), device=device)
     self._compile_and_check(foo, (t,))
 

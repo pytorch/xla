@@ -120,7 +120,7 @@ def scan(
   Example:
 
     >>> # Example of using `scan` to implement `torch.cumsum`.
-    >>> import torch_xla.runtime
+    >>> import torch_xla.core.xla_model as xm
     >>> import torch
     >>> from torch_xla.experimental.scan import scan
     >>>
@@ -129,7 +129,7 @@ def scan(
     >>>   y = new_carry
     >>>   return new_carry, y
     >>>
-    >>> with torch_xla.runtime.xla_device():
+    >>> with torch_xla.device():
     >>>   init = torch.tensor([0.0, 0.0], requires_grad=True)
     >>>   xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
     >>>                     requires_grad=True)
@@ -727,7 +727,7 @@ def _scan_impl_flat(fn,
     seed_tensor = hoisted_vars[seed_parameter_id]
     assert seed_tensor.dtype == torch.int64
     hoisted_vars[seed_parameter_id] = torch.randint(
-        0, 2**62, (num_iters,), dtype=torch.int64, device=torch_xla.device())
+        0, 2**62, (num_iters,), dtype=torch.int64, device='xla')
 
   # Add hoisted variables as While computation params as well,
   # including the potentially updated seed tensor.

@@ -11,7 +11,7 @@ FLAGS, leftovers = parser.parse_known_args()
 
 
 def run():
-  device = xm.xla_device()
+  device = torch_xla.device()
   model = torch.nn.ModuleList([
       torch.nn.Sequential(
           torch.nn.Conv2d(1024, 1024, 1),
@@ -43,7 +43,7 @@ def run():
     dummy_loss = x.sum()
     dummy_loss.backward()
     optimizer.step()
-    xm.mark_step()
+    torch_xla.sync()
 
 
 if __name__ == "__main__":

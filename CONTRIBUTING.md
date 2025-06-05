@@ -193,8 +193,11 @@ commands on your Linux machine directly, outside of the container.
 
 **Subsequent builds**: after building the packages from source code for the
 first time, you may need to build everything again, for example, after a
-`git pull`. You can run `scripts/build_developer.sh` which will rebuild PyTorch,
-TorchVision, and PyTorch/XLA.
+`git pull`. You can:
+
+- run `scripts/build_developer.sh -b pytorch` to rebuild PyTorch, TorchVision,
+  and PyTorch/XLA,
+- run `scripts/build_developer.sh` to rebuild PyTorch/XLA only.
 
 ### Manually build in Docker container
 
@@ -327,9 +330,39 @@ the PR.
 ## Updating Forked Repos
 
 From time to time, you'll need to bring your forked repos up to date with
-the original (aka upstream) repos. You can do this one repo at a time
-by running the following commands on your Linux machine (not inside the
-dev container).
+the upstream repos. You can do this either by using a convenience script,
+or by manually running `git` commands.
+
+### Using the Convenience Script
+
+This is the easiest way to update the forked repos. Please run the following
+commands on your Linux machine (not inside the dev container).
+
+First, create a `git sync-main` alias to run the `scripts/git_sync_main.py` script
+(you only need to do it once):
+
+```bash
+cd $WORKSPACE_DIR/pytorch/xla
+git config alias.sync-main '!scripts/git_sync_main.py'
+```
+
+After that, you can (in the `$WORKSPACE_DIR/pytorch/xla` directory) run:
+
+```bash
+# Update the pytorch/xla repo.
+git sync-main
+# Update the vision and pytorch/xla repos.
+git sync-main -b vision
+# Update the pytorch, vision, and pytorch/xla repos.
+git sync-main -b pytorch
+# See the usage of the command.
+git sync-main -h
+```
+
+### Running git Manually
+
+You can also update the forked repos step by step, by running the following
+commands on your Linux machine (not inside the dev container).
 
 First, for the `pytorch` repo:
 
@@ -340,6 +373,8 @@ git fetch upstream
 git checkout main 
 # Merge the changes from upstream/main into your local branch.
 git merge upstream/main
+# Update submodules to match the latest changes.
+git submodule update --recursive 
 # Push the updated branch to your fork on GitHub.
 git push origin main
 ```
@@ -363,4 +398,25 @@ git fetch upstream
 git checkout master
 git merge upstream/master
 git push origin master
+```
+
+## Updating Local Branch with Upstream Changes
+
+While you work on a PR, other PRs may be merged into the upstream repo's
+default branch, and you may want to make sure your PR works with them.
+In this case, you'll want to rebase your commits on top of the upstream
+commits. You can do this by:
+
+```bash
+cd $WORKSPACE_DIR/pytorch/xla
+git checkout your-branch-name
+# Update the remote-tracking branches for upstream.
+git fetch upstream
+# Rebase commits in your PR on top of the upstream master branch.
+git rebase upstream/master
+# If the above command fails due to merge conflicts, follow the error messages
+# to resolve the conflicts.
+# When you are done, push the updated branch to your fork on GitHub. This will
+# update the PR.
+git push --force-with-lease origin your-branch-name
 ```

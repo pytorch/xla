@@ -128,13 +128,13 @@ def _run(
     iterations = runner._args.verify_iterations
     inputs = copy.deepcopy(model.example_inputs)
 
-    def maybe_mark_step():
-      runner._mark_step(experiment)
+    def maybe_sync():
+      runner._sync(experiment)
 
     def maybe_synchronize():
       runner._synchronize(experiment)
 
-    maybe_mark_step()
+    maybe_sync()
     maybe_synchronize()
 
     with model.pick_grad():
@@ -143,7 +143,7 @@ def _run(
         collect_full_output = i == iterations - 1
         output = model.model_iter_fn(
             inputs, collect_full_output=collect_full_output)
-        maybe_mark_step()
+        maybe_sync()
 
     maybe_synchronize()
     return output

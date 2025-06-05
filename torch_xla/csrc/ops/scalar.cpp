@@ -72,6 +72,26 @@ XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
       literal.Set<xla::bfloat16>({},
                                  static_cast<xla::bfloat16>(value_.toDouble()));
       break;
+    case xla::PrimitiveType::F8E5M2:
+      literal.Set<tsl::float8_e5m2>(
+          {}, static_cast<tsl::float8_e5m2>(value_.toDouble()));
+      break;
+    case xla::PrimitiveType::F8E5M2FNUZ:
+      literal.Set<tsl::float8_e5m2fnuz>(
+          {}, static_cast<tsl::float8_e5m2fnuz>(value_.toDouble()));
+      break;
+    case xla::PrimitiveType::F8E4M3:
+      literal.Set<tsl::float8_e4m3>(
+          {}, static_cast<tsl::float8_e4m3>(value_.toDouble()));
+      break;
+    case xla::PrimitiveType::F8E4M3FN:
+      literal.Set<tsl::float8_e4m3fn>(
+          {}, static_cast<tsl::float8_e4m3fn>(value_.toDouble()));
+      break;
+    case xla::PrimitiveType::F8E4M3FNUZ:
+      literal.Set<tsl::float8_e4m3fnuz>(
+          {}, static_cast<tsl::float8_e4m3fnuz>(value_.toDouble()));
+      break;
     case xla::PrimitiveType::F16:
       literal.Set<xla::half>({}, static_cast<xla::half>(value_.toDouble()));
       break;

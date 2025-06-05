@@ -20,7 +20,7 @@ dummy_model = torch.nn.Sequential(
 class PybindTest(unittest.TestCase):
 
   def test_get_tensors_xla_device_data_node(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.randn(20, 5).to(xla_device)
     t2 = torch.randn(20, 5).to(xla_device)
     t3 = t2 + t1
@@ -42,7 +42,7 @@ class PybindTest(unittest.TestCase):
     assert (expected_tensor_ids == sorted(res_pair[0]))
 
   def test_get_base_seed_as_tensor(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     xm.set_rng_state(23, str(device))
     base_seed = torch_xla._XLAC._get_base_seed_as_tensor(str(device)).item()
     self.assertEqual(23, base_seed)
@@ -51,14 +51,14 @@ class PybindTest(unittest.TestCase):
     self.assertEqual(torch_xla._XLAC._get_seed_info_id(), -127389)
 
   def test_check_tensor_need_materialization(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     t1 = torch.randn(20, 5)
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
     t1 = t1.to(xla_device)
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
-    # call mark_step to clear pending irs on t1. This should test the case where
-    # XLATensor has a `XLAData` instead of a `DeviceData` IR.
-    xm.mark_step()
+    # call `torch_xla.sync()` to clear pending irs on t1. This should test the
+    # case where XLATensor has a `XLAData` instead of a `DeviceData` IR.
+    torch_xla.sync()
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
     t2 = t1 * 2
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
@@ -67,7 +67,7 @@ class PybindTest(unittest.TestCase):
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [True])
 
   def test_get_graph_hash(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_input = torch.randn(64, 256, 14, 14).to(xla_device)
     xla_dummy_model = dummy_model.to(xla_device)
     xla_out = xla_dummy_model(xla_input)
@@ -85,8 +85,8 @@ class PybindTest(unittest.TestCase):
     assert (hash == torch_xla._XLAC._get_graph_hash([xla_out_2]))
 
   def test_clear_pending_irs(self):
-    xla_device = xm.xla_device()
-    xm.mark_step()
+    xla_device = torch_xla.device()
+    torch_xla.sync()
     t1 = torch.randn(20, 5).to(xla_device)
     t2 = torch.randn(20, 5).to(xla_device)
     t3 = t2 + t1
@@ -99,12 +99,12 @@ class PybindTest(unittest.TestCase):
     torch_xla._XLAC._clear_pending_irs(str(xla_device))
     self.assertNotIn("aten::add", torch_xla._XLAC._get_xla_tensors_text([t3]))
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
-    xm.mark_step()
-    # mark_step should not incur new execution
+    torch_xla.sync()
+    # `torch_xla.sync()` should not incur new execution
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
   def test_run_cached_graph(self):
-    xla_device = xm.xla_device()
+    xla_device = torch_xla.device()
     xla_input = torch.randn(64, 256, 14, 14).to(xla_device)
     xla_dummy_model = dummy_model.to(xla_device)
     xla_out = xla_dummy_model(xla_input)

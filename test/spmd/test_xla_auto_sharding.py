@@ -39,11 +39,11 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd(auto=True)
 
   def init_test_variables(cls):
-    xt_no_auto = torch.ones(2, 2).to(xm.xla_device())
+    xt_no_auto = torch.ones(2, 2).to(torch_xla.device())
     cls.hash_no_auto = torch_xla._XLAC._get_graph_hash([xt_no_auto + 0])
 
   def test_auto_sharding_hashing(self):
-    xt = torch.ones(2, 2).to(xm.xla_device())
+    xt = torch.ones(2, 2).to(torch_xla.device())
     assert torch_xla._XLAC._xla_get_auto_sharding()
     hash_auto_spmd = torch_xla._XLAC._get_graph_hash([xt + 0])
     self.assertNotEqual(hash_auto_spmd, self.hash_no_auto)
@@ -60,10 +60,10 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
     t2 = torch.ones(128, 256)
     t3 = (t1 @ t2).sum()
 
-    xt1 = t1.to(xm.xla_device())
-    xt2 = t2.to(xm.xla_device())
+    xt1 = t1.to(torch_xla.device())
+    xt2 = t2.to(torch_xla.device())
     xt3 = (xt1 @ xt2).sum()
-    xm.mark_step()
+    torch_xla.sync()
     self.assertEqual(met.counter_value("CompileWithAutoSharding"), 1)
     self.assertTrue(torch.allclose(t3, xt3.cpu()))
 
@@ -72,11 +72,11 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
   def test_simple_linear_training(self):
     met.clear_counters()
 
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to(torch_xla.device())
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
-    data = torch.randn(128, 128).to(xm.xla_device())
-    target = torch.zeros(128).to(xm.xla_device())
+    data = torch.randn(128, 128).to(torch_xla.device())
+    target = torch.zeros(128).to(torch_xla.device())
     loss_fn = nn.CrossEntropyLoss()
     for i in range(5):
       optimizer.zero_grad()
@@ -84,7 +84,7 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
     cnt = met.counter_value("CompileWithAutoSharding")
     self.assertTrue((cnt is not None) and (cnt <= 3))
 
