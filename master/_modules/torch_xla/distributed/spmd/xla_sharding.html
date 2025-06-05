@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git5771cd3 )
+                  master (2.8.0+git402612d )
                 </div>
               
             
@@ -1007,6 +1007,40 @@
   <span class="n">t</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_spmd_shard_to_full_shape</span><span class="p">(</span>
       <span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_op_sharding</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span>
       <span class="n">full_shape</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">annotate_custom_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                                      <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
+                             <span class="n">partition_spec</span><span class="p">:</span> <span class="n">PartitionSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Annotates an existing tensor with a custom sharding IR node without modifying its data layout.</span>
+
+<span class="sd">  Unlike `mark_sharding`, this function only adds a custom sharding annotation to the XLA IR</span>
+<span class="sd">  without explicitly setting a sharding spec tied to the DeviceData node or transferring any</span>
+<span class="sd">  sharded data to the device. This allows providing explicit XLA sharding annotations of tensors</span>
+<span class="sd">  that have already been sharded with `mark_sharding`.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">      t: The input tensor to be annotated with custom sharding.</span>
+<span class="sd">      mesh: The device mesh that specifies the logical device topology.</span>
+<span class="sd">      partition_spec: The partitioning specification for each dimension of the input tensor.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">      XLAShardedTensor: The input tensor wrapped as a sharded tensor with the custom sharding annotation.</span>
+
+<span class="sd">  Example:</span>
+<span class="sd">      &gt;&gt;&gt; # First shard the tensor with mark_sharding</span>
+<span class="sd">      &gt;&gt;&gt; sharded_tensor = xs.mark_sharding(tensor, mesh1, (0, 1, 2, 3))</span>
+<span class="sd">      &gt;&gt;&gt; # Later, annotate with a different sharding for the XLA SPMD partitioner</span>
+<span class="sd">      &gt;&gt;&gt; custom_sharded = xs.annotate_custom_sharding(sharded_tensor, mesh2, (0, 1, 2, 3))</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span> \
+    <span class="sa">f</span><span class="s2">&quot;Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">).&quot;</span>
+
+  <span class="n">op_sharding</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_op_sharding</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span>
+  <span class="n">annotate_func</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_annotate_custom_sharding</span>
+  <span class="n">annotate_func</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">op_sharding</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
 
 
