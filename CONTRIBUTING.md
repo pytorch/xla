@@ -241,30 +241,35 @@ Please refer to this [guide](https://github.com/pytorch/xla/blob/master/plugins/
 
 ## Before Creating a Pull Request
 
-In `pytorch/xla` repo we enforce coding style for both C++ and Python files. Please try to format
-your code before creating a pull request.
+In `pytorch/xla` repo we enforce coding style for both C++ and Python files.
+Specifically, we use `clang-format-11` with a customized style config to format
+C++, and `yapf` (specially version 0.40.2) with a customized style config
+to format Python. Please ensure that your change is formatted properly before
+sending out a PR.
 
-### C++ Style Guide
+The easiest way to do this is to set up a `git push` hook to automatically
+format changed or added C++ and Python files before pushing:
 
-`pytorch/xla` uses `clang-format-11` with a customized style config.
-If your PR touches the C++ source files, please run the following command before submitting a PR.
-
+First, install the necessary tools if needed:
 ```Shell
-# How to install: sudo apt install clang-format-11
-# If your PR only changes foo.cpp, run the following in the xla/ folder.
-clang-format-11 -i -style=file /PATH/TO/foo.cpp
-# To format all cpp files, run the following in the xla/ folder.
-find -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format-11 -i -style=file
+cd $WORKSPACE_DIR/pytorch/xla
+# If clang-format-11 is not yet installed...
+sudo apt install clang-format-11
+# If yapf 0.40.2 is not yet installed...
+pip install yapf==0.40.2
 ```
 
-### Python Style Guide
-
-`pytorch/xla` uses `yapf`(specially version 0.40.2 in case it's not backward compatible) with a customized style config.
-If your PR touches the Python source files, please run the following command before submitting a PR.
-
+Then, set up the git push hook:
 ```Shell
-# How to install: pip install yapf==0.40.2
-yapf --recursive -i *.py test/ scripts/ torch_xla/ benchmarks/ torchax/
+scripts/git_fix.py --set_git_push_hook
+```
+
+Now, whenever you run `git push`, the C++ and Python files will be
+automatically formatted according to our style guide.
+
+You can also format the files manually by running
+```Shell
+scripts/git_fix.py
 ```
 
 ### Running the Tests
