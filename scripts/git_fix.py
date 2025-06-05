@@ -2,6 +2,7 @@
 """Fixes the format of locally changed git files.
 """
 
+import argparse
 import os
 import re
 import sys
@@ -9,9 +10,15 @@ import sys
 # Root of the PyTorch/XLA repo.
 _PTXLA_DIR = os.path.abspath(os.path.dirname(__file__) + '/..')
 
+# Path of this script, relative to the repo root.
+_SCRIPT_PATH = os.path.abspath(__file__)[len(_PTXLA_DIR) + 1:]
+
 # Names of CLIs for formatting files.
 _CLANG_FORMAT = 'clang-format-11'
 _YAPF = 'yapf'
+
+# Path of the git pre-push hook script, relative to the repo root.
+_GIT_PRE_PUSH_HOOK_PATH = '.git/hooks/pre-push'
 
 
 def get_uncommitted_changed_added_files() -> set[str]:
@@ -145,8 +152,45 @@ def format_python_files(files: set[str]) -> bool:
   return format_files('python', _YAPF, f'{_YAPF} -i', files)
 
 
+def set_git_push_hook() -> bool:
+  """Sets up `git push` to automatially run this script before pushing.
+  
+  Returns:
+    True if the set-up was successful.
+  """
+
+  if os.path.isfile(_GIT_PRE_PUSH_HOOK_PATH):
+    print(
+        f'git pre-push hook already exists at {_GIT_PRE_PUSH_HOOK_PATH}.',
+        file=sys.stderr)
+    # Ask the user if they want to overwrite it.
+    overwrite = input(
+        f'Are you sure you want to overwrite {_GIT_PRE_PUSH_HOOK_PATH}? [y/N] ')
+    if overwrite.lower() != 'y':
+      print('Skipping git pre-push hook setup.', file=sys.stderr)
+      return False
+
+  # Write the current script to the git pre-push hook.
+  with open(_GIT_PRE_PUSH_HOOK_PATH, 'w') as f:
+    f.write(f'''#!/bin/bash
+# This hook is automatically set by `{_SCRIPT_PATH } --set_git_push_hook`.)
+{_SCRIPT_PATH}
+''')
+
+
 def main() -> None:
+  arg_parser = argparse.ArgumentParser(
+      prog=_SCRIPT_PATH, description=__doc__)
+  arg_parser.add_argument(
+      '--set_git_push_hook',
+      action='store_true',
+      help='set up `git push` to automatically run this script before pushing')
+  args = arg_parser.parse_args()
+
   os.chdir(_PTXLA_DIR)
+  if args.set_git_push_hook:
+    sys.exit(0 if set_git_push_hook() else 1)
+
   files = (
       get_uncommitted_changed_added_files() |
       get_committed_changed_added_files())
