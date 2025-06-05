@@ -140,6 +140,10 @@ function run_torch_op_tests {
 #######################################################################################
 
 # DO NOT MODIFY
+# These functions are split to evenly distribute the testing time across shards.
+# You should only modify the tests when one function is a significant bottleneck
+# over other run_xla_op_tests# tests. If that is the case, you should add a new
+# function run_xla_op_testsN+1.
 function run_xla_op_tests1 {
   run_dynamic "$_TEST_DIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_dynamic "$_TEST_DIR/ds/test_dynamic_shapes.py"
@@ -171,15 +175,6 @@ function run_xla_op_tests1 {
   fi
   XLA_METRICS_FILE=/tmp/metrics.txt run_test "$_TEST_DIR/test_metrics.py"
   run_test "$_TEST_DIR/test_deprecation.py"
-  run_test "$_TEST_DIR/dynamo/test_dynamo_integrations_util.py"
-  run_test "$_TEST_DIR/dynamo/test_dynamo_aliasing.py"
-  run_test "$_TEST_DIR/dynamo/test_dynamo.py"
-  run_test "$_TEST_DIR/dynamo/test_dynamo_dynamic_shape.py"
-  run_test "$_TEST_DIR/dynamo/test_bridge.py"
-  run_test "$_TEST_DIR/dynamo/test_num_output.py"
-  run_test "$_TEST_DIR/dynamo/test_graph_input_matcher.py"
-  run_test "$_TEST_DIR/dynamo/test_dynamo_config.py"
-  run_save_tensor_ir run_test "$_TEST_DIR/dynamo/test_dynamo_graph_dump.py"
   run_test "$_TEST_DIR/test_data_type.py"
   run_test "$_TEST_DIR/test_fp8.py"
   run_xla_ir_debug run_test "$_TEST_DIR/test_env_var_mapper.py"
@@ -209,14 +204,12 @@ function run_xla_op_tests2 {
   run_test "$_TEST_DIR/eager/test_eager_spmd.py"
   run_test "$_TEST_DIR/test_callback.py"
   XLA_USE_SPMD=1 run_test "$_TEST_DIR/test_callback.py"
-  run_test "$_TEST_DIR/test_jax_interop.py"
   run_test "$_TEST_DIR/test_assume_pure.py"
   run_test "$_TEST_DIR/test_assume_pure_spmd.py"
   run_test "$_TEST_DIR/test_assume_pure_torch.py"
   run_test "$_TEST_DIR/test_dynamic_shapes_detector.py"
 }
 
-# All the new xla op tests should go to run_xla_op_tests3
 function run_xla_op_tests3 {
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
@@ -263,6 +256,22 @@ function run_xla_op_tests3 {
   run_test "$_TEST_DIR/../examples/scan/scan_examples.py"
 }
 
+function run_xla_op_tests4 {
+  run_test "$_TEST_DIR/test_jax_interop.py"
+}
+
+function run_xla_op_tests5 {
+  run_test "$_TEST_DIR/dynamo/test_dynamo_integrations_util.py"
+  run_test "$_TEST_DIR/dynamo/test_dynamo_aliasing.py"
+  run_test "$_TEST_DIR/dynamo/test_dynamo.py"
+  run_test "$_TEST_DIR/dynamo/test_dynamo_dynamic_shape.py"
+  run_test "$_TEST_DIR/dynamo/test_bridge.py"
+  run_test "$_TEST_DIR/dynamo/test_num_output.py"
+  run_test "$_TEST_DIR/dynamo/test_graph_input_matcher.py"
+  run_test "$_TEST_DIR/dynamo/test_dynamo_config.py"
+  run_save_tensor_ir run_test "$_TEST_DIR/dynamo/test_dynamo_graph_dump.py"
+}
+
 #######################################################################################
 
 function run_op_tests {
@@ -270,6 +279,8 @@ function run_op_tests {
   run_xla_op_tests1
   run_xla_op_tests2
   run_xla_op_tests3
+  run_xla_op_tests4
+  run_xla_op_tests5
 }
 
 function run_mp_op_tests {
@@ -306,6 +317,12 @@ function run_tests {
   elif [[ "$RUN_XLA_OP_TESTS3" == "xla_op3" ]]; then
     echo "Running xla op tests..."
     run_xla_op_tests3
+  elif [[ "$RUN_XLA_OP_TESTS4" == "xla_op4" ]]; then
+    echo "Running xla op tests..."
+    run_xla_op_tests4
+  elif [[ "$RUN_XLA_OP_TESTS5" == "xla_op5" ]]; then
+    echo "Running xla op tests..."
+    run_xla_op_tests5
   elif [[ "$RUN_TORCH_MP_OP_TESTS" == "torch_mp_op" ]]; then
     echo "Running torch op tests..."
     run_torch_op_tests
@@ -317,6 +334,8 @@ function run_tests {
       run_xla_op_tests1
       run_xla_op_tests2
       run_xla_op_tests3
+      run_xla_op_tests4
+      run_xla_op_tests5
     fi
     if [[ "$XLA_SKIP_TORCH_OP_TESTS" != "1" ]]; then
       run_torch_op_tests
