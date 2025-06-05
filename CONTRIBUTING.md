@@ -212,25 +212,25 @@ first time, you may need to build everything again, for example, after a
 
 * Clone the _PyTorch_ repo as per [instructions](https://github.com/pytorch/pytorch#from-source).
 
-  ```Shell
+  ```shell
   git clone --recursive https://github.com/pytorch/pytorch
   cd pytorch/
   ```
 
 * Clone the _PyTorch/XLA_ repo:
 
-  ```Shell
+  ```shell
   git clone --recursive https://github.com/pytorch/xla.git
   ```
 
 * Build PyTorch
-  ```Shell
+  ```shell
   # pytorch/xla requires pytorch wheel to be presented under pytorch/dist
   python setup.py bdist_wheel
   python setup.py develop
   ```
 * Build PyTorch/XLA
-  ```Shell
+  ```shell
   cd xla/
   python setup.py develop
   ```
@@ -251,7 +251,7 @@ The easiest way to do this is to set up a `git push` hook to automatically
 format changed or added C++ and Python files before pushing:
 
 First, install the necessary tools if needed:
-```Shell
+```shell
 cd $WORKSPACE_DIR/pytorch/xla
 # If clang-format-11 is not yet installed...
 sudo apt install clang-format-11
@@ -260,7 +260,7 @@ pip install yapf==0.40.2
 ```
 
 Then, set up the git push hook:
-```Shell
+```shell
 scripts/git_fix.py --set_git_push_hook
 ```
 
@@ -268,7 +268,7 @@ Now, whenever you run `git push`, the C++ and Python files will be
 automatically formatted according to our style guide.
 
 You can also format the files manually by running
-```Shell
+```shell
 scripts/git_fix.py
 ```
 
@@ -278,19 +278,19 @@ To run the tests, follow __one__ of the options below:
 
 * Run on local CPU:
 
-  ```Shell
+  ```shell
   export PJRT_DEVICE=CPU
   ```
 
 * Run on Cloud TPU:
 
-  ```Shell
+  ```shell
   export PJRT_DEVICE=TPU
   ```
 
 * Run on GPU:
 
-  ```Shell
+  ```shell
   export PJRT_DEVICE=CUDA GPU_NUM_DEVICES=${NUM_GPU}
   ```
 
@@ -434,6 +434,6 @@ of some files inside the `.git` directory to `root`, which will prevent us from
 running `git` commands outside of the dev container. To fix this, run the
 following commands *outside of the dev container* to fix the file owners:
 
-```Shell
+```shell
 sudo chown -R $USER .git
 ```
