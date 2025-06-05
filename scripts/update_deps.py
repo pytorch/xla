@@ -19,6 +19,8 @@ import platform
 import re
 import sys
 from typing import Optional
+from html.parser import HTMLParser
+import urllib.request
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +37,40 @@ _SETUP_PATH = os.path.join(_PTXLA_DIR, 'setup.py')
 
 # Page listing libtpu nightly builds.
 _LIBTPU_BUILDS_URL = 'https://storage.googleapis.com/libtpu-wheels/index.html'
-# Page listing jax nightly builds.
-_JAX_BUILDS_URL = 'https://storage.googleapis.com/jax-releases/jax_nightly_releases.html'
+# New JAX package index URLs (PEP 503 compliant)
+_JAX_INDEX_URL = 'https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/simple/'
+_JAX_PROJECT_URL = _JAX_INDEX_URL + 'jax/'
+_JAXLIB_PROJECT_URL = _JAX_INDEX_URL + 'jaxlib/'
+
+
+class PEP503Parser(HTMLParser):
+  """Parser for PEP 503 simple repository API pages."""
+
+  def __init__(self):
+    super().__init__()
+    self.links = []
+    self.current_link = None
+    self.current_text = ""
+
+  def handle_starttag(self, tag, attrs):
+    if tag == 'a':
+      href = None
+      for attr, value in attrs:
+        if attr == 'href':
+          href = value
+          break
+      if href:
+        self.current_link = href
+        self.current_text = ""
+
+  def handle_data(self, data):
+    if self.current_link:
+      self.current_text += data
+
+  def handle_endtag(self, tag):
+    if tag == 'a' and self.current_link:
+      self.links.append((self.current_link, self.current_text.strip()))
+      self.current_link = None
 
 
 def clean_tmp_dir() -> None:
@@ -48,7 +82,7 @@ def clean_tmp_dir() -> None:
 
 def get_last_xla_commit_and_date() -> tuple[str, str]:
   """Finds the latest commit in the master branch of https://github.com/openxla/xla.
-  
+
   Returns:
     A tuple of the latest commit SHA and its date (YYYY-MM-DD).
   """
@@ -68,7 +102,7 @@ def get_last_xla_commit_and_date() -> tuple[str, str]:
 
 def update_openxla() -> bool:
   """Updates the OpenXLA version in the WORKSPACE file to the latest commit.
-  
+
   Returns:
     True if the WORKSPACE file was updated, False otherwise.
   """
@@ -100,7 +134,7 @@ def update_openxla() -> bool:
 def find_latest_nightly(html_lines: list[str],
                         build_re: str) -> Optional[tuple[str, str, str]]:
   """Finds the latest nightly build from the list of HTML lines.
-  
+
   Args:
     html_lines: A list of HTML lines to search for the nightly build.
     build_re: A regular expression for matching the nightly build line.
@@ -130,7 +164,7 @@ def find_latest_nightly(html_lines: list[str],
 
 def find_latest_libtpu_nightly() -> Optional[tuple[str, str, str]]:
   """Finds the latest libtpu nightly build for the current platform.
-  
+
   Returns:
     A tuple of the version, date, and suffix of the latest libtpu nightly build,
     or None if no build is found.
@@ -151,53 +185,96 @@ def find_latest_libtpu_nightly() -> Optional[tuple[str, str, str]]:
       _PLATFORM + r'\.whl</a>')
 
 
+def fetch_pep503_page(url: str) -> list[tuple[str, str]]:
+  """Fetches and parses a PEP 503 index page.
+
+  Args:
+    url: The URL of the PEP 503 index page.
+
+  Returns:
+    A list of (href, text) tuples for all links on the page.
+  """
+  try:
+    with urllib.request.urlopen(url) as response:
+      html = response.read().decode('utf-8')
+
+    parser = PEP503Parser()
+    parser.feed(html)
+    return parser.links
+  except Exception as e:
+    logger.error(f'Failed to fetch {url}: {e}')
+    return []
+
+
 def find_latest_jax_nightly() -> Optional[tuple[str, str, str]]:
-  """Finds the latest JAX nightly build.
-  
+  """Finds the latest JAX nightly build using the new package index.
+
   Returns:
     A tuple of the jax version, jaxlib version, and date of the latest JAX nightly build,
     or None if no build is found.
   """
 
-  # Read the nightly jax build page.
-  clean_tmp_dir()
-  os.system('curl -s {} > {}/jax_builds.html'.format(_JAX_BUILDS_URL, _TMP_DIR))
-  with open(f'{_TMP_DIR}/jax_builds.html', 'r') as f:
-    html_lines = f.readlines()
-
-  # Find lines like
-  # <a href=...>jax/jax-0.6.1.dev20250428-py3-none-any.whl</a>
-  jax_build = find_latest_nightly(
-      html_lines, r'.*<a href=.*?>jax/jax-(.*?)\.dev(\d{8})-(.*)\.whl</a>')
-  if not jax_build:
-    logger.error(
-        f'Could not find latest jax nightly build in {_JAX_BUILDS_URL}.')
+  # Fetch JAX project page
+  jax_links = fetch_pep503_page(_JAX_PROJECT_URL)
+  if not jax_links:
+    logger.error(f'Could not fetch JAX packages from {_JAX_PROJECT_URL}')
     return None
 
-  # Find lines like
-  # <a href=...>nocuda/jaxlib-0.6.1.dev20250428-....whl</a>
-  jaxlib_build = find_latest_nightly(
-      html_lines,
-      r'.*<a href=.*?>nocuda/jaxlib-(.*?)\.dev(\d{8})-(.*)\.whl</a>')
-  if not jaxlib_build:
-    logger.error(
-        f'Could not find latest jaxlib nightly build in {_JAX_BUILDS_URL}.')
+  # Fetch jaxlib project page
+  jaxlib_links = fetch_pep503_page(_JAXLIB_PROJECT_URL)
+  if not jaxlib_links:
+    logger.error(f'Could not fetch jaxlib packages from {_JAXLIB_PROJECT_URL}')
     return None
 
-  jax_version, jax_date, _ = jax_build
-  jaxlib_version, jaxlib_date, _ = jaxlib_build
-  if jax_date != jaxlib_date:
-    logger.error(
-        f'The latest jax date {jax_date} != the latest jaxlib date {jaxlib_date} in {_JAX_BUILDS_URL}.'
-    )
+  # Parse JAX nightly versions
+  # Looking for patterns like: jax-0.6.1.dev20250428-py3-none-any.whl
+  jax_pattern = re.compile(r'jax-([\d.]+)\.dev(\d{8})-py3-none-any\.whl')
+  latest_jax_version = ''
+  latest_jax_date = ''
+
+  for href, text in jax_links:
+    filename = text if text else href.split('/')[-1].split('#')[0]
+    m = jax_pattern.match(filename)
+    if m:
+      version, date = m.groups()
+      if date > latest_jax_date:
+        latest_jax_version = version
+        latest_jax_date = date
+
+  if not latest_jax_version:
+    logger.error('Could not find any JAX nightly builds')
     return None
 
-  return jax_version, jaxlib_version, jax_date
+  # Parse jaxlib nightly versions
+  # Looking for patterns like: jaxlib-0.6.1.dev20250428-cp310-cp310-manylinux2014_x86_64.whl
+  jaxlib_pattern = re.compile(r'jaxlib-([\d.]+)\.dev(\d{8})-.*\.whl')
+  latest_jaxlib_version = ''
+  latest_jaxlib_date = ''
+
+  for href, text in jaxlib_links:
+    filename = text if text else href.split('/')[-1].split('#')[0]
+    m = jaxlib_pattern.match(filename)
+    if m:
+      version, date = m.groups()
+      # Only consider jaxlib builds from the same date as JAX
+      if date == latest_jax_date and version > latest_jaxlib_version:
+        latest_jaxlib_version = version
+        latest_jaxlib_date = date
+
+  if not latest_jaxlib_version:
+    logger.error(
+        f'Could not find jaxlib nightly build for date {latest_jax_date}')
+    return None
+
+  logger.info(
+      f'Found JAX {latest_jax_version} and jaxlib {latest_jaxlib_version} from {latest_jax_date}'
+  )
+  return latest_jax_version, latest_jaxlib_version, latest_jax_date
 
 
 def update_libtpu() -> bool:
   """Updates the libtpu version in setup.py to the latest nightly build.
-  
+
   Returns:
     True if the setup.py file was updated, False otherwise.
   """
@@ -248,7 +325,7 @@ def update_libtpu() -> bool:
 
 def update_jax() -> bool:
   """Updates the jax/jaxlib versions in setup.py to the latest nightly build.
-  
+
   Returns:
     True if the setup.py file was updated, False otherwise.
   """
