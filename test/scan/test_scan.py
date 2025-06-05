@@ -579,7 +579,12 @@ class ScanTest(TestBase, parameterized.TestCase):
         second_level_cache) == 1, "Second-level cache should be exactly 1"
 
     # Check if the partition function created a new cache entry
-    scan(fn1, init, xs, partition_fn=min_cut_rematerialization_partition, is_fn_pure=True)
+    scan(
+        fn1,
+        init,
+        xs,
+        partition_fn=min_cut_rematerialization_partition,
+        is_fn_pure=True)
     second_level_cache = cache[fn1]
     # Inspect the second-level cache for fn2
     assert len(second_level_cache
