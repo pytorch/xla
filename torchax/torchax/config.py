@@ -7,8 +7,9 @@ class Configuration:
   debug_accuracy_for_each_op: bool = False
   debug_mixed_tensor: bool = False
   debug_print_each_op_operands: bool = False
+
   use_int32_for_index: bool = False
-  force_materialize_views: bool = True
+  force_materialize_views: bool = False
 
   # Flash attention
   use_tpu_flash_attention: bool = False

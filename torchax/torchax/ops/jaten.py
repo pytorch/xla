@@ -1060,8 +1060,6 @@ def _aten_bucketize(input,
                     out_int32=False,
                     right=False,
                     out=None):
-  # assert boundaries[0] < boundaries[
-  #     -1], "boundaries must contain a strictly increasing sequence"
   return_type = jnp.int32 if out_int32 else jnp.int64
   return jnp.digitize(input, boundaries, right=not right).astype(return_type)
 
@@ -4889,7 +4887,6 @@ def _aten_multinomial(input,
                       env=None):
   assert num_samples <= input.shape[
       -1] or replacement, "cannot take a larger sample than population when replacement=False"
-  #assert jnp.all(input >= 0), "inputs must be non-negative"
   key = env.get_and_rotate_prng_key(generator)
   if input.ndim == 1:
     return jax.random.choice(
