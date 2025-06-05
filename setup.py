@@ -113,7 +113,7 @@ _libtpu_date = '20250605'
 
 _jax_version = '0.6.1'
 _jaxlib_version = '0.6.1'
-_jax_date = '20250428'  # Date for jax and jaxlib.
+_jax_date = '20250605'  # Date for jax and jaxlib.
 
 if USE_NIGHTLY:
   _libtpu_version += f".dev{_libtpu_date}"
@@ -400,11 +400,12 @@ def _get_jax_install_requirements():
     ]
 
   # Install nightly JAX libraries from the JAX package registries.
-  jax = f'jax @ https://storage.googleapis.com/jax-releases/nightly/jax/jax-{_jax_version}-py3-none-any.whl'
+  jax = f'jax @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/jax/jax-{_jax_version}-py3-none-any.whl'
+
   jaxlib = []
   for python_minor_version in [9, 10, 11]:
     jaxlib.append(
-        f'jaxlib @ https://storage.googleapis.com/jax-releases/nightly/nocuda/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
+        f'jaxlib @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/jaxlib/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
     )
   return [jax] + jaxlib
 
