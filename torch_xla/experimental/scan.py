@@ -70,7 +70,7 @@ def scan(
     init: Carry,
     xs: X,
     partition_fn=default_partition,
-    is_fn_pure: bool = True,
+    is_fn_pure: bool = False,
     # TODO: consider exposing knobs to control the RNG seed used in each `fn` iteration.
 ) -> tuple[Carry, Y]:
   """Apply a function over leading dimension of tensors while carrying along state.

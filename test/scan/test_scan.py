@@ -70,7 +70,7 @@ class ScanTest(TestBase, parameterized.TestCase):
                init: PyTree,
                xs: PyTree,
                partition_fn=default_partition,
-               is_fn_pure: bool = True):
+               is_fn_pure: bool = False):
     """Compares the result of scanning with `fn` with our optimized HLO implementation
     against a for loop implementation. Checks both output values and gradients.
     """
