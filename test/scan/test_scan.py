@@ -521,7 +521,7 @@ class ScanTest(TestBase, parameterized.TestCase):
                       requires_grad=True)
 
     for _ in range(10):
-      scan(fn1, init, xs)
+      scan(fn1, init, xs, is_fn_pure=True)
 
     cache = scan_module._SCAN_COMPUTATION_CACHE
 
@@ -559,8 +559,8 @@ class ScanTest(TestBase, parameterized.TestCase):
     xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
                       device=self.device,
                       requires_grad=True)
-    scan(fn1, init, xs)
-    scan(fn2, init, xs)
+    scan(fn1, init, xs, is_fn_pure=True)
+    scan(fn2, init, xs, is_fn_pure=True)
 
     cache = scan_module._SCAN_COMPUTATION_CACHE
 
@@ -579,7 +579,7 @@ class ScanTest(TestBase, parameterized.TestCase):
         second_level_cache) == 1, "Second-level cache should be exactly 1"
 
     # Check if the partition function created a new cache entry
-    scan(fn1, init, xs, partition_fn=min_cut_rematerialization_partition)
+    scan(fn1, init, xs, partition_fn=min_cut_rematerialization_partition, is_fn_pure=True)
     second_level_cache = cache[fn1]
     # Inspect the second-level cache for fn2
     assert len(second_level_cache
