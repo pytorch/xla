@@ -200,7 +200,8 @@ class JaxTrainer:
       sharding = self.x_sharding
 
     def move_one_tensor(x):
-      jval = torchax.tensor.t2j(x)
+      env = torchax.default_env()
+      jval = env.t2j_copy(x)
       return sharded_device_put(jval, sharding)
 
     if isinstance(state_dict, torch.Tensor):

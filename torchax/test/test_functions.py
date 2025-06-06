@@ -40,7 +40,7 @@ class TestTorchFunctions(parameterized.TestCase):
     actual = torch.tensor(arg, device='jax', **kwargs)
     self.assertIsInstance(actual, torchax.tensor.Tensor)
 
-    torch.testing.assert_close(torchax.tensor.j2t(actual._elem), expected)
+    torch.testing.assert_close(actual.to('cpu'), expected)
 
   def test_dont_capture_conversion(self):
     t = torch.tensor([1, 2, 3])
@@ -86,7 +86,7 @@ class TestTorchFunctions(parameterized.TestCase):
       model.to('jax')
       x = x.to('jax')
       res2 = model(x)
-      self.assertTrue(torch.allclose(res, torchax.tensor.j2t(res2.jax())))
+      self.assertTrue(torch.allclose(res, res2.to('cpu')))
 
   def test_randn_requires_grad(self):
     x = torch.randn((3, 3), requires_grad=True, device='jax')
