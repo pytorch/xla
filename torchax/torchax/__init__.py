@@ -89,7 +89,7 @@ torch.utils.generate_methods_for_privateuse1_backend(
 import jax
 import torchax.device_module
 
-torch._register_device_module('jax', torchax.device_module)
+torch._register_device_module('privateuseone', torchax.device_module)
 
 
 def enable_accuracy_mode():
