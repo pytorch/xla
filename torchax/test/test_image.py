@@ -56,7 +56,7 @@ class TestResampling(parameterized.TestCase):
           antialias=antialias,
           method=method)
 
-    upsampled_tensor_xla = upsampled_tensor_xla.torch()
+    upsampled_tensor_xla = env.j2t_copy(upsampled_tensor_xla)
     abs_err = torch.abs(upsampled_tensor - upsampled_tensor_xla)
 
     assert torch.allclose(
