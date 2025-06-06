@@ -338,11 +338,13 @@ class Environment(contextlib.ContextDecorator):
     self._manually_entered = False
     self.enabled = False
     self._jax_devices = set(["jax", "jax_cpu", "xla"])
+    # TODO: remove the `key_data` unwrapping once mutable typed RNG keys work properly in JAX.
     self._prng_key = mutable_array(
-        jax.random.key(torch.initial_seed() % (1 << 63)))
+        jax.random.key_data(jax.random.key(torch.initial_seed() % (1 << 63))))
 
   def manual_seed(self, key):
-    self._prng_key = mutable_array(jax.random.key(key))
+    # TODO: remove the `key_data` unwrapping once mutable typed RNG keys work properly in JAX.
+    self._prng_key = mutable_array(jax.random.key_data(jax.random.key(key)))
 
   @property
   def prng_key(self):
@@ -416,9 +418,12 @@ class Environment(contextlib.ContextDecorator):
                               generator: Optional[torch.Generator] = None):
     if generator is not None:
       with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-        self._prng_key[...] = jax.random.key(generator.initial_seed() % (2**63))
-    new_prng_key, next_key = jax.random.split(self._prng_key[...])
-    self._prng_key[...] = new_prng_key
+        # TODO: remove the `key_data` unwrapping once mutable typed RNG keys work properly in JAX.
+        self._prng_key[...] = jax.random.key_data(
+            jax.random.key(generator.initial_seed() % (2**63)))
+    old_key = jax.random.wrap_key_data(self._prng_key[...])
+    new_prng_key, next_key = jax.random.split(old_key)
+    self._prng_key[...] = jax.random.key_data(new_prng_key)
     return next_key
 
   def _handle_tensor_constructor(self, func, args, kwargs):
