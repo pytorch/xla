@@ -45,7 +45,7 @@ def _quantize_tensor(x, n_bits: int = 8, dim: int = -1):
   return x_int, scale.astype(x.dtype)
 
 def run_benchmark(bs_nums, out_in_features: List[tuple]):
-  elapsed_time = 0
+  elapsed_time_ms = 0
   print(f"Running benchmark with bs_nums: {bs_nums} and out_in_features: {out_in_features}")
   for bs, num_occur in bs_nums.items():
     for n_output_features, n_input_features in out_in_features:
@@ -64,11 +64,11 @@ def run_benchmark(bs_nums, out_in_features: List[tuple]):
       for _ in range(num_occur):
         quantized_matmul_int8(x, w_w8a8_jax, scalar_jax, quantize_activation=True).block_until_ready()
       end_time = time.perf_counter_ns()
-      elapsed_time += (end_time - start_time)
-  return elapsed_time
+      elapsed_time_ms += (end_time - start_time)/(1e6)
+  return elapsed_time_ms
 
 for case, value in cases.items():
   bs_nums = value["bs_nums"]
   out_in_features = value["out_in_features"]
-  elapsed_time = run_benchmark(bs_nums, out_in_features)
-  print(f"Benchmarking {case} took {elapsed_time/1e-6:.2f} ms")
+  elapsed_time_ms = run_benchmark(bs_nums, out_in_features)
+  print(f"Benchmarking {case} took {elapsed_time_ms:.2f} ms")
