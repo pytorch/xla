@@ -392,7 +392,8 @@ class XlaTestCase(unittest.TestCase):
     ]
     cpu_results = xu.as_list(fn(*cpu_tensors))
     xla_results = xu.as_list(fn(*xla_tensors))
-    self.compareResults(cpu_results, xla_results, rel_err=rel_err, abs_err=abs_err)
+    self.compareResults(
+        cpu_results, xla_results, rel_err=rel_err, abs_err=abs_err)
 
 
 @contextmanager
