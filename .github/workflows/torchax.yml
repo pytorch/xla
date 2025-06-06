@@ -48,6 +48,8 @@ jobs:
         run: |
           pip install -r test-requirements.txt
           pip install -e .[cpu]
+          # TODO: Remove this after Jax 0.6.2 stable is out
+          pip install -U --pre jax jaxlib -i https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/
       - name: Run tests
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
         working-directory: torchax
