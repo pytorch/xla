@@ -442,7 +442,7 @@ class TestOptimizationBarrier(test_utils.XlaTestCase):
   def test_optimization_barrier_correctness(self):
     device = torch.device('xla')
     # only test optimization_barrier on TPU
-    if xm.xla_device_hw(device) != 'TPU':
+    if xr.device_type() != 'TPU':
       return
     x = torch.randn(5, 5, device=device)
     y = torch.randn(5, 5, device=device)
@@ -1532,7 +1532,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(x[0], x0)
 
   def test_print(self):
-    xla_device = torch.device('xla')
+    xla_device = torch.device('xla:0')
     x = torch.tensor([5], device=xla_device)
     expected_str = 'tensor([5], device=\'' + str(xla_device) + '\')'
     self.assertEqual(str(x), expected_str)
@@ -2759,7 +2759,7 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertTrue(dt[0].requires_grad)
 
   def test_send_to_device_single(self):
-    xla_device = torch.device('xla')
+    xla_device = torch.device('xla:0')
     t = _gen_tensor(2, 2)
     dt = xm.send_cpu_data_to_device(t, xla_device)
     self.assertEqual(dt[0].device, xla_device)
@@ -2859,7 +2859,7 @@ class TestGeneric(test_utils.XlaTestCase):
 
     wpack = PackWrapper(pack)
 
-    xla_device = torch.device('xla')
+    xla_device = torch.device('xla:0')
     xdata = xm.send_cpu_data_to_device(wpack, xla_device)
     self.assertTrue(isinstance(xdata, nn.utils.rnn.PackedSequence))
     self.assertEqual(xdata.batch_sizes.device, torch.device('cpu'))

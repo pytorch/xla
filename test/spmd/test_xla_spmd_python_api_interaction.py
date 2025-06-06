@@ -38,7 +38,7 @@ class BasicXMAPITest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(xm.is_master_ordinal())
 
   def test_xla_device(self):
-    device = torch.device('xla')
+    device = torch_xla.device()
     self.assertEqual(device, torch.device('xla:0'))
 
   def test_xla_real_devices(self):

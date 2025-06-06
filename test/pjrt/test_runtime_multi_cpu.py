@@ -27,7 +27,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     os.environ.pop(xenv.PJRT_CPU_ASYNC_CLIENT, None)
 
     expected = {0: torch.device('xla:0')}
-    devices_per_process = pjrt.run_multiprocess(xm.xla_device)
+    devices_per_process = pjrt.run_multiprocess(torch_xla.device)
     self.assertDictEqual(devices_per_process, expected)
 
   def test_multi_cpu_devices(self):
@@ -38,7 +38,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
         3: torch.device('xla:3'),
     }
 
-    devices_per_process = pjrt.run_multiprocess(xm.xla_device)
+    devices_per_process = pjrt.run_multiprocess(torch_xla.device)
     self.assertDictEqual(devices_per_process, expected)
 
   def test_global_ordinal(self):
@@ -65,7 +65,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
       def backward(ctx, grad_output):
         results['forward_ordinal'] = ctx.forward_ordinal
         results['backward_ordinal'] = xr.global_ordinal()
-        results['device'] = str(torch.device('xla'))
+        results['device'] = str(torch_xla.device())
         return grad_output
 
     x = torch.ones(1, requires_grad=True, device='xla')

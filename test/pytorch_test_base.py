@@ -559,7 +559,7 @@ class XLATestBase(DeviceTypeTestBase):
   def instantiate_test(cls, name, test, *, generic_cls):
     test_name = name + '_' + cls.device_type
     class_name = cls.__name__
-    real_device_type = xm.xla_device_hw(str(torch.device('xla')))
+    real_device_type = xm.xla_device_hw(str(torch.device('xla:0')))
     assert real_device_type in DISABLED_TORCH_TESTS, 'Unsupported device type:' + real_device_type
     disabled_torch_tests = DISABLED_TORCH_TESTS[real_device_type]
 
@@ -631,8 +631,8 @@ class XLATestBase(DeviceTypeTestBase):
 
   @classmethod
   def setUpClass(cls):
-    # Sets the primary test device to the xla_device (CPU or TPU)
-    cls.primary_device = str(torch.device('xla'))
+    # Sets the primary test device to the torch_xla.device (CPU or TPU)
+    cls.primary_device = str(torch_xla.device())
     torch_xla._XLAC._xla_set_mat_mul_precision('highest')
 
   def setUp(self):
