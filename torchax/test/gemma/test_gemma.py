@@ -71,7 +71,8 @@ class GemmaTest(unittest.TestCase):
     )
 
     weights, jax_func = torchax.extract_jax(model)
-    inputs_jax = pytree.tree_map_only(torch.Tensor, torchax.tensor.t2j, inputs)
+    env = torchax.default_env()
+    inputs_jax = env.t2j_copy(inputs)
 
     import jax
     print(jax.jit(jax_func)(weights, inputs_jax))
