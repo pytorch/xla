@@ -53,19 +53,20 @@ class PEP503Parser(HTMLParser):
   links: list[tuple[str, str]]
   """List of (href, text) tuples for all links found."""
 
-  current_link: str | None
+  _current_link: str | None
   """The current link being processed."""
 
-  current_text: str
+  _current_text: str
   """The text content of the current link being processed."""
 
   def __init__(self):
     super().__init__()
     self.links = []
-    self.current_link = None
-    self.current_text = ""
+    self._current_link = None
+    self._current_text = ""
 
-  def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
+  def handle_starttag(self, tag: str, attrs: list[tuple[str,
+                                                        str | None]]) -> None:
     """Handles the start of an HTML tag.
 
     Starts processing a link if the tag is an anchor (<a>).
@@ -77,26 +78,26 @@ class PEP503Parser(HTMLParser):
           href = value
           break
       if href:
-        self.current_link = href
-        self.current_text = ""
+        self._current_link = href
+        self._current_text = ""
 
-  def handle_data(self, data: str):
+  def handle_data(self, data: str) -> None:
     """Handles the text data within an HTML tag.
 
     If currently processing a link, appends the data to the current text.
     """
-    if self.current_link:
-      self.current_text += data
+    if self._current_link:
+      self._current_text += data
 
-  def handle_endtag(self, tag: str):
+  def handle_endtag(self, tag: str) -> None:
     """Handles the end of an HTML tag.
 
     If the tag is an anchor (<a>), adds the link and its text to the list.
     """
-    if tag == 'a' and self.current_link:
-      self.links.append((self.current_link, self.current_text.strip()))
-      self.current_link = None
-      self.current_text = ""
+    if tag == 'a' and self._current_link:
+      self.links.append((self._current_link, self._current_text.strip()))
+      self._current_link = None
+      self._current_text = ""
 
 
 def clean_tmp_dir() -> None:
@@ -240,68 +241,71 @@ def find_latest_jax_nightly() -> Optional[tuple[str, str, str]]:
     or None if no build is found.
   """
 
-  # Fetch JAX project page.
-  jax_links = fetch_pep503_page(_JAX_PROJECT_URL)
-  if not jax_links:
-    logger.error("Could not fetch JAX packages from %s", _JAX_PROJECT_URL)
-    return None
+  def parse_version_date(url: str, pattern: str) -> list[tuple[str, str]]:
+    links = fetch_pep503_page(url)
+    if not links:
+      logger.error(f'Could not fetch packages from {url}')
+      return []
+    compiled = re.compile(pattern)
+    results = []
+    for href, text in links:
+      filename = text if text else href.split('/')[-1].split('#')[0]
+      m = compiled.match(filename)
+      if m:
+        version, date = m.groups()
+        results.append((version, date))
+    return results
 
-  # Fetch jaxlib project page.
-  jaxlib_links = fetch_pep503_page(_JAXLIB_PROJECT_URL)
-  if not jaxlib_links:
-    logger.error("Could not fetch jaxlib packages from %s", _JAXLIB_PROJECT_URL)
-    return None
-
-  # Parse JAX nightly versions.
+  # Find JAX libraries.
   #
   # Look for patterns like: jax-0.6.1.dev20250428-py3-none-any.whl
   #   Group 1: Represents the JAX version (formatted as a series of digits and dots).
   #   Group 2: Represents the build date (an 8-digit string typically in YYYYMMDD format).
-  jax_pattern = re.compile(r'jax-([\d.]+)\.dev(\d{8})-py3-none-any\.whl')
-  latest_jax_version = ''
-  latest_jax_date = ''
-
-  for href, text in jax_links:
-    filename = text if text else href.split('/')[-1].split('#')[0]
-    m = jax_pattern.match(filename)
-    if m:
-      version, date = m.groups()
-      if date > latest_jax_date:
-        latest_jax_version = version
-        latest_jax_date = date
-
-  if not latest_jax_version:
-    logger.error('Could not find any JAX nightly builds. Tried parsing %s',
-                 _JAX_PROJECT_URL)
+  jax_versions_dates = parse_version_date(
+      _JAX_PROJECT_URL, r'jax-([\d.]+)\.dev(\d{8})-py3-none-any\.whl')
+  if not jax_versions_dates:
+    logger.error(f"Could not fetch JAX packages from {_JAX_PROJECT_URL}")
     return None
 
-  # Parse jaxlib nightly versions
+  # Fetch jaxlib libraries
   #
   # Look for patterns like: jaxlib-0.6.1.dev20250428-cp310-cp310-manylinux2014_x86_64.whl
   #   Group 1: Represents the jaxlib version (formatted as a series of digits and dots).
   #   Group 2: Represents the build date (an 8-digit string typically in YYYYMMDD format).
-  jaxlib_pattern = re.compile(r'jaxlib-([\d.]+)\.dev(\d{8})-.*\.whl')
-  latest_jaxlib_version = ''
-  latest_jaxlib_date = ''
+  jaxlib_versions_dates = parse_version_date(
+      _JAXLIB_PROJECT_URL, r'jaxlib-([\d.]+)\.dev(\d{8})-.*\.whl')
+  if not jaxlib_versions_dates:
+    logger.error(f"Could not fetch jaxlib packages from {_JAXLIB_PROJECT_URL}")
+    return None
 
-  for href, text in jaxlib_links:
-    filename = text if text else href.split('/')[-1].split('#')[0]
-    m = jaxlib_pattern.match(filename)
-    if m:
-      version, date = m.groups()
-      # Only consider jaxlib builds from the same date as JAX
-      if date == latest_jax_date and version > latest_jaxlib_version:
-        latest_jaxlib_version = version
-        latest_jaxlib_date = date
+  latest_jax_version = ''
+  latest_jax_date = ''
+  for version, date in jax_versions_dates:
+    if date > latest_jax_date:
+      latest_jax_version = version
+      latest_jax_date = date
+
+  if not latest_jax_version:
+    logger.error(
+        f'Could not find any JAX nightly builds. Tried parsing {_JAX_PROJECT_URL}'
+    )
+    return None
+
+  latest_jaxlib_version = ''
+  for version, date in jaxlib_versions_dates:
+    # Only consider jaxlib builds from the same date as JAX
+    if date == latest_jax_date and version > latest_jaxlib_version:
+      latest_jaxlib_version = version
 
   if not latest_jaxlib_version:
     logger.error(
-        'Could not find jaxlib nightly build for date %s. Tried parsing %s',
-        latest_jax_date, _JAXLIB_PROJECT_URL)
+        f'Could not find jaxlib nightly build for date {latest_jax_date}. Tried parsing {_JAXLIB_PROJECT_URL}'
+    )
     return None
 
-  logger.info('Found JAX %s and jaxlib %s from %s', latest_jax_version,
-              latest_jaxlib_version, latest_jax_date)
+  logger.info(
+      f'Found JAX {latest_jax_version} and jaxlib {latest_jaxlib_version} from {latest_jax_date}'
+  )
   return latest_jax_version, latest_jaxlib_version, latest_jax_date
 
 
