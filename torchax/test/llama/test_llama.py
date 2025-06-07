@@ -88,8 +88,8 @@ class LlamaTest(base_test_util.TestCase):
       m_prefill = torch.export.export(m, sample_input_prefill)
 
     weights, mj_prefill = torchax.export.exported_program_to_jax(m_prefill)
-    sample_inputs = pytree.tree_map_only(torch.Tensor, tensor.t2j,
-                                         sample_input_prefill)
+    env = torchax.default_env()
+    sample_inputs = env.t2j_copy(sample_input_prefill)
     print('Prefill', mj_prefill(weights, sample_inputs))
 
     sample_input_decode = (
@@ -103,8 +103,7 @@ class LlamaTest(base_test_util.TestCase):
     with torch.no_grad():
       m_decode = torch.export.export(m, sample_input_decode)
     weights, mj_decode = torchax.export.exported_program_to_jax(m_decode)
-    sample_inputs = pytree.tree_map_only(torch.Tensor, tensor.t2j,
-                                         sample_input_decode)
+    sample_inputs = env.t2j_copy(sample_input_decode)
     print('Decode', mj_decode(weights, sample_inputs))
 
 

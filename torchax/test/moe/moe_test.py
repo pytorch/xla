@@ -48,7 +48,7 @@ class TestMoe(unittest.TestCase):
     x_xla = env.to_xla(x)
     with jax.default_matmul_precision('float32'):
       res_xla = model_xla(x_xla)
-    res2 = torchax.tensor.j2t(res_xla._elem)
+    res2 = res_xla.to('cpu')
     print('max diff', torch.max((res - res2).abs()))
 
     self.assertTrue(torch.allclose(res2, res, atol=1e-2))

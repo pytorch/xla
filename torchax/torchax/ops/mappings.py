@@ -7,7 +7,7 @@ import torch.utils.dlpack as torchdl
 import torch.utils._mode_utils as mode_utils
 
 
-def t2j(t):
+def t2j(t, use_dlpack=True):
   is_bool = False
   if t.dtype == torch.bool:
     is_bool = True
@@ -18,9 +18,14 @@ def t2j(t):
   if not t.is_contiguous():
     t = t.contiguous()
 
-  try:
-    res = jaxdl.from_dlpack(t)
-  except Exception:
+  res = None
+  if use_dlpack:
+    try:
+      res = jaxdl.from_dlpack(t)
+    except Exception:
+      pass
+
+  if res is None:
     # https://github.com/google/jax/issues/7657
     # https://github.com/google/jax/issues/17784
     if t.dtype == torch.bfloat16:
@@ -37,15 +42,29 @@ def t2j(t):
   return res
 
 
-def j2t(x):
+def j2t(x, use_dlpack=True):
   with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-    try:
-      dl = jaxdl.to_dlpack(x)
-      res = torchdl.from_dlpack(dl)
-    except Exception:
+    res = None
+    if use_dlpack:
+      try:
+        dl = jaxdl.to_dlpack(x)
+        res = torchdl.from_dlpack(dl)
+      except Exception:
+        res = None
+
+    orig_dtype = None
+    if res is None:
+      orig_dtype = None
+      if x.dtype == jnp.bfloat16.dtype:
+        orig_dtype = x.dtype
+        x = x.astype(jnp.float32.dtype)
       res = torch.from_numpy(numpy.asarray(x))
+
     if x.dtype == jnp.bool_:
       res = res.to(torch.bool)
+
+    if orig_dtype is not None:
+      res = res.to(j2t_dtype(orig_dtype))
     return res
 
 
