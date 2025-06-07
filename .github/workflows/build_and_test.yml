@@ -76,6 +76,16 @@ jobs:
       has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
     if: github.event_name == 'push' || github.event_name == 'pull_request'
 
+  test-torchprime:
+    name: "torchprime tests"
+    uses: ./.github/workflows/_torchprime_ci.yml
+    needs: [build-torch-xla, check_code_changes]
+    with:
+      timeout-minutes: 100
+      has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    secrets: inherit
+
   push-docs:
     name: "Build docs"
     uses: ./.github/workflows/_docs.yml
