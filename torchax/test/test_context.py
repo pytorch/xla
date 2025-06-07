@@ -87,7 +87,7 @@ class TestContext(unittest.TestCase):
       x = torch.randn(2, 3, generator=torch.Generator().manual_seed(0))
       y = torch.randn(2, 3, generator=torch.Generator().manual_seed(0))
 
-    # Values will be different, but still check device, layout, dtype, etc
+    # Values will be the same given the same seed.
     torch.testing.assert_close(
         torchax.tensor.j2t(x._elem), torchax.tensor.j2t(y._elem))
 
