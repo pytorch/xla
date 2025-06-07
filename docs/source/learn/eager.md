@@ -13,7 +13,7 @@ import torch
 import torch_xla
 import torchvision
 
-device = torch_xla.device()
+device = torch.device('xla')
 model = torchvision.models.resnet18().to(device)
 input = torch.randn(64, 3, 224, 224).to(device)
 
@@ -71,7 +71,7 @@ import torchvision
 # Run ops eagerly by default
 torch_xla.experimental.eager_mode(True)
 
-device = torch_xla.device()
+device = torch.device('xla')
 model = torchvision.models.resnet18().to(device)
 
 # Mark the function to be compiled

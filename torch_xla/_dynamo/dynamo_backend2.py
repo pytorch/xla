@@ -34,7 +34,7 @@ def _dynamo_backend(model: torch.fx.GraphModule, sample_args: Any):
 
   jax.config.update("jax_enable_x64", True)
   env = torchax.default_env()
-  xla_device = torch_xla.device()
+  xla_device = torch.device('xla')
 
   def run_jax(*args, initial_rng_key):
     args_t = torchax.interop.torch_view(args)

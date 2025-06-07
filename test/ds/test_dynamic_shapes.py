@@ -10,7 +10,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 import test_utils
 
 pd = torch._C._EnablePythonDispatcher()
-dev = torch_xla.device()
+dev = torch.device('xla')
 
 
 class TestDynamicShapes(test_utils.XlaTestCase):
@@ -192,7 +192,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     torch_xla.sync()
 
   def test_expand_symint_correctness(self):
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     size1 = 5
     size2 = 2
     t1 = torch.ones([size1, size2])

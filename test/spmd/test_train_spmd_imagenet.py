@@ -206,7 +206,7 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  device = torch_xla.device()
+  device = torch.device('xla')
   model = get_model_property('model_fn')().to(device)
 
   if FLAGS.use_gradient_checkpointing:
@@ -313,8 +313,8 @@ def train_imagenet():
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      x = data.to(torch_xla.device())
-      y = target.to(torch_xla.device())
+      x = data.to('xla')
+      y = target.to('xla')
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
           optimizer.zero_grad()
@@ -344,8 +344,8 @@ def train_imagenet():
     total_samples, correct = 0, 0
     model.eval()
     for step, (data, target) in enumerate(loader):
-      data = data.to(torch_xla.device())
-      target = target.to(torch_xla.device())
+      data = data.to('xla')
+      target = target.to('xla')
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum()

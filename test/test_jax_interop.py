@@ -14,7 +14,7 @@ class TestJaxInterop(absltest.TestCase):
   def test_call_jax(self):
     """Test that we can call a JAX function from PyTorch/XLA lazy tensor tracing."""
 
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.ones((3, 3), device=dev)
 
     def f(a, b):
@@ -29,7 +29,7 @@ class TestJaxInterop(absltest.TestCase):
   def test_call_jax_input_pytree(self):
     """Test that call_jax works with PyTree inputs."""
 
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.ones((2, 2), device=dev)
     b = torch.ones((2, 2), device=dev) * 2
 
@@ -55,7 +55,7 @@ class TestJaxInterop(absltest.TestCase):
   def test_call_jax_output_pytree(self):
     """Test that call_jax works with PyTree outputs."""
 
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.ones((2, 2), device=dev)
 
     def f(a):
@@ -89,7 +89,7 @@ class TestJaxInterop(absltest.TestCase):
   def test_call_jax_some_arg_unused(self):
     """Test when the jax function doesn't use some input arguments."""
 
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.randn((3, 3), device=dev)
     b = torch.randn((3, 3), device=dev)
     c = torch.randn((3, 3), device=dev)
@@ -106,7 +106,7 @@ class TestJaxInterop(absltest.TestCase):
   def test_call_jax_grad(self):
     """Test calling a simple jax.grad transformed function."""
 
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.randn((3, 3), device=dev, requires_grad=True)
     b = torch.randn((3, 3), device=dev, requires_grad=True)
     torch_xla.sync()
@@ -143,7 +143,7 @@ class TestJaxInterop(absltest.TestCase):
   def test_call_jax_non_tensor_args(self):
     """Test that call_jax works with non-tensor arguments."""
 
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.ones((3, 3), device=dev)
 
     def f(a, num: float, string: str, dictionary: dict, none):
@@ -173,7 +173,7 @@ class TestJaxInterop(absltest.TestCase):
     starting_cache_misses = xb._jax_to_xla_computation_cache_elements()
 
     # Let's trace two different jax functions a couple of times.
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.ones((3, 3), device=dev)
 
     def f(a, b):
@@ -198,7 +198,7 @@ class TestJaxInterop(absltest.TestCase):
     starting_cache_misses = xb._jax_to_xla_computation_cache_elements()
 
     # Let's trace the same jax function with different shapes.
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.ones((3, 3), device=dev)
     b = torch.ones((2, 2), device=dev)
 
@@ -217,7 +217,7 @@ class TestJaxInterop(absltest.TestCase):
     starting_cache_misses = xb._jax_to_xla_computation_cache_elements()
 
     # Let's trace the same jax function with different tree specs.
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.ones((3, 3), device=dev)
     b = torch.ones((3, 2), device=dev)
 
@@ -237,7 +237,7 @@ class TestJaxInterop(absltest.TestCase):
     starting_cache_misses = xb._jax_to_xla_computation_cache_elements()
 
     # Let's trace the same jax function with different static args.
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.ones((3, 3), device=dev)
 
     def f(a, num: float):
@@ -255,7 +255,7 @@ class TestJaxInterop(absltest.TestCase):
     import jax
     starting_cache_misses = xb._jax_to_xla_computation_cache_elements()
 
-    dev = torch_xla.device()
+    dev = torch.device('xla')
     a = torch.ones((3, 3), device=dev)
 
     def f(a, b):

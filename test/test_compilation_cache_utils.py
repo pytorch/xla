@@ -31,7 +31,7 @@ def _test_spawn(fn, args):
 class TestGraphHash(parameterized.TestCase):
 
   def _test_num_graph_hash(self, use_dynamo, use_persistent):
-    xla_dev = torch_xla.device()
+    xla_dev = torch.device('xla')
     model = M().to(device=xla_dev)
     input_shape = (10, 5)
     if use_dynamo:

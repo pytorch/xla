@@ -498,7 +498,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
   # 2. All of the pending IRs are result of our warm up cache tracing and they
   # should be removed to avoid extra computation executed and in place updates op
   # mistakenlly update the input tensors.
-  torch_xla._XLAC._clear_pending_irs(str(torch_xla.device()))
+  torch_xla._XLAC._clear_pending_irs(str(torch.device('xla')))
 
   vars_to_return = (xla_args_sharding_spec, args_and_out, graph_hash,
                     arg_index_to_need_update_index, none_remover,
@@ -567,7 +567,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       is_cuda_args = original_device.type == "cuda"
 
     if is_cuda_args:
-      args = _maybe_move_tensors_to_device(args, torch_xla.device())
+      args = _maybe_move_tensors_to_device(args, torch.device('xla'))
 
     if not config.skip_input_data_check:
       # `torch_xla.sync()` needs to be blocking since we want to access args's
@@ -768,7 +768,7 @@ def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
   # UnsupportedNodesCollector might trigger in place ops, need to clear them here.
   _clear_pending_irs_on_args(all_xla_args_tensor_only, cloned_args)
 
-  torch_xla._XLAC._clear_pending_irs(str(torch_xla.device()))
+  torch_xla._XLAC._clear_pending_irs(str(torch.device('xla')))
 
   class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
 
@@ -813,7 +813,7 @@ def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
 def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
   if _args_on_cuda(xla_args):
     xla_args = tuple(
-        _maybe_move_tensors_to_device(xla_args, torch_xla.device()))
+        _maybe_move_tensors_to_device(xla_args, torch.device('xla')))
 
   # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
   # value reference before actually computing it.
