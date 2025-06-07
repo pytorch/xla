@@ -102,6 +102,5 @@ jobs:
           github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN_FOR_TRIGGERING_TORCHPRIME }}
           workflow_file_name: e2e_test.yml
           wait_interval: 60
-          # TODO(yifeit): change this back to `main` when https://github.com/AI-Hypercomputer/torchprime/tree/yifeit/torchprime-ci is merged.
-          ref: yifeit/torchprime-ci
+          ref: main
           client_payload: '{"docker_url": "gcr.io/tpu-pytorch/for-torchprime-ci:${{ steps.random_tag.outputs.uuid }}"}'
