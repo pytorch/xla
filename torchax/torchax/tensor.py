@@ -374,7 +374,7 @@ class Environment(contextlib.ContextDecorator):
     from torchax.decompositions import DECOMPOSITIONS, MUTABLE_DECOMPOSITION
 
     for k, v in DECOMPOSITIONS.items():
-      if k not in self._ops:
+      if k not in self._decomps:
         self._decomps[k] = ops_registry.Operator(
             k,
             v,
