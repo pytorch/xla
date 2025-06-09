@@ -868,7 +868,7 @@ def flash_attention(
                               sm_scale, ab, partition_spec, mesh)
 
 
-# This function should only be called and excuted on runtime.
+# This function should only be called and executed on runtime.
 def _ragged_paged_attention_runtime_check(
     q,  # [max_num_batched_tokens, num_q_heads, head_dim]
     kv_pages,  # [total_num_pages, page_size, num_combined_kv_heads, head_dim]

@@ -423,11 +423,6 @@ def get_device_name(num_devices: int | None = None):
     name += f'-{num_devices}'
   return name
 
-def get_vmem_size(tpu_version: int):
-  if tpu_version == 4:
-    return 16
-  return 128
-
 
 def get_tuned_block_sizes(
     q_dtype,
@@ -465,25 +460,7 @@ def get_tuned_block_sizes(
   elif device_name in TUNED_BLOCK_SIZES:
     if key in TUNED_BLOCK_SIZES[device_name]:
       bkv, bq = TUNED_BLOCK_SIZES[device_name][key]
-
-  # Calculate the matrix sizes in VMEM,
-  # reduce num_kv_pages_per_blk, num_q_per_blk by half if VMEM OOM.
-  num_kv_pages_per_blk, num_q_per_blk = min(pages_per_seq, bkv), min(max_num_batched_tokens, bq)
-  num_q_heads_per_kv_head = num_q_heads_per_blk // num_kv_heads_per_blk
-  while True:
-    q_block = get_dtype_packing(q_dtype) * num_q_per_blk * num_q_heads_per_blk * head_dim
-    output_block = q_block
-    num_combined_kv_heads_per_blk = 2 * num_kv_heads_per_blk
-    kv_bufs = 2 * get_dtype_packing(kv_dtype) * num_kv_pages_per_blk * page_size * num_combined_kv_heads_per_blk * head_dim
-    l_ref = 2 * num_kv_heads_per_blk * num_q_per_blk * num_q_heads_per_kv_head * head_dim
-    m_ref = l_ref
-    acc_ref = 2 * num_q_per_blk * num_q_heads_per_blk * head_dim
-    total_vmem = q_block + output_block + kv_bufs + l_ref + m_ref + acc_ref
-    if cdiv(total_vmem, 1024 ** 3) < get_vmem_size(tpu_version):
-      break
-    num_kv_pages_per_blk //= 2
-    num_q_per_blk //= 2
-  return num_kv_pages_per_blk, num_q_per_blk
+  return (min(pages_per_seq, bkv), min(max_num_batched_tokens, bq))
 
 
 def get_min_page_size(max_model_len, min_page_size=16):

@@ -353,6 +353,72 @@ XlaOpVector SizeMod::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Rem(input1, input2), loctx);
 }
 
+SizeMin::SizeMin(torch::lazy::Value a, torch::lazy::Value b)
+    : XlaNode(
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_min")},
+          {a, b},
+          xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
+                                    {}),
+          1) {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  // We don't need to hash upper_bound_ and because it is computed
+  // from input shapes and input Node already hash its shape.
+  upper_bound_ =
+      std::min(dim_node_0->getStaticValue(), dim_node_1->getStaticValue());
+};
+
+int64_t SizeMin::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  return std::min(dim_node_0->getDynamicValue(), dim_node_1->getDynamicValue());
+}
+
+std::string SizeMin::ToString() const { return "aten::size_min"; }
+
+XlaOpVector SizeMin::Lower(LoweringContext* loctx) const {
+  auto input1 = loctx->GetOutputOp(operand(0));
+  auto input2 = loctx->GetOutputOp(operand(1));
+  return ReturnOp(xla::Min(input1, input2), loctx);
+}
+
+SizeMax::SizeMax(torch::lazy::Value a, torch::lazy::Value b)
+    : XlaNode(
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_max")},
+          {a, b},
+          xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
+                                    {}),
+          1) {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  // We don't need to hash upper_bound_ and because it is computed
+  // from input shapes and input Node already hash its shape.
+  upper_bound_ =
+      std::max(dim_node_0->getStaticValue(), dim_node_1->getStaticValue());
+};
+
+int64_t SizeMax::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  return std::max(dim_node_0->getDynamicValue(), dim_node_1->getDynamicValue());
+}
+
+std::string SizeMax::ToString() const { return "aten::size_max"; }
+
+XlaOpVector SizeMax::Lower(LoweringContext* loctx) const {
+  auto input1 = loctx->GetOutputOp(operand(0));
+  auto input2 = loctx->GetOutputOp(operand(1));
+  return ReturnOp(xla::Max(input1, input2), loctx);
+}
+
 SizeError::SizeError()
     : XlaNode(
           torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_error")},

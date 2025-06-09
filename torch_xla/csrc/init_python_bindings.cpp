@@ -2240,6 +2240,11 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& input, xla::OpSharding sharding) {
           ShardingUtil::XlaMarkSharding(input, sharding);
         });
+  m.def("_xla_annotate_custom_sharding",
+        [](const at::Tensor& input, xla::OpSharding sharding) {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          ShardingUtil::XlaAnnotateCustomSharding(xtensor, sharding);
+        });
   m.def("_mark_manual_sharding",
         [](const at::Tensor& input, xla::OpSharding sharding) {
           XLA_CHECK(IsNonDeviceDataIR(input))

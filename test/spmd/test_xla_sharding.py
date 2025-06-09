@@ -1682,6 +1682,48 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertIn(sharding_spec, x_sharding)
     self.assertEqual(x_sharding, y_sharding)
 
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
+                   "Multiple devices needed")
+  def test_annotate_custom_sharding(self):
+    xt = torch.randn(2, 4, 64, 64).to(xm.xla_device())
+    sharded_mesh_axis_0 = self.n_devices // 2
+    sharded_mesh_axis_1 = self.n_devices // sharded_mesh_axis_0
+
+    xs.mark_sharding(
+        xt, self._get_mesh((1, 1, sharded_mesh_axis_0, sharded_mesh_axis_1)),
+        (0, 1, 2, 3))
+    original_sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
+
+    # Attempting to reshard the original tensor should result in a failure
+    with self.assertRaises(RuntimeError):
+      xs.mark_sharding(xt, self._get_mesh((1, 1, 1, self.n_devices)),
+                       (0, 1, 2, 3))
+
+    self.assertEqual(original_sharding_spec,
+                     torch_xla._XLAC._get_xla_sharding_spec(xt))
+
+    # Annotate the existing XLAShardedTensor with a custom sharding IR
+    xs.annotate_custom_sharding(xt, self._get_mesh((1, 1, 1, self.n_devices)),
+                                (0, 1, 2, 3))
+
+    custom_sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
+
+    self.assertEqual(custom_sharding_spec,
+                     torch_xla._XLAC._get_xla_sharding_spec(xt))
+    self.assertNotEqual(custom_sharding_spec, original_sharding_spec)
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt])
+    self.assertIn(
+        f'%p0.1 = f32[2,4,64,64]{{3,2,1,0}} parameter(0), sharding={original_sharding_spec}',
+        hlo)
+    self.assertIn(
+        f'%custom-call.2 = f32[2,4,64,64]{{3,2,1,0}} custom-call(f32[2,4,64,64]{{3,2,1,0}} %p0.1), custom_call_target="Sharding", sharding={custom_sharding_spec}',
+        hlo)
+    xm.mark_step()
+    # Ensure that the resulting sharding spec is preserved
+    self.assertEqual(custom_sharding_spec,
+                     torch_xla._XLAC._get_xla_sharding_spec(xt))
+
 
 if __name__ == '__main__':
   test = unittest.main()

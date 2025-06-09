@@ -303,6 +303,20 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     t = torch.randint(0, 5, (3,), device=device)
     self._compile_and_check(foo, (t,))
 
+  def test_metrics_preserved(self):
+    metrics.clear_counters()
+    torch_xla._XLAC._xla_increment_counter('UncachedCompile', 3)
+    torch_xla._XLAC._xla_increment_counter('DynamoExtractCompiledGraph', 4)
+
+    model = BasicModule()
+    graph_module = torch.fx.symbolic_trace(model)
+    collector = bridge.UnsupportedNodesCollector(graph_module)
+    collector.run(torch.randn(1), torch.randn(1))
+
+    self.assertEqual(metrics.counter_value('UncachedCompile'), 3)
+    self.assertEqual(metrics.counter_value('DynamoExtractCompiledGraph'), 4)
+    metrics.clear_counters()
+
 
 if __name__ == "__main__":
   from torch._dynamo.test_case import run_tests
