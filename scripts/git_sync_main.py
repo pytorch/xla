@@ -133,7 +133,6 @@ def sync_repo(repo: str) -> bool:
         f'Failed to checkout the {orig_branch} branch of the {repo} repo.')
     success = False
 
-
   # Update the submodules to avoid outdated submodules showing up as uncommited
   # changes. We need to do this to be safe whenever we switch to a new branch.
   if os.system('git submodule update --init --recursive') != 0:
