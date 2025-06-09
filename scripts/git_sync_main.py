@@ -41,7 +41,14 @@ def sync_repo(repo: str) -> bool:
   os.chdir(_PYTORCH_DIR if repo == _PYTORCH_REPO else _VISION_DIR if repo ==
            _VISION_REPO else _PTXLA_DIR)
 
-  # It's unsafe to sync the repo if there are uncommited changes or untracked files.
+  # Update the submodules to avoid outdated submodules showing up as uncommited
+  # changes.
+  if os.system('git submodule update --init --recursive') != 0:
+    logger.error(f'Failed to update submodules in the {repo} repo.')
+    return False
+
+  # It's unsafe to sync the repo if there are uncommited changes or untracked
+  # files.
   uncommitted_changes = os.popen('git status --porcelain').read().strip()
   if uncommitted_changes:
     logger.error(
@@ -72,6 +79,13 @@ def sync_repo(repo: str) -> bool:
     if os.system(f'git checkout {default_branch}') != 0:
       logger.error(
           f'Failed to checkout the {default_branch} branch of the {repo} repo.')
+      return False
+
+    # Update the submodules to avoid outdated submodules showing up as
+    # uncommited changes. We need to do this to be safe whenever we switch
+    # to a new branch.
+    if os.system('git submodule update --init --recursive') != 0:
+      logger.error(f'Failed to update submodules in the {repo} repo.')
       return False
 
     # Make sure the remotes are set up correctly:
@@ -118,6 +132,13 @@ def sync_repo(repo: str) -> bool:
     logger.error(
         f'Failed to checkout the {orig_branch} branch of the {repo} repo.')
     success = False
+
+
+  # Update the submodules to avoid outdated submodules showing up as uncommited
+  # changes. We need to do this to be safe whenever we switch to a new branch.
+  if os.system('git submodule update --init --recursive') != 0:
+    logger.error(f'Failed to update submodules in the {repo} repo.')
+    return False
 
   if success:
     logger.info(
