@@ -9,7 +9,6 @@ import torch.nn.functional as F
 from torch.ao.quantization.utils import determine_qparams
 
 import torch_xla
-import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -26,6 +25,7 @@ if xr.device_type() == 'TPU':
 def with_jax_high_precision(func):
 
   def wrapper(*args, **kwargs):
+    import jax
     jax.config.update('jax_default_matmul_precision', "highest")
     try:
       result = func(*args, **kwargs)
