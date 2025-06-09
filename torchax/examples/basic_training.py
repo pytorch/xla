@@ -17,6 +17,12 @@ import torchvision.transforms as transforms
 # NOTE: add these lines to make it run on TPUs!
 import torchax
 
+import torch.nn as nn
+import torch.nn.functional as F
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 torchax.enable_globally()
 
 transform = transforms.Compose(
@@ -43,9 +49,6 @@ classes = ('T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal',
 print('Training set has {} instances'.format(len(training_set)))
 print('Validation set has {} instances'.format(len(validation_set)))
 
-import matplotlib.pyplot as plt
-import numpy as np
-
 
 # Helper function for inline image display
 def matplotlib_imshow(img, one_channel=False):
@@ -69,8 +72,6 @@ img_grid = torchvision.utils.make_grid(images)
 matplotlib_imshow(img_grid, one_channel=True)
 print('  '.join(classes[labels[j]] for j in range(4)))
 
-import torch.nn as nn
-import torch.nn.functional as F
 
 
 # PyTorch models inherit from torch.nn.Module
@@ -130,9 +131,13 @@ def train_one_epoch(epoch_index, tb_writer=None):
     # Make predictions for this batch
 
     outputs = model(inputs)
+    # TODO: understand why the outputs.requires_grad is False on XLA device
+    # It should be true during training
+    outputs.requires_grad_(True)
 
     # Compute the loss and its gradients
     loss = loss_fn(outputs, labels)
+
     loss.backward()
 
     # Adjust learning weights
@@ -161,7 +166,7 @@ for epoch in range(EPOCHS):
   print('EPOCH {}:'.format(epoch_number + 1))
 
   # Make sure gradient tracking is on, and do a pass over the data
-  model.train(True)
+  model.train()
 
   avg_loss = train_one_epoch(epoch_number)
 
