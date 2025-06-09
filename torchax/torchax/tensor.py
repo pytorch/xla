@@ -6,6 +6,7 @@ from typing import Optional, Any
 import jax
 import jax.numpy as jnp
 import numpy
+import itertools
 import torch
 import torch.distributed._functional_collectives
 import torch.func
@@ -122,14 +123,9 @@ class Tensor(torch.Tensor):
 
   @classmethod
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
-    env = None
-    for arg in torch_pytree.arg_tree_leaves(*args, **kwargs):
-      if isinstance(arg, Tensor) or isinstance(arg, View):
-        env = arg._env
-        break
-
-    with env:
-      return func(*args, **(kwargs or {}))
+    raise AssertionError('torchax Tensors can only do math within torchax environment.'
+                         'Please wrap your code with `with torchax.defautl_env()` or '
+                         'call torchax.enable_globally() before.')
 
   def detach(self):
     return Tensor(jax.lax.stop_gradient(self.jax()), self._env)
@@ -330,6 +326,8 @@ class Environment(contextlib.ContextDecorator):
 
     # name is torch callable
     self._ops = {}
+    self._decomps = {}
+
     self.load_ops()
 
     self._mesh = None
@@ -365,13 +363,19 @@ class Environment(contextlib.ContextDecorator):
   def load_ops(self):
     from torchax.ops import jaten, jtorch, jc10d, jtorchvision_nms
 
-    self._ops.update(ops_registry.all_aten_ops)
-    self._ops.update(ops_registry.all_torch_functions)
+    for k, v in itertools.chain(
+        ops_registry.all_aten_ops.items(), 
+        ops_registry.all_torch_functions.items()):
+      if v.is_jax_function:
+        self._ops[k] = v
+      else: 
+        self._decomps[k] = v
+
     from torchax.decompositions import DECOMPOSITIONS, MUTABLE_DECOMPOSITION
 
     for k, v in DECOMPOSITIONS.items():
       if k not in self._ops:
-        self._ops[k] = ops_registry.Operator(
+        self._decomps[k] = ops_registry.Operator(
             k,
             v,
             is_jax_function=False,
@@ -379,6 +383,28 @@ class Environment(contextlib.ContextDecorator):
             needs_env=False,
             is_view_op=k in MUTABLE_DECOMPOSITION,
         )
+
+  def _get_op_or_decomp(self, func):
+
+    def _get_from_dict(op_dict, op):
+      op = op_dict.get(func)
+      if op is None and isinstance(func, torch._ops.OpOverloadPacket):
+        op = op_dict.get(func.default)
+      if op is None and isinstance(func, torch._ops.OpOverload):
+        op = op_dict.get(func.overloadpacket)
+      return op
+
+    op = _get_from_dict(self._ops, func)
+
+    if op is None:
+      # fallback to decompose
+      op = _get_from_dict(self._decomps, func)
+
+    if op is None:
+      raise OperatorNotFound(
+          f"Operator with name {_name_of_func(func)} has no lowering")
+
+    return op
 
   def _to_copy(self, the_tensor, new_dtype, new_device):
     if isinstance(the_tensor, Tensor):
@@ -397,6 +423,10 @@ class Environment(contextlib.ContextDecorator):
       if new_dtype is not None and new_dtype != the_tensor.dtype:
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
           the_tensor = the_tensor.to(new_dtype)
+
+      if new_device is None: ## device is None means don't change device
+        return the_tensor
+
       jax_device = self.get_as_jax_device(new_device)
       if jax_device:
         arr = t2j(the_tensor)
@@ -425,9 +455,7 @@ class Environment(contextlib.ContextDecorator):
         return func(*args, **kwargs)
     with jax.default_device(jax_device):
       requires_grad = kwargs.get("requires_grad", False)
-      op = self._ops.get(func)
-      if op is None and isinstance(func, torch._ops.OpOverload):
-        op = self._ops.get(func.overloadpacket)
+      op = self._get_op_or_decomp(func)
       res = op.func(*args, **kwargs)
       if isinstance(res, jax.Array):
         res = Tensor(res, self)
@@ -482,17 +510,7 @@ class Environment(contextlib.ContextDecorator):
       return res
 
     with jax.named_scope(_name_of_func(func)):
-      op = self._ops.get(func)
-
-      if op is None and isinstance(func, torch._ops.OpOverloadPacket):
-        op = self._ops.get(func.default)
-
-      if op is None and isinstance(func, torch._ops.OpOverload):
-        op = self._ops.get(func.overloadpacket)
-
-      if op is None:
-        raise OperatorNotFound(
-            f"Operator with name {_name_of_func(func)} has no lowering")
+      op = self._get_op_or_decomp(func)
 
       old_args, old_kwargs = args, kwargs
       args, kwargs = torch_pytree.tree_map_only(
@@ -500,25 +518,30 @@ class Environment(contextlib.ContextDecorator):
           torch.distributed._functional_collectives.wait_tensor,
           (args, kwargs),
       )
-      if not op.is_view_op:
-        args, kwargs = self.v2t_iso((args, kwargs))
+
 
       try:
+        if not op.is_view_op:
+          args, kwargs = self.v2t_iso((args, kwargs))
+
         if op.is_jax_function:
           args, kwargs = self.t2j_iso((args, kwargs))
       except AssertionError:
         if self.config.debug_mixed_tensor:
-          import pdb
-
-          pdb.set_trace()
+          breakpoint()
         else:
           raise
 
       if op.needs_env:
         kwargs["env"] = self
 
-      with self:
+      if op.is_jax_function:
         res = op.func(*args, **kwargs)
+      else:
+        # enable dispatch mode because this op could be a composite autograd op
+        # meaning, it will decompose in C++
+        with self._dispatch_mode:
+          res = op.func(*args, **kwargs)
 
       if op.is_jax_function:
         res = self.j2t_iso(res)

@@ -332,17 +332,7 @@ class View(torch.Tensor):
       args: Tuple[Any, ...] = (),
       kwargs: Optional[dict] = None,
   ) -> Any:
-    from torchax.tensor import Tensor
-
-    env = None
-    for arg in torch_pytree.arg_tree_leaves(*args, **(kwargs or {})):
-      if isinstance(arg, Tensor) or isinstance(arg, View):
-        env = arg._env
-        break
-
-    with env:
-      res = func(*args, **(kwargs or {}))
-      return res
+    assert False
 
   def create_sub_view(self, view_info: ViewInfo) -> "View":
     """

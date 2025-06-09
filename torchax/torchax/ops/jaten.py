@@ -16,7 +16,6 @@ from torchax.ops import op_base, mappings
 from torchax import interop
 from torchax.ops import jax_reimplement
 from torchax.view import View
-from torchax.tensor import Tensor
 # Keys are OpOverload, value is a callable that takes
 # Tensor
 all_ops = {}
@@ -820,8 +819,8 @@ def split_with_sizes(x, sizes, dim=0):
     A list of sub-arrays.
   """
   if isinstance(sizes, int):
-    # split equal size
-    new_sizes = [sizes] * (x.shape[dim] // sizes)
+    # split equal size, round up
+    new_sizes = [sizes] * (-(-x.shape[dim] // sizes))
     sizes = new_sizes
   rank = x.ndim
   splits = np.cumsum(sizes)  # Cumulative sum for split points
@@ -1179,7 +1178,7 @@ def _aten_convolution(
 
 
 # _native_batch_norm_legit(Tensor input, Tensor? weight, Tensor? bias, Tensor(a!) running_mean, Tensor(b!) running_var, bool training, float momentum, float eps)
-@op(torch.ops.aten._native_batch_norm_legit)
+@op(torch.ops.aten._native_batch_norm_legit.default)
 def _aten__native_batch_norm_legit(input, weight, bias, running_mean,
                                    running_var, training, momentum, eps):
   """JAX implementation of batch normalization with optional parameters.
@@ -2565,6 +2564,11 @@ def _aten_cos(input):
 @op_base.promote_int_input
 def _aten_cosh(input):
   return jnp.cosh(input)
+
+  
+@op(torch.ops.aten.diag)
+def _aten_diag(input, diagonal=0):
+  return jnp.diag(input, diagonal)
 
 
 # aten.diagonal
