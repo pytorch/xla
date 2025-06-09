@@ -86,13 +86,12 @@ if [[ "$BAZEL_VERB" == "coverage" ]]; then
 fi
 
 test_names=("all")
-if [[ "$RUN_CPP_TESTS1" == "cpp_tests1" ]]; then
+if [[ "$RUN_CPP_TESTS" == "cpp_tests" ]]; then
   test_names=("test_aten_xla_tensor_1"
               "test_aten_xla_tensor_2"
               "test_aten_xla_tensor_3"
-              "test_aten_xla_tensor_4")
-elif [[ "$RUN_CPP_TESTS2" == "cpp_tests2" ]]; then
-  test_names=("test_aten_xla_tensor_5"
+              "test_aten_xla_tensor_4"
+              "test_aten_xla_tensor_5"
               "test_aten_xla_tensor_6"
               "test_ir"
               "test_lazy"

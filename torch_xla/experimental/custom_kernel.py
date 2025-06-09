@@ -868,7 +868,7 @@ def flash_attention(
                               sm_scale, ab, partition_spec, mesh)
 
 
-# This function should only be called and excuted on runtime.
+# This function should only be called and executed on runtime.
 def _ragged_paged_attention_runtime_check(
     q,  # [max_num_batched_tokens, num_q_heads, head_dim]
     kv_pages,  # [total_num_pages, page_size, num_combined_kv_heads, head_dim]
@@ -1009,7 +1009,7 @@ def ragged_paged_attention(
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_attention
 
   if vmem_limit_bytes is None:
-    vmem_limit_bytes = 64 * 1024 * 1024
+    vmem_limit_bytes = 120 * 1024 * 1024
 
   payload, _ = trace_pallas(
       ragged_attention,

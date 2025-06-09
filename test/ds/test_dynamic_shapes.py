@@ -622,6 +622,24 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # The extra compilation comes from the call `set_sizes_and_strides` in XLATensorImpl::XLATensorImpl when we compare a SymInt with 0.
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
 
+  def test_sizeMinMax(self):
+    met.clear_all()
+
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[3][0] = 1
+    # t2 has size [<=10, 2]
+    t2 = torch.nonzero(t1)
+    # test sym_max
+    dyn_size_max = torch.sym_max(t2.shape[0], t2.shape[1])
+    self.assertGreater(met.counter_value("xla::size_sym_max"), 0)
+    self.assertEqual(int(dyn_size_max), 2)
+    # test sym_min
+    dyn_size_min = torch.sym_min(t2.shape[0], t2.shape[1])
+    self.assertGreater(met.counter_value("xla::size_sym_min"), 0)
+    self.assertEqual(int(dyn_size_min), 1)
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''

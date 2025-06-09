@@ -1,4 +1,6 @@
 from copy import deepcopy
+import glob
+import os
 from absl.testing import absltest
 from absl import flags
 import time
@@ -369,7 +371,7 @@ class TestAssumePure(absltest.TestCase):
     self.assertIsNone(a_pure.grad)
     self.assertIsNone(b_pure.grad)
 
-  def test_composibility_with_call_jax(self):
+  def test_composability_with_call_jax(self):
 
     def jax_func(a, b):
       return jnp.dot(a, b)
@@ -406,6 +408,42 @@ class TestAssumePure(absltest.TestCase):
         a @ b + 1,
         msg="Forward outputs do not match",
         check_device=False)
+
+  def test_assume_pure_profile(self):
+    """Test that xp.Trace works inside assume_pure."""
+    import torch_xla.debug.profiler as xp
+
+    # Arrange
+    MAGIC_STRING = 'foobar123'
+
+    @assume_pure
+    def torch_func(a, b):
+      with xp.Trace(MAGIC_STRING):
+        return torch.matmul(a, b)
+
+    # Precompile it such that it won't be traced again on CPU.
+    # This way we exclusively test the device-side profiles.
+    a = torch.randn(3, 3, device='xla')
+    b = torch.randn(3, 3, device='xla')
+    _ = torch_func(a, b)
+
+    # Act
+    tempdir = self.create_tempdir().full_path
+    xp.start_trace(tempdir)
+    _ = torch_func(a, b)
+    torch_xla.sync(wait=True)
+    xp.stop_trace()
+
+    # Assert
+    files = glob.glob(
+        os.path.join(tempdir, '**', '*.xplane.pb'), recursive=True)
+    self.assertEqual(len(files), 1)
+
+    path = files[0]
+    with open(path, 'rb') as f:
+      proto_str = str(f.read())
+    self.assertTrue(MAGIC_STRING in proto_str,
+                    f'Expected "{MAGIC_STRING}" trace in: {path}')
 
 
 FLAGS = flags.FLAGS

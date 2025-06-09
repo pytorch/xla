@@ -810,13 +810,21 @@ c10::SymNode XLASymNodeImpl::neg() {
 }
 
 c10::SymNode XLASymNodeImpl::sym_min(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
+  auto n_min = torch_xla::MakeNode<SizeMin>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_min, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
+  auto n_max = torch_xla::MakeNode<SizeMax>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_max, PyType::INT);
 }
 
 // Force guards when performing these logical operations

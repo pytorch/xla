@@ -423,11 +423,6 @@ def get_device_name(num_devices: int | None = None):
     name += f'-{num_devices}'
   return name
 
-def get_vmem_size(tpu_version: int):
-  if tpu_version == 4:
-    return 16
-  return 128
-
 
 def get_tuned_block_sizes(
     q_dtype,
@@ -458,6 +453,22 @@ def get_tuned_block_sizes(
 
   # Default block sizes.
   bkv, bq = (128, 32)
+
+  def compute_actual_vmem_bytes(num_kv_pages_per_blk):
+    q_block = bq * num_q_heads_per_blk * head_dim * q_dtype.itemsize
+    in_block = q_block
+    out_block = in_block
+    kv_block = 2 * num_kv_pages_per_blk * page_size * 2 * num_kv_heads_per_blk * head_dim * kv_dtype.itemsize
+    l_ref = num_kv_heads_per_blk * bq * 2 * num_kv_heads_per_blk * 128 * jnp.float32.dtype.itemsize
+    m_ref = l_ref
+    acc_ref = bq * num_q_heads_per_blk * head_dim * jnp.float32.dtype.itemsize
+    return 2 * (in_block + out_block) + kv_block + l_ref + m_ref + acc_ref
+
+  # If the matrices are larger than 64MB, decrease num_kv_pages_per_blk by half.
+  while compute_actual_vmem_bytes(bkv) >= 64 * 1024 * 1024:
+    bkv //= 2
+  bkv = max(bkv, 1)
+
   if tpu_version == 4:
     # This default block size is not tuned, only make sure there's no
     # OOM in vmem
@@ -465,25 +476,7 @@ def get_tuned_block_sizes(
   elif device_name in TUNED_BLOCK_SIZES:
     if key in TUNED_BLOCK_SIZES[device_name]:
       bkv, bq = TUNED_BLOCK_SIZES[device_name][key]
-
-  # Calculate the matrix sizes in VMEM,
-  # reduce num_kv_pages_per_blk, num_q_per_blk by half if VMEM OOM.
-  num_kv_pages_per_blk, num_q_per_blk = min(pages_per_seq, bkv), min(max_num_batched_tokens, bq)
-  num_q_heads_per_kv_head = num_q_heads_per_blk // num_kv_heads_per_blk
-  while True:
-    q_block = get_dtype_packing(q_dtype) * num_q_per_blk * num_q_heads_per_blk * head_dim
-    output_block = q_block
-    num_combined_kv_heads_per_blk = 2 * num_kv_heads_per_blk
-    kv_bufs = 2 * get_dtype_packing(kv_dtype) * num_kv_pages_per_blk * page_size * num_combined_kv_heads_per_blk * head_dim
-    l_ref = 2 * num_kv_heads_per_blk * num_q_per_blk * num_q_heads_per_kv_head * head_dim
-    m_ref = l_ref
-    acc_ref = 2 * num_q_per_blk * num_q_heads_per_blk * head_dim
-    total_vmem = q_block + output_block + kv_bufs + l_ref + m_ref + acc_ref
-    if cdiv(total_vmem, 1024 ** 3) < get_vmem_size(tpu_version):
-      break
-    num_kv_pages_per_blk //= 2
-    num_q_per_blk //= 2
-  return num_kv_pages_per_blk, num_q_per_blk
+  return (min(pages_per_seq, bkv), min(max_num_batched_tokens, bq))
 
 
 def get_min_page_size(max_model_len, min_page_size=16):
@@ -1302,18 +1295,6 @@ def ragged_paged_attention(
       jnp.array((0, 0), jnp.int32),  # seq_idx, buf_idx
       num_seqs,
   )
-  
-  def compute_actual_vmem_bytes():
-    q_block = num_q_per_blk * num_q_heads_per_blk * head_dim * q.dtype.itemsize
-    in_block = q_block
-    out_block = in_block
-    kv_block = 2 * num_kv_pages_per_blk * page_size * num_combined_kv_heads_per_blk * head_dim * kv_pages.dtype.itemsize
-    l_ref = num_kv_heads_per_blk * num_q_per_blk * num_q_heads_per_kv_head * 128 * jnp.float32.dtype.itemsize
-    m_ref = l_ref
-    acc_ref = num_q_per_blk * num_q_heads_per_blk * head_dim * jnp.float32.dtype.itemsize
-    return 2 * q_block + in_block + out_block + kv_block + l_ref + m_ref + acc_ref
-  
-  actual_vmem_bytes = compute_actual_vmem_bytes()
   kernel = pl.pallas_call(
       functools.partial(
           ragged_paged_attention_kernel,
@@ -1331,13 +1312,12 @@ def ragged_paged_attention(
           grid=grid,
           scratch_shapes=scratch_shapes,
       ),
-      # leave a 5MB buffer for vmem_limit_bytes.
       compiler_params=pltpu.TPUCompilerParams(
           dimension_semantics=(
               "arbitrary",
               "arbitrary",
           ),
-          vmem_limit_bytes=min(vmem_limit_bytes, actual_vmem_bytes+5242880),
+          vmem_limit_bytes=vmem_limit_bytes,
       ),
       out_shape=jax.ShapeDtypeStruct(shape=q.shape, dtype=q.dtype),
       name="ragged_paged_attention_kernel",
