@@ -163,14 +163,13 @@ def main() -> None:
   if sync_pytorch and not sync_repo(_PYTORCH_REPO):
     failed_repos.append(_PYTORCH_REPO)
 
-  if (
-      sync_vision and
+  if (sync_vision and
       # The torchvision repo is optional, so skip it if it doesn't exist.
       os.path.isdir(_VISION_DIR) and not sync_repo(_VISION_REPO)):
     failed_repos.append(_VISION_REPO)
 
   if not sync_repo(_TORCH_XLA_REPO):
-      failed_repos.append(_TORCH_XLA_REPO)
+    failed_repos.append(_TORCH_XLA_REPO)
 
   # Print the failed repos last, so that the error is not buried in
   # the middle of the messages.
