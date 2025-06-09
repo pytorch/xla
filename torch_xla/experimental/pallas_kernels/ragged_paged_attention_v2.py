@@ -1302,6 +1302,18 @@ def ragged_paged_attention(
       jnp.array((0, 0), jnp.int32),  # seq_idx, buf_idx
       num_seqs,
   )
+  
+  def compute_actual_vmem_bytes():
+    q_block = num_q_per_blk * num_q_heads_per_blk * head_dim * q.dtype.itemsize
+    in_block = q_block
+    out_block = in_block
+    kv_block = 2 * num_kv_pages_per_blk * page_size * num_combined_kv_heads_per_blk * head_dim * kv_pages.dtype.itemsize
+    l_ref = num_kv_heads_per_blk * num_q_per_blk * num_q_heads_per_kv_head * 128 * jnp.float32.dtype.itemsize
+    m_ref = l_ref
+    acc_ref = num_q_per_blk * num_q_heads_per_blk * head_dim * jnp.float32.dtype.itemsize
+    return 2 * q_block + in_block + out_block + kv_block + l_ref + m_ref + acc_ref
+  
+  actual_vmem_bytes = compute_actual_vmem_bytes()
   kernel = pl.pallas_call(
       functools.partial(
           ragged_paged_attention_kernel,
@@ -1319,12 +1331,13 @@ def ragged_paged_attention(
           grid=grid,
           scratch_shapes=scratch_shapes,
       ),
+      # leave a 5MB buffer for vmem_limit_bytes.
       compiler_params=pltpu.TPUCompilerParams(
           dimension_semantics=(
               "arbitrary",
               "arbitrary",
           ),
-          vmem_limit_bytes=vmem_limit_bytes,
+          vmem_limit_bytes=min(vmem_limit_bytes, actual_vmem_bytes+5242880),
       ),
       out_shape=jax.ShapeDtypeStruct(shape=q.shape, dtype=q.dtype),
       name="ragged_paged_attention_kernel",
