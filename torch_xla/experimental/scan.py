@@ -119,9 +119,9 @@ def scan(
       based activation checkpointing. You may also write your own partitioner to insert any
       custom logic such as host offloading of activations.
 
-    is_fn_pure: (Optional[bool]) If `fn` is pure, the tracing cache will be enabled. A pure 
-      function always produces the same output for the same input, and it doesn't have any 
-      side effects, meaning it doesn't modify any state outside of itself. Essentially, it's 
+    is_fn_pure: (Optional[bool]) If `fn` is pure, the tracing cache will be enabled. A pure
+      function always produces the same output for the same input, and it doesn't have any
+      side effects, meaning it doesn't modify any state outside of itself. Essentially, it's
       like a mathematical function that only depends on its input arguments.
 
   Returns:
@@ -228,7 +228,7 @@ def value_and_grad_partitioned(
 
     partition_fn: An optional partitioning function used to partition fn into
       forward and backward graphs.
-    
+
     is_fn_pure: (Optional[bool]) If `fn` is pure, the tracing cache will be enabled.
 
   Returns:
@@ -772,7 +772,7 @@ def _scan_impl_flat(fn,
   # Add hoisted variables as While computation params as well,
   # including the potentially updated seed tensor.
   for param_id, tensor in hoisted_vars.items():
-    idx = builder.add_param(tensor.to(torch_xla.device()))
+    idx = builder.add_param(tensor.to(torch.device('xla')))
     fn_param_id_to_while_param_id[param_id] = idx
 
   # Since we are threading five objects through the body_fn:

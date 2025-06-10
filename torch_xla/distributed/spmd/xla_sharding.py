@@ -629,9 +629,9 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
       >>> num_devices = xr.global_runtime_device_count()
       >>> device_ids = np.array(range(num_devices))
       >>> mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
-      >>> input = torch.randn(8, 32).to(torch_xla.device())
+      >>> input = torch.randn(8, 32).to(torch.device('xla'))
       >>> xs.mark_sharding(input, mesh, (0, None)) # 4-way data parallel
-      >>> linear = nn.Linear(32, 10).to(torch_xla.device())
+      >>> linear = nn.Linear(32, 10).to(torch.device('xla'))
       >>> xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel
   """
   # We only allow fully specified `partition_spec` to be applicable, as opposed
@@ -745,7 +745,7 @@ def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
 
     >>> import torch_xla.distributed.spmd as xs
     >>> torch_xla.runtime.use_spmd()
-    >>> t1 = torch.randn(8,8).to(torch_xla.device())
+    >>> t1 = torch.randn(8,8).to(torch.device('xla'))
     >>> mesh = xs.get_1d_mesh()
     >>> xs.mark_sharding(t1, mesh, (0, None))
     >>> xs.clear_sharding(t1)

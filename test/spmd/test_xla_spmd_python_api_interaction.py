@@ -126,7 +126,7 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
     # unittest process can persist XLA_USE_SPMD from other test suites,
     # so t may be on a SPMD or non-SPMD device. If this test is run independently
     # outside unittest, then it lives on a non-SPMD device.
-    t = torch.ones(2, 2).to(torch_xla.device())
+    t = torch.ones(2, 2).to(torch.device('xla'))
 
     # Should enable SPMD without crashing.
     xr.use_spmd()
