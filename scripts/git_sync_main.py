@@ -146,24 +146,35 @@ def main() -> None:
       help=('sync the given repo and all repos that depend on it; '
             'the default is torch_xla'),
   )
+  arg_parser.add_argument(
+      '--all',
+      '-a',
+      action='store_true',
+      help=('sync all repos (pytorch, vision, and torch_xla); shorthand for '
+            '--base_repo pytorch'),
+  )
 
   args = arg_parser.parse_args()
 
-  success = True
-  if args.base_repo == _PYTORCH_REPO:
-    if not sync_repo(_PYTORCH_REPO):
-      success = False
+  sync_pytorch = args.all or args.base_repo == _PYTORCH_REPO
+  sync_vision = sync_pytorch or args.base_repo == _VISION_REPO
 
-  if args.base_repo in (_PYTORCH_REPO, _VISION_REPO):
-    # The torchvision repo is optional, so skip it if it doesn't exist.
-    if os.path.isdir(_VISION_DIR) and not sync_repo(_VISION_REPO):
-      success = False
+  failed_repos: list[str] = []
+  if sync_pytorch and not sync_repo(_PYTORCH_REPO):
+    failed_repos.append(_PYTORCH_REPO)
+
+  if (sync_vision and
+      # The torchvision repo is optional, so skip it if it doesn't exist.
+      os.path.isdir(_VISION_DIR) and not sync_repo(_VISION_REPO)):
+    failed_repos.append(_VISION_REPO)
 
   if not sync_repo(_TORCH_XLA_REPO):
-    success = False
+    failed_repos.append(_TORCH_XLA_REPO)
 
-  if not success:
-    logger.error('Failed to sync some repos.')
+  # Print the failed repos last, so that the error is not buried in
+  # the middle of the messages.
+  if failed_repos:
+    logger.error(f'Failed to sync repos: {", ".join(failed_repos)}.')
     sys.exit(1)
 
   logger.info('All repos synced successfully.')

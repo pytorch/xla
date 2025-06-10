@@ -17,8 +17,11 @@ _SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 _BUILD_BASE=torch_xla
 
 # Parse commandline flags.
-while getopts 'b:ht' OPTION; do
+while getopts 'ab:ht' OPTION; do
   case $OPTION in
+  a)
+    _BUILD_BASE="pytorch"
+    ;;
   b)
     _BUILD_BASE=$OPTARG
     # Validate _BUILD_BASE.
@@ -31,9 +34,10 @@ while getopts 'b:ht' OPTION; do
     esac
     ;;
   h)
-    echo "Usage: $0 [-b <base_project>] [-t]"
+    echo "Usage: $0 [-b <base_project>] [-a] [-t]"
     echo "where"
     echo "  -b <base_project> selects which project to start the build from. <base_project> be pytorch, vision, or torch_xla (the default)."
+    echo "  -a (short for -b pytorch) builds all projects."
     echo "  -t checks that the torch_xla and torchax libraries are built and installed successfully."
     exit 0
     ;;
