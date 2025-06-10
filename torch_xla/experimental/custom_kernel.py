@@ -754,17 +754,17 @@ class FlashAttention(torch.autograd.Function):
   # The block_sizes configuration is copied from https://github.com/google/maxtext/blob/0fee320451738166c8e596dc63a57a4673671576/MaxText/layers/attentions.py#L215-L240
   # It yields much better performance than the default block_sizes.
   DEFAULT_BLOCK_SIZES = {
-      "block_q": 512,
-      "block_k_major": 512,
-      "block_k": 512,
+      "block_q": 128,
+      "block_k_major": 128,
+      "block_k": 128,
       "block_b": 2,
-      "block_q_major_dkv": 512,
-      "block_k_major_dkv": 512,
-      "block_q_dkv": 512,
-      "block_k_dkv": 512,
-      "block_q_dq": 1024,
-      "block_k_dq": 256,
-      "block_k_major_dq": 512,
+      "block_q_major_dkv": 128,
+      "block_k_major_dkv": 128,
+      "block_q_dkv": 128,
+      "block_k_dkv": 128,
+      "block_q_dq": 256,
+      "block_k_dq": 128,
+      "block_k_major_dq": 128,
   }
   NUM_LANES = 128
   NUM_SUBLANES = 8
