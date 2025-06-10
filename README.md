@@ -184,7 +184,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 ```diff
  import torch.distributed as dist
 -import torch.multiprocessing as mp
-+import torch_xla as xla
++import torch_xla
 +import torch_xla.distributed.xla_backend
 
  def _mp_fn(rank):
@@ -203,8 +203,8 @@ If you're using `DistributedDataParallel`, make the following changes:
 -  ddp_model = DDP(model, device_ids=[rank])
 
    for inputs, labels in train_loader:
-+    with xla.step():
-+      inputs, labels = inputs.to(xla.device()), labels.to(xla.device())
++    with torch_xla.step():
++      inputs, labels = inputs.to(torch_xla.device()), labels.to(torch_xla.device())
        optimizer.zero_grad()
        outputs = ddp_model(inputs)
        loss = loss_fn(outputs, labels)
@@ -213,7 +213,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 
  if __name__ == '__main__':
 -  mp.spawn(_mp_fn, args=(), nprocs=world_size)
-+  xla.launch(_mp_fn, args=())
++  torch_xla.launch(_mp_fn, args=())
 ```
 
 Additional information on PyTorch/XLA, including a description of its semantics

@@ -95,12 +95,12 @@ pip install numpy torch torch_xla[tpu] \
 Create a file `test.py`:
 
 ``` python
-import torch_xla as xla
+import torch_xla
 
 # Optional
-xla.runtime.set_device_type("TPU")
+torch_xla.runtime.set_device_type("TPU")
 
-print("XLA devices:", xla.real_devices())
+print("XLA devices:", torch_xla.real_devices())
 ```
 
 Run the test script from your terminal:

@@ -166,7 +166,7 @@ commands on your Linux machine directly, outside of the container.
     installed correctly:
 
     ```bash
-    python -c 'import torch_xla as xla; print(xla.device())'
+    python -c 'import torch_xla; print(torch_xla.device())'
     # Output: xla:0
     ```
 
@@ -375,11 +375,11 @@ First, for the `pytorch` repo:
 cd $WORKSPACE_DIR/pytorch
 # Fetch the latest changes from upstream.
 git fetch upstream
-git checkout main 
+git checkout main
 # Merge the changes from upstream/main into your local branch.
 git merge upstream/main
 # Update submodules to match the latest changes.
-git submodule update --recursive 
+git submodule update --recursive
 # Push the updated branch to your fork on GitHub.
 git push origin main
 ```
@@ -389,7 +389,7 @@ Next, for the `vision` repo:
 ```bash
 cd $WORKSPACE_DIR/vision
 git fetch upstream
-git checkout main 
+git checkout main
 git merge upstream/main
 git push origin main
 ```

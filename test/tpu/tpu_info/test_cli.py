@@ -4,7 +4,7 @@ import contextlib
 import multiprocessing
 import os
 from typing import Dict, Optional
-import torch_xla as xla
+import torch_xla
 import torch_xla.runtime as xr
 import torch_xla.distributed.xla_multiprocessing as xmp
 from tpu_info import cli, device, metrics
@@ -30,7 +30,7 @@ class TpuInfoCliTest(parameterized.TestCase):
   ):
     if env:
       os.environ.update(**env)
-    xla.device()
+    torch_xla.device()
     q.put(os.getpid())
     done.wait()
 
