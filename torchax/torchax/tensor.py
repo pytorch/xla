@@ -1,4 +1,3 @@
-import random
 import logging
 import sys
 import contextlib
@@ -12,9 +11,10 @@ import torch.func
 import torch.utils._mode_utils as mode_utils
 import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
-from torchax.view import View, NarrowInfo
+from torchax.view import View
 from torchax import config
 from torchax.ops import mappings, ops_registry
+from jax.experimental import mutable_array
 
 logger = logging.getLogger(__name__)
 
@@ -338,10 +338,15 @@ class Environment(contextlib.ContextDecorator):
     self._manually_entered = False
     self.enabled = False
     self._jax_devices = set(["jax", "jax_cpu", "xla"])
-    self.prng_key = jax.random.key(torch.initial_seed() % (1 << 63))
+    self._prng_key = mutable_array(
+        jax.random.key(torch.initial_seed() % (1 << 63)))
 
   def manual_seed(self, key):
-    self.prng_key = jax.random.key(key)
+    self._prng_key = mutable_array(jax.random.key(key))
+
+  @property
+  def prng_key(self):
+    return self._prng_key[...]
 
   def get_as_jax_device(self, device: Any):
     if device is None:
@@ -411,8 +416,10 @@ class Environment(contextlib.ContextDecorator):
                               generator: Optional[torch.Generator] = None):
     if generator is not None:
       with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-        self.prng_key = jax.random.key(generator.initial_seed() % (2**63))
-    self.prng_key, next_key = jax.random.split(self.prng_key)
+        self._prng_key[...] = jax.random.key(generator.initial_seed() % (2**63))
+    old_key = self._prng_key[...]
+    new_prng_key, next_key = jax.random.split(old_key)
+    self._prng_key[...] = new_prng_key
     return next_key
 
   def _handle_tensor_constructor(self, func, args, kwargs):
