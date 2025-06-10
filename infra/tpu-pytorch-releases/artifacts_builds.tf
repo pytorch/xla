@@ -7,7 +7,7 @@ locals {
   release_pytorch_git_rev = "v2.7.0-rc10"
   nightly_package_version = "2.8.0"
   cuda_versions = {
-    "nightly": ["11.8", "12.1", "12.6", "12.8"],
+    "nightly": [],
     "r2.7": ["12.1", "12.6"] # Note: PyTorch 2.7 release supports 11.8, 12.6, 12.8
   }
 
