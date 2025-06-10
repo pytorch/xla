@@ -17,6 +17,8 @@
 #include "xla/pjrt/pjrt_c_api_client.h"
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
 
+#include <c10/util/Exception.h>
+
 namespace torch_xla {
 namespace runtime {
 
@@ -148,10 +150,11 @@ InitializePjRt(const std::string& device_type) {
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
   } else if (device_type == "CUDA") {
-    TF_LOG(WARNING)
-        << "The XLA:CUDA device is deprecated in release 2.8. "
-        << "Future releases might remove XLA:CUDA support entirely. "
-        << "Use the PyTorch native CUDA backend, instead.";
+    TORCH_WARN(
+        "The XLA:CUDA device is deprecated in release 2.8. ",
+        "Future releases might remove XLA:CUDA support entirely. ",
+        "Use the PyTorch native CUDA backend, instead."
+    )
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);

@@ -206,6 +206,7 @@ cc_library(
         ":sys_util",
         ":tf_logging",
         ":xla_coordinator",
+        "@torch//:headers",
         "@com_google_absl//absl/log:initialize",
         "@xla//xla/pjrt:pjrt_c_api_client",
         "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
