@@ -204,7 +204,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 
    for inputs, labels in train_loader:
 +    with torch_xla.step():
-+      inputs, labels = inputs.to(torch_xla.device()), labels.to(torch_xla.device())
++      inputs, labels = inputs.to("xla"), labels.to("xla")
        optimizer.zero_grad()
        outputs = ddp_model(inputs)
        loss = loss_fn(outputs, labels)
