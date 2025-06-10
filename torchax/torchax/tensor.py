@@ -123,6 +123,9 @@ class Tensor(torch.Tensor):
 
   @classmethod
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
+    # TODO(hanq): figure out why is dispatch mode not sufficient
+    if func == torch.ops._c10d_functional.wait_tensor.default:
+      return args[0]._env.dispatch(func, types, args, kwargs)
     raise AssertionError(
         'torchax Tensors can only do math within torchax environment.'
         'Please wrap your code with `with torchax.defautl_env()` or '
@@ -407,6 +410,8 @@ class Environment(contextlib.ContextDecorator):
     return op
 
   def _to_copy(self, the_tensor, new_dtype, new_device):
+    if isinstance(the_tensor, View):
+      the_tensor = the_tensor.torch()
     if isinstance(the_tensor, Tensor):
       arr = the_tensor.jax()
       if new_dtype is not None and new_dtype != arr.dtype:
@@ -513,11 +518,12 @@ class Environment(contextlib.ContextDecorator):
       op = self._get_op_or_decomp(func)
 
       old_args, old_kwargs = args, kwargs
-      args, kwargs = torch_pytree.tree_map_only(
-          torch.distributed._functional_collectives.AsyncCollectiveTensor,
-          torch.distributed._functional_collectives.wait_tensor,
-          (args, kwargs),
-      )
+      with self._dispatch_mode:
+        args, kwargs = torch_pytree.tree_map_only(
+            torch.distributed._functional_collectives.AsyncCollectiveTensor,
+            torch.distributed._functional_collectives.wait_tensor,
+            (args, kwargs),
+        )
 
       try:
         if not op.is_view_op:

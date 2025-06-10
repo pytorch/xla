@@ -5571,10 +5571,10 @@ mutation_needs_env = {
     torch.ops.aten.bernoulli_.float,
 }
 
-for op, mutation in mutation_ops_to_functional.items():
+for operator, mutation in mutation_ops_to_functional.items():
   ops_registry.register_torch_dispatch_op(
-      op,
+      operator,
       mutation,
       is_jax_function=False,
       is_view_op=True,
-      needs_env=(op in mutation_needs_env))
+      needs_env=(operator in mutation_needs_env))
