@@ -36,8 +36,8 @@ _SETUP_PATH = os.path.join(_PTXLA_DIR, 'setup.py')
 # Page listing libtpu nightly builds.
 _LIBTPU_BUILDS_URL = 'https://storage.googleapis.com/libtpu-wheels/index.html'
 # Page listing jax nightly builds.
-_JAX_BUILDS_URL = 'https://storage.googleapis.com/jax-releases/jax_nightly_releases.html'
-
+_JAX_BUILDS_URL = 'https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/simple/jax'
+_JAXLIB_BUILDS_URL = 'https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/simple/jaxlib'
 
 def clean_tmp_dir() -> None:
   """Cleans up the temp dir."""
@@ -168,20 +168,24 @@ def find_latest_jax_nightly() -> Optional[tuple[str, str, str]]:
   # Find lines like
   # <a href=...>jax/jax-0.6.1.dev20250428-py3-none-any.whl</a>
   jax_build = find_latest_nightly(
-      html_lines, r'.*<a href=.*?>jax/jax-(.*?)\.dev(\d{8})-(.*)\.whl</a>')
+      html_lines, r'.*<a href=.*?>jax-(.*?)\.dev(\d{8})-(.*)\.whl</a>')
   if not jax_build:
     logger.error(
         f'Could not find latest jax nightly build in {_JAX_BUILDS_URL}.')
     return None
 
   # Find lines like
-  # <a href=...>nocuda/jaxlib-0.6.1.dev20250428-....whl</a>
+  # <a href=...>jaxlib-0.6.1.dev20250428-....whl</a>
+  os.system('curl -s {} > {}/jaxlib_builds.html'.format(
+      _JAXLIB_BUILDS_URL, _TMP_DIR))
+  with open(f'{_TMP_DIR}/jaxlib_builds.html', 'r') as f:
+    html_lines = f.readlines()
   jaxlib_build = find_latest_nightly(
       html_lines,
-      r'.*<a href=.*?>nocuda/jaxlib-(.*?)\.dev(\d{8})-(.*)\.whl</a>')
+      r'.*<a href=.*?>jaxlib-(.*?)\.dev(\d{8})-(.*)\.whl</a>')
   if not jaxlib_build:
     logger.error(
-        f'Could not find latest jaxlib nightly build in {_JAX_BUILDS_URL}.')
+        f'Could not find latest jaxlib nightly build in {_JAXLIB_BUILDS_URL}.')
     return None
 
   jax_version, jax_date, _ = jax_build

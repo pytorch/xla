@@ -90,9 +90,10 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 #
 # 2. Update JAX to a new nightly build:
 #
-#    1. Find a new version of jax and jaxlib on https://storage.googleapis.com/jax-releases/jax_nightly_releases.html.
+#    1. Find a new version of jax and jaxlib on https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/simple/jax
+#       and https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/simple/jaxlib.
 #       Usually we prefer the latest version.
-#       E.g. jax/jax-0.6.1.dev20250428-py3-none-any.whl and nocuda/jaxlib-0.6.1.dev20250428-*.whl
+#       E.g. jax-0.6.1.dev20250428-py3-none-any.whl and jaxlib-0.6.1.dev20250428-*.whl
 #       Both jax and jaxlib should be on the same day. We prefer this date to be
 #       the same as the libtpu build date, but it's not strictly necessary.
 #    2. Update _jax_version and _jaxlib_version to the versions we found. E.g.
