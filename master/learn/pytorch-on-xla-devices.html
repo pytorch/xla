@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitae4f06b )
+                  master (2.8.0+git78cff03 )
                 </div>
               
             
@@ -488,7 +488,7 @@ tensors.</p>
 </div>
 <p>Or used with neural network modules:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">l_in</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
-<span class="n">linear</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
+<span class="n">linear</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
 <span class="n">l_out</span> <span class="o">=</span> <span class="n">linear</span><span class="p">(</span><span class="n">l_in</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">l_out</span><span class="p">)</span>
 </pre></div>

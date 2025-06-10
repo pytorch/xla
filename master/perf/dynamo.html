@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitae4f06b )
+                  master (2.8.0+git78cff03 )
                 </div>
               
             
@@ -470,8 +470,8 @@ compiled function.</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-  <span class="n">a_xla</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
-  <span class="n">b_xla</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
+  <span class="n">a_xla</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+  <span class="n">b_xla</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">a_xla</span> <span class="o">+</span> <span class="n">b_xla</span>
 
 <span class="n">compiled_code</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;openxla&#39;</span><span class="p">)</span>

@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitae4f06b )
+                  master (2.8.0+git78cff03 )
                 </div>
               
             
@@ -1076,9 +1076,9 @@
 <span class="sd">      &gt;&gt;&gt; num_devices = xr.global_runtime_device_count()</span>
 <span class="sd">      &gt;&gt;&gt; device_ids = np.array(range(num_devices))</span>
 <span class="sd">      &gt;&gt;&gt; mesh = Mesh(device_ids, mesh_shape, (&#39;x&#39;, &#39;y&#39;))</span>
-<span class="sd">      &gt;&gt;&gt; input = torch.randn(8, 32).to(torch_xla.device())</span>
+<span class="sd">      &gt;&gt;&gt; input = torch.randn(8, 32).to(&#39;xla&#39;)</span>
 <span class="sd">      &gt;&gt;&gt; xs.mark_sharding(input, mesh, (0, None)) # 4-way data parallel</span>
-<span class="sd">      &gt;&gt;&gt; linear = nn.Linear(32, 10).to(torch_xla.device())</span>
+<span class="sd">      &gt;&gt;&gt; linear = nn.Linear(32, 10).to(&#39;xla&#39;)</span>
 <span class="sd">      &gt;&gt;&gt; xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="c1"># We only allow fully specified `partition_spec` to be applicable, as opposed</span>
@@ -1192,7 +1192,7 @@
 
 <span class="sd">    &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
 <span class="sd">    &gt;&gt;&gt; torch_xla.runtime.use_spmd()</span>
-<span class="sd">    &gt;&gt;&gt; t1 = torch.randn(8,8).to(torch_xla.device())</span>
+<span class="sd">    &gt;&gt;&gt; t1 = torch.randn(8,8).to(&#39;xla&#39;)</span>
 <span class="sd">    &gt;&gt;&gt; mesh = xs.get_1d_mesh()</span>
 <span class="sd">    &gt;&gt;&gt; xs.mark_sharding(t1, mesh, (0, None))</span>
 <span class="sd">    &gt;&gt;&gt; xs.clear_sharding(t1)</span>
