@@ -476,14 +476,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_negative_slice(self):
     t = _gen_tensor(32, 24, 32)
-    x = t.to(torch.device('xla'))
+    x = t.to("xla")
     t_slice = t[:, :, -1]
     x_slice = x[:, :, -1]
     self.assertEqual(t_slice.data, x_slice.data.cpu())
 
   def test_negative_cat(self):
     t = _gen_tensor(2, 5, 3)
-    x = t.to(torch.device('xla'))
+    x = t.to("xla")
     t_cat = torch.cat([t, t], -1)
     x_cat = torch.cat([x, x], -1)
     self.assertEqual(t_cat.data, x_cat.data.cpu())
@@ -491,8 +491,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_cat_empty_tensor(self):
     t = _gen_tensor(2, 5, 3)
     empty_tensor = torch.Tensor()
-    x = t.to(torch.device('xla'))
-    empty_tensor_xla = empty_tensor.to(torch.device('xla'))
+    x = t.to("xla")
+    empty_tensor_xla = empty_tensor.to("xla")
     t_cat = torch.cat([t, empty_tensor], 0)
     x_cat = torch.cat([x, empty_tensor_xla], 0)
     self.assertEqual(t_cat.data, x_cat.data.cpu())
@@ -550,9 +550,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     input = _gen_tensor(2, 5, 4, 3)
     mask = _gen_mask(input.size())
     value = torch.tensor(42)
-    xla_input = input.to(torch.device('xla'))
-    xla_mask = mask.to(torch.device('xla'))
-    xla_value = value.to(torch.device('xla'))
+    xla_input = input.to("xla")
+    xla_mask = mask.to("xla")
+    xla_value = value.to("xla")
     result = torch.masked_fill(input, mask, value)
     xla_result = torch.masked_fill(xla_input, xla_mask, xla_value)
     self.assertEqual(input.data, xla_input.data.cpu())
@@ -571,28 +571,28 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_add_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
-    xla_input = input.to(torch.device('xla'))
+    xla_input = input.to("xla")
     output = input + 2
     xla_output = xla_input + 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
   def test_mul_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
-    xla_input = input.to(torch.device('xla'))
+    xla_input = input.to("xla")
     output = input * 2
     xla_output = xla_input * 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
   def test_sub_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
-    xla_input = input.to(torch.device('xla'))
+    xla_input = input.to("xla")
     output = input - 2
     xla_output = xla_input - 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
   def test_div_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
-    xla_input = input.to(torch.device('xla'))
+    xla_input = input.to("xla")
     output = input / 2
     xla_output = xla_input / 2
     self.assertEqual(output.data, xla_output.data.cpu())
@@ -730,7 +730,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_clamp(self):
     a = torch.randn(3, 3)
-    xla_a = a.to(torch.device('xla'))
+    xla_a = a.to("xla")
     b = torch.clamp(a, max=3.4)
     xla_b = torch.clamp(xla_a, max=3.4)
     self.assertEqual(b.data, xla_b.data.cpu())
@@ -1904,8 +1904,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_conv2d_backward(self):
     # Somehow eager cpu produces different results than us, and
     # therefore we can't compare eager and xla.
-    conv = nn.Conv2d(1, 1, kernel_size=1).to('xla')
-    input = torch.tensor([[[[2077.0]]]]).to('xla')
+    conv = nn.Conv2d(1, 1, kernel_size=1).to("xla")
+    input = torch.tensor([[[[2077.0]]]]).to("xla")
 
     output = conv(input)
     loss = torch.sum(output)
@@ -1921,9 +1921,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     output_cpu = linear_cpu(input_cpu)
 
     # It looks like nn.Module.to is in-place.
-    linear = copy.deepcopy(linear_cpu).to('xla')
+    linear = copy.deepcopy(linear_cpu).to("xla")
     apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
-    input = copy.deepcopy(input_cpu).to('xla')
+    input = copy.deepcopy(input_cpu).to("xla")
     input.retain_grad()
     output = linear(input)
 
@@ -1953,9 +1953,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     output_cpu = linear_cpu(input_cpu)
 
     # It looks like nn.Module.to is in-place.
-    linear = copy.deepcopy(linear_cpu).to('xla')
+    linear = copy.deepcopy(linear_cpu).to("xla")
     apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
-    input = copy.deepcopy(input_cpu).to('xla')
+    input = copy.deepcopy(input_cpu).to("xla")
     output = linear(input)
 
     # We will have some reshapes on the bias. So skip the check here.
@@ -1981,9 +1981,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     output_cpu = linear_cpu(input_cpu)
 
     # It looks like nn.Module.to is in-place.
-    linear = copy.deepcopy(linear_cpu).to('xla')
+    linear = copy.deepcopy(linear_cpu).to("xla")
     apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
-    input = copy.deepcopy(input_cpu).to('xla')
+    input = copy.deepcopy(input_cpu).to("xla")
     input.retain_grad()
     output = linear(input)
 
@@ -2012,9 +2012,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     output_cpu = linear_cpu(input_cpu)
 
     # It looks like nn.Module.to is in-place.
-    linear = copy.deepcopy(linear_cpu).to('xla')
+    linear = copy.deepcopy(linear_cpu).to("xla")
     apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
-    input = copy.deepcopy(input_cpu).to('xla')
+    input = copy.deepcopy(input_cpu).to("xla")
     input.retain_grad()
     output = linear(input)
 
@@ -2088,8 +2088,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     grad = torch.rand(10, 10, dtype=torch.bfloat16)
     inp = torch.rand(10, 10)
 
-    Xgrad = grad.to(torch.device('xla'))
-    Xinp = inp.to(torch.device('xla'))
+    Xgrad = grad.to("xla")
+    Xinp = inp.to("xla")
 
     r = foo(grad, inp)
     Xr = foo(Xgrad, Xinp)
@@ -2104,7 +2104,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t = torch.rand(10, 10, requires_grad=True, dtype=torch.bfloat16)
     t.retain_grad()
     t.grad = torch.rand(10, 10, dtype=torch.bfloat16)
-    xt = t.to(torch.device('xla'))
+    xt = t.to("xla")
     xt.grad = t.grad.to(torch_xla.device(), dtype=torch.bfloat16)
 
     foo(t)
@@ -2115,7 +2115,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_clip_grad_norm_zero(self):
     t = torch.rand(10, 10, dtype=torch.bfloat16)
-    xt = t.to(torch.device('xla'))
+    xt = t.to("xla")
     result = torch.nn.utils.clip_grad_norm_(xt, 1.0)
     self.assertEqual(result.device.type, 'xla')
     self.assertTrue(torch.allclose(result.cpu(), torch.tensor(0.)))
@@ -2128,8 +2128,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t0 = torch.rand(10, 10, dtype=torch.bfloat16)
     t1 = torch.rand(10, 10)
 
-    Xt0 = t0.to(torch.device('xla'))
-    Xt1 = t1.to(torch.device('xla'))
+    Xt0 = t0.to("xla")
+    Xt1 = t1.to("xla")
 
     r = foo(t0, t1)
     Xr = foo(Xt0, Xt1)
@@ -2170,8 +2170,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       x = make_tensor(xshape)
       ilist = [make_index(s) for s in ishapes]
 
-      Xx = x.to(torch.device('xla'))
-      Xilist = [i.to(torch.device('xla')) for i in ilist]
+      Xx = x.to("xla")
+      Xilist = [i.to("xla") for i in ilist]
 
       out = f(x, *ilist)
       Xout = f(Xx, *Xilist)
@@ -2211,8 +2211,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     inp = torch.rand(10, dtype=torch.half)
     s = torch.tensor(7, dtype=torch.double)
 
-    Xinp = inp.to(torch.device('xla'))
-    Xs = s.to(torch.device('xla'))
+    Xinp = inp.to("xla")
+    Xs = s.to("xla")
 
     out = fn(inp, s)
     Xout = fn(Xinp, Xs)
@@ -2266,7 +2266,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       return r + 5
 
     inp = torch.rand(1, 3, 10, 10, dtype=torch.double)
-    Xinp = inp.to(torch.device('xla'))
+    Xinp = inp.to("xla")
 
     out = foo(inp)
     Xout = foo(Xinp, is_xla=True)
@@ -2363,7 +2363,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     input = torch.rand((10, 10), dtype=torch.float16)
     out = foo(input)
 
-    in_xla = input.to(torch.device('xla'))
+    in_xla = input.to("xla")
     out_xla = foo(in_xla)
 
     self.assertEqual(out.dtype, out_xla.dtype)
@@ -2379,7 +2379,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     a = torch.rand(5, 5, 0, 5)
 
     expected = torch.cummax(a, dim)
-    actual = torch.cummax(a.to(torch.device('xla')), dim)
+    actual = torch.cummax(a.to("xla"), dim)
 
     self.assertEqual(actual, expected)
 
@@ -2881,7 +2881,7 @@ class TestGeneric(test_utils.XlaTestCase):
     # Assumes CPU-XLA data movement works.
     cuda_tensor = cpu_tensor.to("cuda")
     # Move tensor CUDA -> XLA.
-    xla_tensor = cuda_tensor.to(torch.device('xla'))
+    xla_tensor = cuda_tensor.to("xla")
     # Move the XLA tensor back to CPU, and check that it is the same as
     # the original CPU tensor.
     self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu()))
@@ -2974,7 +2974,7 @@ class TestDLPack(parameterized.TestCase):
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_roundtrip_bool(self):
-    xla_tensor = torch.ones(1, dtype=torch.bool).to(torch.device('xla'))
+    xla_tensor = torch.ones(1, dtype=torch.bool).to("xla")
     self._test_dlpack_capsule_conversion_helper(xla_tensor)
 
   @onlyIfTorchSupportsCUDA
@@ -3042,7 +3042,7 @@ class TestDLPack(parameterized.TestCase):
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_xla_to_pytorch_cuda(self):
-    xla_t1 = torch.arange(5).to(torch.device('xla'))
+    xla_t1 = torch.arange(5).to("xla")
     dlt1 = xdlpack.to_dlpack(xla_t1)
     cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
     self.assertEqual(cuda_t1.device.type, 'cuda')
@@ -3053,7 +3053,7 @@ class TestDLPack(parameterized.TestCase):
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_xla_to_pytorch_cuda_protocol_conversion(self):
-    xla_t1 = torch.arange(5).to(torch.device('xla'))
+    xla_t1 = torch.arange(5).to("xla")
     cuda_t1 = torch.utils.dlpack.from_dlpack(xla_t1)
     self.assertEqual(cuda_t1.device.type, 'cuda')
     self.assertEqual(cuda_t1.device.index, xla_t1.device.index)

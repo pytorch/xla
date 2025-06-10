@@ -772,7 +772,7 @@ def _scan_impl_flat(fn,
   # Add hoisted variables as While computation params as well,
   # including the potentially updated seed tensor.
   for param_id, tensor in hoisted_vars.items():
-    idx = builder.add_param(tensor.to(torch.device('xla')))
+    idx = builder.add_param(tensor.to("xla"))
     fn_param_id_to_while_param_id[param_id] = idx
 
   # Since we are threading five objects through the body_fn:

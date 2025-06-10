@@ -123,7 +123,7 @@ class ScanSpmdTest(unittest.TestCase):
 
     torch.manual_seed(42)
     torch_xla.manual_seed(42)
-    model = MyModel().to('xla')
+    model = MyModel().to("xla")
     model = apply_xla_patch_to_nn_linear(model)
     for name, param in model.named_parameters():
       if 'up_proj' in name:
@@ -175,7 +175,7 @@ class ScanSpmdTest(unittest.TestCase):
         else:
           return self.layers(x)
 
-    model = MyModel().to('xla')
+    model = MyModel().to("xla")
     # High dimensional input whose last dim is the contraction dim.
     torch_xla.manual_seed(42)
     x = torch.randn((3, 4, 5, 128), device='xla')

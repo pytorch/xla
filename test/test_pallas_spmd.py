@@ -65,9 +65,9 @@ class PallasTest(unittest.TestCase):
     n_devices = xr.global_runtime_device_count()
     xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
 
-    q = torch.randn(8, 2, 128, 8).to('xla')
-    k = torch.randn(8, 2, 128, 8).to('xla')
-    v = torch.randn(8, 2, 128, 8).to('xla')
+    q = torch.randn(8, 2, 128, 8).to("xla")
+    k = torch.randn(8, 2, 128, 8).to("xla")
+    v = torch.randn(8, 2, 128, 8).to("xla")
 
     o = flash_attention(q, k, v, partition_spec=(0, None, None, None))
     dev_ids = ','.join(map(str, range(n_devices)))
@@ -89,9 +89,9 @@ class PallasTest(unittest.TestCase):
             range(n_devices), (n_devices // 2, 2, 1, 1, 1),
             ('fsdp', 'dp', 'a', 'b', 'c')))
 
-    q = torch.randn(4, 2, 2, 128, 4).to('xla')
-    k = torch.randn(4, 2, 2, 128, 4).to('xla')
-    v = torch.randn(4, 2, 2, 128, 4).to('xla')
+    q = torch.randn(4, 2, 2, 128, 4).to("xla")
+    k = torch.randn(4, 2, 2, 128, 4).to("xla")
+    v = torch.randn(4, 2, 2, 128, 4).to("xla")
 
     o = flash_attention(
         q, k, v, partition_spec=('fsdp', 'dp', None, None, None))
@@ -111,10 +111,10 @@ class PallasTest(unittest.TestCase):
     n_devices = xr.global_runtime_device_count()
     xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
 
-    q = torch.randn(8, 2, 513, 4).to('xla')
-    k = torch.randn(8, 2, 513, 4).to('xla')
-    v = torch.randn(8, 2, 513, 4).to('xla')
-    ab = torch.randn(8, 2, 513, 513).to('xla')
+    q = torch.randn(8, 2, 513, 4).to("xla")
+    k = torch.randn(8, 2, 513, 4).to("xla")
+    v = torch.randn(8, 2, 513, 4).to("xla")
+    ab = torch.randn(8, 2, 513, 513).to("xla")
 
     o = flash_attention(q, k, v, ab=ab, partition_spec=(0, None, None, None))
     dev_ids = ','.join(map(str, range(n_devices)))
@@ -134,9 +134,9 @@ class PallasTest(unittest.TestCase):
     xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
 
     torch.manual_seed(42)
-    q = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    k = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    v = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -162,9 +162,9 @@ class PallasTest(unittest.TestCase):
         f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
 
     torch.manual_seed(42)
-    q = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    k = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    v = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -191,15 +191,15 @@ class PallasTest(unittest.TestCase):
     v = torch.randn(8, 2, 128, 4)
     zeros = torch.zeros(8, 32)
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
-    segment_ids_xla = segment_ids.to('xla')
+    segment_ids_xla = segment_ids.to("xla")
     # only shard data dimension
     o = flash_attention(
-        q.to('xla'),
-        k.to('xla'),
-        v.to('xla'),
+        q.to("xla"),
+        k.to("xla"),
+        v.to("xla"),
         False,
         segment_ids_xla,
-        segment_ids.to('xla'),
+        segment_ids.to("xla"),
         partition_spec=("data", None, None, None))
     n_devices = xr.global_runtime_device_count()
     dev_ids = ','.join(map(str, range(n_devices)))
@@ -232,10 +232,10 @@ class PallasTest(unittest.TestCase):
     xs.set_global_mesh(xs.get_1d_mesh("data"))
 
     torch.manual_seed(42)
-    q = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    k = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    v = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    zeros = torch.zeros(8, 32).to('xla')
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    zeros = torch.zeros(8, 32).to("xla")
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     q.retain_grad()
     k.retain_grad()
@@ -271,10 +271,10 @@ class PallasTest(unittest.TestCase):
     torch_xla.sync()
 
     torch.manual_seed(42)
-    q = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    k = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    v = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    zeros = torch.zeros(8, 32).to('xla')
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    zeros = torch.zeros(8, 32).to("xla")
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     q.retain_grad()
     k.retain_grad()
@@ -310,12 +310,12 @@ class PallasTest(unittest.TestCase):
     q_segment_ids = torch.ones(8, q.shape[2], dtype=torch.float32)
     # only shard data dimension
     o = flash_attention(
-        q.to('xla'),
-        k.to('xla'),
-        v.to('xla'),
+        q.to("xla"),
+        k.to("xla"),
+        v.to("xla"),
         False,
-        q_segment_ids.to('xla'),
-        kv_segment_ids.to('xla'),
+        q_segment_ids.to("xla"),
+        kv_segment_ids.to("xla"),
         partition_spec=("data", None, None, None))
     n_devices = xr.global_runtime_device_count()
     dev_ids = ','.join(map(str, range(n_devices)))
@@ -349,12 +349,12 @@ class PallasTest(unittest.TestCase):
     xs.set_global_mesh(xs.get_1d_mesh("data"))
 
     torch.manual_seed(42)
-    q = torch.randn(8, 2, 1024, 4, requires_grad=True).to('xla')
-    k = torch.randn(8, 2, 128, 4, requires_grad=True).to('xla')
-    v = torch.randn(8, 2, 128, 4, requires_grad=True).to('xla')
-    zeros = torch.zeros(8, 32).to('xla')
+    q = torch.randn(8, 2, 1024, 4, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 4, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 4, requires_grad=True).to("xla")
+    zeros = torch.zeros(8, 32).to("xla")
     kv_segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
-    q_segment_ids = torch.ones(8, q.shape[2], dtype=torch.float32).to('xla')
+    q_segment_ids = torch.ones(8, q.shape[2], dtype=torch.float32).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -388,12 +388,12 @@ class PallasTest(unittest.TestCase):
     torch_xla.sync()
 
     torch.manual_seed(42)
-    q = torch.randn(8, 2, 1024, 4, requires_grad=True).to('xla')
-    k = torch.randn(8, 2, 128, 4, requires_grad=True).to('xla')
-    v = torch.randn(8, 2, 128, 4, requires_grad=True).to('xla')
-    zeros = torch.zeros(8, 32).to('xla')
+    q = torch.randn(8, 2, 1024, 4, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 4, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 4, requires_grad=True).to("xla")
+    zeros = torch.zeros(8, 32).to("xla")
     kv_segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
-    q_segment_ids = torch.ones(8, q.shape[2], dtype=torch.float32).to('xla')
+    q_segment_ids = torch.ones(8, q.shape[2], dtype=torch.float32).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -449,15 +449,15 @@ class PallasTest(unittest.TestCase):
         flash_attention_wrapper, fw_compiler=compiler)
 
     torch.manual_seed(42)
-    q = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    k = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    v = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
     B, N, SEQ, H = q.size()
-    mask = (torch.rand(8, 2, 128, 128) > 0.5).to('xla')
-    ab = torch.ones(8, 2, 128, 128).to('xla')
+    mask = (torch.rand(8, 2, 128, 128) > 0.5).to("xla")
+    ab = torch.ones(8, 2, 128, 128).to("xla")
     ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min).requires_grad_()
     ab.retain_grad()
 
@@ -476,13 +476,13 @@ class PallasTest(unittest.TestCase):
     ab_grad = ab.grad
 
     torch.manual_seed(42)
-    q = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    k = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
-    v = torch.randn(8, 2, 128, 8, requires_grad=True).to('xla')
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
-    ab = torch.ones(8, 2, 128, 128).to('xla')
+    ab = torch.ones(8, 2, 128, 128).to("xla")
     ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min).requires_grad_()
     ab.retain_grad()
 

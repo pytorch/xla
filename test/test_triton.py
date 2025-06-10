@@ -248,8 +248,8 @@ class TritonTest(unittest.TestCase):
   def test_gpu_custom_call_triton_add(self):
     size = 16
 
-    x = torch.arange(size, dtype=torch.int64).to('xla')
-    y = torch.arange(size, dtype=torch.int64).to('xla')
+    x = torch.arange(size, dtype=torch.int64).to("xla")
+    y = torch.arange(size, dtype=torch.int64).to("xla")
     output = torch.empty_like(x)
     block_size = 8
     grid = (triton.cdiv(size, block_size),)

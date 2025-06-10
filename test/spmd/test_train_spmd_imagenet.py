@@ -313,8 +313,8 @@ def train_imagenet():
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      x = data.to(torch.device('xla'))
-      y = target.to(torch.device('xla'))
+      x = data.to("xla")
+      y = target.to("xla")
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
           optimizer.zero_grad()
@@ -344,8 +344,8 @@ def train_imagenet():
     total_samples, correct = 0, 0
     model.eval()
     for step, (data, target) in enumerate(loader):
-      data = data.to(torch.device('xla'))
-      target = target.to(torch.device('xla'))
+      data = data.to("xla")
+      target = target.to("xla")
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum()

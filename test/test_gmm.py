@@ -127,9 +127,9 @@ class MegabloxTest(unittest.TestCase):
             ref_out = self._reference_gmm(lhs, rhs, group_sizes, transpose_rhs)
 
             out = gmm_func(
-                lhs.to('xla'),
-                rhs.to('xla'),
-                group_sizes.to('xla'),
+                lhs.to("xla"),
+                rhs.to("xla"),
+                group_sizes.to("xla"),
                 transpose_rhs=transpose_rhs)
             # torch.compiled version of the gmm will cache the payload in dynamo layer
             # hence won't trigger the trace_pallas cache
@@ -137,9 +137,9 @@ class MegabloxTest(unittest.TestCase):
               old_cnt = xr.get_num_cached_compilation_graph()
               # execute the same gmm func, expected to hit the cache
               out = gmm_func(
-                  lhs.to('xla'),
-                  rhs.to('xla'),
-                  group_sizes.to('xla'),
+                  lhs.to("xla"),
+                  rhs.to("xla"),
+                  group_sizes.to("xla"),
                   transpose_rhs=transpose_rhs)
               new_cnt = xr.get_num_cached_compilation_graph()
               self.assertEqual(old_cnt, new_cnt)
@@ -170,13 +170,13 @@ class MegabloxTest(unittest.TestCase):
           group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
           ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
-          out = gmm_func(lhs.to('xla'), rhs.to('xla'), group_sizes.to('xla'))
+          out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
           # torch.compiled version of the gmm will cache the payload in dynamo layer
           # hence won't trigger the trace_pallas cache
           if test_cache and gmm_func != compiled_gmm:
             old_cnt = xr.get_num_cached_compilation_graph()
             # execute the same gmm func, expected to hit the cache
-            out = gmm_func(lhs.to('xla'), rhs.to('xla'), group_sizes.to('xla'))
+            out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
             new_cnt = xr.get_num_cached_compilation_graph()
             self.assertEqual(old_cnt, new_cnt)
           self.assertTrue(torch.allclose(ref_out, out.cpu()))
@@ -203,11 +203,11 @@ class MegabloxTest(unittest.TestCase):
         group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
         ref_out = self._reference_tgmm(lhs, rhs, group_sizes)
 
-        out = tgmm(lhs.to('xla'), rhs.to('xla'), group_sizes.to('xla'))
+        out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
         if test_cache:
           old_cnt = xr.get_num_cached_compilation_graph()
           # execute the same gmm func, expected to hit the cache
-          out = tgmm(lhs.to('xla'), rhs.to('xla'), group_sizes.to('xla'))
+          out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
           new_cnt = xr.get_num_cached_compilation_graph()
           self.assertEqual(new_cnt, old_cnt)
         self.assertTrue(torch.allclose(ref_out, out.cpu()))
@@ -234,11 +234,11 @@ class MegabloxTest(unittest.TestCase):
         group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
         ref_out = self._reference_tgmm(lhs, rhs, group_sizes)
 
-        out = tgmm(lhs.to('xla'), rhs.to('xla'), group_sizes.to('xla'))
+        out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
         if test_cache:
           old_cnt = xr.get_num_cached_compilation_graph()
           # execute the same gmm func, expected to hit the cache
-          out = tgmm(lhs.to('xla'), rhs.to('xla'), group_sizes.to('xla'))
+          out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
           new_cnt = xr.get_num_cached_compilation_graph()
           self.assertEqual(new_cnt, old_cnt)
         self.assertTrue(torch.allclose(ref_out, out.cpu()))
@@ -269,8 +269,8 @@ class MegabloxTest(unittest.TestCase):
 
         ref_out_backward = torch.ones_like(ref_out)
         grad_lhs, grad_rhs = gmm_backward(
-            ref_out_backward.to('xla'), lhs.to('xla'), rhs.to('xla'),
-            group_sizes.to('xla'))
+            ref_out_backward.to("xla"), lhs.to("xla"), rhs.to("xla"),
+            group_sizes.to("xla"))
         # same gmm/tgmm was run for the `test_cache=False` case so the
         # cache should be populated now
         new_cnt = xr.get_num_cached_compilation_graph()
@@ -304,13 +304,13 @@ class MegabloxTest(unittest.TestCase):
       ref_out.sum().backward()
 
       torch.manual_seed(42)
-      lhs_xla = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True).to('xla')
+      lhs_xla = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True).to("xla")
       rhs_xla = torch.rand(
-          num_groups, k, n, dtype=rhs_dtype, requires_grad=True).to('xla')
+          num_groups, k, n, dtype=rhs_dtype, requires_grad=True).to("xla")
       lhs_xla.retain_grad()
       rhs_xla.retain_grad()
 
-      out = GMM.apply(lhs_xla, rhs_xla, group_sizes.to('xla'))
+      out = GMM.apply(lhs_xla, rhs_xla, group_sizes.to("xla"))
       out.sum().backward()
 
       self.assertTrue(torch.allclose(ref_out, out.cpu()))
@@ -341,13 +341,13 @@ class MegabloxTest(unittest.TestCase):
       ref_out.sum().backward()
 
       torch.manual_seed(42)
-      lhs_xla = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True).to('xla')
+      lhs_xla = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True).to("xla")
       rhs_xla = torch.rand(
-          num_groups, k, n, dtype=rhs_dtype, requires_grad=True).to('xla')
+          num_groups, k, n, dtype=rhs_dtype, requires_grad=True).to("xla")
       lhs_xla.retain_grad()
       rhs_xla.retain_grad()
 
-      out = GMM.apply(lhs_xla, rhs_xla, group_sizes.to('xla'))
+      out = GMM.apply(lhs_xla, rhs_xla, group_sizes.to("xla"))
       grad_out = torch.ones_like(out)
       torch.autograd.backward([out], [grad_out, lhs_xla, rhs_xla])
 
@@ -380,7 +380,7 @@ class MegabloxTest(unittest.TestCase):
           rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
           group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
 
-          out = gmm(lhs.to('xla'), rhs.to('xla'), group_sizes.to('xla'), tiling)
+          out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"), tiling)
           self.assertEqual(met.counter_value('trace_pallas_cache_hit'), None)
 
 

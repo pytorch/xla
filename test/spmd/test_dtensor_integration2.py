@@ -38,8 +38,8 @@ class DTensorIntegrationTest2(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch_xla._XLAC._xla_get_auto_sharding())
 
     optimizer = optim.SGD(sharded_model.parameters(), lr=0.1)
-    data = torch.randn(128, 128).to(torch.device('xla'))
-    target = torch.zeros(128).to(torch.device('xla'))
+    data = torch.randn(128, 128).to("xla")
+    target = torch.zeros(128).to("xla")
     loss_fn = nn.CrossEntropyLoss()
     for _ in range(5):
       optimizer.zero_grad()

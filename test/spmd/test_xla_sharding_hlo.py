@@ -22,8 +22,8 @@ class XlaShardingHloTest(test_xla_sharding_base.XlaShardingTest):
 
   @patch.dict(os.environ, {"XLA_DUMP_POST_OPTIMIZATIONS": "1"})
   def test_xla_sharded_hlo_dump_post_optimizations(self):
-    t1 = torch.randn(1, 128).to(torch.device('xla'))
-    t2 = torch.randn(128, 1).to(torch.device('xla'))
+    t1 = torch.randn(1, 128).to("xla")
+    t2 = torch.randn(128, 1).to("xla")
     xs.mark_sharding(t1, self._get_mesh((1, self.n_devices)), (0, 1))
 
     t3 = t1 @ t2

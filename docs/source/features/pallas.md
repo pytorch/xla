@@ -40,9 +40,9 @@ jax will lock the TPU and torch-xla cannot access it.
 Example usage:
 
 ``` python3
-q = torch.randn(3, 2, 128, 4).to('xla')
-k = torch.randn(3, 2, 128, 4).to('xla')
-v = torch.randn(3, 2, 128, 4).to('xla')
+q = torch.randn(3, 2, 128, 4).to("xla")
+k = torch.randn(3, 2, 128, 4).to("xla")
+v = torch.randn(3, 2, 128, 4).to("xla")
 
 # Adopts any Pallas kernel
 from torch_xla.experimental.custom_kernel import make_kernel_from_pallas

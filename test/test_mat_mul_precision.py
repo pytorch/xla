@@ -73,8 +73,8 @@ class TestMatMulPrecision(unittest.TestCase):
 
     narrowest_atol = widest_atol / 4.0
 
-    x = x.to(torch.float32).to('xla')
-    y = y.to(torch.float32).to('xla')
+    x = x.to(torch.float32).to("xla")
+    y = y.to(torch.float32).to("xla")
 
     # Act
     actual = torch.matmul(x, y).to('cpu').to(torch.float64)

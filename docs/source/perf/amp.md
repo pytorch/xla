@@ -19,7 +19,7 @@ from torch_xla.amp import syncfree
 import torch_xla.core.xla_model as xm
 
 # Creates model and optimizer in default precision
-model = Net().to(torch.device('xla'))
+model = Net().to("xla")
 # Pytorch/XLA provides sync-free optimizers for improved performance
 optimizer = syncfree.SGD(model.parameters(), ...)
 
@@ -106,7 +106,7 @@ from torch_xla.amp import syncfree
 import torch_xla.core.xla_model as xm
 
 # Creates model and optimizer in default precision
-model = Net().to(torch.device('xla'))
+model = Net().to("xla")
 # Pytorch/XLA provides sync-free optimizers for improved performance
 optimizer = syncfree.SGD(model.parameters(), ...)
 scaler = GradScaler()
