@@ -39,11 +39,11 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd(auto=True)
 
   def init_test_variables(cls):
-    xt_no_auto = torch.ones(2, 2).to("xla")
+    xt_no_auto = torch.ones(2, 2).to('xla')
     cls.hash_no_auto = torch_xla._XLAC._get_graph_hash([xt_no_auto + 0])
 
   def test_auto_sharding_hashing(self):
-    xt = torch.ones(2, 2).to("xla")
+    xt = torch.ones(2, 2).to('xla')
     assert torch_xla._XLAC._xla_get_auto_sharding()
     hash_auto_spmd = torch_xla._XLAC._get_graph_hash([xt + 0])
     self.assertNotEqual(hash_auto_spmd, self.hash_no_auto)
@@ -60,8 +60,8 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
     t2 = torch.ones(128, 256)
     t3 = (t1 @ t2).sum()
 
-    xt1 = t1.to("xla")
-    xt2 = t2.to("xla")
+    xt1 = t1.to('xla')
+    xt2 = t2.to('xla')
     xt3 = (xt1 @ xt2).sum()
     torch_xla.sync()
     self.assertEqual(met.counter_value("CompileWithAutoSharding"), 1)
@@ -72,11 +72,11 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
   def test_simple_linear_training(self):
     met.clear_counters()
 
-    model = self.SimpleLinear().to("xla")
+    model = self.SimpleLinear().to('xla')
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
-    data = torch.randn(128, 128).to("xla")
-    target = torch.zeros(128).to("xla")
+    data = torch.randn(128, 128).to('xla')
+    target = torch.zeros(128).to('xla')
     loss_fn = nn.CrossEntropyLoss()
     for i in range(5):
       optimizer.zero_grad()

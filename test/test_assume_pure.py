@@ -75,7 +75,7 @@ class TestAssumePure(absltest.TestCase):
 
   def test_assume_pure_module(self):
     # Arrange
-    model = nn.Linear(3, 3).to("xla")
+    model = nn.Linear(3, 3).to('xla')
 
     @assume_pure
     def simple_torch_function(params, x):
@@ -88,7 +88,7 @@ class TestAssumePure(absltest.TestCase):
     torch_xla.sync()
 
     # Assert
-    expected = model(torch.ones(3, 3).to("xla"))
+    expected = model(torch.ones(3, 3).to('xla'))
     torch.testing.assert_close(actual, expected, check_device=False)
 
   @unittest.skipIf(xr.device_type() == 'TPU',
@@ -119,8 +119,8 @@ class TestAssumePure(absltest.TestCase):
 
     orig_model = MyModule()
     pure_model = deepcopy(orig_model)
-    orig_model = orig_model.to("xla")
-    pure_model = pure_model.to("xla")
+    orig_model = orig_model.to('xla')
+    pure_model = pure_model.to('xla')
     orig_params = dict(orig_model.named_parameters())
     pure_params = dict(pure_model.named_parameters())
     orig_x = torch.randn((5, 3, 9, 9), device='xla', requires_grad=True)
@@ -470,13 +470,13 @@ class TracingBenchmark(absltest.TestCase):
         num_hidden_layers=100,
         intermediate_size=8 * 128,
         vocab_size=256)
-    model = DecoderOnlyModel(config=config).to("xla")
+    model = DecoderOnlyModel(config=config).to('xla')
     batch_size = 2
     sequence_length = 8
 
     # Generate random input_ids within the range of the vocabulary size
     input_ids = torch.randint(0, config.vocab_size,
-                              (batch_size, sequence_length)).to("xla")
+                              (batch_size, sequence_length)).to('xla')
 
     pure_model = deepcopy(model)
     torch_xla.sync()

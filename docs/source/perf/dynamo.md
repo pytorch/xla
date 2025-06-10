@@ -23,8 +23,8 @@ import torch
 import torch_xla.core.xla_model as xm
 
 def add(a, b):
-  a_xla = a.to("xla")
-  b_xla = b.to("xla")
+  a_xla = a.to('xla')
+  b_xla = b.to('xla')
   return a_xla + b_xla
 
 compiled_code = torch.compile(add, backend='openxla')

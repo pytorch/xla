@@ -100,8 +100,8 @@ class AsStridedTest(parameterized.TestCase):
     ss = StridedAndSlice().to("cpu")
     input = torch.randn((2, 4, 256, 256), device="cpu").requires_grad_()
     if use_xla:
-      ss.to("xla")
-      input = input.to("xla")
+      ss.to('xla')
+      input = input.to('xla')
     return ss(input, use_aten_slice)
 
   @parameterized.named_parameters(
@@ -137,7 +137,7 @@ class AsStridedTest(parameterized.TestCase):
     cpu_output = compiler_func(input_cpu, use_aten_slice=use_aten_slice)
     torch_xla.sync()
 
-    input_xla = input_xla.to("xla")
+    input_xla = input_xla.to('xla')
     xla_output = compiler_func(input_xla, use_aten_slice=use_aten_slice)
     torch_xla.sync()
     torch.testing.assert_close(cpu_output, xla_output.cpu())

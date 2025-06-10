@@ -44,7 +44,7 @@ class AssumePureSpmdTest(unittest.TestCase):
       "TODO(https://github.com/pytorch/xla/issues/9017): Get these tests working on GPU"
   )
   def test_assume_pure_works_with_mark_sharding_with_gradients(self):
-    x = torch.randn((8, 4, 5, 128)).to("xla").requires_grad_(True)
+    x = torch.randn((8, 4, 5, 128)).to('xla').requires_grad_(True)
     result = assume_pure(mark_sharding_with_gradients)(
         x, self.spmd_mesh, ("model", None, None, None))
     result.sum().backward()

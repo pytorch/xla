@@ -254,10 +254,10 @@ class MetricsTest(unittest.TestCase):
     # Create N boxes in the format XYXY.
     # This should not run any fallback ops.
     N = 10
-    x = torch.rand(N, 1).to("xla")
-    y = torch.rand(N, 1).to("xla")
-    width = torch.rand(N, 1).to("xla")
-    height = torch.rand(N, 1).to("xla")
+    x = torch.rand(N, 1).to('xla')
+    y = torch.rand(N, 1).to('xla')
+    width = torch.rand(N, 1).to('xla')
+    height = torch.rand(N, 1).to('xla')
     xys = torch.cat((x, x + width, y, y - height), dim=1)
     getAndAssertFallbackOpsLenEquals(0)
 
@@ -274,7 +274,7 @@ class MetricsTest(unittest.TestCase):
     if not XLAExperimentalContains("nms"):
       # Run torchvision operations as fallback.
       import torchvision
-      scores = torch.rand(N).to("xla")
+      scores = torch.rand(N).to('xla')
       # NMS doesn't have a PyTorch/XLA implementation without dynamic shapes.
       torchvision.ops.nms(xys, scores, 0.5)
       # remove_small_boxes is not implemented in C++. It calls other PyTorch

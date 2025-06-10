@@ -42,8 +42,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(isinstance(xst1, XLAShardedTensor))
 
   def test_xla_sharded_tensor_repr(self):
-    xt = torch.randn(128, 128).to("xla")
-    model = self.SimpleLinear().to("xla")
+    xt = torch.randn(128, 128).to('xla')
+    model = self.SimpleLinear().to('xla')
 
     mesh = self._get_mesh((1, self.n_devices))
     partition_spec = (0, 1)
@@ -73,7 +73,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     num_element = self.n_devices
     mesh = self._get_mesh((self.n_devices,))
     t = torch.arange(num_element, dtype=torch.float32)
-    xt = xs.mark_sharding(t.to("xla"), mesh, (0,))
+    xt = xs.mark_sharding(t.to('xla'), mesh, (0,))
 
     shards = xt.local_shards
     self.assertEqual(len(shards), self.n_devices)
@@ -97,7 +97,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     num_element = self.n_devices + 1  # Ensure padding with two or more devices
     mesh = self._get_mesh((self.n_devices,))
     t = torch.arange(num_element, dtype=torch.float32)
-    xt = xs.mark_sharding(t.to("xla"), mesh, (0,))
+    xt = xs.mark_sharding(t.to('xla'), mesh, (0,))
     shards = xt.local_shards
     self.assertEqual(len(shards), self.n_devices)
     shard_len = math.ceil(num_element / self.n_devices)
@@ -127,7 +127,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     num_element = self.n_devices
     mesh = self._get_mesh((self.n_devices,))
     t = torch.arange(num_element, dtype=torch.float32)
-    xt = xs.mark_sharding(t.to("xla"), mesh, (None,))
+    xt = xs.mark_sharding(t.to('xla'), mesh, (None,))
     shards = xt.local_shards
     self.assertEqual(len(shards), self.n_devices)
     for i, shard in enumerate(shards):
@@ -147,7 +147,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     mesh = self._get_mesh((self.n_devices // 2, 2))
     t = torch.arange(num_element, dtype=torch.float32).reshape((16, 16))
     # Partial replication along the 0th tensor axis, shard 2-way on the 1st
-    xt = xs.mark_sharding(t.to("xla"), mesh, (None, 1))
+    xt = xs.mark_sharding(t.to('xla'), mesh, (None, 1))
     shard_len = t.shape[1] // 2
 
     shards = xt.local_shards
@@ -172,7 +172,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     num_element = self.n_devices
     mesh = self._get_mesh((self.n_devices,))
     t = torch.arange(num_element, dtype=torch.float32) + 1
-    xt = xs.mark_sharding(t.to("xla"), mesh, (0,))
+    xt = xs.mark_sharding(t.to('xla'), mesh, (0,))
     local_shards = xt.local_shards
     self.assertTrue(len(local_shards) == self.n_devices)
 
@@ -197,13 +197,13 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       xt.load_local_shards_(local_shards)
 
     # Replicated shards should fail
-    rt = xs.mark_sharding(t.to("xla"), mesh, (None,))
+    rt = xs.mark_sharding(t.to('xla'), mesh, (None,))
     local_shards = rt.local_shards
     with self.assertRaises(RuntimeError):
       rt.load_local_shards_(local_shards)
 
   def test_xla_sharding_type(self):
-    t = torch.randn(10, 20).to("xla")
+    t = torch.randn(10, 20).to('xla')
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_type(t), None)
 
     x_dim = 2 if self.n_devices >= 2 else 1
@@ -245,8 +245,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     t2 = torch.randn(1, 128, device='cpu')
     expected = t1 + t2
 
-    xt1 = t1.to("xla")
-    xt2 = t2.to("xla")
+    xt1 = t1.to('xla')
+    xt2 = t2.to('xla')
     xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), (0, 1))
 
     if self.n_devices > 1:
@@ -261,7 +261,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     t = torch.randn(2, 4, 8, 16, device='cpu')
     expected = t + t
 
-    xt = t.to("xla")
+    xt = t.to('xla')
     # Shard along two axes if four or more devices are available
     z_dim = 2 if self.n_devices >= 4 else 1
     xs.mark_sharding(xt, self._get_mesh((1, 1, z_dim, self.n_devices // z_dim)),
@@ -401,7 +401,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                        "Multiple devices required for tupled partition spec")
   def test_tupled_partition_spec(self):
     mesh = self._get_mesh((2, self.n_devices // 2))
-    t = torch.randn(16).to("xla")
+    t = torch.randn(16).to('xla')
     xs.mark_sharding(t, mesh, ((0, 1),))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(t), "{devices=[%d]%s}" %
@@ -413,7 +413,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     mesh = xs.Mesh(
         range(self.n_devices), (1, 2, self.n_devices // 2), ('r', 'b', 'm'))
     # Shard the first dimension on `r` and `b`, replicate the second dimension
-    t = torch.randn(16, 16).to("xla")
+    t = torch.randn(16, 16).to('xla')
     xs.mark_sharding(t, mesh, (('r', 'b'), None))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(t),
@@ -421,14 +421,14 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         (self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices))))
 
     # Replicate the first dimension, shard the second on `b` and `m`
-    u = torch.randn(16, 16).to("xla")
+    u = torch.randn(16, 16).to('xla')
     xs.mark_sharding(u, mesh, (None, ('b', 'm')))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(u), "{devices=[1,%d]%s}" %
         (self.n_devices, ','.join(str(x) for x in range(self.n_devices))))
 
     # Replicate the first dimension, shard the second on `r` and `m`
-    v = torch.randn(16, 16).to("xla")
+    v = torch.randn(16, 16).to('xla')
     xs.mark_sharding(v, mesh, (None, ('r', 'm')))
     device_order = mesh.get_logical_mesh().transpose((0, 2, 1)).flatten()
     self.assertEqual(
@@ -437,7 +437,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         (self.n_devices // 2, ','.join(str(x) for x in device_order)))
 
     # Replicate the first dimension, shard the second on `m` and `b`
-    v = torch.randn(16, 16).to("xla")
+    v = torch.randn(16, 16).to('xla')
     xs.mark_sharding(v, mesh, (None, ('m', 'b')))
     device_order = mesh.get_logical_mesh().transpose((2, 1, 0)).flatten()
     self.assertEqual(
@@ -450,7 +450,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     mesh = xs.Mesh(
         range(self.n_devices), (1, 2, self.n_devices // 2, 1),
         ('a', 'b', 'c', 'd'))
-    t = torch.randn(2, 2).to("xla")
+    t = torch.randn(2, 2).to('xla')
     xs.mark_sharding(t, mesh, (('a', 'b'), ('c', 'd')))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(t), "{devices=[2,%d]%s}" %
@@ -460,7 +460,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                        'At least 2 devices needed for 2D mesh')
   def test_3d_tensor_2d_mesh(self):
     mesh = self._get_mesh((2, self.n_devices // 2))
-    t = torch.randn(16, 16, 16).to("xla")
+    t = torch.randn(16, 16, 16).to('xla')
     xs.mark_sharding(t, mesh, (None, 0, 1))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(t), '{devices=[1,2,%d]%s}' %
@@ -495,7 +495,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(expected, actual, atol=1e-5))
 
   def test_clear_sharding(self):
-    xt = torch.randn(2, 4, 8, 16).to("xla")
+    xt = torch.randn(2, 4, 8, 16).to('xla')
     xs.mark_sharding(xt, self._get_mesh((1, 1, 1, self.n_devices)),
                      (0, 1, 2, 3))
     self.assertTrue(torch_xla._XLAC._get_xla_sharding_spec(xt))
@@ -503,7 +503,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertFalse(torch_xla._XLAC._get_xla_sharding_spec(xt))
 
   def test_replication_with_no_clear_sharding(self):
-    xt = torch.randn(2, 4).to("xla")
+    xt = torch.randn(2, 4).to('xla')
     # replication
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (None, None))
     # sharding annotation over an existing replication sharding is permitted.
@@ -513,7 +513,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
           "replicated" in torch_xla._XLAC._get_xla_sharding_spec(xt))
 
   def test_deep_copy(self):
-    xt = torch.randn(2, 4, 8, 16).to("xla")
+    xt = torch.randn(2, 4, 8, 16).to('xla')
     xs.mark_sharding(xt, self._get_mesh((1, 1, 1, self.n_devices)),
                      (0, 1, 2, 3))
     xt2 = copy.deepcopy(xt)
@@ -522,7 +522,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         torch_xla._XLAC._get_xla_sharding_spec(xt2))
 
   def test_clone(self):
-    xt = torch.randn(2, 4, 8, 16).to("xla")
+    xt = torch.randn(2, 4, 8, 16).to('xla')
     xs.mark_sharding(xt, self._get_mesh((1, 1, 1, self.n_devices)),
                      (0, 1, 2, 3))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
@@ -537,7 +537,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         torch_xla._XLAC._get_xla_sharding_spec(xt2))
 
   def test_sync_with_sharding(self):
-    xt = torch.ones(2, 2).to("xla")
+    xt = torch.ones(2, 2).to('xla')
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
     torch_xla.sync()  # `torch_xla.sync()` should preserve the sharding
@@ -545,7 +545,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_execute_replicated_metrics(self):
     met.clear_all()
-    xt = torch.ones(2, 2).to("xla")
+    xt = torch.ones(2, 2).to('xla')
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
     xt += 2
     torch_xla.sync()
@@ -554,15 +554,15 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_optimizer_step_with_sharding(self):
     # Use simple linear model to test model parameter sharding
-    model = self.SimpleLinear().to("xla")
+    model = self.SimpleLinear().to('xla')
     xs.mark_sharding(model.fc1.weight, self._get_mesh((1, self.n_devices)),
                      (0, 1))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight)
 
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
-    data = torch.randn(128, 128).to("xla")
-    target = torch.zeros(128).to("xla")
+    data = torch.randn(128, 128).to('xla')
+    target = torch.zeros(128).to('xla')
     loss_fn = nn.CrossEntropyLoss()
     for i in range(3):
       optimizer.zero_grad()
@@ -581,7 +581,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertFalse(met.counter_value("ReplicateShardedData"))
 
     # Linear model with two linear layers and only one is annotated.
-    model = self.SimpleLinear().to("xla")
+    model = self.SimpleLinear().to('xla')
     xs.mark_sharding(model.fc1.weight, self._get_mesh((1, self.n_devices)),
                      (0, 1))
     self.assertTrue(torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
@@ -589,8 +589,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
-    data = torch.randn(128, 128).to("xla")
-    target = torch.zeros(128).to("xla")
+    data = torch.randn(128, 128).to('xla')
+    target = torch.zeros(128).to('xla')
     loss_fn = nn.CrossEntropyLoss()
     for i in range(3):
       optimizer.zero_grad()
@@ -606,7 +606,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(met.counter_value("ReplicateShardedData"), 2)
 
   def test_inplace_add_with_sharding(self):
-    xt = torch.ones(2, 2).to("xla")
+    xt = torch.ones(2, 2).to('xla')
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
     xt.add_(1)  # inplace update should preserve the sharding
@@ -622,8 +622,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       xr.device_type() == 'CPU',
       "sharding will be the same for both tensors on single device")
   def test_shard_hashing(self):
-    xt1 = torch.ones(2, 2).to("xla")
-    xt2 = torch.ones(2, 2).to("xla")
+    xt1 = torch.ones(2, 2).to('xla')
+    xt2 = torch.ones(2, 2).to('xla')
 
     # Add sharding to xt1, this should result in the hashes being different for
     # xt1 and xt2
@@ -639,7 +639,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertNotEqual(hash1, hash2)
 
   def test_transfer_sharded_data_to_host(self):
-    xt1 = torch.ones(16, 16).to("xla")
+    xt1 = torch.ones(16, 16).to('xla')
     xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), (0, 1))
     t1 = xt1.cpu()
     self.assertTrue(torch.allclose(t1, torch.ones(16, 16)))
@@ -666,7 +666,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Verify the resulting sharding annotation matches an explicit
     # `mark_sharding` call.
     xt = xtensors[0]
-    explicit_xt = tensor.to("xla")
+    explicit_xt = tensor.to('xla')
     xs.mark_sharding(explicit_xt, mesh, (0, 1))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(xt),
@@ -676,8 +676,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     t1 = torch.randn(2, 2)
     t2 = torch.randn(2, 2)
     expected_1 = t1 + t2
-    xt1 = t1.to("xla")
-    xt2 = t2.to("xla")
+    xt1 = t1.to('xla')
+    xt2 = t2.to('xla')
     xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), (0, 1))
     xt3 = xt1 + xt2
     self.assertTrue(torch.allclose(expected_1, xt3.cpu()))
@@ -685,8 +685,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     t4 = torch.randn(2, 2)
     t5 = torch.randn(2, 2)
     expected_2 = t4 + t5
-    xt4 = t4.to("xla")
-    xt5 = t5.to("xla")
+    xt4 = t4.to('xla')
+    xt5 = t5.to('xla')
     xs.mark_sharding(xt4, self._get_mesh((1, self.n_devices)), (0, 1))
     xs.mark_sharding(xt5, self._get_mesh((1, self.n_devices)), (0, 1))
     xt6 = xt4 + xt5
@@ -724,8 +724,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     ct2 = torch.randn(16, 16, device='cpu')
     expected = ct1 + ct2
 
-    t1 = ct1.to("xla")
-    t2 = ct2.to("xla")
+    t1 = ct1.to('xla')
+    t2 = ct2.to('xla')
 
     # Meaningful test for higher-order mesh with extra replication
     # requires multiple devices. Otherwise, this should defaults back to
@@ -821,8 +821,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     t2 = torch.randn(1, 128, device='cpu')
     expected = t1 + t2
 
-    xt1 = t1.to("xla")
-    xt2 = t2.to("xla")
+    xt1 = t1.to('xla')
+    xt2 = t2.to('xla')
     actual = xt1 + xt2
     actual = xs.mark_sharding(actual, self._get_mesh((1, self.n_devices)),
                               (0, 1))
@@ -847,7 +847,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                        "Multiple devices required for autograd sharding test")
   def test_mark_sharding_autograd(self):
     x = torch.randn(8, 8, requires_grad=True)
-    x = x.to("xla")
+    x = x.to('xla')
     mesh = self._get_mesh((1, self.n_devices))
     # Forward pass
     z = x @ x
@@ -872,7 +872,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     from functorch.compile import aot_function, make_boxed_func  # type: ignore
 
     x = torch.randn(8)
-    x = x.to("xla").requires_grad_(True)
+    x = x.to('xla').requires_grad_(True)
 
     graphs = []
 
@@ -897,12 +897,12 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Check that the AOTAutograd captured graphs also each contains a mark_sharding.
     fwd, bwd = graphs
 
-    inp = torch.randn(8).to("xla").requires_grad_(False)
+    inp = torch.randn(8).to('xla').requires_grad_(False)
     out, *residuals = fwd(inp)
     self._check_sharding_annotation(out,
                                     'sharding={devices=[%d]' % self.n_devices)
 
-    tangents = torch.randn(8).to("xla").requires_grad_(False)
+    tangents = torch.randn(8).to('xla').requires_grad_(False)
     out, = bwd(*residuals, tangents)
     self._check_sharding_annotation(out,
                                     'sharding={devices=[%d]' % self.n_devices)
@@ -921,7 +921,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_mark_sharding_ir_with_multiple_output(self):
     partition_spec = (0,)
-    xt1 = torch.randn(8, 8).to("xla")
+    xt1 = torch.randn(8, 8).to('xla')
     # max return 2 tensors `value` and `indices`. They are the output
     # of the same IR Node `MaxInDim`
     (xt_val, xt_index) = torch.max(xt1, 1)
@@ -937,13 +937,13 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
   def test_sharded_tensor_to_cpu_int_type(self):
     partition_spec = (0, 1)
     t1 = torch.arange(64).reshape(8, 8)
-    xt1 = t1.clone().to("xla")
+    xt1 = t1.clone().to('xla')
     xst1 = xs.mark_sharding(xt1, self._get_mesh((self.n_devices, 1)),
                             partition_spec)
     self.assertTrue(torch.allclose(t1, xst1.cpu()))
 
   def test_named_partition_spec(self):
-    xt1 = torch.arange(64).reshape(8, 8).to("xla")
+    xt1 = torch.arange(64).reshape(8, 8).to('xla')
     mesh = xs.Mesh(
         list(range(self.n_devices)), (1, self.n_devices), ('data', 'model'))
     partition_spec = ('model', 'data')
@@ -981,18 +981,18 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     met.clear_all()
     mesh = self._get_mesh((1, self.n_devices))
 
-    t = torch.randn(1, self.n_devices).to("xla")
+    t = torch.randn(1, self.n_devices).to('xla')
     xs.mark_sharding(t, mesh, (0, 1))
     self.assertIn("CreateOpSharding", met.counter_names())
     self.assertEqual(met.counter_value("CreateOpSharding"), 1)
 
     # Sharding with the same partition spec should not result in another call
-    u = torch.randn(1, self.n_devices).to("xla")
+    u = torch.randn(1, self.n_devices).to('xla')
     xs.mark_sharding(u, mesh, (0, 1))
     self.assertEqual(met.counter_value("CreateOpSharding"), 1)
 
     # Changing the partition spec will result in another CreateOpSharding
-    v = torch.randn(1, self.n_devices).to("xla")
+    v = torch.randn(1, self.n_devices).to('xla')
     xs.mark_sharding(v, mesh, (0, None))
     self.assertEqual(met.counter_value("CreateOpSharding"), 2)
 
@@ -1130,11 +1130,11 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         from_cpu_shards(shards, op_sharding, torch.Size((1,)))
 
   def test_backward_optimization_barrier(self):
-    model = self.SimpleLinear().to("xla")
+    model = self.SimpleLinear().to('xla')
     # The first layer won't have gradients in the hook. Not sure why.
     xs.xla_sharding.apply_backward_optimization_barrier(model.fc2)
 
-    x = torch.randn(2, 128).to("xla")
+    x = torch.randn(2, 128).to('xla')
     y = model(x)
     loss = y.sum()
     loss.backward()
@@ -1145,7 +1145,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         hlo)
 
   def test_mark_shard_scalar(self):
-    x = torch.tensor(1.0).to("xla")
+    x = torch.tensor(1.0).to('xla')
     self.assertEqual(len(x.shape), 0)
 
     xt = xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), ())
@@ -1174,7 +1174,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(id(mesh), id(expected_mesh))
 
   def test_mark_manual_sharding(self):
-    x = torch.zeros(3, 2).to("xla")
+    x = torch.zeros(3, 2).to('xla')
     with self.assertRaises(RuntimeError):
       xt = xs._mark_manual_sharding(x)
 
@@ -1192,7 +1192,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # xt.global_tensor.cpu()
 
   def test_spmd_full_to_shard_shape(self):
-    x = torch.zeros(8, 8).to("xla")
+    x = torch.zeros(8, 8).to('xla')
     with self.assertRaises(RuntimeError):
       x = torch_xla._XLAC._spmd_full_to_shard_shape(x)
 
@@ -1213,7 +1213,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # xx.cpu()
 
     # Replicated shape
-    x = torch.zeros(8, 4).to("xla")
+    x = torch.zeros(8, 4).to('xla')
     xt = xs.mark_sharding(x, self._get_mesh((self.n_devices, 1)), (None, None))
     xx = torch_xla._XLAC._spmd_full_to_shard_shape(xt.global_tensor)
 
@@ -1225,7 +1225,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
 
   def test_spmd_shard_to_full_shape(self):
-    x = torch.zeros(8, 8).to("xla")
+    x = torch.zeros(8, 8).to('xla')
     x += 1
     # No sharding spec attached.
     with self.assertRaises(RuntimeError):
@@ -1256,7 +1256,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{replicated}")
 
   def test_manual_sharding_e2e(self):
-    x = torch.zeros(8, 8).to("xla")
+    x = torch.zeros(8, 8).to('xla')
     mesh = self._get_mesh((1, self.n_devices))
     partition_spec = (0, 1)
     xt = xs.mark_sharding(x, mesh, partition_spec)
@@ -1275,7 +1275,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_manual_sharding_api_e2e(self):
     xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
-    x = torch.zeros(8, 8).to("xla")
+    x = torch.zeros(8, 8).to('xla')
     partition_spec = (0, 1)
 
     xx = xs.enable_manual_sharding(x, partition_spec)
@@ -1290,7 +1290,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                    "Only runs on TPUv4")
   def test_spmd_reduce_scatter(self):
     xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
-    x = torch.ones(8, 8).to("xla")
+    x = torch.ones(8, 8).to('xla')
 
     # Reduce scatter
     x = xs.enable_manual_sharding(x, (None, None)).global_tensor
@@ -1311,7 +1311,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                    "Only runs on TPUv4")
   def test_spmd_reduce_scatter_canonical_index(self):
     xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
-    x = torch.ones(8, 8).to("xla")
+    x = torch.ones(8, 8).to('xla')
 
     # Reduce scatter
     x = xs.enable_manual_sharding(x, (None, None)).global_tensor
@@ -1332,7 +1332,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                    "Only runs on TPUv4")
   def test_spmd_all_reduce(self):
     xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
-    x = torch.ones(8, 8).to("xla")
+    x = torch.ones(8, 8).to('xla')
 
     # all reduce
     x = xs.enable_manual_sharding(x, (None, None)).global_tensor
@@ -1352,7 +1352,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                    "Only runs on TPUv4")
   def test_spmd_all_reduce_scale(self):
     xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
-    x = torch.ones(8, 8).to("xla")
+    x = torch.ones(8, 8).to('xla')
     scale = 0.25
 
     # all reduce

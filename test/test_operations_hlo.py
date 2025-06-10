@@ -36,9 +36,9 @@ class TestOperationsHlo(unittest.TestCase):
     assert 'aten::expand' in hlo_text
 
   def test_special_scalars_addcdiv_addcmul(self):
-    a = torch.rand(5, 5).to("xla")
-    b = torch.rand(5, 5).to("xla")
-    c = torch.rand(5, 5).to("xla")
+    a = torch.rand(5, 5).to('xla')
+    b = torch.rand(5, 5).to('xla')
+    c = torch.rand(5, 5).to('xla')
     for op in [torch.addcdiv, torch.addcmul]:
       out = op(a, b, c, value=1.0)
       hlo_text = torch_xla._XLAC._get_xla_tensors_text([out])
@@ -52,8 +52,8 @@ class TestOperationsHlo(unittest.TestCase):
 
   def test_div_by_f64(self):
     mod = torch.nn.MultiheadAttention(768, 12, batch_first=True)
-    mod.to("xla")
-    a = torch.rand(1, 512, 768).to("xla")
+    mod.to('xla')
+    a = torch.rand(1, 512, 768).to('xla')
     b, _ = mod(a, a, a, need_weights=False)
     b.sum().backward()
     hlo_text = torch_xla._XLAC._get_xla_tensors_text(
@@ -61,8 +61,8 @@ class TestOperationsHlo(unittest.TestCase):
     assert 'f64' not in hlo_text
 
   def test_dropout_by_u8_mask(self):
-    mod = torch.nn.Dropout().to("xla")
-    a = torch.rand(20, 16, dtype=torch.bfloat16).to("xla")
+    mod = torch.nn.Dropout().to('xla')
+    a = torch.rand(20, 16, dtype=torch.bfloat16).to('xla')
     b = mod(a)
     hlo_text = torch_xla._XLAC._get_xla_tensors_hlo([b])
     assert 'u8' in hlo_text

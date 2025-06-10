@@ -181,7 +181,7 @@ class TestGRU(parameterized.TestCase):
     input_size, hidden_size, num_layers = 16, 32, 2
     gru, scan_gru = self.build_models(input_size, hidden_size, num_layers, True)
     gru = gru.cpu()
-    scan_gru = scan_gru.to("xla")
+    scan_gru = scan_gru.to('xla')
     torch_xla.sync()
 
     with torch.no_grad():
@@ -221,15 +221,15 @@ class TestGRU(parameterized.TestCase):
     """
     seq_len, batch_size, input_size, hidden_size, num_layers = 16, 4, 16, 32, 2
     gru, scan_gru = self.build_models(input_size, hidden_size, num_layers, bias)
-    gru, scan_gru = gru.to("xla"), scan_gru.to("xla")
+    gru, scan_gru = gru.to('xla'), scan_gru.to('xla')
     torch_xla.sync()
 
     # Prepare input and initial hidden states.
     inp1 = torch.randn(seq_len, batch_size,
-                       input_size).to("xla").requires_grad_(True)
+                       input_size).to('xla').requires_grad_(True)
     inp2 = inp1.clone().detach().requires_grad_(True)
     hx1 = torch.randn(num_layers, batch_size,
-                      hidden_size).to("xla").requires_grad_(True)
+                      hidden_size).to('xla').requires_grad_(True)
     hx2 = hx1.clone().detach().requires_grad_(True)
     torch_xla.sync()
 
@@ -263,14 +263,14 @@ class TestGRU(parameterized.TestCase):
     seq_len, batch_size, input_size, hidden_size, num_layers = 2048, 4, 16, 32, 5
     gru, scan_gru = self.build_models(input_size, hidden_size, num_layers, bias)
     gru = gru.cpu()
-    scan_gru = scan_gru.to("xla")
+    scan_gru = scan_gru.to('xla')
     torch_xla.sync()
 
     # Prepare input and initial hidden states.
     inp1 = torch.randn(seq_len, batch_size, input_size).requires_grad_(True)
-    inp2 = inp1.to("xla").clone().detach().requires_grad_(True)
+    inp2 = inp1.to('xla').clone().detach().requires_grad_(True)
     hx1 = torch.randn(num_layers, batch_size, hidden_size).requires_grad_(True)
-    hx2 = hx1.to("xla").clone().detach().requires_grad_(True)
+    hx2 = hx1.to('xla').clone().detach().requires_grad_(True)
     torch_xla.sync()
 
     # Forward passes.
@@ -304,15 +304,15 @@ class TestGRU(parameterized.TestCase):
     seq_len, batch_size, input_size, hidden_size, num_layers = 16, 4, 16, 32, 2
     gru, scan_gru = self.build_models(
         input_size, hidden_size, num_layers, bias, batch_first=True)
-    gru, scan_gru = gru.to("xla"), scan_gru.to("xla")
+    gru, scan_gru = gru.to('xla'), scan_gru.to('xla')
     torch_xla.sync()
 
     # Prepare input and initial hidden states.
     inp1 = torch.randn(batch_size, seq_len,
-                       input_size).to("xla").requires_grad_(True)
+                       input_size).to('xla').requires_grad_(True)
     inp2 = inp1.clone().detach().requires_grad_(True)
     hx1 = torch.randn(num_layers, batch_size,
-                      hidden_size).to("xla").requires_grad_(True)
+                      hidden_size).to('xla').requires_grad_(True)
     hx2 = hx1.clone().detach().requires_grad_(True)
     torch_xla.sync()
 

@@ -82,7 +82,7 @@ class MyModule(nn.Module):
 
 # Create module and move to XLA device
 module = MyModule()
-module = module.to("xla")
+module = module.to('xla')
 
 # Convert module's forward pass into a pure function
 pure_forward = lambda params, buffers, x: functional_call(module, (params, buffers), (x,))

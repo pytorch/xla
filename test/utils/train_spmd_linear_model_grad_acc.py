@@ -182,6 +182,6 @@ def train_and_evaluate_grad_acc():
   xr.use_spmd(auto=FLAGS.auto_spmd)
   print('Start training loop...')
   losses, m = train()
-  t = torch.randn(10, FLAGS.input_dim).to("xla")
+  t = torch.randn(10, FLAGS.input_dim).to('xla')
   m(t).cpu()
   return [loss.cpu() for loss in losses]

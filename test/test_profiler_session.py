@@ -23,8 +23,8 @@ def _run_computation():
       return x
 
   m = M()
-  m = m.to("xla")
-  x = torch.randn(10, 10).to("xla")
+  m = m.to('xla')
+  x = torch.randn(10, 10).to('xla')
   for _ in range(20):
     y = m(x)
     y.cpu()

@@ -66,7 +66,7 @@ class DynamRandomOpTest(parameterized.TestCase):
     met.clear_all()
     dynamo_random_op = torch.compile(
         self.random_op, backend=backend, fullgraph=True)
-    t = torch.randn(5, 5).to("xla")
+    t = torch.randn(5, 5).to('xla')
     dynamo_res_1 = dynamo_random_op(t)
     dynamo_res_2 = dynamo_random_op(t)
     dynamo_res_3 = dynamo_random_op(t)
@@ -783,7 +783,7 @@ class DynamoOperationsTest(test_utils.XlaTestCase, parameterized.TestCase):
     optfoo = torch.compile(backend=backend)(foo)
 
     t = torch.arange(9)
-    Xt = t.to("xla")
+    Xt = t.to('xla')
 
     expected = foo(t)
     actual = optfoo(Xt).cpu()
@@ -803,7 +803,7 @@ class DynamoOperationsTest(test_utils.XlaTestCase, parameterized.TestCase):
     optfoo = torch.compile(backend=backend)(foo)
 
     t = torch.arange(10)
-    Xt = t.to("xla")
+    Xt = t.to('xla')
 
     expected = foo(t)
     actual = optfoo(Xt)
