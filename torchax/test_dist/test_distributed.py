@@ -79,17 +79,17 @@ def test_all_gather_tensor_func(multi_cpu, process_group):
     ],
 )
 def test_all_reduce(op, expected, multi_cpu, process_group):
-    device_count = multi_cpu
+  device_count = multi_cpu
 
-    def f(index):
-      with torchax.default_env():
-        dist.all_reduce(index, op)
-        return index
+  def f(index):
+    with torchax.default_env():
+      dist.all_reduce(index, op)
+      return index
 
-    res = torchax.distributed.spawn(f)
+  res = torchax.distributed.spawn(f)
 
-    expected_tensors = [expected for _ in range(device_count)]
-    np.testing.assert_equal(res.numpy(), expected_tensors)
+  expected_tensors = [expected for _ in range(device_count)]
+  np.testing.assert_equal(res.numpy(), expected_tensors)
 
 
 @pytest.mark.parametrize(
