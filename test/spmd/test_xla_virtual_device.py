@@ -45,7 +45,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
   def test_model_weight_metrics(self):
     met.clear_counters()
     partition_spec = (0, 1)
-    model = nn.Linear(128, 64).to(torch_xla.device())
+    model = nn.Linear(128, 64).to('xla')
     xs.mark_sharding(model.weight, self._get_mesh((1, self.n_devices)),
                      partition_spec)
     self.assertIn("VirtualDeviceUsage", met.counter_names())

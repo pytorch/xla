@@ -913,9 +913,9 @@ class PallasTest(parameterized.TestCase):
     w_copy = w.clone()
     expected = F.linear(x_copy, w_copy)
 
-    x_xla = x.to("xla")
-    w_int_xla = w_int.to("xla")
-    scalar_xla = scalar.to("xla")
+    x_xla = x.to('xla')
+    w_int_xla = w_int.to('xla')
+    scalar_xla = scalar.to('xla')
     if use_dynamo:
 
       def quantized_matmul_int8_wrapper(x, w_int, scalar, quantize_activation,

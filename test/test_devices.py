@@ -69,7 +69,7 @@ class TestDevices(parameterized.TestCase):
       def forward(self, x):
         return self.linear(x)
 
-    model = TrivialModel().to(torch_xla.device())
+    model = TrivialModel().to('xla')
 
     batch_size = 16
     num_samples = 100
@@ -86,8 +86,7 @@ class TestDevices(parameterized.TestCase):
 
     for inputs, labels in loader:
       with torch_xla.step():
-        inputs, labels = inputs.to(torch_xla.device()), labels.to(
-            torch_xla.device())
+        inputs, labels = inputs.to('xla'), labels.to('xla')
         optimizer.zero_grad()
         outputs = model(inputs)
         loss = loss_fn(outputs, labels)
