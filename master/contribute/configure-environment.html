@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitf921e5e )
+                  master (2.8.0+gitae4f06b )
                 </div>
               
             
@@ -528,12 +528,12 @@ via the Command Palette (<code class="docutils literal notranslate"><span class=
 </pre></div>
 </div>
 <p>Create a file <code class="docutils literal notranslate"><span class="pre">test.py</span></code>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xla</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
 
 <span class="c1"># Optional</span>
-<span class="n">xla</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">set_device_type</span><span class="p">(</span><span class="s2">&quot;TPU&quot;</span><span class="p">)</span>
+<span class="n">torch_xla</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">set_device_type</span><span class="p">(</span><span class="s2">&quot;TPU&quot;</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;XLA devices:&quot;</span><span class="p">,</span> <span class="n">xla</span><span class="o">.</span><span class="n">real_devices</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;XLA devices:&quot;</span><span class="p">,</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">real_devices</span><span class="p">())</span>
 </pre></div>
 </div>
 <p>Run the test script from your terminal:</p>
