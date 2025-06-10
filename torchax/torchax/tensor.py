@@ -123,9 +123,10 @@ class Tensor(torch.Tensor):
 
   @classmethod
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
-    raise AssertionError('torchax Tensors can only do math within torchax environment.'
-                         'Please wrap your code with `with torchax.defautl_env()` or '
-                         'call torchax.enable_globally() before.')
+    raise AssertionError(
+        'torchax Tensors can only do math within torchax environment.'
+        'Please wrap your code with `with torchax.defautl_env()` or '
+        'call torchax.enable_globally() before.')
 
   def detach(self):
     return Tensor(jax.lax.stop_gradient(self.jax()), self._env)
@@ -363,12 +364,11 @@ class Environment(contextlib.ContextDecorator):
   def load_ops(self):
     from torchax.ops import jaten, jtorch, jc10d, jtorchvision_nms
 
-    for k, v in itertools.chain(
-        ops_registry.all_aten_ops.items(), 
-        ops_registry.all_torch_functions.items()):
+    for k, v in itertools.chain(ops_registry.all_aten_ops.items(),
+                                ops_registry.all_torch_functions.items()):
       if v.is_jax_function:
         self._ops[k] = v
-      else: 
+      else:
         self._decomps[k] = v
 
     from torchax.decompositions import DECOMPOSITIONS, MUTABLE_DECOMPOSITION
@@ -424,7 +424,7 @@ class Environment(contextlib.ContextDecorator):
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
           the_tensor = the_tensor.to(new_dtype)
 
-      if new_device is None: ## device is None means don't change device
+      if new_device is None:  ## device is None means don't change device
         return the_tensor
 
       jax_device = self.get_as_jax_device(new_device)
@@ -518,7 +518,6 @@ class Environment(contextlib.ContextDecorator):
           torch.distributed._functional_collectives.wait_tensor,
           (args, kwargs),
       )
-
 
       try:
         if not op.is_view_op:

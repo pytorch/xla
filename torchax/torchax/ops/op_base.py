@@ -13,7 +13,11 @@ from typing import Callable, Optional, ParamSpec, Concatenate
 
 class InplaceOp:
 
-  def __init__(self, functional_op, replace=False, position_to_mutate=0, is_jax_func=False):
+  def __init__(self,
+               functional_op,
+               replace=False,
+               position_to_mutate=0,
+               is_jax_func=False):
     self.functional = functional_op
     self.replace = replace
     self.position_to_mutate = position_to_mutate
@@ -35,7 +39,7 @@ class InplaceOp:
       new_value = env.j2t_iso(new_value_jax)
     else:
       new_value = self.functional(view_value, *args[1:], **kwargs)
-    
+
     if isinstance(to_mutate, View):
       to_mutate.update(new_value)
     else:
