@@ -166,7 +166,7 @@ commands on your Linux machine directly, outside of the container.
     installed correctly:
 
     ```bash
-    python -c 'import torch_xla as xla; print(xla.device())'
+    python -c 'import torch_xla; print(torch_xla.device())'
     # Output: xla:0
     ```
 
@@ -212,25 +212,25 @@ first time, you may need to build everything again, for example, after a
 
 * Clone the _PyTorch_ repo as per [instructions](https://github.com/pytorch/pytorch#from-source).
 
-  ```Shell
+  ```shell
   git clone --recursive https://github.com/pytorch/pytorch
   cd pytorch/
   ```
 
 * Clone the _PyTorch/XLA_ repo:
 
-  ```Shell
+  ```shell
   git clone --recursive https://github.com/pytorch/xla.git
   ```
 
 * Build PyTorch
-  ```Shell
+  ```shell
   # pytorch/xla requires pytorch wheel to be presented under pytorch/dist
   python setup.py bdist_wheel
   python setup.py develop
   ```
 * Build PyTorch/XLA
-  ```Shell
+  ```shell
   cd xla/
   python setup.py develop
   ```
@@ -241,30 +241,35 @@ Please refer to this [guide](https://github.com/pytorch/xla/blob/master/plugins/
 
 ## Before Creating a Pull Request
 
-In `pytorch/xla` repo we enforce coding style for both C++ and Python files. Please try to format
-your code before creating a pull request.
+In `pytorch/xla` repo we enforce coding style for both C++ and Python files.
+Specifically, we use `clang-format-11` with a customized style config to format
+C++, and `yapf` (specially version 0.40.2) with a customized style config
+to format Python. Please ensure that your change is formatted properly before
+sending out a PR.
 
-### C++ Style Guide
+The easiest way to do this is to set up a `git push` hook to automatically
+format changed or added C++ and Python files before pushing:
 
-`pytorch/xla` uses `clang-format-11` with a customized style config.
-If your PR touches the C++ source files, please run the following command before submitting a PR.
-
-```Shell
-# How to install: sudo apt install clang-format-11
-# If your PR only changes foo.cpp, run the following in xla/ folder
-clang-format-11 -i -style=file /PATH/TO/foo.cpp
-# To format all cpp files, run the following in xla/ folder
-find -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format-11 -i -style=file
+First, install the necessary tools if needed:
+```shell
+cd $WORKSPACE_DIR/pytorch/xla
+# If clang-format-11 is not yet installed...
+sudo apt install clang-format-11
+# If yapf 0.40.2 is not yet installed...
+pip install yapf==0.40.2
 ```
 
-### Python Style Guide
+Then, set up the git push hook:
+```shell
+scripts/git_fix.py --set_git_push_hook
+```
 
-`pytorch/xla` uses `yapf`(specially version 0.40.2 in case it's not backward compatible) with a customized style config.
-If your PR touches the Python source files, please run the following command before submitting a PR.
+Now, whenever you run `git push`, the C++ and Python files will be
+automatically formatted according to our style guide.
 
-```Shell
-# How to install: pip install yapf==0.40.2
-yapf --recursive -i *.py test/ scripts/ torch_xla/ benchmarks/ torchax/
+You can also format the files manually by running
+```shell
+scripts/git_fix.py
 ```
 
 ### Running the Tests
@@ -273,19 +278,19 @@ To run the tests, follow __one__ of the options below:
 
 * Run on local CPU:
 
-  ```Shell
+  ```shell
   export PJRT_DEVICE=CPU
   ```
 
 * Run on Cloud TPU:
 
-  ```Shell
+  ```shell
   export PJRT_DEVICE=TPU
   ```
 
 * Run on GPU:
 
-  ```Shell
+  ```shell
   export PJRT_DEVICE=CUDA GPU_NUM_DEVICES=${NUM_GPU}
   ```
 
@@ -370,11 +375,11 @@ First, for the `pytorch` repo:
 cd $WORKSPACE_DIR/pytorch
 # Fetch the latest changes from upstream.
 git fetch upstream
-git checkout main 
+git checkout main
 # Merge the changes from upstream/main into your local branch.
 git merge upstream/main
 # Update submodules to match the latest changes.
-git submodule update --recursive 
+git submodule update --recursive
 # Push the updated branch to your fork on GitHub.
 git push origin main
 ```
@@ -384,7 +389,7 @@ Next, for the `vision` repo:
 ```bash
 cd $WORKSPACE_DIR/vision
 git fetch upstream
-git checkout main 
+git checkout main
 git merge upstream/main
 git push origin main
 ```
@@ -419,4 +424,16 @@ git rebase upstream/master
 # When you are done, push the updated branch to your fork on GitHub. This will
 # update the PR.
 git push --force-with-lease origin your-branch-name
+```
+
+## Fixing Git Metadata File Permissions
+
+Normally we run `git` commands outside of the dev container. If we run
+a mutating `git` command inside the dev container, it may change the owner
+of some files inside the `.git` directory to `root`, which will prevent us from
+running `git` commands outside of the dev container. To fix this, run the
+following commands *outside of the dev container* to fix the file owners:
+
+```shell
+sudo chown -R $USER .git
 ```

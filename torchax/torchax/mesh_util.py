@@ -199,7 +199,8 @@ class Mesh:
     }
 
     def model_initializer():
-      model = model_class(*init_args, **init_kwargs)
+      with torchax.default_env():
+        model = model_class(*init_args, **init_kwargs)
       return dict(model.state_dict())
 
     jitted = interop.jax_jit(

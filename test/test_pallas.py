@@ -9,7 +9,6 @@ import torch.nn.functional as F
 from torch.ao.quantization.utils import determine_qparams
 
 import torch_xla
-import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -26,6 +25,7 @@ if xr.device_type() == 'TPU':
 def with_jax_high_precision(func):
 
   def wrapper(*args, **kwargs):
+    import jax
     jax.config.update('jax_default_matmul_precision', "highest")
     try:
       result = func(*args, **kwargs)
@@ -913,9 +913,9 @@ class PallasTest(parameterized.TestCase):
     w_copy = w.clone()
     expected = F.linear(x_copy, w_copy)
 
-    x_xla = x.to("xla")
-    w_int_xla = w_int.to("xla")
-    scalar_xla = scalar.to("xla")
+    x_xla = x.to('xla')
+    w_int_xla = w_int.to('xla')
+    scalar_xla = scalar.to('xla')
     if use_dynamo:
 
       def quantized_matmul_int8_wrapper(x, w_int, scalar, quantize_activation,
