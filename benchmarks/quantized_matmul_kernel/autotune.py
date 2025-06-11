@@ -1,3 +1,5 @@
+# To run, do python myscripts/autotune_quantized_matmul_pallas_kernel2.py 2>&1 | tee out.txt
+# Then in the out.txt, extract lines with "Add to table:" and replace the string with 4 spaces, then copy to the block table in the pallas kernel.
 import time
 from typing import List
 
@@ -11,6 +13,8 @@ from jax.experimental import pallas as pl
 from jax.experimental.pallas import tpu as pltpu
 from torch_xla.experimental.pallas_kernels.quantized_matmul_kernel import (
     quantized_matmul_int8,
+    get_tuned_block_sizes,
+    TUNED_BLOCK_SIZES,
 )
 
 def _quantize_tensor(x, n_bits: int = 8, dim: int = -1):
@@ -61,19 +65,17 @@ def find_factors_multiple_of_128(n: int) -> List[int]:
 
     return factors
 
-
 # Benchmarking script starts.
 
 # one off
-# batch_sizes = [2048]
-# out_in_features = [(8192, 3584)]
-# batch_block_sizes = [2048]
+# batch_sizes = [16, 32]
+# out_in_features = [(128, 256), (256, 128)]
+# batch_block_sizes = [128, 256]
 
 # for real
 batch_sizes = [16, 32, 64, 128, 256, 512, 1024, 2048]
 out_in_features = [(6144, 4096), (4096, 4096), (28672, 4096), (4096, 14336), (1280, 8192), (8192, 1024), (7168, 8192), (8192, 3584)]
 batch_block_sizes = [128, 256, 512, 1024, 2048]
-# out_block_size and in_block_size are automatically determined based on num_out_features and num_in_features.
 
 for bs in batch_sizes:
   for n_output_features, n_input_features in out_in_features:
@@ -90,6 +92,7 @@ for bs in batch_sizes:
     scalar_jax = scalar_jax.squeeze()
     assert scalar_jax.shape == (n_output_features,)
 
+    vmem_limit_80_mb = 80 * 1024 * 1024
     best_time = None
     best_batch_block_size = None
     best_out_block_size = None
@@ -102,19 +105,19 @@ for bs in batch_sizes:
         for in_block_size in in_block_sizes:
           skip_trial = False
           print(f'Benchmarking w8a8 matmul bs={bs}, n_output_features={n_output_features}, n_input_features={n_input_features} with batch_block_size={batch_block_size}, out_block_size={out_block_size}, in_block_size={in_block_size}', flush=True)
-          for _ in range(5):  # warming up
+          for _ in range(10):  # warming up
             try:
-              quantized_matmul_int8(x, w_w8a8_jax, scalar_jax, quantize_activation=True, batch_block_size=batch_block_size, out_block_size=out_block_size, in_block_size=in_block_size).block_until_ready()
+              quantized_matmul_int8(x, w_w8a8_jax, scalar_jax, quantize_activation=True, batch_block_size=batch_block_size, out_block_size=out_block_size, in_block_size=in_block_size, vmem_limit_bytes=vmem_limit_80_mb).block_until_ready()
             except Exception as e:
               print(f'Failed to run quantized_matmul with batch_block_size={batch_block_size}, out_block_size={out_block_size}, in_block_size={in_block_size} due to {e}', flush=True)
               skip_trial = True
               break
           if skip_trial:
             continue
-          num_iterations = 20
+          num_iterations = 30
           start_time = time.perf_counter_ns()
           for _ in range(num_iterations):
-            quantized_matmul_int8(x, w_w8a8_jax, scalar_jax, quantize_activation=True, batch_block_size=batch_block_size, out_block_size=out_block_size, in_block_size=in_block_size).block_until_ready()
+            quantized_matmul_int8(x, w_w8a8_jax, scalar_jax, quantize_activation=True, batch_block_size=batch_block_size, out_block_size=out_block_size, in_block_size=in_block_size, vmem_limit_bytes=vmem_limit_80_mb).block_until_ready()
           end_time = time.perf_counter_ns()
           elapsed_time = (end_time - start_time) / num_iterations
           print(f'Benchmarked w8a8 matmul with batch_block_size={batch_block_size}, out_block_size={out_block_size}, in_block_size={in_block_size}, time={elapsed_time}')
@@ -124,7 +127,6 @@ for bs in batch_sizes:
             best_out_block_size = out_block_size
             best_in_block_size = in_block_size
     print(f'Best batch_block_size={best_batch_block_size}, out_block_size={best_out_block_size}, in_block_size={best_in_block_size}, time={best_time}')
-    print(f'Add to table: ({bs}, {n_output_features}, {n_input_features}, \'{jnp.dtype(dtype).name}\', {True}): ({best_batch_block_size}, {best_out_block_size}, {best_in_block_size}),')
+    print(f'Add to table: (6, {bs}, {n_output_features}, {n_input_features}, \'{jnp.dtype(dtype).name}\', {True}): ({best_batch_block_size}, {best_out_block_size}, {best_in_block_size}),')
 
 # key should be: bs, n_output_features, n_input_features, dtype, quantize_activation
-
