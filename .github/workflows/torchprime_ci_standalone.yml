@@ -1,0 +1,137 @@
+name: Test torchprime
+on:
+  pull_request_target:
+    branches:
+      - master
+      - r[0-9]+.[0-9]+
+  pull_request:  # TODO: Remove before merging
+    branches:
+      - master
+      - r[0-9]+.[0-9]+
+  push:
+    branches:
+      - master
+      - r[0-9]+.[0-9]+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}-${{ github.event_name == 'workflow_dispatch' }}-${{ github.event_name == 'schedule' }}
+  cancel-in-progress: true
+
+jobs:
+  wait-for-build:
+    name: Wait for build to complete
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request_target'  || github.event_name == 'pull_request'
+    outputs:
+      has_code_changes: ${{ steps.check_changes.outputs.has_code_changes }}
+      workflow_run_id: ${{ steps.get_run_id.outputs.run_id }}
+    steps:
+      - name: Wait on Build and test workflow
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ (github.event_name == 'pull_request_target' || github.event_name == 'pull_request') && github.event.pull_request.head.sha || github.sha }}
+          check-name: 'Build PyTorch/XLA'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+          running-workflow-name: 'Test torchprime'
+      
+      # Get the workflow run ID for artifact download
+      - name: Get workflow run ID
+        id: get_run_id
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const ref = context.eventName === 'pull_request_target' 
+              ? context.payload.pull_request.head.sha 
+              : context.sha;
+            
+            // Get workflow runs for this commit
+            const runs = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: ref,
+              status: 'completed',
+              per_page: 50
+            });
+            
+            // Find the "Build and test" workflow run
+            const buildRun = runs.data.workflow_runs.find(run => 
+              run.name === 'Build and test' && run.head_sha === ref
+            );
+            
+            if (buildRun) {
+              core.setOutput('run_id', buildRun.id);
+              console.log(`Found Build and test workflow run: ${buildRun.id}`);
+            } else {
+              core.setFailed('Could not find Build and test workflow run');
+            }
+      
+      # Check if the build workflow detected code changes
+      - name: Check for code changes from build workflow
+        id: check_changes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const ref = context.eventName === 'pull_request_target' 
+              ? context.payload.pull_request.head.sha 
+              : context.sha;
+            
+            // Get the check runs for this commit
+            const checkRuns = await github.rest.checks.listForRef({
+              owner,
+              repo,
+              ref,
+              check_name: 'Check Code Changes'
+            });
+            
+            // Default to running if we can't determine
+            let hasCodeChanges = 'true';
+            
+            if (checkRuns.data.check_runs.length > 0) {
+              const checkRun = checkRuns.data.check_runs[0];
+              // Try to parse the conclusion or output to determine if code changes exist
+              if (checkRun.conclusion === 'skipped' || 
+                  (checkRun.output && checkRun.output.text && 
+                   checkRun.output.text.includes('No code changes'))) {
+                hasCodeChanges = 'false';
+              }
+            }
+            
+            core.setOutput('has_code_changes', hasCodeChanges);
+
+  # Download artifacts from the build workflow before calling torchprime tests
+  download-artifacts:
+    name: Download build artifacts
+    needs: wait-for-build
+    runs-on: ubuntu-latest
+    if: needs.wait-for-build.outputs.has_code_changes == 'true'
+    steps:
+      - name: Download artifacts from build workflow
+        uses: actions/download-artifact@v4
+        with:
+          name: torch-xla-wheels
+          path: /tmp/wheels/
+          run-id: ${{ needs.wait-for-build.outputs.workflow_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Re-upload artifacts so they're available to the called workflow
+      - name: Upload artifacts for torchprime workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: torch-xla-wheels
+          path: /tmp/wheels/
+          retention-days: 1
+
+  test-torchprime:
+    name: "torchprime tests"
+    needs: [wait-for-build, download-artifacts]
+    if: needs.wait-for-build.result == 'success' && needs.wait-for-build.outputs.has_code_changes == 'true'
+    uses: ./.github/workflows/_torchprime_ci.yml
+    with:
+      timeout-minutes: 100
+      has_code_changes: ${{ needs.wait-for-build.outputs.has_code_changes }}
+    secrets: inherit
