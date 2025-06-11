@@ -55,7 +55,6 @@ import torch_xla.core.xla_model as xm
 import torch_xla.core.functions as xf
 import torch_xla.debug.profiler as xp
 import unittest
-import warnings
 import test_utils
 
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])

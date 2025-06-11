@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
 
+#include <c10/util/Exception.h>
+
 #include "absl/log/initialize.h"
 #include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -16,8 +18,6 @@
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
-
-#include <c10/util/Exception.h>
 
 namespace torch_xla {
 namespace runtime {
