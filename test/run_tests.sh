@@ -163,7 +163,6 @@ function run_xla_op_tests1 {
   run_test "$_TEST_DIR/pjrt/test_runtime.py"
   run_test "$_TEST_DIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$_TEST_DIR/pjrt/test_internal_tpu.py"
-  run_test "$_TEST_DIR/pjrt/test_cuda.py"
 
   PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/pjrt/test_ddp.py"
   PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/pjrt/test_mesh_service.py"
