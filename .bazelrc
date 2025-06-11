@@ -32,6 +32,9 @@ build --action_env=CC=gcc
 build --action_env=CXX=g++
 build --spawn_strategy=standalone
 
+# TODO(https://github.com/pytorch/xla/issues/9336): Enable bzlmod.
+build --noenable_bzlmod
+
 ###########################################################################
 
 build:clang --action_env=CC=/usr/bin/clang-17
