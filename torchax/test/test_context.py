@@ -81,7 +81,6 @@ class TestContext(unittest.TestCase):
       x = torch.randn(2, 3, generator=torch.Generator().manual_seed(0))
       y = torch.randn(2, 3, generator=torch.Generator().manual_seed(0))
 
-      # Values will be different, but still check device, layout, dtype, etc
       torch.testing.assert_close(x, y)
 
   def test_buffer(self):
