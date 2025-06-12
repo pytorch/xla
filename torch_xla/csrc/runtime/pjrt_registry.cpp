@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
 
+#include <c10/util/Exception.h>
+
 #include "absl/log/initialize.h"
 #include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -129,7 +131,7 @@ InitializePjRt(const std::string& device_type) {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
-    client = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
+    client = std::move(xla::GetPjRtCpuClient(async, cpu_device_count).value());
   } else if (device_type == "TPU") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
     // Init the absl logging to avoid the log spam.
@@ -148,6 +150,9 @@ InitializePjRt(const std::string& device_type) {
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
   } else if (device_type == "CUDA") {
+    TORCH_WARN("The XLA:CUDA device is deprecated in release 2.8. ",
+               "Future releases might remove XLA:CUDA support entirely. ",
+               "Use the PyTorch native CUDA backend, instead.")
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);

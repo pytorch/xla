@@ -47,7 +47,7 @@ Or used with neural network modules:
 
 ```python
 l_in = torch.randn(10, device='xla')
-linear = torch.nn.Linear(10, 20).to(torch_xla.device())
+linear = torch.nn.Linear(10, 20).to('xla')
 l_out = linear(l_in)
 print(l_out)
 ```

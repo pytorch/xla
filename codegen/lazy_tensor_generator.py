@@ -3,6 +3,12 @@ import os
 
 from dataclasses import dataclass
 from typing import List, Union
+
+xla_root = sys.argv[1]
+torch_root = os.path.join(xla_root, "torch")
+
+sys.path.insert(0, torch_root)
+
 from torchgen.api.lazy import LazyIrSchema
 from torchgen.dest.lazy_ir import aten_symbol, node_ctor_inputs, GenLazyIR, GenLazyNativeFuncDefinition
 from torchgen.gen_lazy_tensor import run_gen_lazy_tensor
@@ -15,8 +21,6 @@ from torchgen.api.types import (
     kernel_signature,
 )
 
-xla_root = sys.argv[1]
-torch_root = os.path.join(xla_root, "torch")
 aten_path = os.path.join(torch_root, "aten", "src", "ATen")
 shape_inference_hdr = os.path.join(torch_root, "torch", "csrc", "lazy", "core",
                                    "shape_inference.h")

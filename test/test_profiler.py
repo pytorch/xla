@@ -5,7 +5,7 @@ import multiprocessing
 import os
 import sys
 import tempfile
-import time
+import signal
 import unittest
 
 import args_parse
@@ -23,7 +23,7 @@ def train_worker(port, training_started):
       batch_size=16,
       momentum=0.5,
       lr=0.01,
-      num_epochs=10)
+      num_epochs=100)
   flags.fake_data = True
   flags.profiler_port = port
 
@@ -86,9 +86,12 @@ class ProfilerTest(unittest.TestCase):
     training_started = context.Event()
     p = context.Process(
         target=train_worker, args=(port, training_started), daemon=True)
-    p.start()
-    training_started.wait(60)
 
+    # Wait for training to start.
+    p.start()
+    training_started.wait(600)
+
+    # Take a profile.
     logdir = tempfile.mkdtemp()
     xp.trace(
         f'localhost:{port}',
@@ -96,7 +99,13 @@ class ProfilerTest(unittest.TestCase):
         duration_ms=5000,
         num_tracing_attempts=5,
         delay_ms=1000)
-    p.terminate()
+    pid = p.pid
+    assert pid is not None, 'Process ID should not be None'
+    # Gracefully interrupt the process.
+    os.kill(pid, signal.SIGINT)
+    p.join()
+
+    # Validate the profiling output.
     path = self._check_xspace_pb_exist(logdir)
     self._check_trace_namespace_exists(path)
     self._check_metrics_warnings_exist(self.fname)

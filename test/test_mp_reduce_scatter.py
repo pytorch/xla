@@ -13,7 +13,7 @@ def _mp_fn(index):
   shard_size = 2
   input_list_size = 5
 
-  if xm.xla_device_hw(device) in ['TPU', 'CUDA']:
+  if xm.xla_device_hw(device) in ['TPU', 'CUDA', 'CPU']:
     rand = torch.rand((32, shard_size * world_size, 32))
     xrand = rand.to(device)
 

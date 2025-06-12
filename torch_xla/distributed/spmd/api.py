@@ -219,7 +219,7 @@ def xla_distribute_module(
       assert next(module.parameters()).device != torch_xla.device(), \
         f"Currently requires module to be on cpu, before xla_distribute_module."
       xr.use_spmd(auto=True)
-      module = module.to(torch_xla.device())
+      module = module.to('xla')
     else:
       # apply partition_fun to submodules
       for name, submod in module.named_modules():

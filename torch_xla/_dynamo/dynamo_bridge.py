@@ -646,6 +646,7 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
     # We need to restore this metric count later, so save it in a separate variable
     dynamo_extract_graph_helper_metric_count = metrics.counter_value(
         'DynamoExtractCompiledGraph')
+    uncached_compile_metric_count = metrics.counter_value('UncachedCompile')
 
     metrics.clear_counters()
     result = super().run_node(n)
@@ -684,6 +685,9 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
     # Restore this metric counter
     torch_xla._XLAC._xla_increment_counter(
         'DynamoExtractCompiledGraph', dynamo_extract_graph_helper_metric_count)
+    if uncached_compile_metric_count is not None:
+      torch_xla._XLAC._xla_increment_counter('UncachedCompile',
+                                             uncached_compile_metric_count)
 
     return result
 

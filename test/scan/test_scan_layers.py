@@ -271,14 +271,14 @@ class ScanLayersTest(XlaTestCase, parameterized.TestCase):
     assert checks > 0
 
   def test_heterogenous_layers(self):
-    layer1 = nn.Linear(128, 128).to(torch_xla.device())
-    layer2 = nn.Sequential(nn.Linear(128, 128).to(torch_xla.device()))
+    layer1 = nn.Linear(128, 128).to('xla')
+    layer2 = nn.Sequential(nn.Linear(128, 128).to('xla'))
     with self.assertRaisesRegex(ValueError, "mismatched keys"):
       scan_layers([layer1, layer2], torch.zeros((128,), device='xla'))
 
   def test_mismatched_shapes(self):
-    layer1 = nn.Linear(128, 128).to(torch_xla.device())
-    layer2 = nn.Linear(128, 129).to(torch_xla.device())
+    layer1 = nn.Linear(128, 128).to('xla')
+    layer2 = nn.Linear(128, 129).to('xla')
     with self.assertRaisesRegex(ValueError, "Shape mismatch"):
       scan_layers([layer1, layer2], torch.zeros((128,), device='xla'))
 

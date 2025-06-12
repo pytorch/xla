@@ -62,8 +62,8 @@ ReduceContext GetReduceContext(absl::Span<const xla::XlaOp> operands) {
   return redux;
 }
 
-xla::XlaComputation GetReduceComutation(AllReduceType reduce_type,
-                                        xla::PrimitiveType type) {
+xla::XlaComputation GetReduceComputation(AllReduceType reduce_type,
+                                         xla::PrimitiveType type) {
   switch (reduce_type) {
     case AllReduceType::kSum:
       return XlaHelpers::CreateAddComputation(type);
@@ -153,14 +153,14 @@ std::vector<xla::XlaOp> BuildAllReduce(
     if (pin_layout) {
       reduce = xla::AllReduce(
           xla::Tuple(operands[0].builder(), type_ctx.second.ops),
-          GetReduceComutation(reduce_type, type_ctx.first), reduce_groups,
+          GetReduceComputation(reduce_type, type_ctx.first), reduce_groups,
           /*channel_id=*/absl::nullopt,
           /*shape_with_layout=*/
           MakeReduceShape(type_ctx.second.operand_shapes));
     } else {
       reduce = xla::AllReduce(
           xla::Tuple(operands[0].builder(), type_ctx.second.ops),
-          GetReduceComutation(reduce_type, type_ctx.first), reduce_groups);
+          GetReduceComputation(reduce_type, type_ctx.first), reduce_groups);
     }
     for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
       size_t op_idx = type_ctx.second.indices[i];
@@ -192,7 +192,7 @@ xla::XlaOp BuildAllReduce(AllReduceType reduce_type, xla::XlaOp input,
   channel_handle.set_handle(1);
   channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
   auto reduce_result = xla::AllReduce(
-      input, GetReduceComutation(reduce_type, input_shape.element_type()),
+      input, GetReduceComputation(reduce_type, input_shape.element_type()),
       std::move(reduce_groups), std::move(channel_handle), std::nullopt, true);
   if (scale != 1.0) {
     xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
@@ -426,13 +426,13 @@ ReduceScatterResult BuildReduceScatter(
         static_cast<XlaDeviceType>(xla_device.type()));
     reduce_result = xla::ReduceScatter(
         token_handler.GetInput(input, &input_shape),
-        GetReduceComutation(reduce_type, input_shape.element_type()),
+        GetReduceComputation(reduce_type, input_shape.element_type()),
         scatter_dim, shard_count, reduce_groups, channel_handle,
         /*layout=*/reduce_shape.layout(), use_global_device_ids);
   } else {
     reduce_result = xla::ReduceScatter(
         token_handler.GetInput(input, &input_shape),
-        GetReduceComutation(reduce_type, input_shape.element_type()),
+        GetReduceComputation(reduce_type, input_shape.element_type()),
         scatter_dim, shard_count, reduce_groups, channel_handle,
         /*layout=*/std::nullopt, use_global_device_ids);
   }
@@ -459,7 +459,7 @@ xla::XlaOp BuildReduceScatter(AllReduceType reduce_type, xla::XlaOp input,
   channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
   xla::XlaOp reduce_result;
   reduce_result = xla::ReduceScatter(
-      input, GetReduceComutation(reduce_type, input_shape.element_type()),
+      input, GetReduceComputation(reduce_type, input_shape.element_type()),
       scatter_dim, shard_count, std::move(reduce_groups),
       std::move(channel_handle), std::nullopt, true);
   if (scale != 1.0) {
@@ -528,20 +528,20 @@ ReduceScatterResultCoalesced BuildReduceScatterCoalesced(
     if (pin_layout) {
       reduce_result = xla::ReduceScatter(
           xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
-          GetReduceComutation(reduce_type, type_ctx.first), scatter_dim,
+          GetReduceComputation(reduce_type, type_ctx.first), scatter_dim,
           shard_count, cc_groups, /*channel_id=*/absl::nullopt,
           /*layout=*/
           MakeReduceShape(type_ctx.second.operand_shapes).layout());
     } else {
       reduce_result = xla::ReduceScatter(
           xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
-          GetReduceComutation(reduce_type, type_ctx.first), scatter_dim,
+          GetReduceComputation(reduce_type, type_ctx.first), scatter_dim,
           shard_count, cc_groups);
     }
     for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
       size_t op_idx = type_ctx.second.indices[i];
       xla::XlaOp gte;
-      if (ShapeHelper::ShapeOfXlaOp(reduce_result).dimensions_size() == 0) {
+      if (ShapeHelper::ShapeOfXlaOp(reduce_result).IsTuple()) {
         gte = xla::GetTupleElement(reduce_result, i);
       } else {
         gte = reduce_result;
