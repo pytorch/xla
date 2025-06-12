@@ -32,6 +32,9 @@ build --action_env=CC=gcc
 build --action_env=CXX=g++
 build --spawn_strategy=standalone
 
+# TODO(https://github.com/pytorch/xla/issues/9336): Enable bzlmod.
+build --noenable_bzlmod
+
 ###########################################################################
 
 build:clang --action_env=CC=/usr/bin/clang-17
@@ -224,9 +227,6 @@ build --noincompatible_remove_legacy_whole_archive
 
 # cc_shared_library ensures no library is linked statically more than once.
 build --experimental_link_static_libraries_once=false
-
-# On linux, don't cross compile by default
-build:linux --distinct_host_configuration=false
 
 # Do not risk cache corruption. See:
 # https://github.com/bazelbuild/bazel/issues/3360
