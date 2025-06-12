@@ -25,11 +25,11 @@ namespace {
 
 class HloMetadataSetter {
  public:
-  HloMetadataSetter(LoweringContext* const low_ctx,
+  HloMetadataSetter(LoweringContext& lowering_context,
                     const torch::lazy::Node& node)
-      : low_ctx_(low_ctx) {
+      : lowering_context_(lowering_context) {
     if (ShouldPopulateXlaOpMetadata()) {
-      PopulateXlaOpMetadata(low_ctx, node);
+      PopulateXlaOpMetadata(lowering_context, node);
     }
   }
 
@@ -41,7 +41,7 @@ class HloMetadataSetter {
 
   ~HloMetadataSetter() {
     if (ShouldPopulateXlaOpMetadata()) {
-      low_ctx_->builder()->ClearOpMetadata();
+      lowering_context_.builder()->ClearOpMetadata();
     }
   }
 
@@ -54,7 +54,7 @@ class HloMetadataSetter {
     return FLAGS_torch_lazy_ir_debug || op_metadata;
   }
 
-  static void PopulateXlaOpMetadata(LoweringContext* const low_ctx,
+  static void PopulateXlaOpMetadata(LoweringContext& lowering_context,
                                     const torch::lazy::Node& node) {
     xla::OpMetadata metadata;
     // NOTE: we apply some string manipulation as xprof backend utility
@@ -84,13 +84,13 @@ class HloMetadataSetter {
     metadata.set_op_name(absl::StrCat(op_name_prefix, op_type));
 
     // Sets file, line and stack_frame_id in metadata
-    low_ctx->stack_frame_index_builder()->AddStackFrameLocations(
+    lowering_context.stack_frame_index_builder()->AddStackFrameLocations(
         nmeta.frame_info, static_cast<int>(max_stack_depth), metadata);
 
-    low_ctx->builder()->SetOpMetadata(std::move(metadata));
+    lowering_context.builder()->SetOpMetadata(std::move(metadata));
   }
 
-  LoweringContext* const low_ctx_ = nullptr;
+  LoweringContext& lowering_context_;
 };
 
 }  // namespace
@@ -239,7 +239,7 @@ xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
 XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node& node) {
   XlaOpVector result_ops;
   try {
-    const HloMetadataSetter meta_setter(this, node);
+    const HloMetadataSetter meta_setter(*this, node);
     const XlaNode* const casted = dynamic_cast<const XlaNode*>(&node);
 
     result_ops = casted->Lower(this);
