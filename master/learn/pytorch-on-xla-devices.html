@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git1bd3042 )
+                  master (2.8.0+git503f828 )
                 </div>
               
             
@@ -768,6 +768,70 @@ device is unavailable the load will fail. PyTorch/XLA, like all of
 PyTorch, is under active development and this behavior may change in the
 future.</p>
 </section>
+<section id="unexpected-tensor-materialization-during-aot-ahead-of-time-tracing">
+<h3>Unexpected Tensor Materialization During AOT (ahead of time) Tracing<a class="headerlink" href="#unexpected-tensor-materialization-during-aot-ahead-of-time-tracing" title="Permalink to this heading">¶</a></h3>
+<p>While tensor materialization is normal for JIT workflow, it is not expected during traced inference (i.e. <a class="reference external" href="https://awsdocs-neuron.readthedocs-hosted.com/en/latest/frameworks/torch/torch-neuronx/programming-guide/inference/trace-vs-xla-lazytensor.html">AOT model tracing in AWS Neuron</a>).
+When working with traced inference, developers may encounter tensor materialization, which leads to graphs being compiled based on example input tensor value and unexpected program behavior.
+Therefore we need to take advantage of PyTorch/XLA’s debugging flags to identify when unexpected tensor materialization happens and make appropriate code changes to avoid tensor materialization.</p>
+<p>A common issue occurs when tensor values are evaluated during model compilation (traced inference). Consider this example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensor</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">tensor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tensor</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tensor</span> <span class="o">*</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<p>While this code can compile and run, it may lead to unexpected behavior because:</p>
+<ul class="simple">
+<li><p>The tensor value is being accessed during tracing (<code class="docutils literal notranslate"><span class="pre">tensor[0]</span></code>).</p></li>
+<li><p>The resulting graph becomes fixed based on the tensor value available during tracing</p></li>
+<li><p>Developers might incorrectly assume the condition will be evaluated dynamically during inference</p></li>
+<li><p>The solution for the code above is to utilize the debugging flags below to catch the issue and modify the code. One example is to feed the flag through model configuration</p></li>
+</ul>
+<p>See the updated code without tensor materialization:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">TestModel</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># the flag should be pre-determined based on the model configuration</span>
+        <span class="c1"># it should not be an input of the model during runtime</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flag</span> <span class="o">=</span> <span class="n">flag</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensor</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">flag</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tensor</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tensor</span> <span class="o">*</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<section id="debugging-flags">
+<h4>Debugging Flags<a class="headerlink" href="#debugging-flags" title="Permalink to this heading">¶</a></h4>
+<p>To help catch tensor materialization issues, PyTorch/XLA provides two useful approaches:</p>
+<ol class="arabic simple">
+<li><p>Enable warning messages for tensor materialization:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;PT_XLA_DEBUG_LEVEL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;2&#39;</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Disable graph execution to catch issues during development:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_allow_execution</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="recommendations">
+<h4>Recommendations<a class="headerlink" href="#recommendations" title="Permalink to this heading">¶</a></h4>
+<p>Using these flags during development can help identify potential issues early in the development cycle. The recommended approach is to:</p>
+<ul class="simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">PT_XLA_DEBUG_LEVEL=2</span></code> during initial development to identify potential materialization points</p></li>
+<li><p>Apply <code class="docutils literal notranslate"><span class="pre">_set_allow_execution(False)</span></code> when you want to ensure no tensor materialization occurs during tracing</p></li>
+<li><p>When you see warnings or errors related the tensor materialization, look into the code path and make appropriate changes. The example above moved the flag to the <code class="docutils literal notranslate"><span class="pre">__init__</span></code> function which does not depend on the model input during runtime.</p></li>
+</ul>
+<p>For more detailed debugging information, refer to the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/source/learn/troubleshoot.md#pytorchxla-debugging-tool">XLA troubleshoot</a>.</p>
+</section>
+</section>
 </section>
 <section id="compilation-caching">
 <h2>Compilation Caching<a class="headerlink" href="#compilation-caching" title="Permalink to this heading">¶</a></h2>
@@ -871,6 +935,11 @@ networks on TPUs are available
 <li><a class="reference internal" href="#memory-layout">Memory Layout</a></li>
 <li><a class="reference internal" href="#moving-xla-tensors-to-and-from-the-cpu">Moving XLA Tensors to and from the CPU</a></li>
 <li><a class="reference internal" href="#saving-and-loading-xla-tensors">Saving and Loading XLA Tensors</a></li>
+<li><a class="reference internal" href="#unexpected-tensor-materialization-during-aot-ahead-of-time-tracing">Unexpected Tensor Materialization During AOT (ahead of time) Tracing</a><ul>
+<li><a class="reference internal" href="#debugging-flags">Debugging Flags</a></li>
+<li><a class="reference internal" href="#recommendations">Recommendations</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><a class="reference internal" href="#compilation-caching">Compilation Caching</a></li>

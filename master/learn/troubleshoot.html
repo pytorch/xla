@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git1bd3042 )
+                  master (2.8.0+git503f828 )
                 </div>
               
             
@@ -577,18 +577,25 @@ Execution<span class="w"> </span>Analysis:<span class="w"> </span>--------------
 Execution<span class="w"> </span>Analysis:<span class="w"> </span><span class="o">================================================================================</span>
 </pre></div>
 </div>
-<p>Some common causes of Compilation/Executation are 1. User manually call
-<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>. 2. <a class="reference external" href="https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51">Parallel
+<p>Some common causes of compilation/executation are</p>
+<ol class="arabic simple">
+<li><p>User manually calls
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>.</p></li>
+<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51">Parallel
 loader</a>
-call <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> for every x (configurable) batch. 3. Exiting a
+cals <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> for every x (configurable) batch.</p></li>
+<li><p>Exit a
 <a class="reference external" href="https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/debug/profiler.py#L165-L171">profiler StepTrace
-region</a>.
-4. Dynamo decide to compile/execute the graph. 5. User trying to
-access(often due to logging) the value of a tensor before the
-<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>.</p>
-<p>The execution caused by 1-4 are expected, and we want to avoid 5 by
-either reduce the frequency of accessing tensor values or manually add a
-<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> before accessing.</p>
+region</a>.</p></li>
+<li><p>Dynamo decides to compile/execute the graph.</p></li>
+<li><p>User tries to
+access (often due to logging) the value of a tensor before the
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>.</p></li>
+<li><p>User tries to access a tensor value before calling <code class="docutils literal notranslate"><span class="pre">mark_step</span></code>. See <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/source/learn/pytorch-on-xla-devices.md">PyTorch on XLA Devices</a> for more details.</p></li>
+</ol>
+<p>The op executions caused by items 1-4 are expected, and we want to avoid item 5 by
+either reducing the frequency of accessing tensor values or manually adding a call to
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> before accessing them.</p>
 <p>Users should expect to see this <code class="docutils literal notranslate"><span class="pre">Compilation</span> <span class="pre">Cause</span></code> +
 <code class="docutils literal notranslate"><span class="pre">Executation</span> <span class="pre">Cause</span></code> pairs for first couple steps. After the model
 stabilize users should expect to only see <code class="docutils literal notranslate"><span class="pre">Execution</span> <span class="pre">Cause</span></code>(you can
