@@ -95,3 +95,4 @@ run_test "$_TEST_DIR/quantized_ops/test_dot_general.py"
 run_xla_ir_hlo_debug run_test "$_TEST_DIR/test_user_computation_debug_cache.py"
 run_test "$_TEST_DIR/test_data_type.py"
 run_test "$_TEST_DIR/test_compilation_cache_utils.py"
+# run_test "$_TEST_DIR/test_mp_reduce_scatter.py"  # See Github issue 9314
