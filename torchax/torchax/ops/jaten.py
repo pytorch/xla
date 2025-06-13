@@ -20,9 +20,6 @@ from torchax.view import View
 # Tensor
 all_ops = {}
 
-# list all Aten ops from pytorch that does mutation
-# and need to be implemented in jax
-
 
 def op(*aten, **kwargs):
 

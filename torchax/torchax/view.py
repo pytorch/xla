@@ -332,7 +332,10 @@ class View(torch.Tensor):
       args: Tuple[Any, ...] = (),
       kwargs: Optional[dict] = None,
   ) -> Any:
-    assert False
+    raise AssertionError(
+        'torchax Tensors can only do math within the torchax environment.'
+        'Please wrap your code with `with torchax.default_env()` or '
+        'call torchax.enable_globally() before.')
 
   def create_sub_view(self, view_info: ViewInfo) -> "View":
     """

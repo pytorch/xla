@@ -127,8 +127,8 @@ class Tensor(torch.Tensor):
     if func == torch.ops._c10d_functional.wait_tensor.default:
       return args[0]._env.dispatch(func, types, args, kwargs)
     raise AssertionError(
-        'torchax Tensors can only do math within torchax environment.'
-        'Please wrap your code with `with torchax.defautl_env()` or '
+        'torchax Tensors can only do math within the torchax environment.'
+        'Please wrap your code with `with torchax.default_env()` or '
         'call torchax.enable_globally() before.')
 
   def detach(self):
