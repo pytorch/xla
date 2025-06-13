@@ -997,7 +997,7 @@ class PythonModule {
     using ParameterTypes = typename FnTraits::parameter_types;
 
     BindPythonFunction<Func, RetType, ParameterTypes, Extra...>::bind(
-        module_, name, std::forward<Func>(f), std::forward<Extra>(extra)...);
+        module_, name, std::forward<Func>(f), extra...);
     return *this;
   }
 
@@ -1020,7 +1020,7 @@ class PythonModule {
             torch::PyWarningHandler handler;
             return f(args...);
           },
-          std::forward<Extra>(extra)...);
+          extra...);
     }
   };
 
