@@ -6,7 +6,6 @@ import torchax
 import torchax.export
 from torchax.ops import jaten
 from torchax.ops import jlibrary
-
 # Create a `mylib` library which has a basic SDPA op.
 m = Library("mylib", "DEF")
 m.define("scaled_dot_product_attention(Tensor q, Tensor k, Tensor v) -> Tensor")

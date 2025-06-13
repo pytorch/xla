@@ -14,6 +14,8 @@ import torchax.distributed
 # TODO(wcromar): do something useful with group name
 GROUP_NAME = "process_group"
 
+torchax.enable_globally()
+
 
 @pytest.fixture(scope="module")
 def multi_cpu():
@@ -80,8 +82,9 @@ def test_all_reduce(op, expected, multi_cpu, process_group):
   device_count = multi_cpu
 
   def f(index):
-    dist.all_reduce(index, op)
-    return index
+    with torchax.default_env():
+      dist.all_reduce(index, op)
+      return index
 
   res = torchax.distributed.spawn(f)
 

@@ -16,66 +16,9 @@ from torchax.ops import op_base, mappings
 from torchax import interop
 from torchax.ops import jax_reimplement
 from torchax.view import View
-from torchax.tensor import Tensor
 # Keys are OpOverload, value is a callable that takes
 # Tensor
 all_ops = {}
-
-# list all Aten ops from pytorch that does mutation
-# and need to be implemented in jax
-
-mutation_ops_to_functional = {
-    torch.ops.aten.add_: torch.ops.aten.add,
-    torch.ops.aten.sub_: torch.ops.aten.sub,
-    torch.ops.aten.mul_: torch.ops.aten.mul,
-    torch.ops.aten.div_: torch.ops.aten.div,
-    torch.ops.aten.pow_: torch.ops.aten.pow,
-    torch.ops.aten.lt_: torch.ops.aten.lt,
-    torch.ops.aten.le_: torch.ops.aten.le,
-    torch.ops.aten.gt_: torch.ops.aten.gt,
-    torch.ops.aten.ge_: torch.ops.aten.ge,
-    torch.ops.aten.eq_: torch.ops.aten.eq,
-    torch.ops.aten.ne_: torch.ops.aten.ne,
-    torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
-    torch.ops.aten.geometric_: torch.ops.aten.geometric,
-    torch.ops.aten.normal_: torch.ops.aten.normal,
-    torch.ops.aten.random_: torch.ops.aten.uniform,
-    torch.ops.aten.uniform_: torch.ops.aten.uniform,
-    torch.ops.aten.relu_: torch.ops.aten.relu,
-    # squeeze_ is expected to change tensor's shape. So replace with new value
-    torch.ops.aten.squeeze_: (torch.ops.aten.squeeze, True),
-    torch.ops.aten.sqrt_: torch.ops.aten.sqrt,
-    torch.ops.aten.clamp_: torch.ops.aten.clamp,
-    torch.ops.aten.clamp_min_: torch.ops.aten.clamp_min,
-    torch.ops.aten.sigmoid_: torch.ops.aten.sigmoid,
-    torch.ops.aten.tanh_: torch.ops.aten.tanh,
-    torch.ops.aten.ceil_: torch.ops.aten.ceil,
-    torch.ops.aten.logical_not_: torch.ops.aten.logical_not,
-    torch.ops.aten.unsqueeze_: torch.ops.aten.unsqueeze,
-    torch.ops.aten.transpose_: torch.ops.aten.transpose,
-    torch.ops.aten.log_normal_: torch.ops.aten.log_normal,
-    torch.ops.aten.scatter_add_: torch.ops.aten.scatter_add,
-    torch.ops.aten.scatter_reduce_.two: torch.ops.aten.scatter_reduce,
-    torch.ops.aten.scatter_: torch.ops.aten.scatter,
-    torch.ops.aten.bitwise_or_: torch.ops.aten.bitwise_or,
-}
-
-# Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
-_jax_version = tuple(int(v) for v in jax.version._version.split("."))
-
-
-def make_mutation(op):
-  if type(mutation_ops_to_functional[op]) is tuple:
-    return op_base.InplaceOp(
-        mutation_ops_to_functional[op][0],
-        replace=mutation_ops_to_functional[op][1],
-        position_to_mutate=0)
-  return op_base.InplaceOp(mutation_ops_to_functional[op], position_to_mutate=0)
-
-
-for op in mutation_ops_to_functional.keys():
-  ops_registry.register_torch_dispatch_op(
-      op, make_mutation(op), is_jax_function=False, is_view_op=True)
 
 
 def op(*aten, **kwargs):
@@ -163,14 +106,20 @@ def _aten_trunc(x):
 
 @op(torch.ops.aten.index_copy)
 def _aten_index_copy(x, dim, indexes, source):
+  if x.ndim == 0:
+    return source
+  if x.ndim == 1:
+    source = jnp.squeeze(source)
   # return jax.lax.scatter(x, index, dim)
+  if dim < 0:
+    dim = dim + x.ndim
   dims = []
   for i in range(len(x.shape)):
     if i == dim:
       dims.append(indexes)
     else:
       dims.append(slice(None, None, None))
-  return x.at[dim].set(source)
+  return x.at[tuple(dims)].set(source)
 
 
 # aten.cauchy_
@@ -405,7 +354,7 @@ def _aten_transpose(x, dim0, dim1):
 
 
 @op(torch.ops.aten.triu)
-def _aten_triu(m, k):
+def _aten_triu(m, k=0):
   return jnp.triu(m, k)
 
 
@@ -741,15 +690,15 @@ def _aten__to_copy(self, **kwargs):
 
 
 @op(torch.ops.aten.empty)
-@op_base.convert_dtype()
+@op_base.convert_dtype(use_default_dtype=False)
 def _aten_empty(size: Sequence[int], *, dtype=None, **kwargs):
   return jnp.empty(size, dtype=dtype)
 
 
 @op(torch.ops.aten.empty_like)
-@op_base.convert_dtype()
+@op_base.convert_dtype(use_default_dtype=False)
 def _aten_empty_like(input, *, dtype=None, **kwargs):
-  return jnp.empty_like(input, dtype=dtype)
+  return jnp.empty_like(input, dtype)
 
 
 @op(torch.ops.aten.ones)
@@ -820,8 +769,8 @@ def split_with_sizes(x, sizes, dim=0):
     A list of sub-arrays.
   """
   if isinstance(sizes, int):
-    # split equal size
-    new_sizes = [sizes] * (x.shape[dim] // sizes)
+    # split equal size, round up
+    new_sizes = [sizes] * (-(-x.shape[dim] // sizes))
     sizes = new_sizes
   rank = x.ndim
   splits = np.cumsum(sizes)  # Cumulative sum for split points
@@ -1179,7 +1128,7 @@ def _aten_convolution(
 
 
 # _native_batch_norm_legit(Tensor input, Tensor? weight, Tensor? bias, Tensor(a!) running_mean, Tensor(b!) running_var, bool training, float momentum, float eps)
-@op(torch.ops.aten._native_batch_norm_legit)
+@op(torch.ops.aten._native_batch_norm_legit.default)
 def _aten__native_batch_norm_legit(input, weight, bias, running_mean,
                                    running_var, training, momentum, eps):
   """JAX implementation of batch normalization with optional parameters.
@@ -1203,7 +1152,6 @@ def _aten__native_batch_norm_legit(input, weight, bias, running_mean,
   """
   reduction_dims = [0] + list(range(2, input.ndim))
   reshape_dims = [1, -1] + [1] * (input.ndim - 2)
-
   if training:
     # Calculate batch mean and variance
     mean = jnp.mean(input, axis=reduction_dims, keepdims=True)
@@ -1922,39 +1870,6 @@ def _aten_gt(self, other):
   return self > other
 
 
-# aten.pixel_shuffle
-@op(torch.ops.aten.pixel_shuffle)
-def _aten_pixel_shuffle(x, upscale_factor):
-  """PixelShuffle implementation in JAX.
-
-  Args:
-    x: Input tensor. Typically a feature map.
-    upscale_factor: Integer by which to upscale the spatial dimensions.
-
-  Returns:
-    Tensor after PixelShuffle operation.
-  """
-
-  batch_size, channels, height, width = x.shape
-
-  if channels % (upscale_factor**2) != 0:
-    raise ValueError(
-        "Number of channels must be divisible by the square of the upscale factor."
-    )
-
-  new_channels = channels // (upscale_factor**2)
-  new_height = height * upscale_factor
-  new_width = width * upscale_factor
-
-  x = x.reshape(batch_size, new_channels, upscale_factor, upscale_factor,
-                height, width)
-  x = jnp.transpose(x,
-                    (0, 1, 2, 4, 3, 5))  # Move channels to spatial dimensions
-  x = x.reshape(batch_size, new_channels, new_height, new_width)
-
-  return x
-
-
 # aten.sym_stride
 # aten.lt
 @op(torch.ops.aten.lt)
@@ -2567,6 +2482,11 @@ def _aten_cosh(input):
   return jnp.cosh(input)
 
 
+@op(torch.ops.aten.diag)
+def _aten_diag(input, diagonal=0):
+  return jnp.diag(input, diagonal)
+
+
 # aten.diagonal
 @op(torch.ops.aten.diagonal)
 def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
@@ -2807,7 +2727,8 @@ def _aten_lgamma(input, *, out=None):
 
 @op(torch.ops.aten.mvlgamma)
 def _aten_mvlgamma(input, p, *, out=None):
-  return jax.scipy.special.multigammaln(input, d)
+  input = input.astype(mappings.t2j_dtype(torch.get_default_dtype()))
+  return jax.scipy.special.multigammaln(input, p)
 
 
 @op(torch.ops.aten.linalg_eig)
@@ -3622,7 +3543,7 @@ def _randn(
 
 
 @op(torch.ops.aten.bernoulli.p, needs_env=True)
-def _bernoulli(
+def _aten_bernoulli(
     self,
     p=0.5,
     *,
@@ -4931,7 +4852,12 @@ def _aten_flatten(x, start_dim=0, end_dim=-1):
 
 @op(torch.ops.aten.new_empty)
 def _new_empty(self, size, **kwargs):
-  return jnp.empty(size)
+  dtype = kwargs.get('dtype')
+  if dtype is not None:
+    dtype = mappings.t2j_dtype(dtype)
+  else:
+    dtype = self.dtype
+  return jnp.empty(size, dtype=dtype)
 
 
 @op(torch.ops.aten.new_empty_strided)
@@ -5513,3 +5439,139 @@ def kthvalue(input, k, dim=None, keepdim=False, *, out=None):
       jnp.argpartition(input, k - 1, dimension).astype('int64'), k - 1,
       dimension, keepdim)
   return values, indices
+
+
+@op(torch.ops.aten.take)
+def _aten_take(self, index):
+  return self.flatten()[index]
+
+
+# func: pad(Tensor self, SymInt[] pad, str mode="constant", float? value=None) -> Tensor
+@op(torch.ops.aten.pad)
+def _aten_pad(self, pad, mode='constant', value=None):
+  if not isinstance(pad, (tuple, list)) or len(pad) % 2 != 0:
+    raise ValueError("Padding must be a sequence of even length.")
+
+  num_dims = self.ndim
+  if len(pad) > 2 * num_dims:
+    raise ValueError(
+        f"Padding sequence length ({len(pad)}) exceeds 2 * number of dimensions ({2 * num_dims})."
+    )
+
+  # JAX's pad function expects padding for each dimension as a tuple of (low, high)
+  # We need to reverse the pad sequence and group them for JAX.
+  # pad = [p_l0, p_r0, p_l1, p_r1, ...]
+  # becomes ((..., ..., (p_l1, p_r1), (p_l0, p_r0)))
+  jax_pad_width = []
+  # Iterate in reverse pairs
+  for i in range(len(pad) // 2):
+    jax_pad_width.append((pad[(2 * i)], pad[(2 * i + 1)]))
+
+  # Pad any leading dimensions with (0, 0) if the pad sequence is shorter
+  # than the number of dimensions.
+  for _ in range(num_dims - len(pad) // 2):
+    jax_pad_width.append((0, 0))
+
+  # Reverse the jax_pad_width list to match the dimension order
+  jax_pad_width.reverse()
+
+  if mode == "constant":
+    if value is None:
+      value = 0.0
+    return jnp.pad(
+        self, pad_width=jax_pad_width, mode="constant", constant_values=value)
+  elif mode == "reflect":
+    return jnp.pad(self, pad_width=jax_pad_width, mode="reflect")
+  elif mode == "edge":
+    return jnp.pad(self, pad_width=jax_pad_width, mode="edge")
+  else:
+    raise ValueError(
+        f"Unsupported padding mode: {mode}. Expected 'constant', 'reflect', or 'edge'."
+    )
+
+
+mutation_ops_to_functional = {
+    torch.ops.aten.add_:
+        op_base.InplaceOp(torch.ops.aten.add),
+    torch.ops.aten.sub_:
+        op_base.InplaceOp(torch.ops.aten.sub),
+    torch.ops.aten.mul_:
+        op_base.InplaceOp(torch.ops.aten.mul),
+    torch.ops.aten.div_:
+        op_base.InplaceOp(torch.ops.aten.div),
+    torch.ops.aten.pow_:
+        op_base.InplaceOp(torch.ops.aten.pow),
+    torch.ops.aten.lt_:
+        op_base.InplaceOp(torch.ops.aten.lt),
+    torch.ops.aten.le_:
+        op_base.InplaceOp(torch.ops.aten.le),
+    torch.ops.aten.gt_:
+        op_base.InplaceOp(torch.ops.aten.gt),
+    torch.ops.aten.ge_:
+        op_base.InplaceOp(torch.ops.aten.ge),
+    torch.ops.aten.eq_:
+        op_base.InplaceOp(torch.ops.aten.eq),
+    torch.ops.aten.ne_:
+        op_base.InplaceOp(torch.ops.aten.ne),
+    torch.ops.aten.bernoulli_:
+        op_base.InplaceOp(torch.ops.aten.bernoulli.p),
+    torch.ops.aten.bernoulli_.float:
+        op_base.InplaceOp(_aten_bernoulli, is_jax_func=True),
+    torch.ops.aten.geometric_:
+        op_base.InplaceOp(torch.ops.aten.geometric),
+    torch.ops.aten.normal_:
+        op_base.InplaceOp(torch.ops.aten.normal),
+    torch.ops.aten.random_:
+        op_base.InplaceOp(torch.ops.aten.uniform),
+    torch.ops.aten.uniform_:
+        op_base.InplaceOp(torch.ops.aten.uniform),
+    torch.ops.aten.relu_:
+        op_base.InplaceOp(torch.ops.aten.relu),
+    # squeeze_ is expected to change tensor's shape. So replace with new value
+    torch.ops.aten.squeeze_:
+        op_base.InplaceOp(torch.ops.aten.squeeze, True),
+    torch.ops.aten.sqrt_:
+        op_base.InplaceOp(torch.ops.aten.sqrt),
+    torch.ops.aten.clamp_:
+        op_base.InplaceOp(torch.ops.aten.clamp),
+    torch.ops.aten.clamp_min_:
+        op_base.InplaceOp(torch.ops.aten.clamp_min),
+    torch.ops.aten.sigmoid_:
+        op_base.InplaceOp(torch.ops.aten.sigmoid),
+    torch.ops.aten.tanh_:
+        op_base.InplaceOp(torch.ops.aten.tanh),
+    torch.ops.aten.ceil_:
+        op_base.InplaceOp(torch.ops.aten.ceil),
+    torch.ops.aten.logical_not_:
+        op_base.InplaceOp(torch.ops.aten.logical_not),
+    torch.ops.aten.unsqueeze_:
+        op_base.InplaceOp(torch.ops.aten.unsqueeze),
+    torch.ops.aten.transpose_:
+        op_base.InplaceOp(torch.ops.aten.transpose),
+    torch.ops.aten.log_normal_:
+        op_base.InplaceOp(torch.ops.aten.log_normal),
+    torch.ops.aten.scatter_add_:
+        op_base.InplaceOp(torch.ops.aten.scatter_add),
+    torch.ops.aten.scatter_reduce_.two:
+        op_base.InplaceOp(torch.ops.aten.scatter_reduce),
+    torch.ops.aten.scatter_:
+        op_base.InplaceOp(torch.ops.aten.scatter),
+    torch.ops.aten.bitwise_or_:
+        op_base.InplaceOp(torch.ops.aten.bitwise_or),
+}
+
+# Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
+_jax_version = tuple(int(v) for v in jax.version._version.split("."))
+
+mutation_needs_env = {
+    torch.ops.aten.bernoulli_,
+    torch.ops.aten.bernoulli_.float,
+}
+
+for operator, mutation in mutation_ops_to_functional.items():
+  ops_registry.register_torch_dispatch_op(
+      operator,
+      mutation,
+      is_jax_function=False,
+      is_view_op=True,
+      needs_env=(operator in mutation_needs_env))

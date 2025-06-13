@@ -143,26 +143,26 @@ def run_export_and_compare(testcase,
           (sample_input.input, sample_input.args, sample_input.kwargs))
       with testcase.env:
         res2 = func(input2, *args2, **kwargs2)
-      res2 = pytree.tree_map_only(tensor.Tensor, lambda t: t.torch(), res2)
-      with testcase.subTest("torchax_diff:" + str(atol)):
-        if ignore_indices and isinstance(res, tuple) and len(res) == 2:
-          diff_output(
-              testcase,
-              res[0],
-              res2[0],
-              atol=atol,
-              rtol=rtol,
-              equal_nan=equal_nan,
-              check_output=check_output)
-        else:
-          diff_output(
-              testcase,
-              res,
-              res2,
-              atol=atol,
-              rtol=rtol,
-              equal_nan=equal_nan,
-              check_output=check_output)
+        res2 = pytree.tree_map_only(tensor.Tensor, lambda t: t.torch(), res2)
+        with testcase.subTest("torchax_diff:" + str(atol)):
+          if ignore_indices and isinstance(res, tuple) and len(res) == 2:
+            diff_output(
+                testcase,
+                res[0],
+                res2[0],
+                atol=atol,
+                rtol=rtol,
+                equal_nan=equal_nan,
+                check_output=check_output)
+          else:
+            diff_output(
+                testcase,
+                res,
+                res2,
+                atol=atol,
+                rtol=rtol,
+                equal_nan=equal_nan,
+                check_output=check_output)
 
 
 ops_to_test = [
@@ -188,7 +188,6 @@ class TestOpInfo(TestCase):
     torchax.enable_accuracy_mode()
     #self.env.config.debug_accuracy_for_each_op = True
     self.env.config.debug_print_each_op = True
-    self.env.config.debug_print_each_op_operands = True
     torch.manual_seed(0)
     self.old_var = self.env.config.use_torch_native_for_cpu_tensor
     self.env.config.use_torch_native_for_cpu_tensor = False
