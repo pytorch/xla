@@ -985,32 +985,54 @@ std::vector<bool> check_materialization_helper(
   return need_materialization;
 }
 
-// Wraps a py::module to provide more convenient APIs.
-class PythonModule {
+// Wraps a python scope (e.g. py::module) to provide more convenient APIs.
+// It behaves like a Scope object but has enhanced behaviors for the def()
+// method. This class has reference semantics, just like the Scope class.
+template <typename Scope>
+class PythonScope : public Scope {
  public:
-  PythonModule(py::module& module) : module_(module) {}
+  // Delegates to the Scope constructor.
+  template <typename... Args>
+  PythonScope(Args&&... args) : Scope(std::forward<Args>(args)...) {}
+
+  // PythonScope is copyable and movable.
+  PythonScope(const PythonScope& other) = default;
+  PythonScope(PythonScope&& other) = default;
+  PythonScope& operator=(const PythonScope& other) = default;
+  PythonScope& operator=(PythonScope&& other) = default;
 
   template <typename Func, typename... Extra>
-  PythonModule& def(const char* name, Func&& f, const Extra&... extra) {
+  PythonScope& def(const char* name, Func&& f, const Extra&... extra) {
     using FnTraits = typename c10::guts::infer_function_traits<Func>::type;
     using RetType = typename FnTraits::return_type;
     using ParameterTypes = typename FnTraits::parameter_types;
 
-    BindPythonFunction<Func, RetType, ParameterTypes, Extra...>::bind(
-        module_, name, std::forward<Func>(f), extra...);
+    PythonFunctionBinder<Func, RetType, ParameterTypes, Extra...>::Bind(
+        *this, name, std::forward<Func>(f), extra...);
+    return *this;
+  }
+  template <typename Func, typename... Extra>
+  PythonScope& def_init(Func&& f, const Extra&... extra) {
+    using FnTraits = typename c10::guts::infer_function_traits<Func>::type;
+    using RetType = typename FnTraits::return_type;
+    using ParameterTypes = typename FnTraits::parameter_types;
+
+    PythonFunctionBinder<Func, RetType, ParameterTypes, Extra...>::BindInit(
+        *this, std::forward<Func>(f), extra...);
     return *this;
   }
 
  private:
-  template <class F, class RetType, class ParameterTypes, class... Extra>
-  struct BindPythonFunction;
+  template <typename F, typename RetType, typename ParameterTypes,
+            typename... Extra>
+  struct PythonFunctionBinder;
 
-  template <class F, class RetType, class... Args, class... Extra>
-  struct BindPythonFunction<F, RetType, c10::guts::typelist::typelist<Args...>,
-                            Extra...> {
-    static void bind(py::module& module, const char* name, F&& f,
+  template <typename F, typename RetType, typename... Args, typename... Extra>
+  struct PythonFunctionBinder<
+      F, RetType, c10::guts::typelist::typelist<Args...>, Extra...> {
+    static void Bind(Scope& scope, const char* const name, F&& f,
                      const Extra&... extra) {
-      module.def(
+      scope.def(
           name,
           [f = std::move(f)](Args... args) -> RetType {
             // RAII for emitting Python warnings.
@@ -1022,18 +1044,25 @@ class PythonModule {
           },
           extra...);
     }
-  };
 
-  py::module& module_;
+    static void BindInit(Scope& scope, F&& f, const Extra&... extra) {
+      scope.def(py::init(
+          [f = std::move(f)](Args... args) -> RetType {
+            torch::PyWarningHandler handler;
+            return (*f)(args...);
+          },
+          extra...));
+    }
+  };
 };
 
 void BuildProfilerSubmodule(py::module* m) {
-  py::module profiler_module =
+  // Define the profiler module.
+  PythonScope<py::module> profiler =
       m->def_submodule("profiler", "Profiler integration");
-  PythonModule profiler(profiler_module);
-  py::class_<runtime::profiler::ProfilerServer,
-             std::unique_ptr<runtime::profiler::ProfilerServer>>
-      profiler_server_class(profiler_module, "ProfilerServer");
+  PythonScope<py::class_<runtime::profiler::ProfilerServer,
+                         std::unique_ptr<runtime::profiler::ProfilerServer>>>
+      profiler_server_class(profiler, "ProfilerServer");
   profiler
       .def(
           "start_server",
@@ -1074,55 +1103,48 @@ void BuildProfilerSubmodule(py::module* m) {
           py::arg("service_addr"), py::arg("logdir"),
           py::arg("duration_ms") = 1000, py::arg("num_tracing_attempts") = 3,
           py::arg("timeout_s") = 120, py::arg("interval_s") = 5,
-          py::arg("options"));
+          py::arg("options"))
+      .def("scope_pusher",
+           [](const std::string& name)
+               -> std::unique_ptr<torch::lazy::ScopePusher> {
+             return absl::make_unique<torch::lazy::ScopePusher>(name);
+           });
 
-  py::class_<xla::profiler::TraceMeWrapper> traceme_class(
-      profiler_module, "TraceMe", py::module_local());
-  BindInitPythonFunction(
-      traceme_class, [](const py::str& name, const py::kwargs& kwargs) {
+  // Define the profiler.TraceMe class.
+  PythonScope<py::class_<xla::profiler::TraceMeWrapper>>(profiler, "TraceMe",
+                                                         py::module_local())
+      .def_init([](const py::str& name, const py::kwargs& kwargs) {
         return std::make_unique<xla::profiler::TraceMeWrapper>(name, kwargs);
-      });
-  BindPythonFunction(traceme_class, "__enter__",
-                     [](py::object self) -> py::object { return self; });
-  BindPythonFunction(
-      traceme_class, "__exit__",
-      [](py::object self, const py::object& ex_type, const py::object& ex_value,
-         const py::object& traceback) -> py::object {
-        py::cast<xla::profiler::TraceMeWrapper*>(self)->Stop();
-        return py::none();
-      });
-  BindPythonFunction(
-      traceme_class, "set_metadata",
-      [](xla::profiler::TraceMeWrapper& self, const py::kwargs& kwargs) {
-        self.SetMetadata(kwargs);
-      });
-  traceme_class.def_static("is_enabled", &tsl::profiler::TraceMe::Active);
+      })
+      .def("__enter__", [](py::object self) -> py::object { return self; })
+      .def("__exit__",
+           [](py::object self, const py::object& ex_type,
+              const py::object& ex_value,
+              const py::object& traceback) -> py::object {
+             py::cast<xla::profiler::TraceMeWrapper*>(self)->Stop();
+             return py::none();
+           })
+      .def("set_metadata",
+           [](xla::profiler::TraceMeWrapper& self, const py::kwargs& kwargs) {
+             self.SetMetadata(kwargs);
+           })
+      .def_static("is_enabled", &tsl::profiler::TraceMe::Active);
 
-  py::class_<torch::lazy::ScopePusher,
-             std::unique_ptr<torch::lazy::ScopePusher>>
-      scope_pusher_class(profiler_module, "ScopePusher");
-  BindPythonFunction(
-      profiler_module, "scope_pusher",
-      [](const std::string& name) -> std::unique_ptr<torch::lazy::ScopePusher> {
-        return absl::make_unique<torch::lazy::ScopePusher>(name);
-      });
-
-  // Profiler Session Definition.
-  py::class_<runtime::profiler::TslProfilerSessionWrapper,
-             std::unique_ptr<runtime::profiler::TslProfilerSessionWrapper>>
-      profiler_session(profiler_module, "TslProfilerSessionWrapper");
-  BindInitPythonFunction(profiler_session,
-                         &runtime::profiler::TslProfilerSessionWrapper::Create);
-  BindPythonFunction(
-      profiler_session, "stop", [](py::object self) -> py::bytes {
-        std::string xspace_str =
-            py::cast<runtime::profiler::TslProfilerSessionWrapper*>(self)
-                ->Stop();
-        return py::bytes(xspace_str);
-      });
-  BindPythonFunction(
-      profiler_session, "export",
-      [](py::object self, py::bytes xspace, const std::string& dump_dir) {
+  // Define the profiler.TslProfilerSessionWrapper class.ß
+  PythonScope<py::class_<
+      runtime::profiler::TslProfilerSessionWrapper,
+      std::unique_ptr<runtime::profiler::TslProfilerSessionWrapper>>>(
+      profiler, "TslProfilerSessionWrapper")
+      .def_init(&runtime::profiler::TslProfilerSessionWrapper::Create)
+      .def("stop",
+           [](py::object self) -> py::bytes {
+             std::string xspace_str =
+                 py::cast<runtime::profiler::TslProfilerSessionWrapper*>(self)
+                     ->Stop();
+             return py::bytes(xspace_str);
+           })
+      .def("export", [](py::object self, py::bytes xspace,
+                        const std::string& dump_dir) {
         const std::string xspace_str = xspace.cast<std::string>();
         py::cast<runtime::profiler::TslProfilerSessionWrapper*>(self)->Export(
             xspace_str, dump_dir);
