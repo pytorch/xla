@@ -985,96 +985,166 @@ std::vector<bool> check_materialization_helper(
   return need_materialization;
 }
 
+// Wraps a python scope (e.g. py::module) to provide more convenient APIs.
+// It behaves like a Scope object but has enhanced behaviors for the def()
+// method. This class has reference semantics, just like the Scope class.
+template <typename Scope>
+class PythonScope : public Scope {
+ public:
+  // Delegates to the Scope constructor.
+  template <typename... Args>
+  PythonScope(Args&&... args) : Scope(std::forward<Args>(args)...) {}
+
+  // PythonScope is copyable and movable.
+  PythonScope(const PythonScope& other) = default;
+  PythonScope(PythonScope&& other) = default;
+  PythonScope& operator=(const PythonScope& other) = default;
+  PythonScope& operator=(PythonScope&& other) = default;
+
+  template <typename Func, typename... Extra>
+  PythonScope& def(const char* name, Func&& f, const Extra&... extra) {
+    using FnTraits = typename c10::guts::infer_function_traits<Func>::type;
+    using RetType = typename FnTraits::return_type;
+    using ParameterTypes = typename FnTraits::parameter_types;
+
+    PythonFunctionBinder<Func, RetType, ParameterTypes, Extra...>::Bind(
+        *this, name, std::forward<Func>(f), extra...);
+    return *this;
+  }
+  template <typename Func, typename... Extra>
+  PythonScope& def_init(Func&& f, const Extra&... extra) {
+    using FnTraits = typename c10::guts::infer_function_traits<Func>::type;
+    using RetType = typename FnTraits::return_type;
+    using ParameterTypes = typename FnTraits::parameter_types;
+
+    PythonFunctionBinder<Func, RetType, ParameterTypes, Extra...>::BindInit(
+        *this, std::forward<Func>(f), extra...);
+    return *this;
+  }
+
+ private:
+  template <typename F, typename RetType, typename ParameterTypes,
+            typename... Extra>
+  struct PythonFunctionBinder;
+
+  template <typename F, typename RetType, typename... Args, typename... Extra>
+  struct PythonFunctionBinder<
+      F, RetType, c10::guts::typelist::typelist<Args...>, Extra...> {
+    static void Bind(Scope& scope, const char* const name, F&& f,
+                     const Extra&... extra) {
+      scope.def(
+          name,
+          [f = std::move(f)](Args... args) -> RetType {
+            // RAII for emitting Python warnings.
+            //
+            // This turns messages passed to `TORCH_WARN()` in `f` into Python
+            // warnings.
+            torch::PyWarningHandler handler;
+            return f(args...);
+          },
+          extra...);
+    }
+
+    static void BindInit(Scope& scope, F&& f, const Extra&... extra) {
+      scope.def(py::init(
+          [f = std::move(f)](Args... args) -> RetType {
+            torch::PyWarningHandler handler;
+            return (*f)(args...);
+          },
+          extra...));
+    }
+  };
+};
+
 void BuildProfilerSubmodule(py::module* m) {
-  py::module profiler = m->def_submodule("profiler", "Profiler integration");
-  py::class_<runtime::profiler::ProfilerServer,
-             std::unique_ptr<runtime::profiler::ProfilerServer>>
+  // Define the profiler module.
+  PythonScope<py::module> profiler =
+      m->def_submodule("profiler", "Profiler integration");
+  PythonScope<py::class_<runtime::profiler::ProfilerServer,
+                         std::unique_ptr<runtime::profiler::ProfilerServer>>>
       profiler_server_class(profiler, "ProfilerServer");
-  BindPythonFunction(
-      profiler, "start_server",
-      [](int port) -> std::unique_ptr<runtime::profiler::ProfilerServer> {
-        auto server = absl::make_unique<runtime::profiler::ProfilerServer>();
-        server->Start(port);
-        return server;
-      },
-      py::arg("port"));
-
-  BindPythonFunction(
-      profiler, "trace",
-      [](const char* service_addr, const char* logdir, int duration_ms,
-         int num_tracing_attempts, int timeout_s, int interval_s,
-         py::dict options) {
-        absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
-            ConvertDictToMap(options);
-        std::chrono::seconds sleep_s(interval_s);
-        absl::Status status;
-        {
-          NoGilSection nogil;
-          for (int i = 0; i <= timeout_s / interval_s; i++) {
-            status = runtime::profiler::Trace(service_addr, logdir, duration_ms,
-                                              num_tracing_attempts, opts);
-            if (status.ok()) {
-              return;
+  profiler
+      .def(
+          "start_server",
+          [](int port) -> std::unique_ptr<runtime::profiler::ProfilerServer> {
+            auto server =
+                absl::make_unique<runtime::profiler::ProfilerServer>();
+            server->Start(port);
+            return server;
+          },
+          py::arg("port"))
+      .def(
+          "trace",
+          [](const char* service_addr, const char* logdir, int duration_ms,
+             int num_tracing_attempts, int timeout_s, int interval_s,
+             py::dict options) {
+            absl::flat_hash_map<std::string, std::variant<int, std::string>>
+                opts = ConvertDictToMap(options);
+            std::chrono::seconds sleep_s(interval_s);
+            absl::Status status;
+            {
+              NoGilSection nogil;
+              for (int i = 0; i <= timeout_s / interval_s; i++) {
+                status =
+                    runtime::profiler::Trace(service_addr, logdir, duration_ms,
+                                             num_tracing_attempts, opts);
+                if (status.ok()) {
+                  return;
+                }
+                std::this_thread::sleep_for(sleep_s);
+              }
             }
-            std::this_thread::sleep_for(sleep_s);
-          }
-        }
-        if (!status.ok()) {
-          PyErr_SetString(PyExc_RuntimeError, std::string(status.message()));
-          throw py::error_already_set();
-        }
-      },
-      py::arg("service_addr"), py::arg("logdir"), py::arg("duration_ms") = 1000,
-      py::arg("num_tracing_attempts") = 3, py::arg("timeout_s") = 120,
-      py::arg("interval_s") = 5, py::arg("options"));
+            if (!status.ok()) {
+              PyErr_SetString(PyExc_RuntimeError,
+                              std::string(status.message()));
+              throw py::error_already_set();
+            }
+          },
+          py::arg("service_addr"), py::arg("logdir"),
+          py::arg("duration_ms") = 1000, py::arg("num_tracing_attempts") = 3,
+          py::arg("timeout_s") = 120, py::arg("interval_s") = 5,
+          py::arg("options"))
+      .def("scope_pusher",
+           [](const std::string& name)
+               -> std::unique_ptr<torch::lazy::ScopePusher> {
+             return absl::make_unique<torch::lazy::ScopePusher>(name);
+           });
 
-  py::class_<xla::profiler::TraceMeWrapper> traceme_class(profiler, "TraceMe",
-                                                          py::module_local());
-  BindInitPythonFunction(
-      traceme_class, [](const py::str& name, const py::kwargs& kwargs) {
+  // Define the profiler.TraceMe class.
+  PythonScope<py::class_<xla::profiler::TraceMeWrapper>>(profiler, "TraceMe",
+                                                         py::module_local())
+      .def_init([](const py::str& name, const py::kwargs& kwargs) {
         return std::make_unique<xla::profiler::TraceMeWrapper>(name, kwargs);
-      });
-  BindPythonFunction(traceme_class, "__enter__",
-                     [](py::object self) -> py::object { return self; });
-  BindPythonFunction(
-      traceme_class, "__exit__",
-      [](py::object self, const py::object& ex_type, const py::object& ex_value,
-         const py::object& traceback) -> py::object {
-        py::cast<xla::profiler::TraceMeWrapper*>(self)->Stop();
-        return py::none();
-      });
-  BindPythonFunction(
-      traceme_class, "set_metadata",
-      [](xla::profiler::TraceMeWrapper& self, const py::kwargs& kwargs) {
-        self.SetMetadata(kwargs);
-      });
-  traceme_class.def_static("is_enabled", &tsl::profiler::TraceMe::Active);
+      })
+      .def("__enter__", [](py::object self) -> py::object { return self; })
+      .def("__exit__",
+           [](py::object self, const py::object& ex_type,
+              const py::object& ex_value,
+              const py::object& traceback) -> py::object {
+             py::cast<xla::profiler::TraceMeWrapper*>(self)->Stop();
+             return py::none();
+           })
+      .def("set_metadata",
+           [](xla::profiler::TraceMeWrapper& self, const py::kwargs& kwargs) {
+             self.SetMetadata(kwargs);
+           })
+      .def_static("is_enabled", &tsl::profiler::TraceMe::Active);
 
-  py::class_<torch::lazy::ScopePusher,
-             std::unique_ptr<torch::lazy::ScopePusher>>
-      scope_pusher_class(profiler, "ScopePusher");
-  BindPythonFunction(
-      profiler, "scope_pusher",
-      [](const std::string& name) -> std::unique_ptr<torch::lazy::ScopePusher> {
-        return absl::make_unique<torch::lazy::ScopePusher>(name);
-      });
-
-  // Profiler Session Definition.
-  py::class_<runtime::profiler::TslProfilerSessionWrapper,
-             std::unique_ptr<runtime::profiler::TslProfilerSessionWrapper>>
-      profiler_session(profiler, "TslProfilerSessionWrapper");
-  BindInitPythonFunction(profiler_session,
-                         &runtime::profiler::TslProfilerSessionWrapper::Create);
-  BindPythonFunction(
-      profiler_session, "stop", [](py::object self) -> py::bytes {
-        std::string xspace_str =
-            py::cast<runtime::profiler::TslProfilerSessionWrapper*>(self)
-                ->Stop();
-        return py::bytes(xspace_str);
-      });
-  BindPythonFunction(
-      profiler_session, "export",
-      [](py::object self, py::bytes xspace, const std::string& dump_dir) {
+  // Define the profiler.TslProfilerSessionWrapper class.ß
+  PythonScope<py::class_<
+      runtime::profiler::TslProfilerSessionWrapper,
+      std::unique_ptr<runtime::profiler::TslProfilerSessionWrapper>>>(
+      profiler, "TslProfilerSessionWrapper")
+      .def_init(&runtime::profiler::TslProfilerSessionWrapper::Create)
+      .def("stop",
+           [](py::object self) -> py::bytes {
+             std::string xspace_str =
+                 py::cast<runtime::profiler::TslProfilerSessionWrapper*>(self)
+                     ->Stop();
+             return py::bytes(xspace_str);
+           })
+      .def("export", [](py::object self, py::bytes xspace,
+                        const std::string& dump_dir) {
         const std::string xspace_str = xspace.cast<std::string>();
         py::cast<runtime::profiler::TslProfilerSessionWrapper*>(self)->Export(
             xspace_str, dump_dir);
