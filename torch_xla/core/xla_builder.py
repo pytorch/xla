@@ -925,12 +925,10 @@ class FlattenedInputFunc:
     with jax_env_context():
       import jax
       self.tx = maybe_get_torchax()
-      flattened_inputs, spec = jax.tree.flatten((sample_args, sample_kwargs))
-      tensors, non_tensors = self.tx.util.partition(
-          flattened_inputs, lambda a: isinstance(a, torch.Tensor))
-      self.non_tensors = non_tensors
       self.orig_func = orig_func
-      self.in_spec = spec
+
+      self.non_tensors = None
+      self.in_spec = None
       self.out_spec = None
 
   def preprocess(self, args, kwargs=None):
@@ -940,11 +938,17 @@ class FlattenedInputFunc:
       flattened_inputs, spec = jax.tree.flatten((args, kwargs))
       tensors, non_tensors = self.tx.util.partition(
           flattened_inputs, lambda a: isinstance(a, torch.Tensor))
+      # Note: saving the non_tensors and in_spec here 
+      # because flat_call needs to take those as closure, not as inputs
+      # flat_call is meant to be processed by, say, jax.jit.
+      self.non_tensors = non_tensors
+      self.in_spec = spec
       return tensors
 
   def flat_call(self, flat_input):
     with jax_env_context():
       import jax
+      assert self.in_spec is not None, 'flat call only makes sense after preprocess is called'
       flattened = self.tx.util.merge(flat_input, self.non_tensors)
       args, kwargs = jax.tree.unflatten(self.in_spec, flattened)
       res = self.orig_func(*args, **kwargs)
