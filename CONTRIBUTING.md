@@ -69,7 +69,7 @@ find these upstream repos. We only need to do this once:
 cd $WORKSPACE_DIR/pytorch
 git remote add upstream https://github.com/pytorch/pytorch.git
 # Set up remote tracking for vision.
-cd $WORKSPACE_DIR
+cd $WORKSPACE_DIR/vision
 git remote add upstream https://github.com/pytorch/vision.git
 # Set up remote tracking for pytorch/xla.
 cd $WORKSPACE_DIR/pytorch/xla
