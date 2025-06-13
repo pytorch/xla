@@ -985,51 +985,99 @@ std::vector<bool> check_materialization_helper(
   return need_materialization;
 }
 
+// Wraps a py::module to provide more convenient APIs.
+class PythonModule {
+ public:
+  PythonModule(py::module& module) : module_(module) {}
+
+  template <typename Func, typename... Extra>
+  PythonModule& def(const char* name, Func&& f, const Extra&... extra) {
+    using FnTraits = typename c10::guts::infer_function_traits<Func>::type;
+    using RetType = typename FnTraits::return_type;
+    using ParameterTypes = typename FnTraits::parameter_types;
+
+    BindPythonFunction<Func, RetType, ParameterTypes, Extra...>::bind(
+        module_, name, std::forward<Func>(f), std::forward<Extra>(extra)...);
+    return *this;
+  }
+
+ private:
+  template <class F, class RetType, class ParameterTypes, class... Extra>
+  struct BindPythonFunction;
+
+  template <class F, class RetType, class... Args, class... Extra>
+  struct BindPythonFunction<F, RetType, c10::guts::typelist::typelist<Args...>,
+                            Extra...> {
+    static void bind(py::module& module, const char* name, F&& f,
+                     const Extra&... extra) {
+      module.def(
+          name,
+          [f = std::move(f)](Args... args) -> RetType {
+            // RAII for emitting Python warnings.
+            //
+            // This turns messages passed to `TORCH_WARN()` in `f` into Python
+            // warnings.
+            torch::PyWarningHandler handler;
+            return f(args...);
+          },
+          std::forward<Extra>(extra)...);
+    }
+  };
+
+  py::module& module_;
+};
+
 void BuildProfilerSubmodule(py::module* m) {
-  py::module profiler = m->def_submodule("profiler", "Profiler integration");
+  py::module profiler_module =
+      m->def_submodule("profiler", "Profiler integration");
+  PythonModule profiler(profiler_module);
   py::class_<runtime::profiler::ProfilerServer,
              std::unique_ptr<runtime::profiler::ProfilerServer>>
-      profiler_server_class(profiler, "ProfilerServer");
-  BindPythonFunction(
-      profiler, "start_server",
-      [](int port) -> std::unique_ptr<runtime::profiler::ProfilerServer> {
-        auto server = absl::make_unique<runtime::profiler::ProfilerServer>();
-        server->Start(port);
-        return server;
-      },
-      py::arg("port"));
-
-  BindPythonFunction(
-      profiler, "trace",
-      [](const char* service_addr, const char* logdir, int duration_ms,
-         int num_tracing_attempts, int timeout_s, int interval_s,
-         py::dict options) {
-        absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
-            ConvertDictToMap(options);
-        std::chrono::seconds sleep_s(interval_s);
-        absl::Status status;
-        {
-          NoGilSection nogil;
-          for (int i = 0; i <= timeout_s / interval_s; i++) {
-            status = runtime::profiler::Trace(service_addr, logdir, duration_ms,
-                                              num_tracing_attempts, opts);
-            if (status.ok()) {
-              return;
+      profiler_server_class(profiler_module, "ProfilerServer");
+  profiler
+      .def(
+          "start_server",
+          [](int port) -> std::unique_ptr<runtime::profiler::ProfilerServer> {
+            auto server =
+                absl::make_unique<runtime::profiler::ProfilerServer>();
+            server->Start(port);
+            return server;
+          },
+          py::arg("port"))
+      .def(
+          "trace",
+          [](const char* service_addr, const char* logdir, int duration_ms,
+             int num_tracing_attempts, int timeout_s, int interval_s,
+             py::dict options) {
+            absl::flat_hash_map<std::string, std::variant<int, std::string>>
+                opts = ConvertDictToMap(options);
+            std::chrono::seconds sleep_s(interval_s);
+            absl::Status status;
+            {
+              NoGilSection nogil;
+              for (int i = 0; i <= timeout_s / interval_s; i++) {
+                status =
+                    runtime::profiler::Trace(service_addr, logdir, duration_ms,
+                                             num_tracing_attempts, opts);
+                if (status.ok()) {
+                  return;
+                }
+                std::this_thread::sleep_for(sleep_s);
+              }
             }
-            std::this_thread::sleep_for(sleep_s);
-          }
-        }
-        if (!status.ok()) {
-          PyErr_SetString(PyExc_RuntimeError, std::string(status.message()));
-          throw py::error_already_set();
-        }
-      },
-      py::arg("service_addr"), py::arg("logdir"), py::arg("duration_ms") = 1000,
-      py::arg("num_tracing_attempts") = 3, py::arg("timeout_s") = 120,
-      py::arg("interval_s") = 5, py::arg("options"));
+            if (!status.ok()) {
+              PyErr_SetString(PyExc_RuntimeError,
+                              std::string(status.message()));
+              throw py::error_already_set();
+            }
+          },
+          py::arg("service_addr"), py::arg("logdir"),
+          py::arg("duration_ms") = 1000, py::arg("num_tracing_attempts") = 3,
+          py::arg("timeout_s") = 120, py::arg("interval_s") = 5,
+          py::arg("options"));
 
-  py::class_<xla::profiler::TraceMeWrapper> traceme_class(profiler, "TraceMe",
-                                                          py::module_local());
+  py::class_<xla::profiler::TraceMeWrapper> traceme_class(
+      profiler_module, "TraceMe", py::module_local());
   BindInitPythonFunction(
       traceme_class, [](const py::str& name, const py::kwargs& kwargs) {
         return std::make_unique<xla::profiler::TraceMeWrapper>(name, kwargs);
@@ -1052,9 +1100,9 @@ void BuildProfilerSubmodule(py::module* m) {
 
   py::class_<torch::lazy::ScopePusher,
              std::unique_ptr<torch::lazy::ScopePusher>>
-      scope_pusher_class(profiler, "ScopePusher");
+      scope_pusher_class(profiler_module, "ScopePusher");
   BindPythonFunction(
-      profiler, "scope_pusher",
+      profiler_module, "scope_pusher",
       [](const std::string& name) -> std::unique_ptr<torch::lazy::ScopePusher> {
         return absl::make_unique<torch::lazy::ScopePusher>(name);
       });
@@ -1062,7 +1110,7 @@ void BuildProfilerSubmodule(py::module* m) {
   // Profiler Session Definition.
   py::class_<runtime::profiler::TslProfilerSessionWrapper,
              std::unique_ptr<runtime::profiler::TslProfilerSessionWrapper>>
-      profiler_session(profiler, "TslProfilerSessionWrapper");
+      profiler_session(profiler_module, "TslProfilerSessionWrapper");
   BindInitPythonFunction(profiler_session,
                          &runtime::profiler::TslProfilerSessionWrapper::Create);
   BindPythonFunction(
