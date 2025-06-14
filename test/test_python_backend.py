@@ -16,7 +16,7 @@ class PythonBackendTest(unittest.TestCase):
     expected = func_that_takes_dict_and_list(dict1, list1)
     
     flattened = xla_builder.FlattenedInputFunc(
-      func_that_takes_dict_and_list, sample_args=(dict1, list1), sample_kwargs={})
+      func_that_takes_dict_and_list)
 
     actual = flattened.postprocess(flattened.flat_call(flattened.preprocess((dict1, list1)))) 
 

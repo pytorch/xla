@@ -830,50 +830,16 @@ def get_computation_hlo(computation):
   return torch_xla._XLAC._xla_computation_text(computation)
 
 
-class XlaComputation:
-
-  def __init__(self, name: str, computation: torch_xla._XLAC.XlaComputation,
-               pick_tensor_args, out_spec):
-    """
-    Creates an XlaComputation object wrapping an HLO module.
-
-    Args:
-      name: a string name for debugging.
-      computation: a `torch_xla._XLAC.XlaComputation` object that executes an HLO module.
-      pick_tensor_args: a function that takes in a list of inputs and returns a list of
-        tensors to be passed to the computation.
-      out_spec: a pytree spec for the output of the computation.
-    """
-    self.computation = computation
-    self.name = name
-    self.pick_tensor_args = pick_tensor_args
-    self.out_spec = out_spec
-
-  @requires_jax
-  def __call__(self, input_list):
-    input_tensors = self.pick_tensor_args(input_list) if self.pick_tensor_args else input_list
-    result = torch_xla._XLAC._xla_user_computation(f'xla::call_jax_{self.name}',
+def xla_computation_as_func(computation, name=None):
+  name = name or "xla::computation"
+  if not '::' in name:
+    name = 'xla::' + name
+  def fn(input_tensors):
+    result = torch_xla._XLAC._xla_user_computation(name,
                                                    input_tensors,
-                                                   self.computation)
+                                                   computation)
     return result
-    assert isinstance(result, list)
-    import jax.tree_util
-    return jax.tree_util.tree_unflatten(self.out_spec, result)
-
-    
-class XlaBuilderComputationFactory:
-  
-  def __init__(self, xla_op_func):
-    self.xla_op_func = xla_op_func
-
-  # Input shapes for tensors
-  def specialize(self, input_shapes_flat):
-    computation = create_computation('xla_op_func', self.xla_op_func, input_shapes_flat)
-    return XlaComputation(
-      'xla_op_func', computation, pick_tensor_args, out_spec)
-
-  def __hash__(self):
-    return hash(id(self.xla_op_func))
+  return fn
 
     
 class FlattenedInputFunc:
@@ -911,23 +877,20 @@ class FlattenedInputFunc:
     self.non_tensors = None
     self.in_spec = None
     self.out_spec = None
-
-  def _reset_captured_input_output_info(self):
-    self.non_tensors = None
-    self.in_spec = None
-    self.out_spec = None
+    # This is used to mark position of tensor inputs
+    self._sentinel = object()
 
   def preprocess(self, args, kwargs=None):
     with jax_env_context():
       import jax
       kwargs = kwargs or {}
       flattened_inputs, spec = jax.tree.flatten((args, kwargs))
-      tensors, non_tensors = self.tx.util.partition(
-          flattened_inputs, lambda a: isinstance(a, torch.Tensor))
+      tensors = tuple(a for a in flattened_inputs if isinstance(a, torch.Tensor))
+      self.non_tensors = tuple(self._sentinel if isinstance(a, torch.Tensor) else a
+                                     for a in flattened_inputs)
       # Note: saving the non_tensors and in_spec here 
       # because flat_call needs to take those as closure, not as inputs
       # flat_call is meant to be processed by, say, jax.jit.
-      self.non_tensors = non_tensors
       self.in_spec = spec
       return tensors
 
@@ -935,8 +898,15 @@ class FlattenedInputFunc:
     with jax_env_context():
       import jax
       assert self.in_spec is not None, 'flat call only makes sense after preprocess is called'
-      flattened = self.tx.util.merge(flat_input, self.non_tensors)
-      args, kwargs = jax.tree.unflatten(self.in_spec, flattened)
+
+      # Put the tensor input and the non tensor input together
+      new_flattened = list(self.non_tensors)
+      tensor_args_iter = iter(flat_input)
+      for i in range(len(new_flattened)):
+        if new_flattened[i] is self._sentinel:
+          new_flattened[i] = next(tensor_args_iter)
+
+      args, kwargs = jax.tree.unflatten(self.in_spec, new_flattened)
       res = self.orig_func(*args, **kwargs)
       flattened_out, spec = jax.tree.flatten(res)
       self.out_spec = spec
@@ -947,7 +917,6 @@ class FlattenedInputFunc:
       import jax
       assert self.out_spec is not None, 'post process only makes sense after flat_call is called'
       res = jax.tree.unflatten(self.out_spec, res_flattened)
-      self._reset_captured_input_output_info()
       return res
 
       
@@ -968,7 +937,8 @@ class XlaCallableWithCache(abc.ABC):
     tensor_input_flattened = self._flat_input_func.preprocess(args, kwargs)
 
     abstract_inputs = tuple(
-      (a.shape, a.dtype) for a in tensor_input_flattened
+      (a.shape, a.dtype) if a is not None else a 
+      for a in tensor_input_flattened
     )
 
     cache_key = hash(
@@ -978,7 +948,7 @@ class XlaCallableWithCache(abc.ABC):
       self._flat_input_func.in_spec))
 
     if cache_key not in self._cache:
-      self._cache[cache_key] = self.especialize(abstract_inputs)
+      self._cache[cache_key] = self.especialize(tensor_input_flattened)
     
     flat_callable = self._cache[cache_key]
 
@@ -998,8 +968,9 @@ class JaxCallable(XlaCallableWithCache):
   def especialize(self, sample_flat_args):
     import jax
     tx = maybe_get_torchax()
-    sample_flat_args = tuple(jax.ShapeDtypeStruct(shape, tx.ops.mappings.t2j_dtype(dtype))
-        for shape, dtype in sample_flat_args)
+    sample_flat_args = tuple(
+        jax.ShapeDtypeStruct(a.shape, tx.ops.mappings.t2j_dtype(a.dtype)) if a is not None else None
+        for a in sample_flat_args)
     with xp.Trace('jax_to_xla_computation'):
       lowered = jax.jit(self._flat_input_func.flat_call, keep_unused=True).lower(sample_flat_args)
       hlo_ir = lowered.compiler_ir('hlo')
@@ -1007,10 +978,7 @@ class JaxCallable(XlaCallableWithCache):
       # mentioned at https://github.com/jax-ml/jax/discussions/22266
       hlo_module = hlo_ir.as_serialized_hlo_module_proto()  # type: ignore
       computation = computation_from_module_proto('jax_callable', hlo_module)
-      return XlaComputation('jax_func', computation, pick_tensor_args=None, out_spec=None)
-
-  def __hash__(self):
-    return self._hash
+      return xla_computation_as_func(computation, 'jax_func')
 
 
 # Process in converting a Jax function or xla-builder function 
@@ -1019,124 +987,12 @@ class JaxCallable(XlaCallableWithCache):
 # 2. Apply conversion to only the flat_call method
 # 3. The composition of postprocess . especialized(flat_call) . preprocess is what 
 #    is used as the final callable
-
     
-def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
-  if name is None:
-    name = 'jax_func_' + jax_func.__name__
-
-  # If we don't do this before calling jax, any torch_xla operation will hang.
-  jax_import_guard()
-
-  # Prevent JAX from discovering MegaScale devices a second time. If we don't do this,
-  # then the MegaScale device discovery will hang.
-  with jax_env_context():
-    import jax
-    tx = maybe_get_torchax()
-
-    flattened_inputs, spec = jax.tree.flatten((args, kwargs))
-
-    def convert_arg_to_jax(a):
-      if a is None:
-        return None
-      elif isinstance(a, torch.dtype):
-        return tx.ops.mappings.t2j_dtype(a)
-      return a
-
-    def abstractify(a):  # make a pytree leaf abstract
-      if a is None:
-        return None
-      if isinstance(a, torch.Tensor):
-        assert a.device.type == 'xla', f"Inputs must be XLA tensors. Got {a.device}"
-        return jax.ShapeDtypeStruct(a.shape, tx.ops.mappings.t2j_dtype(a.dtype))
-      return a
-
-    flattened_inputs = list(convert_arg_to_jax(a) for a in flattened_inputs)
-    sample_inputs = tuple(abstractify(a) for a in flattened_inputs)
-
-    # Pick out the non-static args.
-    # Consider anything that is not a `jax.ShapeDtypeStruct` as a static arg.
-    def pick_tensor_args(flattened_args) -> list[torch.Tensor]:
-      tensor_args = []
-      for i in range(len(sample_inputs)):
-        if isinstance(sample_inputs[i], jax.ShapeDtypeStruct):
-          tensor_args.append(flattened_args[i])
-      return tensor_args
-
-    sample_tensor_args = pick_tensor_args(sample_inputs)
-    traced_out_spec = []
-
-    # This function only takes in tensor arguments and only returns tensor arguments
-    # because its signature must match the signature of the HLO module lowered from JAX,
-    # allowing us to wrap it in an XLA user computation.
-    def fn(*tensor_args):
-      # Go from a list of tensor args to the full list of flattened arguments,
-      # by referencing the original flattened inputs.
-      new_flattened = copy(flattened_inputs)
-      tensor_args_iter = iter(tensor_args)
-      for i in range(len(sample_inputs)):
-        if isinstance(sample_inputs[i], jax.ShapeDtypeStruct):
-          new_flattened[i] = next(tensor_args_iter)
-      args, kwargs = jax.tree.unflatten(spec, new_flattened)
-      # `out` could be a pytree, and we need to turn it into a flat list.
-      out = jax_func(*args, **kwargs)
-      # Obtain the tree spec to be used by `XlaComputation` to unflatten the output
-      # lazy tensors later.
-      assert len(traced_out_spec) == 0, "fn can only be traced once"
-      out_flat, out_spec = jax.tree.flatten(out)
-      traced_out_spec.append(out_spec)
-      return out_flat
-
-    def get_xla_computation():
-      import torch_xla.debug.profiler as xp
-      # If we see this trace span in the profiler, we'll know that there's a cache miss.
-      with xp.Trace('jax_to_xla_computation'):
-        lowered = jax.jit(fn, keep_unused=True).lower(*sample_tensor_args)
-        hlo_ir = lowered.compiler_ir('hlo')
-        assert len(traced_out_spec) == 1, \
-            "fn must be traced to obtain the output tree spec"
-        spec = traced_out_spec[0]
-        # Get a protobuf representation of the HLO. `as_serialized_hlo_module_proto` is
-        # mentioned at https://github.com/jax-ml/jax/discussions/22266
-        hlo_module = hlo_ir.as_serialized_hlo_module_proto()  # type: ignore
-        computation = computation_from_module_proto(name, hlo_module)
-        return computation, spec
-
-    computation, out_spec = _jax_to_xla_computation_cache_get_or_insert(
-        jax_func, sample_inputs, spec, get_xla_computation)
-    pick_tensor_args = lambda a: a
-    return XlaComputation(name, computation, pick_tensor_args, out_spec=None)
-
-
-def _jax_to_xla_computation_cache_get_or_insert(jax_func,
-                                                sample_inputs: tuple[Any, ...],
-                                                input_tree_spec,
-                                                get_xla_computation):
-  from jax._src import config
-  global _JAX_TO_XLA_COMPUTATION_CACHE
-  # Use three layers of dictionary lookup.
-  # The first layer uses the `config.trace_context()`, which is strongly referenced.
-  # The second layer uses the `jax_func`, which is weakly referenced.
-  # The third layer uses the sample inputs and the tree spec, which is strongly referenced.
-  config_context_dict = _JAX_TO_XLA_COMPUTATION_CACHE.setdefault(
-      config.trace_context(), WeakKeyDictionary())
-  inner_dict = config_context_dict.setdefault(jax_func, {})
-  if (sample_inputs, input_tree_spec) in inner_dict:
-    return inner_dict[(sample_inputs, input_tree_spec)]
-  else:
-    hlo = get_xla_computation()
-    _JAX_TO_XLA_COMPUTATION_CACHE[config.trace_context()][jax_func][(
-        sample_inputs, input_tree_spec)] = hlo
-    return hlo
-
 
 def _jax_to_xla_computation_cache_elements() -> int:
   size = 0
-  for jax_config in _JAX_TO_XLA_COMPUTATION_CACHE:
-    config_dict = _JAX_TO_XLA_COMPUTATION_CACHE[jax_config]
-    for jax_func in config_dict:
-      inner_dict = config_dict[jax_func]
-      size += len(inner_dict)
+  for func in _JAX_TO_XLA_COMPUTATION_CACHE.values():
+    size += len(func._cache)
   return size
 
 
