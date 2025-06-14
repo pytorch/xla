@@ -1,5 +1,7 @@
 import unittest
+import torch
 from torch_xla.core import xla_builder
+
 
 
 class PythonBackendTest(unittest.TestCase):
@@ -28,6 +30,21 @@ class PythonBackendTest(unittest.TestCase):
     actual2 = flattened.postprocess(
         flattened.flat_call(flattened.preprocess((dict2, list2))))
     self.assertEqual(expected2, actual2)
+
+  def test_xla_callable(self):
+
+    def add(a, b):
+      return xla_builder.Op.sin(a) + b
+
+    xla_func = xla_builder.XlaCallable(add)
+
+    a = torch.randn(2,2, device='xla')
+    b = torch.randn(2,2, device='xla')
+    res = xla_func(a, b)
+
+    expected = torch.sin(a.cpu()) + b.cpu()
+
+    self.assertTrue(torch.allclose(expected, res.cpu()))
 
 
 if __name__ == '__main__':

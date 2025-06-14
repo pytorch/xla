@@ -817,7 +817,6 @@ def create_computation(name, fn, shapes, **kwargs):
   for shape in shapes:
     p = mkparam(builder, len(params), shape)
     params.append(p)
-
   root = fn(*params, **kwargs)
   return root.build(name)
 
@@ -923,7 +922,16 @@ class FlattenedInputFunc:
       return res
 
 
-class XlaCallableWithCache(abc.ABC):
+class CompiledCallableWithCache(abc.ABC):
+  """This class is meant to be subclassed.
+  
+  Given a function that can create shape-specialized computations
+  one can treat it as a shape-generic computations if one accepts that
+  shape changes will trigger recompile.
+  
+  This class captures this idea by having a cache for shapes.
+  the function that specializes are "passed in" via subclassing.
+  """
 
   def __init__(self, flat_input_func: FlattenedInputFunc):
     self._cache = {}
@@ -960,7 +968,7 @@ class XlaCallableWithCache(abc.ABC):
     pass
 
 
-class JaxCallable(XlaCallableWithCache):
+class JaxCallable(CompiledCallableWithCache):
 
   def __init__(self, jax_func):
     super().__init__(FlattenedInputFunc(jax_func))
@@ -984,12 +992,33 @@ class JaxCallable(XlaCallableWithCache):
       return xla_computation_as_func(computation, 'jax_func')
 
 
-# Process in converting a Jax function or xla-builder function
-# to a Torchxla function (i.e. function that takes XLATensors)
-# 1. Apply FlattenedInputFunc which deals with nested inputs
-# 2. Apply conversion to only the flat_call method
-# 3. The composition of postprocess . especialized(flat_call) . preprocess is what
-#    is used as the final callable
+class XlaCallable(CompiledCallableWithCache):
+  """
+  
+  """
+
+  def __init__(self, xla_func):
+    """xla_func is a function that takes XlaOp as the placeholder and expresses
+    math using xla builder python API above
+    """
+    super().__init__(FlattenedInputFunc(xla_func))
+
+  def especialize(self, sample_flat_args):
+    sample_args_shapes = tuple(
+        Shape.create(Op.from_torch_type(a.dtype), a.shape)
+        for a in sample_flat_args)
+
+    with xp.Trace('jax_to_xla_computation'):
+      name = 'xla::computation'
+      builder = create_builder(name)
+      params = []
+      for a in sample_flat_args:
+        p = mkparam(builder, len(params),
+          mkshape(Op.from_torch_type(a.dtype), a.shape))
+        params.append(p)
+      root = Op.tuple(self._flat_input_func.flat_call(params))
+      computation = root.build(name)
+      return xla_computation_as_func(computation, name)
 
 
 def _jax_to_xla_computation_cache_elements() -> int:
