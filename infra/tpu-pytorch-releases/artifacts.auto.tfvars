@@ -1,4 +1,4 @@
-#### Historical builds for releases before r2.7
+#### Historical builds for releases before r2.7.
 manual_nightly_builds = [
 ]
 
