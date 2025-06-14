@@ -1014,7 +1014,7 @@ class XlaCallable(CompiledCallableWithCache):
       params = []
       for a in sample_flat_args:
         p = mkparam(builder, len(params),
-          mkshape(Op.from_torch_type(a.dtype), a.shape))
+                    mkshape(Op.from_torch_type(a.dtype), a.shape))
         params.append(p)
       root = Op.tuple(self._flat_input_func.flat_call(params))
       computation = root.build(name)

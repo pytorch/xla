@@ -3,7 +3,6 @@ import torch
 from torch_xla.core import xla_builder
 
 
-
 class PythonBackendTest(unittest.TestCase):
 
   def test_flatten_func(self):
@@ -38,8 +37,8 @@ class PythonBackendTest(unittest.TestCase):
 
     xla_func = xla_builder.XlaCallable(add)
 
-    a = torch.randn(2,2, device='xla')
-    b = torch.randn(2,2, device='xla')
+    a = torch.randn(2, 2, device='xla')
+    b = torch.randn(2, 2, device='xla')
     res = xla_func(a, b)
 
     expected = torch.sin(a.cpu()) + b.cpu()
