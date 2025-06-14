@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torch_xla_rocm_plugin"
+version = "0.0.1"
+description = "PyTorch/XLA ROCM Plugin"
+
+[tool.setuptools.package-data]
+torch_xla_rocm_plugin = ["lib/*.so"]
+
+[project.entry-points."torch_xla.plugins"]
+rocm = "torch_xla_rocm_plugin:RocmPlugin"
