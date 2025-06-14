@@ -334,7 +334,7 @@ class HybridMesh(Mesh):
         A np.ndarray of device logical ordinals with shape [global_x, global_y, global_z]. On
           v2 and v3, global_z is instead cores_per_chip (i.e., 2).
     """
-    assert xm.xla_device_hw(torch_xla.device()) == 'TPU'
+    assert xr.device_type() == 'TPU'
     # coords is a 3-dims tuple representing the device in physical mesh
     device_coords = [self.device_attributes[d]['coords'] for d in devices]
     dims = tuple(d + 1 for d in max(device_coords))
