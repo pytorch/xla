@@ -22,7 +22,7 @@ print(t)
 
 This code should look familiar. PyTorch/XLA uses the same interface as regular
 PyTorch with a few additions. Importing `torch_xla` initializes PyTorch/XLA, and
-`torch_xla.device()` returns the current XLA device. This may be a CPU or TPU
+`torch.device('xla')` returns the current XLA device. This may be a CPU or TPU
 depending on your environment.
 
 ## XLA Tensors are PyTorch Tensors
@@ -112,7 +112,7 @@ train_loader = xu.SampleGenerator(
           torch.zeros(batch_size, dtype=torch.int64)),
     sample_count=60000 // batch_size // xr.world_size())
 
-device = torch_xla.device()  # Get the XLA device (TPU).
+device = torch.device('xla')  # Get the XLA device (TPU).
 model = MNIST().train().to(device)  # Create a model and move it to the device.
 loss_fn = nn.NLLLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
@@ -169,7 +169,7 @@ def _mp_fn(index):
     index: Index of the process.
   """
 
-  device = torch_xla.device()  # Get the device assigned to this process.
+  device = torch.device('xla')  # Get the device assigned to this process.
   # Wrap the loader for multi-device.
   mp_device_loader = pl.MpDeviceLoader(train_loader, device)
 
@@ -290,7 +290,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-device = torch_xla.device()
+device = torch.device('xla')
 
 t0 = torch.randn(2, 2, device=device)
 t1 = torch.randn(2, 2, device=device)

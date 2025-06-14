@@ -77,7 +77,7 @@ class SimpleLinear(nn.Module):
 
 
 def train():
-  device = torch_xla.device()
+  device = torch.device('xla')
   num_devices = xr.global_runtime_device_count()
   print(f'num_devices: {num_devices}')
   # Define a mesh with all devices along one axis

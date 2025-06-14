@@ -130,7 +130,7 @@ def train_mnist(flags, **kwargs):
   # Scale learning rate to num cores
   lr = flags.lr * xr.world_size()
 
-  device = torch_xla.device()
+  device = torch.device('xla')
   model = MNIST().to(device)
 
   # Initialization is nondeterministic with multiple threads in PjRt.

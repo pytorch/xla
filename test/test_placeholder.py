@@ -19,7 +19,7 @@ class TestPlaceholder(absltest.TestCase):
     ):
       p = create_placeholder_tensor(shape, dtype)
       assert isinstance(p, torch.Tensor)
-      assert p.device == torch_xla.device()
+      assert p.device == torch.device('xla')
       self.assertEqual(p.dtype, dtype)
       self.assertEqual(p.shape, shape)
       self.assertTrue(torch_xla._XLAC._is_placecholder(p))
@@ -56,7 +56,7 @@ class TestPlaceholder(absltest.TestCase):
     self.assertNotEqual(h1, h2)
 
   def test_cannot_get_handle_from_deleted_pjrt_buffer(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t0 = torch.randn(4, 2, 2).to(xla_device)
     t1 = torch.randn(4, 2, 2).to(xla_device)
     self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))

@@ -68,7 +68,7 @@ def register(name, opfn):
     SLICE_AND_ADD = xor.register('slice_and_add', slice_and_add)
 
     def user_computation_test():
-      device = torch_xla.device()
+      device = torch.device('xla')
       x = torch.randn(2, 2).to(device)
       y = torch.randn(2, 2).to(device)
       z = SLICE_AND_ADD(x, y, dimno=0)

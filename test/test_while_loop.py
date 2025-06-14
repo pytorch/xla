@@ -26,7 +26,7 @@ def _fake_while_loop(cond_fn, body_fn, operands):
 class WhileLoopTest(unittest.TestCase):
 
   def test_while_loop_addition(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     def cond_fn(iteri, x):
       return iteri > 0
@@ -41,7 +41,7 @@ class WhileLoopTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
 
   def test_while_loop_addition_nested(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     def cond_fn(iteri, x):
       return iteri > 0
@@ -56,7 +56,7 @@ class WhileLoopTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
 
   def test_while_loop_simple_linear_inside_loop(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     torch.set_grad_enabled(False)
 
     class SimpleLinear(torch.nn.Module):
@@ -94,7 +94,7 @@ class WhileLoopTest(unittest.TestCase):
   # ====== fori_loop ======
   @unittest.skip("Fori_loop is not supported now due to unstable result.")
   def test_fori_loop_addition(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     lower = torch.tensor(0, device=device)
     upper = torch.tensor(50, device=device)

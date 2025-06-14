@@ -101,7 +101,7 @@ def ddp_correctness(init_method: str = 'env://',
     dist.init_process_group("xla", init_method=init_method)
 
   rank, world_size = dist.get_rank(), dist.get_world_size()
-  device = torch_xla.device()
+  device = torch.device('xla')
 
   # Module initialization is not thread safe. Force threads to initialize one
   # at a time with the same seed

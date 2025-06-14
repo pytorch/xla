@@ -184,7 +184,7 @@ repo. contains examples for training and serving many LLM and diffusion models.
 
 General guidelines to modify your code:
 
--   Replace `cuda` with `torch_xla.device()`
+-   Replace `cuda` with `torch.device('xla')`
 -   Remove progress bar, printing that would access the XLA tensor
     values
 -   Reduce logging and callbacks that would access the XLA tensor values
@@ -227,7 +227,7 @@ tutorial, but you can pass the `device` value to the function as well.
 
 ``` python
     import torch_xla.core.xla_model as xm
-    self.device = torch_xla.device()
+    self.device = torch.device('xla')
 ```
 
 Another place in the code that has cuda specific code is DDIM scheduler.
@@ -244,7 +244,7 @@ if attr.device != torch.device("cuda"):
 with
 
 ``` python
-device = torch_xla.device()
+device = torch.device('xla')
 attr = attr.to(torch.device(device))
 ```
 
@@ -339,7 +339,7 @@ with the following lines:
 
 ``` python
 import torch_xla.core.xla_model as xm
-device = torch_xla.device()
+device = torch.device('xla')
 pipe.to(device)
 ```
 

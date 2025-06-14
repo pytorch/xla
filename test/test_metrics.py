@@ -24,7 +24,7 @@ def check_metrics_file():
 class MetricsTest(unittest.TestCase):
 
   def test_clear_counters(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t1 = torch.tensor(100, device=xla_device)
     t1 += 2
     self.assertIn("xla::add", met.metrics_report())
@@ -39,7 +39,7 @@ class MetricsTest(unittest.TestCase):
     assert (len(met.counter_names()) > 0)
 
   def test_clear_metrics(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t1 = torch.tensor(156, device=xla_device)
     self.assertIn("TensorToData", met.metrics_report())
     assert (len(met.metric_names()) > 0)
@@ -52,7 +52,7 @@ class MetricsTest(unittest.TestCase):
     assert (len(met.metric_names()) > 0)
 
   def test_tracing_time_metrics(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     met.clear_all()
     t1 = torch.tensor(156, device=xla_device)
     t2 = t1 + 100
@@ -61,7 +61,7 @@ class MetricsTest(unittest.TestCase):
 
   def test_eager_metrics(self):
     with torch_xla.experimental.eager_mode_context(True):
-      xla_device = torch_xla.device()
+      xla_device = torch.device('xla')
       met.clear_all()
       t1 = torch.tensor(156, device=xla_device)
       t2 = t1 + 100
@@ -78,7 +78,7 @@ class MetricsTest(unittest.TestCase):
       self.assertNotIn('ExecuteTime', met.metric_names())
 
   def test_short_metrics_report_default_list(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t1 = torch.tensor(1456, device=xla_device)
     t2 = t1 * 2
     torch_xla.sync()
@@ -100,7 +100,7 @@ class MetricsTest(unittest.TestCase):
     assert check_metrics_file()
 
   def test_short_metrics_report_custom_list(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t1 = torch.tensor(100, device=xla_device)
     t2 = t1 * 2
     t1 += 2
@@ -120,7 +120,7 @@ class MetricsTest(unittest.TestCase):
     self.assertIn('InputOutputAliasCount', short_report)
 
   def test_short_metrics_fallback_counter(self):
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t1 = torch.tensor(100, device=xla_device)
     t2 = t1 * 2
     # this will trigger a aten::_local_scalar_dense which is the same as fallback counter
@@ -135,7 +135,7 @@ class MetricsTest(unittest.TestCase):
 
   def test_metrics_report(self):
     # TODO(jwtan): Add test to cover TrimIrGraph, SyncTensorsToData, TransferToDeviceAsync, IrValueTensorToXlaData
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t1 = torch.tensor(2077, device=xla_device)
     t2 = t1 * 2
     torch_xla.sync()
@@ -207,7 +207,7 @@ class MetricsTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != "CPU", f"This test only works on CPU.")
   def test_execute_time_metric(self):
     # Initialize the client before starting the timer.
-    torch_xla.device()
+    torch.device('xla')
 
     begin = time.perf_counter_ns()
     value = torch.randn(
@@ -226,7 +226,7 @@ class MetricsTest(unittest.TestCase):
 
   def test_pybind_increment_counter(self):
     met.clear_all()
-    xla_device = torch_xla.device()
+    xla_device = torch.device('xla')
     t1 = torch.tensor(2077, device=xla_device)
     self.assertEqual(met.counter_value('CreateXlaTensor'), 1)
     torch_xla._XLAC._xla_increment_counter('CreateXlaTensor', 3)

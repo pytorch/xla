@@ -11,7 +11,7 @@ from torch_xla._dynamo.dynamo_bridge import alias_with_buffer_donor_config
 class TestBufferDonationUtil(unittest.TestCase):
 
   def test_hash_with_buffer_donor(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     input = torch.randn(5, 5).to(device)
     res = torch.cos(input)
     hash_no_donor = torch_xla._XLAC._get_graph_hash([res])
@@ -40,7 +40,7 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
     return input * 1.1
 
   def test_manual_buffer_donation(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     input = torch.randn(5, 5).to(device)
     input_cloned = input.cpu().to(device)
     dummy_inplace_mul_compiled = torch.compile(
@@ -55,7 +55,7 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
     torch.allclose(input_cloned.cpu() * 1.1, input.cpu())
 
   def test_manual_buffer_donation_for_non_inplce_op(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     input = torch.randn(5, 5).to(device)
     input_cloned = input.cpu().to(device)
     dummy_mul_compiled = torch.compile(self.dummy_mul, backend='openxla')
@@ -81,7 +81,7 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
       torch.ops.xla.dynamo_set_buffer_donor_(input, True)
       input += (0.5 * torch.sin(input))
 
-    device = torch_xla.device()
+    device = torch.device('xla')
     input = torch.randn(5, 5).to(device)
     input_cloned = input.cpu().to(device)
     dummy_inplace_add_compiled = torch.compile(dummy_inplace, backend='openxla')
@@ -109,7 +109,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
     return input + 1
 
   def test_manual_buffer_donation(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     input = torch.randn(5, 5).to(device)
     input_cloned = input.cpu().to(device)
     dummy_inplace_add_compiled = torch.compile(
@@ -127,7 +127,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
     self.assertFalse(torch_xla._XLAC._get_buffer_donation(input))
 
   def test_manual_buffer_donation_for_non_inplce_op(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     input = torch.randn(5, 5).to(device)
     input_cloned = input.cpu().to(device)
     dummy_add_compiled = torch.compile(self.dummy_add, backend='openxla')
@@ -152,7 +152,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
     def dummy_inplace(input):
       input += (0.3 * torch.cos(input))
 
-    device = torch_xla.device()
+    device = torch.device('xla')
     input = torch.randn(5, 5).to(device)
     input_cloned = input.cpu().to(device)
     dummy_inplace_add_compiled = torch.compile(dummy_inplace, backend='openxla')
@@ -174,7 +174,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
 
   def test_buffer_donation_on_non_data_tensor(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     input = torch.randn(5, 5).to(device)
     res = input + 1
 

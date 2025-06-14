@@ -1310,7 +1310,7 @@ void BuildLoweringContextSubmodule(py::module* m) {
    *     import torch_xla
    *     import torch_xla.core.xla_model as xm
    *
-   *     device = torch_xla.device()
+   *     device = torch.device('xla')
    *     example = torch.tensor([1.0, 2.0, 3.0, 4.0], device=device)
    *
    *     def network(x):

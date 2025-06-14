@@ -341,7 +341,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
 
   assert len(kwargs) == 0, "Export to stablehlo doesnt support kwargs yet."
 
-  device = torch_xla.device()
+  device = torch.device('xla')
 
   _flat_input_args = exported_model._graph_module_flat_inputs(args, {})
   _flat_input_args = pytree.tree_map_only(torch.Tensor,
@@ -352,7 +352,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   torch_xla.sync()
   xm.wait_device_ops()
   metrics.clear_counters()
-  device = torch_xla.device()
+  device = torch.device('xla')
 
   # Run the fx graph tracing using lazy tensor
   if options.inline_all_constant:
