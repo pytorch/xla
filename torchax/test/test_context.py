@@ -63,18 +63,19 @@ class TestContext(unittest.TestCase):
 
   def test_jit_with_rng(self):
 
-    @xla_env
-    def random_op():
-      x = torch.randn(3, 3)
-      y = torch.randn(3, 3)
-      return x @ y
+    with xla_env:
 
-    random_jit = torchax.interop.jax_jit(random_op)
-    self.assertIsInstance(random_jit(), tensor.Tensor)
+      def random_op():
+        x = torch.randn(3, 3)
+        y = torch.randn(3, 3)
+        return x @ y
 
-    # Result always expected to be the same for a jitted function because seeds
-    # are baked in
-    torch.testing.assert_close(random_jit(), random_jit(), atol=0, rtol=0)
+      random_jit = torchax.interop.jax_jit(random_op)
+      self.assertIsInstance(random_jit(), tensor.Tensor)
+
+      # Result always expected to be the same for a jitted function because seeds
+      # are baked in
+      torch.testing.assert_close(random_jit(), random_jit(), atol=0, rtol=0)
 
   def test_generator_seed(self):
     with xla_env:
