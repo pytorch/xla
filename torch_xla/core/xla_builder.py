@@ -830,6 +830,7 @@ def get_computation_hlo(computation):
 
 
 def xla_computation_as_func(computation, name=None):
+  """Converts an XlaComputation object to a callable that takes XLATensors."""
   name = name or "xla::computation"
   if not '::' in name:
     name = 'xla::' + name
@@ -938,25 +939,15 @@ class CompiledCallableWithCache(abc.ABC):
     self._flat_input_func = flat_input_func
 
   def __call__(self, *args, **kwargs):
-
-    def abstractify(a):  # make a pytree leaf abstract
-      if a is None:
-        return None
-      if isinstance(a, torch.Tensor):
-        assert a.device.type == 'xla', f"Inputs must be XLA tensors. Got {a.device}"
-        return jax.ShapeDtypeStruct(a.shape, tx.ops.mappings.t2j_dtype(a.dtype))
-      return a
-
     tensor_input_flattened = self._flat_input_func.preprocess(args, kwargs)
 
     abstract_inputs = tuple((a.shape, a.dtype) if a is not None else a
                             for a in tensor_input_flattened)
 
-    cache_key = hash((abstract_inputs, tuple(self._flat_input_func.non_tensors),
-                      self._flat_input_func.in_spec))
-
+    cache_key = (abstract_inputs, tuple(self._flat_input_func.non_tensors),
+                 self._flat_input_func.in_spec)
     if cache_key not in self._cache:
-      self._cache[cache_key] = self.especialize(tensor_input_flattened)
+      self._cache[cache_key] = self.specialize(tensor_input_flattened)
 
     flat_callable = self._cache[cache_key]
 
@@ -964,22 +955,39 @@ class CompiledCallableWithCache(abc.ABC):
     return self._flat_input_func.postprocess(output)
 
   @abc.abstractmethod
-  def especialize(self, sample_flat_args):
+  def specialize(self, sample_flat_args):
     pass
+
+
+class JaxFlattenedInputFunc(FlattenedInputFunc):
+  """When we know that the original function is a jax function, 
+  
+  we need to do more preprocessing. In particular, translate dtypes from
+  torch.dtype to jax.dtype
+  """
+
+  def preprocess(self, args, kwargs=None):
+    res = super().preprocess(args, kwargs)
+    tx = maybe_get_torchax()
+    self.non_tensors = tuple(
+        tx.ops.mappings.t2j_dtype(a) if isinstance(a, torch.dtype) else a
+        for a in self.non_tensors)
+    return res
 
 
 class JaxCallable(CompiledCallableWithCache):
 
   def __init__(self, jax_func):
-    super().__init__(FlattenedInputFunc(jax_func))
+    super().__init__(JaxFlattenedInputFunc(jax_func))
 
-  def especialize(self, sample_flat_args):
+  def specialize(self, sample_flat_args):
     import jax
     tx = maybe_get_torchax()
     sample_flat_args = tuple(
         jax.ShapeDtypeStruct(a.shape, tx.ops.mappings.t2j_dtype(a.dtype)
                             ) if a is not None else None
         for a in sample_flat_args)
+
     with xp.Trace('jax_to_xla_computation'):
       lowered = jax.jit(
           self._flat_input_func.flat_call,
@@ -993,9 +1001,7 @@ class JaxCallable(CompiledCallableWithCache):
 
 
 class XlaCallable(CompiledCallableWithCache):
-  """
-  
-  """
+  """XlaCallable lets you implement LazyTensor callables using the Python XlaBuilder API."""
 
   def __init__(self, xla_func):
     """xla_func is a function that takes XlaOp as the placeholder and expresses
@@ -1003,12 +1009,12 @@ class XlaCallable(CompiledCallableWithCache):
     """
     super().__init__(FlattenedInputFunc(xla_func))
 
-  def especialize(self, sample_flat_args):
+  def specialize(self, sample_flat_args):
     sample_args_shapes = tuple(
         Shape.create(Op.from_torch_type(a.dtype), a.shape)
         for a in sample_flat_args)
 
-    with xp.Trace('jax_to_xla_computation'):
+    with xp.Trace('xla::computation'):
       name = 'xla::computation'
       builder = create_builder(name)
       params = []
@@ -1051,6 +1057,13 @@ def call_jax(jax_func,
     kwargs: a dictionary of keyword arguments to pass to `jax_func`. Any XLA tensors are
           turned into JAX arrays before being passed to `jax_func`.
 
+    name: Name of the graph given to xla computation.
+    
+    override_hash: Optionally set a value for to be used as hash key to cache the
+    precompiled callable. By default we will use the id of jax_func as the key.
+    If jax_func is generated in a closure, it's id will change. So one can override
+    the hash key to be the id of the parent function to not have collisions.
+
   ## Example
 
       >>> import torch
@@ -1080,18 +1093,19 @@ def call_jax(jax_func,
   import jax
   from jax._src import config
 
-  hash_key = (override_hash or hash(jax_func), config.trace_context())
+  tx = maybe_get_torchax()
+  flattened, _ = jax.tree.flatten((args, kwargs))
+  kwargs = kwargs or {}
+  if tx is not None and any(isinstance(a, tx.tensor.Tensor) for a in flattened):
+    return tx.interop.call_jax(jax_func, *args, **kwargs)
+
+  hash_key = (override_hash or id(jax_func), config.trace_context())
   if hash_key not in _JAX_TO_XLA_COMPUTATION_CACHE:
     _JAX_TO_XLA_COMPUTATION_CACHE[hash_key] = JaxCallable(jax_func)
 
   wrapped_jax_callable = _JAX_TO_XLA_COMPUTATION_CACHE[hash_key]
   kwargs = kwargs or {}
   return wrapped_jax_callable(*args, **kwargs)
-
-
-# decorator
-def jax_func_as_torch_callable(fn):
-  return JaxCallable(fn)
 
 
 def create_placeholder_tensor(shape, dtype):
