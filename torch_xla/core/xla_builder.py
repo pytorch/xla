@@ -1080,6 +1080,12 @@ def call_jax(jax_func,
   import jax
   from jax._src import config
 
+  tx = maybe_get_torchax()
+  flattened, _ = jax.tree.flatten((args, kwargs))
+  kwargs = kwargs or {}
+  if tx is not None and any(isinstance(a, tx.tensor.Tensor) for a in flattened):
+    return tx.interop.call_jax(jax_func, *args, **kwargs)
+
   hash_key = (override_hash or hash(jax_func), config.trace_context())
   if hash_key not in _JAX_TO_XLA_COMPUTATION_CACHE:
     _JAX_TO_XLA_COMPUTATION_CACHE[hash_key] = JaxCallable(jax_func)
@@ -1087,11 +1093,6 @@ def call_jax(jax_func,
   wrapped_jax_callable = _JAX_TO_XLA_COMPUTATION_CACHE[hash_key]
   kwargs = kwargs or {}
   return wrapped_jax_callable(*args, **kwargs)
-
-
-# decorator
-def jax_func_as_torch_callable(fn):
-  return JaxCallable(fn)
 
 
 def create_placeholder_tensor(shape, dtype):
