@@ -518,8 +518,8 @@ class Environment(contextlib.ContextDecorator):
           if self.autocast_dtype is not None:
             autocast_policy = amp.autocast_policy.get(func)
             if autocast_policy is not None:
-              args, kwargs = amp.execute_policy(
-                autocast_policy, args, kwargs, self.autocast_dtype)
+              args, kwargs = amp.execute_policy(autocast_policy, args, kwargs,
+                                                self.autocast_dtype)
 
         if op.is_jax_function:
           args, kwargs = self.t2j_iso((args, kwargs))

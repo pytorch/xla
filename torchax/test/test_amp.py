@@ -6,18 +6,16 @@ from torchax import interop
 import torch
 
 
-
 class AutocastTest(unittest.TestCase):
 
   def setUp(self):
     self.env = torchax.default_env()
 
-  
   def test_auto_cast_ir(self):
     with self.env:
       with torchax.amp.autocast('jax', dtype=torch.bfloat16, env=self.env):
-        a = jax.ShapeDtypeStruct((2,2), jnp.float32)
-        b = jax.ShapeDtypeStruct((2,2), jnp.float32)
+        a = jax.ShapeDtypeStruct((2, 2), jnp.float32)
+        b = jax.ShapeDtypeStruct((2, 2), jnp.float32)
         ir_text = jax.jit(interop.jax_view(torch.matmul)).lower(a, b).as_text()
         self.assertIn('tensor<2x2xbf16>', ir_text)
 
