@@ -10,14 +10,6 @@ import torchax
 import torchax.interop
 
 
-def to_xla_tensor(tensorstree):
-  return torchax.interop.torch_view(torchax.tensor.t2j(tensorstree))
-
-
-def to_torch_tensor(tensorstree):
-  return torchax.tensor.j2t(torchax.interop.jax_view(tensorstree))
-
-
 @partial(jax.jit, static_argnums=(1, 2, 3, 4))
 def upsample_jit(tensor, output_size: Tuple[int, int], align_corners: bool,
                  antialias: bool, method: str):
@@ -53,8 +45,9 @@ class TestResampling(parameterized.TestCase):
         align_corners=align_corners,
         antialias=antialias)
 
-    with torchax.default_env():
-      input_tensor_xla = to_xla_tensor(input_tensor)
+    env = torchax.default_env()
+    with env:
+      input_tensor_xla = env.to_xla(input_tensor)
       input_tensor_xla = torchax.interop.jax_view(input_tensor_xla)
       upsampled_tensor_xla = upsample_jit(
           input_tensor_xla,
@@ -63,7 +56,7 @@ class TestResampling(parameterized.TestCase):
           antialias=antialias,
           method=method)
 
-    upsampled_tensor_xla = to_torch_tensor(upsampled_tensor_xla)
+    upsampled_tensor_xla = env.j2t_copy(upsampled_tensor_xla)
     abs_err = torch.abs(upsampled_tensor - upsampled_tensor_xla)
 
     assert torch.allclose(

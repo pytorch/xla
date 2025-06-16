@@ -32,24 +32,6 @@ def unwrap(torchtensors):
   return torch_pytree.tree_map_only(Tensor, lambda x: x._elem, torchtensors)
 
 
-def t2j(t):
-  if isinstance(t, Tensor):
-    return t._elem
-  return mappings.t2j(t)
-
-
-def j2t(x):
-  return mappings.j2t(x)
-
-
-def t2j_dtype(dtype):
-  return mappings.t2j_dtype(dtype)
-
-
-def j2t_dtype(dtype):
-  return mappings.j2t_dtype(dtype)
-
-
 @contextlib.contextmanager
 def log_nested(env, message):
   if env.config.debug_print_each_op:
@@ -66,7 +48,7 @@ class Tensor(torch.Tensor):
 
   @staticmethod
   def __new__(cls, elem, env):
-    dtype = j2t_dtype(elem.dtype)
+    dtype = mappings.j2t_dtype(elem.dtype)
     shape = list(elem.shape)
     for i, s in enumerate(shape):
       if not isinstance(s, int):
@@ -143,11 +125,11 @@ class Tensor(torch.Tensor):
     return self._elem
 
   def torch(self) -> torch.Tensor:
-    return j2t(self.jax())
+    return self._env.j2t_copy(self.jax())
 
   @property
   def dtype(self):
-    return j2t_dtype(self._elem.dtype)
+    return mappings.j2t_dtype(self._elem.dtype)
 
   def dim(self):
     return self.ndim
@@ -188,7 +170,7 @@ class Tensor(torch.Tensor):
 
 def debug_accuracy(func, args, kwargs, current_output):
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(
-      torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output))
+      torch.Tensor, lambda x: x.torch(), (args, kwargs, current_output))
 
   with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
     if "device" in kwargs_torch:
@@ -421,7 +403,8 @@ class Environment(contextlib.ContextDecorator):
         # only supported is CPU
         if str(new_device).startswith("cpu"):
           # converting to a non-jax device: let torch native handle it
-          torch_tensor = j2t(arr) if isinstance(the_tensor, Tensor) else arr
+          torch_tensor = self.j2t_copy(arr) if isinstance(the_tensor,
+                                                          Tensor) else arr
           with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
             return torch_tensor.to(new_device)
     else:
@@ -434,7 +417,7 @@ class Environment(contextlib.ContextDecorator):
 
       jax_device = self.get_as_jax_device(new_device)
       if jax_device:
-        arr = t2j(the_tensor)
+        arr = self.t2j_copy(the_tensor)
         arr = jax.device_put(arr, jax_device)
       else:
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
@@ -586,7 +569,7 @@ class Environment(contextlib.ContextDecorator):
     if isinstance(val, Tensor):
       return val
     if isinstance(val, torch.Tensor):
-      return Tensor(t2j(val), self)
+      return Tensor(self.t2j_copy(val), self)
     return val
 
   def to_xla(self, torchvalues):
@@ -595,6 +578,11 @@ class Environment(contextlib.ContextDecorator):
     return res
 
   def t2j_iso(self, torchtensors):
+    """Convert torchax Tensor to jax array.
+    
+    This function will not copy, will just unwrap the inner jax array out.
+    Note: iso is short for "isomorphic"
+    """
 
     def to_jax(x):
       if isinstance(
@@ -619,11 +607,33 @@ class Environment(contextlib.ContextDecorator):
     return res
 
   def j2t_iso(self, jaxarray):
-    return torch_pytree.tree_map_only(jnp.ndarray, lambda x: Tensor(x, self),
+    """Convert jax array to torchax Tensor.
+    
+    This function will not copy, will just wrap the jax array with a torchax Tensor
+    Note: iso is short for "isomorphic"
+    """
+    return torch_pytree.tree_map_only(jax.Array, lambda x: Tensor(x, self),
                                       jaxarray)
 
   def j2t_copy(self, args):
-    pass
+    """Convert torch.Tensor in cpu to a jax array
+    
+    This might involves copying the data (depending if dlpack is enabled)
+    """
+    return torch_pytree.tree_map_only(
+        jax.Array,
+        lambda x: mappings.j2t(x, self.config.use_dlpack_for_data_conversion),
+        args)
+
+  def t2j_copy(self, args):
+    """Convert jax array to torch.Tensor in cpu.
+    
+    This might involves copying the data (depending if dlpack is enabled)
+    """
+    return torch_pytree.tree_map_only(
+        torch.Tensor,
+        lambda x: mappings.t2j(x, self.config.use_dlpack_for_data_conversion),
+        args)
 
   def override_op_definition(self, op_to_override, op_impl):
     self._ops[op_to_override] = ops_registry.Operator(
