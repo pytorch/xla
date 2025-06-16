@@ -454,21 +454,6 @@ def get_tuned_block_sizes(
   # Default block sizes.
   bkv, bq = (128, 32)
 
-  def compute_actual_vmem_bytes(num_kv_pages_per_blk):
-    q_block = bq * num_q_heads_per_blk * head_dim * q_dtype.itemsize
-    in_block = q_block
-    out_block = in_block
-    kv_block = 2 * num_kv_pages_per_blk * page_size * 2 * num_kv_heads_per_blk * head_dim * kv_dtype.itemsize
-    l_ref = num_kv_heads_per_blk * bq * 2 * num_kv_heads_per_blk * 128 * jnp.float32.dtype.itemsize
-    m_ref = l_ref
-    acc_ref = bq * num_q_heads_per_blk * head_dim * jnp.float32.dtype.itemsize
-    return 2 * (in_block + out_block) + kv_block + l_ref + m_ref + acc_ref
-
-  # If the matrices are larger than 64MB, decrease num_kv_pages_per_blk by half.
-  while compute_actual_vmem_bytes(bkv) >= 64 * 1024 * 1024:
-    bkv //= 2
-  bkv = max(bkv, 1)
-
   if tpu_version == 4:
     # This default block size is not tuned, only make sure there's no
     # OOM in vmem
