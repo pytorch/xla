@@ -13,6 +13,7 @@ import torch_xla.core.xla_builder as xb
 import torch_xla.runtime as xr
 from torch_xla.experimental.assume_pure import assume_pure
 from torch_xla._internal.jax_workarounds import jax_import_guard
+import jax.numpy as jnp
 
 
 def assert_gradients_close(test_case, actual, expected):
