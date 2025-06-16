@@ -34,7 +34,7 @@ def scan_layers(layers: Iterable[torch.nn.Module],
 
     input_data: The input to be given to the first layer from `layers`.
 
-    partition_fn: (Optional[Callable]) The graph parition function passed to AOTAutograd.
+    partition_fn: (Optional[Callable]) The graph partition function passed to AOTAutograd.
       Since this function uses AOTAutograd to trace `fn`, you may override what computation
       happen in the forward and backward passes by specifying different partition functions.
       `default_partition` implies no activation checkpointing. You may specify
@@ -76,16 +76,12 @@ def scan_layers(layers: Iterable[torch.nn.Module],
   stacked_buffers = tree_map(lambda *tensors: torch.stack(tensors, dim=0),
                              *buffers_list)
 
-  # Use the first layer as the example/template layer.
-  from copy import deepcopy
-  example_layer = deepcopy(first_layer)
-
   # Define the function to apply at each step
   def one_layer(carry, params_buffers):
     # Apply the current layer's weights and biases to the example layer,
     # then run the resulting layer.
     output = torch.func.functional_call(  # type: ignore
-        example_layer, params_buffers, carry, strict=True)
+        first_layer, params_buffers, carry, strict=True)
     return output, None
 
   stacked_params_buffers = (stacked_params, stacked_buffers)
