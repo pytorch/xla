@@ -5,7 +5,7 @@ import torch
 import torch_xla
 import unittest
 
-device = torch_xla.device()
+device = torch.device('xla')
 
 torch.manual_seed(12345)
 

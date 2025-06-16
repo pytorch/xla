@@ -8,7 +8,7 @@ import torch_xla.core.xla_model as xm
 
 def _mp_fn(index):
   os.environ["ENABLE_COLLECTIVE_MATMUL_IN_MP"] = "1"
-  device = torch_xla.device()
+  device = torch.device('xla')
   world_size = xr.world_size()
   groups = [[i for i in range(world_size)]]
   scale = 1 / world_size

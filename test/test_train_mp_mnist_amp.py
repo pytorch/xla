@@ -130,7 +130,7 @@ def train_mnist(flags, **kwargs):
   # Scale learning rate to num cores
   lr = flags.lr * xr.world_size()
 
-  device = torch_xla.device()
+  device = torch.device('xla')
   device_hw = xm.xla_device_hw(device)
   model = MNIST().to(device)
 

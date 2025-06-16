@@ -38,7 +38,7 @@ class ParameterWrappingTest(test_xla_sharding_base.XlaShardingTest):
     super().setUpClass()
 
   def test_fsdpv2(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     one_d_mesh = xs.get_1d_mesh("fsdp")
     xs.set_global_mesh(one_d_mesh)
     linears = MultiLinear()
@@ -56,7 +56,7 @@ class ParameterWrappingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(output.shape, torch.Size([100, 40]))
 
   def basic_spmd_test(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     one_d_mesh = xs.get_1d_mesh("data")
     input = torch.randn(8, 128)
     input2 = torch.randn(8, 128)

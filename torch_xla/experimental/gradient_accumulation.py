@@ -154,7 +154,7 @@ def _make_init_grad(param):
 def _gradient_accumulation_impl(context, body_fn, iterable_tensors, params,
                                 carried_tensors):
   builder = XlaBuildHelper('grad_acc')
-  device = torch_xla.device()
+  device = torch.device('xla')
 
   init_iterator = torch.tensor(0, dtype=torch.int32, device=device)
   init_loss = torch.tensor(0, dtype=torch.float32, device=device)

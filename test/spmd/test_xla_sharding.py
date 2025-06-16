@@ -277,7 +277,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(expected, actual))
 
   def test_mark_sharding_not_ordered_sharding_spec_2d(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     t1 = torch.randn(8, 16, device='cpu')
     expected = t1 + t1
 
@@ -290,7 +290,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(expected, (xt1 + xt1).cpu()))
 
   def test_mark_sharding_not_ordered_sharding_spec_3d(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     t1 = torch.randn(4, 8, 16, device='cpu')
     expected = t1 + t1
 
@@ -307,7 +307,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(expected, (xt1 + xt1).cpu()))
 
   def test_mark_sharding_not_ordered_sharding_spec_4d(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     t1 = torch.randn(32, 4, 8, 16, device='cpu')
     expected = t1 + t1
 
@@ -326,7 +326,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(expected, (xt1 + xt1).cpu()))
 
   def test_mark_sharding_partial(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     t1 = torch.randn(4, 4).to(device)
     t2 = torch.randn(4, 4).to(device)
     # Somehow the eager cpu result is different from the xla result.
@@ -356,7 +356,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(expected, actual))
 
   def test_propagate_replicated_sharding(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     t1 = torch.randn(4, 4).to(device)
     t2 = torch.randn(4, 4).to(device)
     t3 = t1 @ t2
@@ -368,7 +368,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertIn("replicated", torch_xla._XLAC._get_xla_sharding_spec(t3))
 
   def test_mark_sharding_partial_unordered(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     t1 = torch.randn(4, 3, 4).to(device)
     t2 = torch.randn(4, 3, 4).to(device)
     expected = t1 + t2
@@ -467,7 +467,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         (self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices))))
 
   def test_partial_replication_addmm(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     z_dim = 2 if self.n_devices >= 4 else 1
     mesh = self._get_mesh((z_dim, self.n_devices // z_dim))
 
@@ -657,7 +657,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     sharding_spec = xs.ShardingSpec(mesh, (0, 1))
     self.assertTrue(sharding_spec.can_apply(tensor))
     xtensors = xm.send_cpu_data_to_device([tensor],
-                                          torch_xla.device(),
+                                          torch.device('xla'),
                                           input_sharding=sharding_spec)
     self.assertEqual(len(xtensors), 1)
     outbound = met.metric_data("OutboundData")[1]
@@ -955,7 +955,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       self.assertTrue("replicated" in sharding_spec)
 
   def test_shard_device_data_ir(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     xla_x = torch.randn(8, 128, device=device)
     # xla_x now becomes a device data IR
     xla_y = xla_x * 5
@@ -967,7 +967,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(xla_y.cpu(), xla_x.cpu() * 5))
 
   def test_shard_device_data_ir_after_sync(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     xla_x = torch.randn(8, 128, device=device)
     x = xla_x.cpu()
     # xla_x now becomes a device data IR without XLAData
@@ -1370,7 +1370,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(x.cpu(), expected_x))
 
   def test_get_1d_mesh(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     mesh = xs.get_1d_mesh("data")
     t1 = torch.randn(8, 8).to(device)
     xt = xs.mark_sharding(t1, mesh, ("data", None))
@@ -1387,7 +1387,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       xr.global_runtime_device_count() > 1,
       "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_sharding(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     mesh = xs.get_1d_mesh("data")
     batch_size = 8
     train_loader = xu.SampleGenerator(
@@ -1410,7 +1410,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       xr.global_runtime_device_count() > 1,
       "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_non_batch_size(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     mesh = xs.get_1d_mesh("data")
     batch_size = mesh.size() - 1
     train_loader = xu.SampleGenerator(
@@ -1433,7 +1433,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       xr.global_runtime_device_count() > 1,
       "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_non_batch_size_and_mini_batch(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     mesh = xs.get_1d_mesh("data")
     batch_size = mesh.size() - 1
     train_loader = xu.SampleGenerator(
@@ -1453,7 +1453,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       data, _ = iter(train_device_loader).__next__()
 
   def test_fallback(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     theta: float = 10000
     dim = 16
@@ -1487,7 +1487,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     import torch_xla.core.xla_model as xm
     import torch.nn.functional as F
 
-    with torch_xla.device():
+    with torch.device('xla'):
       torch_xla.manual_seed(42)
       x0 = torch.randn(2, 3, requires_grad=True)
       w0 = torch.randn(4, 3, requires_grad=True)

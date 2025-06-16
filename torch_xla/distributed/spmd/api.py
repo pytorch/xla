@@ -216,7 +216,7 @@ def xla_distribute_module(
   if partition_fn:
     if getattr(partition_fn, '__name__', 'unknown') == "auto_policy":
       # TODO(yeounoh) allow pre-loading to xla device in the future.
-      assert next(module.parameters()).device != torch_xla.device(), \
+      assert next(module.parameters()).device != torch.device('xla'), \
         f"Currently requires module to be on cpu, before xla_distribute_module."
       xr.use_spmd(auto=True)
       module = module.to('xla')

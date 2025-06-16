@@ -9,7 +9,7 @@ import torch.distributed as dist
 
 
 def _mp_fn(index):
-  device = torch_xla.device()
+  device = torch.device('xla')
   if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):
     world_size = xr.world_size()
     dist.init_process_group('xla', init_method='xla://')

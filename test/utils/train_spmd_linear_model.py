@@ -69,7 +69,7 @@ class SimpleLinear(nn.Module):
 
 
 def train():
-  device = torch_xla.device()
+  device = torch.device('xla')
   torch.manual_seed(42)
   model = SimpleLinear().to(device)
   print('===> Preparing data..')

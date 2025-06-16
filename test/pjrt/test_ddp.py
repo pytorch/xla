@@ -26,7 +26,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
   @staticmethod
   def _ddp_init(index: int = ...):
     dist.init_process_group('xla', init_method='xla://')
-    device = torch_xla.device()
+    device = torch.device('xla')
     model = nn.Linear(10, 10).to(device)
     ddp_model = DDP(model)
 

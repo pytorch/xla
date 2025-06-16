@@ -105,7 +105,7 @@ def demo_basic(rank):
     setup(rank, world_size)
 
     # create model and move it to XLA device
-    device = torch_xla.device()
+    device = torch.device('xla')
     model = ToyModel().to(device)
     ddp_model = DDP(model, gradient_as_bucket_view=True)
 

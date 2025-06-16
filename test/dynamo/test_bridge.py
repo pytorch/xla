@@ -116,7 +116,7 @@ def allclose(expected, actual):
 def make_reuse_graph_test(module_class, niter=100):
 
   def test_wrapper(self):
-    xla_dev = torch_xla.device()
+    xla_dev = torch.device('xla')
     xla_module = module_class().to(device=xla_dev)
     inputs = tuple(x.to(device=xla_dev) for x in xla_module.get_random_inputs())
     metrics.clear_counters()
@@ -187,7 +187,7 @@ def make_training_test(model_cls):
   def test_wrapper(self):
     import torch_xla.core.xla_model as xm
 
-    xla_dev = torch_xla.device()
+    xla_dev = torch.device('xla')
     model = model_cls()
     inputs = model.get_random_inputs()
 
@@ -240,7 +240,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
       def __init__(self):
         super().__init__(num_embeddings=10, embedding_dim=10, padding_idx=0)
 
-    device = torch_xla.device()
+    device = torch.device('xla')
     module = Emb()
     module.to(device)
 
@@ -255,7 +255,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     def foo(x):
       return x * 2
 
-    device = torch_xla.device()
+    device = torch.device('xla')
     x = torch.rand(5, device=device)
     x = x.unsqueeze(dim=-1)
     self._compile_and_check(foo, (x,))
@@ -265,7 +265,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     def foo(device):
       return torch.arange(5, device="cpu").to(device)
 
-    self._compile_and_check(foo, (torch_xla.device(),))
+    self._compile_and_check(foo, (torch.device('xla'),))
 
   def test_index_flag_unsupported(self):
     # The indices of the index operation are represented as
@@ -277,7 +277,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     def foo(xt, t):
       return xt[t]
 
-    device = torch_xla.device()
+    device = torch.device('xla')
     xt = torch.rand(5, device=device)
     t = torch.randint(0, 5, (3,))
     self._compile_and_check(foo, (xt, t))
@@ -299,7 +299,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     def foo(t):
       return t.cpu()
 
-    device = torch_xla.device()
+    device = torch.device('xla')
     t = torch.randint(0, 5, (3,), device=device)
     self._compile_and_check(foo, (t,))
 

@@ -17,7 +17,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
   @staticmethod
   def _broadcast(sync):
     torch.manual_seed(xr.global_ordinal())
-    device = torch_xla.device()
+    device = torch.device('xla')
     model = nn.Linear(5, 5).to(device)
     if sync:
       xm.broadcast_master_param(model)
@@ -41,7 +41,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _all_reduce(pin_layout):
-    device = torch_xla.device()
+    device = torch.device('xla')
     # Prevent 0 and 1 from being converted to constants
     ordinal = xm.send_cpu_data_to_device(
         torch.tensor(
@@ -63,7 +63,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _all_gather(pin_layout):
-    device = torch_xla.device()
+    device = torch.device('xla')
     ordinal = torch.tensor([xr.global_ordinal()], device=device)
     out = xm.all_gather(ordinal, pin_layout=pin_layout)
     torch_xla.sync()
@@ -80,7 +80,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _reduce_scatter(pin_layout):
-    device = torch_xla.device()
+    device = torch.device('xla')
     world_size = xr.world_size()
     tensor = -torch.arange(world_size, dtype=torch.float32).to(device)
 
@@ -105,7 +105,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _all_to_all(pin_layout):
-    device = torch_xla.device()
+    device = torch.device('xla')
     world_size = xr.world_size()
 
     tensor = torch.cat(
@@ -151,7 +151,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       return input
 
     dist.init_process_group("xla", init_method='xla://')
-    device = torch_xla.device()
+    device = torch.device('xla')
     input = torch.tensor([xr.global_ordinal()],
                          dtype=torch.float,
                          device=device)
@@ -175,7 +175,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       return output
 
     dist.init_process_group("xla", init_method='xla://')
-    device = torch_xla.device()
+    device = torch.device('xla')
     input = torch.tensor([xr.global_ordinal()],
                          dtype=torch.float,
                          device=device)
@@ -200,7 +200,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _all_gather(use_dynamo: bool):
     met.clear_all()
     dist.init_process_group("xla", init_method='xla://')
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     def callable(input):
       output_tensor = [
@@ -229,7 +229,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _reduce_scatter(use_dynamo: bool):
     met.clear_all()
     dist.init_process_group("xla", init_method='xla://')
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     def callable(output, input):
       dist.reduce_scatter_tensor(output, input)
@@ -254,7 +254,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _all_to_all_single(use_dynamo: bool, split_size: int = 1):
     met.clear_all()
     dist.init_process_group("xla", init_method='xla://')
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     def callable(output, input):
       dist.all_to_all_single(output, input)

@@ -20,7 +20,7 @@ class Eager(unittest.TestCase):
     xm.wait_device_ops()
     met.clear_all()
     self.assertTrue(torch_xla.experimental.is_eager_mode())
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     # For some reason randn will also trigger an execution of
     # size [5, 5] full of 0.
@@ -36,7 +36,7 @@ class Eager(unittest.TestCase):
 
   def test_eager_recompile(self):
     self.assertTrue(torch_xla.experimental.is_eager_mode())
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     t1 = torch.randn(5, 5, device=device)
     xm.wait_device_ops()
@@ -55,7 +55,7 @@ class Eager(unittest.TestCase):
 
   def test_eager_in_place(self):
     self.assertTrue(torch_xla.experimental.is_eager_mode())
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     t1 = torch.randn(5, 5, device=device)
     xm.wait_device_ops()
@@ -67,7 +67,7 @@ class Eager(unittest.TestCase):
 
   def test_eager_random_seed(self):
     self.assertTrue(torch_xla.experimental.is_eager_mode())
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     met.clear_all()
     t1 = torch.randn(12, 13, device=device)
@@ -82,7 +82,7 @@ class Eager(unittest.TestCase):
 
   def test_eager_set_random_seed(self):
     self.assertTrue(torch_xla.experimental.is_eager_mode())
-    device = torch_xla.device()
+    device = torch.device('xla')
 
     old_seed = 1234
     xm.set_rng_state(old_seed)
@@ -95,7 +95,7 @@ class Eager(unittest.TestCase):
 
   def test_batch_norm_execute_once(self):
     xm.wait_device_ops()
-    device = torch_xla.device()
+    device = torch.device('xla')
     m = nn.BatchNorm2d(16).to(device)
     m.train()
     input = torch.randn(8, 16, 8, 32).to(device)
@@ -112,7 +112,7 @@ class Eager(unittest.TestCase):
                   torch_xla._XLAC._get_xla_tensor_debug_info(m.running_mean))
 
   def test_svd_execute_once(self):
-    device = torch_xla.device()
+    device = torch.device('xla')
     a = torch.randn(5, 3).to(device)
     xm.wait_device_ops()
     met.clear_all()

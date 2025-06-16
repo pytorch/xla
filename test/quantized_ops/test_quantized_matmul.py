@@ -12,7 +12,7 @@ from torch.ao.quantization.utils import determine_qparams
 
 torch.manual_seed(123456)
 
-device = torch_xla.device()
+device = torch.device('xla')
 
 
 class M(torch.nn.Module):

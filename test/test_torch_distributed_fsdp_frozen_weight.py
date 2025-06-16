@@ -7,7 +7,7 @@ from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP
 
 
 def _mp_fn(index):
-  dev = torch_xla.device()
+  dev = torch.device('xla')
   if xm.xla_device_hw(dev) not in ('TPU', 'CUDA'):
     print(
         'Default device {} is not a TPU or CUDA device'.format(dev),

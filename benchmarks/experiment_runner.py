@@ -255,7 +255,7 @@ class ExperimentRunner:
 
   def _pure_wall_time_iter_fn(self, benchmark_experiment: BenchmarkExperiment,
                               benchmark_model: BenchmarkModel, input_tensor):
-    device = torch_xla.device() if benchmark_experiment.xla else 'cuda'
+    device = torch.device('xla') if benchmark_experiment.xla else 'cuda'
     sync_fn = xm.wait_device_ops if benchmark_experiment.xla else torch.cuda.synchronize
     timing, output = bench.do_bench(
         lambda: benchmark_model.model_iter_fn(

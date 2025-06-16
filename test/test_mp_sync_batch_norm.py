@@ -47,7 +47,7 @@ class TestMpSyncBatchNorm(parameterized.TestCase):
     t_global = torch.rand((xr.world_size() * bsz, length))
 
     # XLA SyncBatchNorm
-    device = torch_xla.device()
+    device = torch.device('xla')
     t_xla = t_global[bsz * rank:bsz * (rank + 1), ...].to(device)
     sbn_xla = xf.SyncBatchNorm(length).to(device)
     result = run_step(sbn_xla, t_xla)
@@ -72,7 +72,7 @@ class TestMpSyncBatchNorm(parameterized.TestCase):
     t_global = torch.rand((xr.world_size() * bsz, features, length))
 
     # XLA SyncBatchNorm
-    device = torch_xla.device()
+    device = torch.device('xla')
     t_xla = t_global[bsz * rank:bsz * (rank + 1), ...].to(device)
     sbn_xla = xf.SyncBatchNorm(features).to(device)
     result = run_step(sbn_xla, t_xla)
@@ -97,7 +97,7 @@ class TestMpSyncBatchNorm(parameterized.TestCase):
     t_global = torch.rand((xr.world_size() * bsz, features, h, w))
 
     # XLA SyncBatchNorm
-    device = torch_xla.device()
+    device = torch.device('xla')
     t_xla = t_global[bsz * rank:bsz * (rank + 1), ...].to(device)
     sbn_xla = xf.SyncBatchNorm(features).to(device)
     result = run_step(sbn_xla, t_xla)
@@ -122,7 +122,7 @@ class TestMpSyncBatchNorm(parameterized.TestCase):
     t_global = torch.rand((xr.world_size() * bsz, features, d, h, w))
 
     # XLA SyncBatchNorm
-    device = torch_xla.device()
+    device = torch.device('xla')
     t_xla = t_global[bsz * rank:bsz * (rank + 1), ...].to(device)
     sbn_xla = xf.SyncBatchNorm(features).to(device)
     result = run_step(sbn_xla, t_xla)

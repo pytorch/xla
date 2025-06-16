@@ -28,7 +28,7 @@ class TrainResNetBase():
         sample_count=self.train_dataset_len // self.batch_size //
         xr.world_size())
 
-    self.device = torch_xla.device()
+    self.device = torch.device('xla')
     self.train_device_loader = pl.MpDeviceLoader(train_loader, self.device)
     self.model = torchvision.models.resnet50().to(self.device)
     self.optimizer = optim.SGD(self.model.parameters(), weight_decay=1e-4)

@@ -6,7 +6,7 @@ import torch_xla
 import unittest
 from absl.testing import parameterized
 
-device = torch_xla.device()
+device = torch.device('xla')
 
 dtype_parameters = [
     torch.float8_e5m2,
