@@ -95,7 +95,7 @@ torch._register_device_module('privateuseone', torchax.device_module)
 module = torch.utils.cpp_extension.load(
     name="custom_device_extension",
     sources=[
-        "cpp/registration.cpp",
+        os.path.join(os.path.dirname(__file__), "cpp/registration.cpp"),
     ],
     extra_include_paths=["cpp_extensions"],
     extra_cflags=["-g"],
