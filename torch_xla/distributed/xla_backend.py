@@ -5,7 +5,7 @@ import torch_xla.runtime as xr
 from torch_xla._internal import rendezvous
 import logging
 import os
-from torch._C._distributed_c10d import ProcessGroup
+from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
@@ -232,8 +232,17 @@ class ProcessGroupXla(ProcessGroup):
   def gather(self, *args):
     raise NotImplementedError
 
-  def scatter(self, *args):
-    raise NotImplementedError
+  def scatter(self, output_tensor_list: list[torch.Tensor], input_tensors_list: list[list[torch.Tensor]], opts: ScatterOptions):
+    output_tensor = output_tensor_list[0]
+    if xr.global_ordinal() == opts.rootRank:
+      input_tensors = input_tensors_list[0]
+    else:
+      input_tensors = [torch.zeros_like(output_tensor)] * xr.world_size()
+
+    rs_opts = ReduceScatterOptions()
+    rs_opts.reduceOp = dist.ReduceOp.SUM
+    return self.reduce_scatter([output_tensor], [input_tensors], rs_opts)
+
 
   # Dummy channel id maker. Different backend (TPU, GPU, etc) should replace
   # the maker with their specific one. See unit test in

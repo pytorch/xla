@@ -104,6 +104,25 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
       np.testing.assert_array_equal(value, [-ordinal])
 
   @staticmethod
+  def _scatter():
+    dist.init_process_group("xla", init_method='xla://')
+    device = torch_xla.device()
+    world_size = xr.world_size()
+    if xr.global_ordinal() == 0:
+      tensors = [torch.tensor([i], device=device, dtype=torch.float) for i in range(world_size)]
+    else:
+      tensors = None
+    output_tensor = torch.tensor([-1], device=device)
+    dist.scatter(output_tensor, tensors, src=0)
+    torch_xla.sync()
+    return output_tensor.cpu()
+
+  def test_scatter(self):
+    results = pjrt.run_multiprocess(self._scatter)
+    for ordinal, value in results.items():
+      np.testing.assert_array_equal(value, [ordinal])
+
+  @staticmethod
   def _all_to_all(pin_layout):
     device = torch_xla.device()
     world_size = xr.world_size()
