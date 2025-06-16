@@ -169,9 +169,6 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   @staticmethod
   def _all_gather_into_tensor(use_dynamo: bool, mode: str):
     met.clear_all()
-    allowed_modes = ["stack", "concat"]
-    if mode not in allowed_modes:
-      raise ValueError(f"mode must be one of {allowed_modes}")
 
     def callable(output, input):
       dist.all_gather_into_tensor(output, input, None)
@@ -186,6 +183,9 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       output_tensor = torch.empty((xr.world_size(), 1), device=device)
     elif mode == "concat":
       output_tensor = torch.empty((xr.world_size(),), device=device)
+    else:
+      raise ValueError(f"mode must be either 'stack' or 'concat'")
+
     f = torch.compile(callable, backend='openxla') if use_dynamo else callable
     f(output_tensor, input)
     torch_xla.sync()

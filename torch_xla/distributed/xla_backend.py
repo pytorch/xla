@@ -81,26 +81,29 @@ class ProcessGroupXla(ProcessGroup):
     xm.all_reduce(reduce_type, tensors, groups=self._mesh, pin_layout=False)
     return _ret_work(tensors)
 
-  # method for dist.all_gather_into_tensor under eager mode.
+  # This method is called for dist.all_gather_into_tensor under eager mode.
+  # https://docs.pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_into_tensor
   def _allgather_base(self, output_tensor: torch.Tensor,
                       input_tensor: torch.Tensor, opts: AllgatherOptions):
     is_scalar = (input_tensor.dim() == 0)
     if is_scalar:
       input_tensor = torch.reshape(input_tensor, (1,))
+
     result = xm.all_gather(
         input_tensor, dim=0, groups=self._mesh, pin_layout=False)
+
     if result.shape == output_tensor.shape:
       output_tensor.copy_(result, non_blocking=True)
-    else:
-      stacked_result = torch.stack(
-          torch.split(result, input_tensor.shape[0], dim=0), dim=0)
-      if stacked_result.shape == output_tensor.shape:
-        output_tensor.copy_(stacked_result, non_blocking=True)
-      else:
-        msg = f"Input shape {input_tensor.shape} and output shape {output_tensor.shape} are not compatible for all_gather_into_tensor. Input must be stacked or concatenated to create output."
-        raise ValueError(msg)
+      return _ret_work([output_tensor])
 
-    return _ret_work([output_tensor])
+    stacked_result = torch.stack(
+        torch.split(result, input_tensor.shape[0], dim=0), dim=0)
+    if stacked_result.shape == output_tensor.shape:
+      output_tensor.copy_(stacked_result, non_blocking=True)
+      return _ret_work([output_tensor])
+
+    msg = f"Input shape {input_tensor.shape} and output shape {output_tensor.shape} are not compatible for all_gather_into_tensor. Input must be stacked or concatenated to create output."
+    raise ValueError(msg)
 
   def allgather(self, output_tensors_list, input_tensors, opts=None):
     for input_tensor, output_tensors in zip(input_tensors, output_tensors_list):
