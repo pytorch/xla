@@ -1009,7 +1009,7 @@ def ragged_paged_attention(
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_attention
 
   if vmem_limit_bytes is None:
-    vmem_limit_bytes = 120 * 1024 * 1024
+    vmem_limit_bytes = 64 * 1024 * 1024
 
   payload, _ = trace_pallas(
       ragged_attention,
