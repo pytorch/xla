@@ -1346,7 +1346,7 @@ def _aten_max_pool2d_with_indices(inputs,
 try:
 
   @op(torch.ops.xla.max_pool2d_forward)
-  def _xla_max_pool2d_foward(*args, **kwargs):
+  def _xla_max_pool2d_forward(*args, **kwargs):
     return _aten_max_pool2d_with_indices(*args, **kwargs)[0]
 
   @op(torch.ops.xla.aot_mark_sharding)
@@ -1357,11 +1357,17 @@ try:
     pmesh = xs.Mesh.from_str(mesh)
     assert pmesh is not None
     partition_spec_eval = ast.literal_eval(partition_spec)
-    op_sharding = tuple(
-        str(i) if i is not None else i for i in partition_spec_eval)
     jmesh = pmesh.get_jax_mesh()
     return jax.lax.with_sharding_constraint(
-        t, NamedSharding(jmesh, P(*op_sharding)))
+        t, NamedSharding(jmesh, P(*partition_spec_eval)))
+
+  @op(torch.ops.xla.einsum_linear_forward)
+  def _xla_einsum_linear_forward(input, weight, bias):
+    with jax.named_scope('einsum_linear_forward'):
+      product = jax.numpy.einsum('...n,mn->...m', input, weight)
+      if bias is not None:
+        return product + bias
+      return product
 
 except AttributeError:
   pass
