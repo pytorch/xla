@@ -985,8 +985,9 @@ def apply_xla_patch_to_nn_linear(module: torch.nn.Module):
   for name, child in module.named_children():
     if isinstance(child,
                   torch.nn.Linear) and not isinstance(child, EinsumLinear):
-      einsum_linear = EinsumLinear(
-          child.in_features, child.out_features, bias=child.bias is not None)
+      with torch.device('meta'):
+        einsum_linear = EinsumLinear(
+            child.in_features, child.out_features, bias=child.bias is not None)
       einsum_linear.load_state_dict(
           child.state_dict(), strict=True, assign=True)
       setattr(module, name, einsum_linear)
