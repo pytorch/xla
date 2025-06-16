@@ -235,15 +235,15 @@ class ProcessGroupXla(ProcessGroup):
   def scatter(self, output_tensor_list: list[torch.Tensor],
               input_tensors_list: list[list[torch.Tensor]],
               opts: ScatterOptions):
-    output_tensor = output_tensor_list[0]
     if xr.global_ordinal() == opts.rootRank:
-      input_tensors = input_tensors_list[0]
+      inputs = input_tensors_list
     else:
-      input_tensors = [torch.zeros_like(output_tensor)] * xr.world_size()
+      inputs = [[torch.zeros_like(output_tensor)] * xr.world_size()
+                for output_tensor in output_tensor_list]
 
     rs_opts = ReduceScatterOptions()
     rs_opts.reduceOp = dist.ReduceOp.SUM
-    return self.reduce_scatter([output_tensor], [input_tensors], rs_opts)
+    return self.reduce_scatter(output_tensor_list, inputs, rs_opts)
 
   # Dummy channel id maker. Different backend (TPU, GPU, etc) should replace
   # the maker with their specific one. See unit test in
