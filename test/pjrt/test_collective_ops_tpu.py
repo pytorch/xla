@@ -109,12 +109,14 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
     device = torch_xla.device()
     world_size = xr.world_size()
     if xr.global_ordinal() == 0:
-      tensors = [torch.tensor([i], device=device, dtype=torch.float) for i in range(world_size)]
+      tensors = [
+          torch.tensor([i], device=device, dtype=torch.float)
+          for i in range(world_size)
+      ]
     else:
       tensors = None
-    output_tensor = torch.tensor([-1], device=device)
+    output_tensor = torch.tensor([-1], dtype=torch.float, device=device)
     dist.scatter(output_tensor, tensors, src=0)
-    torch_xla.sync()
     return output_tensor.cpu()
 
   def test_scatter(self):
