@@ -43,9 +43,10 @@ def extract_jax(mod: torch.nn.Module, env=None):
   """Returns a pytree of jax.ndarray and a jax callable."""
   if env is None:
     env = default_env()
-  states = mod.state_dict()
+  states = dict(mod.named_buffers())
+  states.update(mod.named_parameters())
 
-  states = pytree.tree_map_only(torch.Tensor, tensor.t2j, states)
+  states = env.t2j_copy(states)
 
   #@jax.jit
   def jax_func(states, inputs):
