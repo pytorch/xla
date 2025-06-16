@@ -80,16 +80,27 @@ def disable_temporarily():
 
 torch.utils.rename_privateuse1_backend('jax')
 unsupported_dtype = [torch.quint8]
-torch.utils.generate_methods_for_privateuse1_backend(
-    for_tensor=True,
-    for_module=True,
-    for_storage=True,
-    unsupported_dtype=unsupported_dtype)
+# torch.utils.generate_methods_for_privateuse1_backend(
+#     for_tensor=True,
+#     for_module=True,
+#     for_storage=True,
+#     unsupported_dtype=unsupported_dtype)
 
 import jax
 import torchax.device_module
+import torch.utils.cpp_extension
 
 torch._register_device_module('privateuseone', torchax.device_module)
+
+module = torch.utils.cpp_extension.load(
+    name="custom_device_extension",
+    sources=[
+        "cpp/registration.cpp",
+    ],
+    extra_include_paths=["cpp_extensions"],
+    extra_cflags=["-g"],
+    verbose=True,
+)
 
 
 def enable_accuracy_mode():
