@@ -1,9 +1,9 @@
-from copy import copy
-from functools import wraps
+from functools import wraps, partial
 from typing import Dict
 
 import torch
-from torch.utils._pytree import tree_map, tree_flatten, tree_unflatten
+import torch.nn as nn
+from torch.utils._pytree import tree_flatten, tree_unflatten
 import torch_xla
 from torch_xla._internal.jax_workarounds import requires_jax
 import torch_xla.core.xla_builder as xb
@@ -46,6 +46,33 @@ def j2t_autograd(fn):
   import torchax.interop
   return torchax.interop.j2t_autograd(
       fn, call_jax=lambda fn, *args: xb.call_jax(fn, args))
+
+
+class PureModule(nn.Module):
+  """Wraps a module whose forward pass is known to be free of side-effects and whose
+  behavior only depends on the inputs.
+
+  It behaves as if decorating the wrapped module's functionalized forward pass with `@assume_pure`.
+
+  This wrapper has a few advantages over the underlying module:
+  - `PureModule`s will only be traced once.
+  - Framework profile scopes added via `xp.Trace` will show up in both the forward
+    and the backward pass.
+  """
+
+  def __init__(self, module: nn.Module) -> None:
+    super().__init__()
+    self._module = module
+    self._pure_forward = assume_pure(partial(_pure_forward, self._module))
+
+  def forward(self, *args, **kwargs):
+    params = dict(self._module.named_parameters())
+    buffers = dict(self._module.named_buffers())
+    return self._pure_forward(params, buffers, args, kwargs)
+
+
+def _pure_forward(module, params, buffers, args, kwargs):
+  return torch.func.functional_call(module, (params, buffers), args, kwargs)
 
 
 def make_fake_inputs(input):
