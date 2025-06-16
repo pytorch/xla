@@ -167,19 +167,25 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     return input.cpu()
 
   @staticmethod
-  def _all_gather_into_tensor(use_dynamo: bool):
+  def _all_gather_into_tensor(use_dynamo: bool, mode: str):
     met.clear_all()
 
     def callable(output, input):
-      dist.all_gather_into_tensor(output_tensor, input, None)
-      return output_tensor
+      dist.all_gather_into_tensor(output, input, None)
+      return output
 
     dist.init_process_group("xla", init_method='xla://')
     device = torch_xla.device()
     input = torch.tensor([xr.global_ordinal()],
                          dtype=torch.float,
                          device=device)
-    output_tensor = torch.empty((1, xr.world_size()), device=device)
+    if mode == "stack":
+      output_tensor = torch.empty((xr.world_size(), 1), device=device)
+    elif mode == "concat":
+      output_tensor = torch.empty((xr.world_size(),), device=device)
+    else:
+      raise ValueError(f"mode must be either 'stack' or 'concat'")
+
     f = torch.compile(callable, backend='openxla') if use_dynamo else callable
     f(output_tensor, input)
     torch_xla.sync()
@@ -278,13 +284,17 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     for index, val in results.items():
       torch.testing.assert_close(val, expected)
 
-  @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
-  def test_all_gather_into_tensor(self, use_dynamo):
+  @parameterized.product(dynamo=[True, False], mode=["stack", "concat"])
+  def test_all_gather_into_tensor(self, dynamo, mode):
+    if dynamo and mode == "stack":
+      self.skipTest("https://github.com/pytorch/pytorch/issues/155632")
     results = pjrt.run_multiprocess(
-        self._all_gather_into_tensor, use_dynamo=use_dynamo)
+        self._all_gather_into_tensor, use_dynamo=dynamo, mode=mode)
     expected = torch.arange(
-        tpu.num_expected_global_devices(), dtype=torch.float).unsqueeze(0)
-    for index, val in results.items():
+        tpu.num_expected_global_devices(), dtype=torch.float)
+    if mode == "stack":
+      expected = expected.unsqueeze(1)
+    for _, val in results.items():
       torch.testing.assert_close(val, expected)
 
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
