@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git55a7540 )
+                  master (2.8.0+git0be0fbd )
                 </div>
               
             
@@ -1091,9 +1091,8 @@
   <span class="n">tx</span> <span class="o">=</span> <span class="n">maybe_get_torchax</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">tx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">tx</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">jax.sharding</span><span class="w"> </span><span class="kn">import</span> <span class="n">PartitionSpec</span> <span class="k">as</span> <span class="n">P</span><span class="p">,</span> <span class="n">NamedSharding</span>
-    <span class="n">op_sharding</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">partition_spec</span><span class="p">)</span>
     <span class="n">jmesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_jax_mesh</span><span class="p">()</span>
-    <span class="n">t</span><span class="o">.</span><span class="n">shard_</span><span class="p">(</span><span class="n">NamedSharding</span><span class="p">(</span><span class="n">jmesh</span><span class="p">,</span> <span class="n">P</span><span class="p">(</span><span class="o">*</span><span class="n">op_sharding</span><span class="p">)))</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">shard_</span><span class="p">(</span><span class="n">NamedSharding</span><span class="p">(</span><span class="n">jmesh</span><span class="p">,</span> <span class="n">P</span><span class="p">(</span><span class="o">*</span><span class="n">partition_spec</span><span class="p">)))</span>
     <span class="k">return</span> <span class="n">t</span>
 
   <span class="n">op_sharding</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_op_sharding</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span>
@@ -1433,8 +1432,9 @@
   <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">module</span><span class="o">.</span><span class="n">named_children</span><span class="p">():</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span>
                   <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">EinsumLinear</span><span class="p">):</span>
-      <span class="n">einsum_linear</span> <span class="o">=</span> <span class="n">EinsumLinear</span><span class="p">(</span>
-          <span class="n">child</span><span class="o">.</span><span class="n">in_features</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">out_features</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="n">child</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+      <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;meta&#39;</span><span class="p">):</span>
+        <span class="n">einsum_linear</span> <span class="o">=</span> <span class="n">EinsumLinear</span><span class="p">(</span>
+            <span class="n">child</span><span class="o">.</span><span class="n">in_features</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">out_features</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="n">child</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
       <span class="n">einsum_linear</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span>
           <span class="n">child</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">assign</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
       <span class="nb">setattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">einsum_linear</span><span class="p">)</span>
