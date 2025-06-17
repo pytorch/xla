@@ -349,6 +349,5 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       np.testing.assert_array_equal(value, [expected])
 
 
-
 if __name__ == '__main__':
   absltest.main()
