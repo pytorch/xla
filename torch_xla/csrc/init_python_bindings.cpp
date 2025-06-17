@@ -1485,106 +1485,8 @@ void InitXlaModuleBindings(py::module m) {
   py::class_<op_builder::Op, op_builder::OpPtr>(m, "XlaOp");
 
   // Define the _XLAC.XlaComputation class.
-  PythonScope<py::class_<runtime::ComputationClient::Computation,
-                         runtime::ComputationClient::ComputationPtr>>(
-      m, "XlaComputation")
-      .def("_xla_op_create_builder",
-           [](const std::string& name) {
-             return std::make_shared<xla::XlaBuilder>(name);
-           })
-      .def("_xla_op_tensor_shape",
-           [](const at::Tensor& tensor, const std::string& device) {
-             xla::Shape tensor_shape = GetTensorShape(tensor, device);
-             return op_builder::ShapeToPyShape(tensor_shape);
-           })
-      .def("_xla_op_param",
-           [](op_builder::BuilderPtr builder, int64_t param_no,
-              py::object py_shape) {
-             xla::Shape shape = op_builder::PyShapeToShape(py_shape);
-             xla::XlaOp param = xla::Parameter(builder.get(), param_no, shape,
-                                               absl::StrCat("p", param_no));
-             return std::make_shared<op_builder::Op>(std::move(builder),
-                                                     std::move(param));
-           })
-      .def("_xla_op_build",
-           [](const std::string& name, op_builder::OpPtr root) {
-             runtime::ComputationClient::ComputationPtr computation;
-             {
-               NoGilSection nogil;
-               computation = CreateComputation(name, root->op);
-             }
-             return computation;
-           })
-      .def("_xla_op_computation_from_module_proto",
-           [](const std::string& name, const std::string& module_proto) {
-             runtime::ComputationClient::ComputationPtr computation;
-             {
-               NoGilSection nogil;
-               computation = CreateComputationFromProto(name, module_proto);
-             }
-             return computation;
-           })
-      .def("_xla_computation_text",
-           [](const runtime::ComputationClient::ComputationPtr& computation) {
-             std::string hlo_text;
-             {
-               NoGilSection nogil;
-               hlo_text = ConsumeValue(runtime::util::GetComputationHloText(
-                   computation->computation()));
-             }
-             return hlo_text;
-           })
-      .def("_xla_op_shape",
-           [](op_builder::OpPtr op) {
-             const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op->op);
-             return op_builder::ShapeToPyShape(shape);
-           })
-      .def("_xla_op_builder",  //
-           [](op_builder::OpPtr op) { return op->builder; })
-      .def("_xla_op_create",
-           [](op_builder::BuilderPtr builder, const std::string& opname,
-              const std::vector<op_builder::OpPtr>& operands, py::dict args) {
-             return op_builder::CreateOp(builder, opname, operands, args);
-           })
-      .def("_xla_sgd_optimizer_step_",
-           [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
-              at::Tensor& buf, const at::Tensor& d_p, double weight_decay,
-              double momentum, double lr, double dampening, bool nesterov,
-              bool maximize) {
-             {
-               NoGilSection nogil;
-               XLATensorPtr found_inf_xla = bridge::GetXlaTensor(found_inf);
-               XLATensorPtr step_xla = bridge::GetXlaTensor(step);
-               XLATensorPtr param_xla = bridge::GetXlaTensor(param);
-               XLATensorPtr d_p_xla = bridge::GetXlaTensor(d_p);
-               XLATensorPtr buf_xla = bridge::GetXlaTensor(buf);
-               tensor_methods::sgd_optimizer_step_(
-                   found_inf_xla, step_xla, param_xla, buf_xla, d_p_xla,
-                   weight_decay, momentum, lr, dampening, nesterov, maximize);
-             }
-           })
-      .def("_xla_adam_optimizer_step_",
-           [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
-              at::Tensor& grad, at::Tensor& exp_avg, at::Tensor& exp_avg_sq,
-              at::Tensor& max_exp_avg_sq, double beta1, double beta2, double lr,
-              double weight_decay, double eps, bool amsgrad, bool maximize,
-              bool use_adamw) {
-             {
-               NoGilSection nogil;
-               XLATensorPtr found_inf_xla = bridge::GetXlaTensor(found_inf);
-               XLATensorPtr step_xla = bridge::GetXlaTensor(step);
-               XLATensorPtr param_xla = bridge::GetXlaTensor(param);
-               XLATensorPtr grad_xla = bridge::GetXlaTensor(grad);
-               XLATensorPtr exp_avg_xla = bridge::GetXlaTensor(exp_avg);
-               XLATensorPtr exp_avg_sq_xla = bridge::GetXlaTensor(exp_avg_sq);
-               XLATensorPtr max_exp_avg_sq_xla =
-                   bridge::GetXlaTensor(max_exp_avg_sq);
-               tensor_methods::adam_optimizer_step_(
-                   found_inf_xla, step_xla, param_xla, grad_xla, exp_avg_xla,
-                   exp_avg_sq_xla, max_exp_avg_sq_xla, beta1, beta2, lr,
-                   weight_decay, eps, amsgrad, maximize, use_adamw);
-             }
-           });
+  py::class_<runtime::ComputationClient::Computation,
+             runtime::ComputationClient::ComputationPtr>(m, "XlaComputation");
 
   // Define the _XLAC.OpSharding class.
   PythonScope<py::class_<xla::OpSharding>>(m, "OpSharding")
@@ -2489,6 +2391,103 @@ void InitXlaModuleBindings(py::module m) {
                 XlaHelpers::mat_mul_precision();
             return xla::PrecisionToString(precision);
       })
+      .def("_xla_op_create_builder",
+           [](const std::string& name) {
+            return std::make_shared<xla::XlaBuilder>(name);
+           })
+      .def("_xla_op_tensor_shape",
+           [](const at::Tensor& tensor, const std::string& device) {
+            xla::Shape tensor_shape = GetTensorShape(tensor, device);
+            return op_builder::ShapeToPyShape(tensor_shape);
+           })
+      .def("_xla_op_param",
+           [](op_builder::BuilderPtr builder, int64_t param_no,
+              py::object py_shape) {
+            xla::Shape shape = op_builder::PyShapeToShape(py_shape);
+            xla::XlaOp param = xla::Parameter(builder.get(), param_no, shape,
+                                              absl::StrCat("p", param_no));
+            return std::make_shared<op_builder::Op>(std::move(builder),
+                                                    std::move(param));
+           })
+      .def("_xla_op_build",
+           [](const std::string& name, op_builder::OpPtr root) {
+            runtime::ComputationClient::ComputationPtr computation;
+            {
+              NoGilSection nogil;
+              computation = CreateComputation(name, root->op);
+            }
+            return computation;
+           })
+      .def("_xla_op_computation_from_module_proto",
+           [](const std::string& name, const std::string& module_proto) {
+            runtime::ComputationClient::ComputationPtr computation;
+            {
+              NoGilSection nogil;
+              computation = CreateComputationFromProto(name, module_proto);
+            }
+            return computation;
+           })
+      .def("_xla_computation_text",
+           [](const runtime::ComputationClient::ComputationPtr& computation) {
+            std::string hlo_text;
+            {
+              NoGilSection nogil;
+              hlo_text = ConsumeValue(runtime::util::GetComputationHloText(
+                  computation->computation()));
+            }
+            return hlo_text;
+           })
+      .def("_xla_op_shape",
+           [](op_builder::OpPtr op) {
+            const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op->op);
+            return op_builder::ShapeToPyShape(shape);
+           })
+      .def("_xla_op_builder",  //
+           [](op_builder::OpPtr op) { return op->builder; })
+      .def("_xla_op_create",
+           [](op_builder::BuilderPtr builder, const std::string& opname,
+              const std::vector<op_builder::OpPtr>& operands, py::dict args) {
+            return op_builder::CreateOp(builder, opname, operands, args);
+           })
+      .def("_xla_sgd_optimizer_step_",
+           [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
+              at::Tensor& buf, const at::Tensor& d_p, double weight_decay,
+              double momentum, double lr, double dampening, bool nesterov,
+              bool maximize) {
+            {
+              NoGilSection nogil;
+              XLATensorPtr found_inf_xla = bridge::GetXlaTensor(found_inf);
+              XLATensorPtr step_xla = bridge::GetXlaTensor(step);
+              XLATensorPtr param_xla = bridge::GetXlaTensor(param);
+              XLATensorPtr d_p_xla = bridge::GetXlaTensor(d_p);
+              XLATensorPtr buf_xla = bridge::GetXlaTensor(buf);
+              tensor_methods::sgd_optimizer_step_(
+                  found_inf_xla, step_xla, param_xla, buf_xla, d_p_xla,
+                  weight_decay, momentum, lr, dampening, nesterov, maximize);
+            }
+           })
+      .def("_xla_adam_optimizer_step_",
+           [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
+              at::Tensor& grad, at::Tensor& exp_avg, at::Tensor& exp_avg_sq,
+              at::Tensor& max_exp_avg_sq, double beta1, double beta2, double lr,
+              double weight_decay, double eps, bool amsgrad, bool maximize,
+              bool use_adamw) {
+            {
+              NoGilSection nogil;
+              XLATensorPtr found_inf_xla = bridge::GetXlaTensor(found_inf);
+              XLATensorPtr step_xla = bridge::GetXlaTensor(step);
+              XLATensorPtr param_xla = bridge::GetXlaTensor(param);
+              XLATensorPtr grad_xla = bridge::GetXlaTensor(grad);
+              XLATensorPtr exp_avg_xla = bridge::GetXlaTensor(exp_avg);
+              XLATensorPtr exp_avg_sq_xla = bridge::GetXlaTensor(exp_avg_sq);
+              XLATensorPtr max_exp_avg_sq_xla =
+                  bridge::GetXlaTensor(max_exp_avg_sq);
+              tensor_methods::adam_optimizer_step_(
+                  found_inf_xla, step_xla, param_xla, grad_xla, exp_avg_xla,
+                  exp_avg_sq_xla, max_exp_avg_sq_xla, beta1, beta2, lr,
+                  weight_decay, eps, amsgrad, maximize, use_adamw);
+            }
+           })
       .def("_xla_mark_sharding",
            [](const at::Tensor& input, xla::OpSharding sharding) {
             ShardingUtil::XlaMarkSharding(input, sharding);
