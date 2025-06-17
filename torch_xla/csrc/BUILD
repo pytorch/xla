@@ -243,6 +243,8 @@ ptxla_cc_library(
     srcs = ["shape_builder.cpp"],
     hdrs = ["shape_builder.h"],
     deps = [
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/base:nullability",
         "@com_google_absl//absl/types:span",
         "@xla//xla:shape_util",
         "@xla//xla:types",

@@ -6,8 +6,11 @@
 namespace torch_xla {
 
 const xla::Shape& ShapeHelper::ShapeOfXlaOp(xla::XlaOp op) {
-  const xla::Shape* shape = ConsumeValue(op.builder()->GetShapePtr(op));
-  return *shape;
+  return *ConsumeValue(GetShape(op));
+}
+
+absl::StatusOr<const xla::Shape * absl_nonnull> GetShape(xla::XlaOp op) {
+  return op.builder()->GetShapePtr(op);
 }
 
 }  // namespace torch_xla
