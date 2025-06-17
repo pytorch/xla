@@ -296,6 +296,7 @@ TENSOR_CONSTRUCTORS = {
 # TODO(wen): use existing types, either from torch or jax
 SUPPORTED_JAX_PLATFROM = ["cpu", "tpu"]
 
+
 class Environment(contextlib.ContextDecorator):
   """This class holds a set of configurations and "globals" needed
 
@@ -335,7 +336,7 @@ class Environment(contextlib.ContextDecorator):
     return self._target_device
 
   @target_device.setter
-  def target_device(self, device:str):
+  def target_device(self, device: str):
     self._target_device = device.lower()
 
   def manual_seed(self, key):
@@ -362,7 +363,7 @@ class Environment(contextlib.ContextDecorator):
     if device.startswith("xla"):
       return jax.local_devices()[0]
 
-    # TODO (wen): jax is NOT a device type, 
+    # TODO (wen): jax is NOT a device type,
     # once we can register more than one backend, revisit
     if device.startswith("jax"):
       match self.target_device:
@@ -371,7 +372,8 @@ class Environment(contextlib.ContextDecorator):
         case "tpu":
           return jax.devices("tpu")[0]
         case _:
-          raise AttributeError(f"Cannot handle env.target_device {self.target_device}")
+          raise AttributeError(
+              f"Cannot handle env.target_device {self.target_device}")
 
     return None  # fallback to torch
 
@@ -446,7 +448,7 @@ class Environment(contextlib.ContextDecorator):
             # I don't know ifgit  this will work after the model is jitted
             if self.target_device != the_tensor.jax_device.platform:
               arr = jax.device_put(the_tensor.jax(),
-                                  jax.devices(self.target_device)[0])
+                                   jax.devices(self.target_device)[0])
               return Tensor(arr, self)
           case _:
             logging.error(f"torchax.Tenosr cannot handle device {new_device}")
