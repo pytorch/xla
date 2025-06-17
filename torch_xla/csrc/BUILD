@@ -274,6 +274,7 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:xla_coordinator",
         "//torch_xla/csrc/runtime:xla_util",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:variant",

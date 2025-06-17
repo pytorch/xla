@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/synchronization/blocking_counter.h"
@@ -84,6 +85,51 @@ namespace {
 
 static int64_t seed_info_id = -127389;
 
+template <class T>
+struct _lambda_return_type_traits {
+  using type = T;
+
+  static constexpr bool is_status_type = false;
+
+  static absl::Status get_status(T&&) {
+    return absl::OkStatus();
+  }
+};
+
+template <>
+struct _lambda_return_type_traits<void> {
+  using type = void;
+  static constexpr bool is_status_type = false;
+};
+
+template <class T>
+struct _lambda_return_type_traits<absl::StatusOr<T>> {
+  using type = T;
+
+  static constexpr bool is_status_type = true;
+
+  static absl::Status get_status(absl::StatusOr<T>&& return_value) {
+    return return_value.status();
+  }
+};
+
+template <>
+struct _lambda_return_type_traits<absl::Status> {
+  using type = void;
+
+  static constexpr bool is_status_type = true;
+
+  static absl::Status get_status(absl::Status&& return_value) {
+    return return_value;
+  }
+};
+
+void HandleStatus(absl::Status status) {
+  if (!status.ok()) {
+    throw std::runtime_error(static_cast<std::string>(status.message()));
+  }
+}
+
 // Binds a C++ function to Python.
 //
 // Calls `def()` method onto an instance of `T`, binding a name to a function of
@@ -102,27 +148,50 @@ struct _bind_python_function {};
 template <class T, class F, class RetType, class... Args, class... Extra>
 struct _bind_python_function<T, F, RetType,
                              c10::guts::typelist::typelist<Args...>, Extra...> {
+
+  using lambda_traits = _lambda_return_type_traits<RetType>;
+  using return_type = typename lambda_traits::type;
+
+  static constexpr bool returns_void = std::is_same<void, return_type>::value;
+  static constexpr bool returns_status_type = lambda_traits::is_status_type;
+
+  static std::function<return_type(Args...)> lambda(F&& f) {
+    return [f = std::move(f)](Args... args) -> return_type {
+      // RAII for emitting Python warnings.
+      //
+      // This should be used with `TORCH_WARN()`. It consumes the messages
+      // passed to `TORCH_WARN()`, and emits a Python warning.
+      torch::PyWarningHandler handler;
+
+      if constexpr (!returns_status_type && returns_void) {
+        (*f)(args...);
+      } else {
+        auto ret = (*f)(args...);
+        auto status = lambda_traits::get_status(std::forward<RetType>(ret));
+
+        HandleStatus(status);
+        ABSL_CHECK(status.ok());
+
+        if constexpr (!returns_status_type) {
+          return ret;
+        } else if constexpr (!returns_void) {
+          return ret.value();
+        }
+      }
+    };
+  }
+
   static void bind(T scope, const char* name, F&& f, Extra&&... extra) {
-    scope.def(
-        name,
-        [f = std::move(f)](Args... args) -> RetType {
-          // RAII for emitting Python warnings.
-          //
-          // This should be used with `TORCH_WARN()`. It consumes the messages
-          // passed to `TORCH_WARN()`, and emits a Python warning.
-          torch::PyWarningHandler handler;
-          return (*f)(args...);
-        },
-        std::forward<Extra>(extra)...);
+    scope.def(name, lambda(std::forward<F>(f)), std::forward<Extra>(extra)...);
+  }
+
+  static void bind_static(T scope, const char* name, F&& f, Extra&&... extra) {
+    scope.def_static(name, lambda(std::forward<F>(f)),
+                     std::forward<Extra>(extra)...);
   }
 
   static void bind_init(T scope, F&& f, Extra&&... extra) {
-    scope.def(py::init(
-        [f = std::move(f)](Args... args) -> RetType {
-          torch::PyWarningHandler handler;
-          return (*f)(args...);
-        },
-        std::forward<Extra>(extra)...));
+    scope.def(py::init(std::forward<F>(f), std::forward<Extra>(extra)...));
   }
 };
 
@@ -146,6 +215,18 @@ void BindInitPythonFunction(T scope, F&& fn, Extra&&... extra) {
   using ParameterTypes = typename FnTraits::parameter_types;
   _bind_python_function<T, F, RetType, ParameterTypes, Extra...>::bind_init(
       scope, std::forward<F>(fn), std::forward<Extra>(extra)...);
+}
+
+// Wraps `_bind_python_function`, extracting the function types from `F`.
+// This function should be used for surfacing static Python methods.
+template <class T, class F, class... Extra>
+void BindStaticPythonFunction(T scope, const char* name, F&& fn,
+                              Extra&&... extra) {
+  using FnTraits = typename c10::guts::infer_function_traits<F>::type;
+  using RetType = typename FnTraits::return_type;
+  using ParameterTypes = typename FnTraits::parameter_types;
+  _bind_python_function<T, F, RetType, ParameterTypes, Extra...>::bind_static(
+      scope, name, std::forward<F>(fn), std::forward<Extra>(extra)...);
 }
 
 struct NoGilSection {
@@ -196,7 +277,7 @@ void WaitDeviceOps(absl::Span<const std::string> devices = {}) {
   runtime::GetComputationClient()->WaitDeviceOps(devices);
 }
 
-void PrepareToExit() {
+absl::Status PrepareToExit() {
   runtime::ComputationClient* client =
       runtime::GetComputationClientIfInitialized();
   if (client != nullptr) {
@@ -204,6 +285,7 @@ void PrepareToExit() {
     SetAllReduceToken(xla_device, nullptr);
     WaitDeviceOps();
   }
+  return absl::OkStatus();
 }
 
 std::string GetTensorsDump(
@@ -806,7 +888,7 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
   return xla_tensors;
 }
 
-at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor, int64_t dim) {
+absl::StatusOr<at::Tensor> GetXlaTensorDimensionSize(const at::Tensor& tensor, int64_t dim) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
   return bridge::AtenFromXlaTensor(
       tensor_methods::get_dimensions_size(xtensor, {dim}));
@@ -842,7 +924,7 @@ py::object GetMetricData(const std::string& name) {
   return py::none();
 }
 
-py::object GetRevisions() {
+absl::StatusOr<py::object> GetRevisions() {
   auto py_dict = py::dict();
   py_dict["xla"] = std::string(XLA_GITREV);
   py_dict["torch"] = std::string(TORCH_GITREV);
@@ -992,7 +1074,8 @@ void BuildProfilerSubmodule(py::module* m) {
       profiler_server_class(profiler, "ProfilerServer");
   BindPythonFunction(
       profiler, "start_server",
-      [](int port) -> std::unique_ptr<runtime::profiler::ProfilerServer> {
+      [](int port) -> absl::StatusOr<
+                       std::unique_ptr<runtime::profiler::ProfilerServer>> {
         auto server = absl::make_unique<runtime::profiler::ProfilerServer>();
         server->Start(port);
         return server;
@@ -1003,7 +1086,7 @@ void BuildProfilerSubmodule(py::module* m) {
       profiler, "trace",
       [](const char* service_addr, const char* logdir, int duration_ms,
          int num_tracing_attempts, int timeout_s, int interval_s,
-         py::dict options) {
+         py::dict options) -> absl::Status {
         absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
             ConvertDictToMap(options);
         std::chrono::seconds sleep_s(interval_s);
@@ -1014,59 +1097,68 @@ void BuildProfilerSubmodule(py::module* m) {
             status = runtime::profiler::Trace(service_addr, logdir, duration_ms,
                                               num_tracing_attempts, opts);
             if (status.ok()) {
-              return;
+              return absl::OkStatus();
             }
             std::this_thread::sleep_for(sleep_s);
           }
         }
-        if (!status.ok()) {
-          PyErr_SetString(PyExc_RuntimeError, std::string(status.message()));
-          throw py::error_already_set();
-        }
+        return status;
       },
       py::arg("service_addr"), py::arg("logdir"), py::arg("duration_ms") = 1000,
       py::arg("num_tracing_attempts") = 3, py::arg("timeout_s") = 120,
       py::arg("interval_s") = 5, py::arg("options"));
 
-  py::class_<xla::profiler::TraceMeWrapper> traceme_class(profiler, "TraceMe",
-                                                          py::module_local());
+  py::class_<xla::profiler::TraceMeWrapper> traceme(profiler, "TraceMe",
+                                                    py::module_local());
   BindInitPythonFunction(
-      traceme_class, [](const py::str& name, const py::kwargs& kwargs) {
+      traceme,
+      [](const py::str& name, const py::kwargs& kwargs)
+          -> absl::StatusOr<std::unique_ptr<xla::profiler::TraceMeWrapper>> {
         return std::make_unique<xla::profiler::TraceMeWrapper>(name, kwargs);
       });
-  BindPythonFunction(traceme_class, "__enter__",
-                     [](py::object self) -> py::object { return self; });
   BindPythonFunction(
-      traceme_class, "__exit__",
+      traceme, "__enter__",
+      [](py::object self) -> absl::StatusOr<py::object> { return self; });
+  BindPythonFunction(
+      traceme, "__exit__",
       [](py::object self, const py::object& ex_type, const py::object& ex_value,
-         const py::object& traceback) -> py::object {
+         const py::object& traceback) -> absl::Status {
         py::cast<xla::profiler::TraceMeWrapper*>(self)->Stop();
-        return py::none();
+        return absl::OkStatus();
       });
-  BindPythonFunction(
-      traceme_class, "set_metadata",
-      [](xla::profiler::TraceMeWrapper& self, const py::kwargs& kwargs) {
-        self.SetMetadata(kwargs);
-      });
-  traceme_class.def_static("is_enabled", &tsl::profiler::TraceMe::Active);
+  BindPythonFunction(traceme, "set_metadata",
+                     [](xla::profiler::TraceMeWrapper& self,
+                        const py::kwargs& kwargs) -> absl::Status {
+                       self.SetMetadata(kwargs);
+                       return absl::OkStatus();
+                     });
+  BindStaticPythonFunction(traceme, "is_enabled", []() -> absl::StatusOr<bool> {
+    return tsl::profiler::TraceMe::Active();
+  });
 
   py::class_<torch::lazy::ScopePusher,
              std::unique_ptr<torch::lazy::ScopePusher>>
-      scope_pusher_class(profiler, "ScopePusher");
+      scope_pusher(profiler, "ScopePusher");
   BindPythonFunction(
       profiler, "scope_pusher",
-      [](const std::string& name) -> std::unique_ptr<torch::lazy::ScopePusher> {
-        return absl::make_unique<torch::lazy::ScopePusher>(name);
+      [](const std::string& name)
+          -> absl::StatusOr<std::unique_ptr<torch::lazy::ScopePusher>> {
+        return std::make_unique<torch::lazy::ScopePusher>(name);
       });
 
   // Profiler Session Definition.
   py::class_<runtime::profiler::TslProfilerSessionWrapper,
              std::unique_ptr<runtime::profiler::TslProfilerSessionWrapper>>
       profiler_session(profiler, "TslProfilerSessionWrapper");
-  BindInitPythonFunction(profiler_session,
-                         &runtime::profiler::TslProfilerSessionWrapper::Create);
+  BindInitPythonFunction(
+      profiler_session,
+      []() -> absl::StatusOr<
+               std::unique_ptr<runtime::profiler::TslProfilerSessionWrapper>> {
+        return runtime::profiler::TslProfilerSessionWrapper::Create();
+      });
   BindPythonFunction(
-      profiler_session, "stop", [](py::object self) -> py::bytes {
+      profiler_session, "stop",
+      [](py::object self) -> absl::StatusOr<py::bytes> {
         std::string xspace_str =
             py::cast<runtime::profiler::TslProfilerSessionWrapper*>(self)
                 ->Stop();
@@ -1074,10 +1166,12 @@ void BuildProfilerSubmodule(py::module* m) {
       });
   BindPythonFunction(
       profiler_session, "export",
-      [](py::object self, py::bytes xspace, const std::string& dump_dir) {
+      [](py::object self, py::bytes xspace,
+         const std::string& dump_dir) -> absl::Status {
         const std::string xspace_str = xspace.cast<std::string>();
         py::cast<runtime::profiler::TslProfilerSessionWrapper*>(self)->Export(
             xspace_str, dump_dir);
+        return absl::OkStatus();
       });
 }
 
@@ -1333,59 +1427,77 @@ void BuildLoweringContextSubmodule(py::module* m) {
   py::class_<PyLoweringContext, std::unique_ptr<PyLoweringContext>>
       py_lowering_context(lowering, "LoweringContext", py::module_local());
 
-  BindInitPythonFunction(py_lowering_context, []() {
-    return std::make_unique<PyLoweringContext>();
-  });
-  BindInitPythonFunction(py_lowering_context, [](const std::string& name) {
-    return std::make_unique<PyLoweringContext>(name);
-  });
+  BindInitPythonFunction(
+      py_lowering_context,
+      []() -> absl::StatusOr<std::unique_ptr<PyLoweringContext>> {
+        return std::make_unique<PyLoweringContext>();
+      });
+  BindInitPythonFunction(
+      py_lowering_context,
+      [](const std::string& name)
+          -> absl::StatusOr<std::unique_ptr<PyLoweringContext>> {
+        return std::make_unique<PyLoweringContext>(name);
+      });
   BindPythonFunction(
       py_lowering_context, "build",
-      [](PyLoweringContext& context, const std::vector<at::Tensor>& tensors) {
+      [](PyLoweringContext& context,
+         const std::vector<at::Tensor>& tensors) -> absl::Status {
         context.Build(tensors);
+        return absl::OkStatus();
       });
   BindPythonFunction(
       py_lowering_context, "buildforiloop",
       [](PyLoweringContext& context, const std::vector<at::Tensor>& tensors,
-         const std::vector<at::Tensor>& additional_inputs_list) {
+         const std::vector<at::Tensor>& additional_inputs_list)
+          -> absl::Status {
         context.BuildForiLoop(tensors, additional_inputs_list);
+        return absl::OkStatus();
       },
       py::arg("tensors"),
       py::arg("additional_inputs_list") = std::vector<at::Tensor>{});
   BindPythonFunction(
       py_lowering_context, "hlo",
-      [](PyLoweringContext& context) -> py::bytes { return context.GetHlo(); });
-  BindPythonFunction(py_lowering_context, "hlo_text",
-                     [](PyLoweringContext& context) -> std::string {
-                       return context.GetHloText();
-                     });
-  BindPythonFunction(py_lowering_context, "hlo_json",
-                     [](PyLoweringContext& context) -> std::string {
-                       return context.GetHloJsonText();
-                     });
-  BindPythonFunction(py_lowering_context, "parameter_id_tensor_mapping",
-                     [](PyLoweringContext& context)
-                         -> std::unordered_map<int64_t, at::Tensor> {
-                       return context.GetParameterIdTensorMapping();
-                     });
-  BindPythonFunction(py_lowering_context, "device_parameter_id_tensor_mapping",
-                     [](PyLoweringContext& context)
-                         -> std::unordered_map<int64_t, at::Tensor> {
-                       return context.GetDeviceParameterIdTensorMapping();
+      [](PyLoweringContext& context) -> absl::StatusOr<py::bytes> {
+        return context.GetHlo();
+      });
+  BindPythonFunction(
+      py_lowering_context, "hlo_text",
+      [](PyLoweringContext& context) -> absl::StatusOr<std::string> {
+        return context.GetHloText();
+      });
+  BindPythonFunction(
+      py_lowering_context, "hlo_json",
+      [](PyLoweringContext& context) -> absl::StatusOr<std::string> {
+        return context.GetHloJsonText();
+      });
+  BindPythonFunction(
+      py_lowering_context, "parameter_id_tensor_mapping",
+      [](PyLoweringContext& context)
+          -> absl::StatusOr<std::unordered_map<int64_t, at::Tensor>> {
+        return context.GetParameterIdTensorMapping();
+      });
+  BindPythonFunction(
+      py_lowering_context, "device_parameter_id_tensor_mapping",
+      [](PyLoweringContext& context)
+          -> absl::StatusOr<std::unordered_map<int64_t, at::Tensor>> {
+        return context.GetDeviceParameterIdTensorMapping();
+      });
+  BindPythonFunction(py_lowering_context, "tensor_parameter_id",
+                     [](PyLoweringContext& context,
+                        const at::Tensor& tensor) -> absl::StatusOr<int64_t> {
+                       return context.GetTensorParameterId(tensor);
                      });
   BindPythonFunction(
-      py_lowering_context, "tensor_parameter_id",
-      [](PyLoweringContext& context, const at::Tensor& tensor) -> int64_t {
-        return context.GetTensorParameterId(tensor);
+      py_lowering_context, "set_name_string",
+      [](PyLoweringContext& context, const std::string& name) -> absl::Status {
+        context.SetNameString(name);
+        return absl::OkStatus();
       });
-  BindPythonFunction(py_lowering_context, "set_name_string",
-                     [](PyLoweringContext& context, const std::string& name) {
-                       context.SetNameString(name);
-                     });
-  BindPythonFunction(py_lowering_context, "get_name_string",
-                     [](PyLoweringContext& context) -> std::string {
-                       return context.GetNameString();
-                     });
+  BindPythonFunction(
+      py_lowering_context, "get_name_string",
+      [](PyLoweringContext& context) -> absl::StatusOr<std::string> {
+        return context.GetNameString();
+      });
 }
 
 // Used in the to_dlpack.
@@ -1420,17 +1532,14 @@ at::Tensor tensor_fromDLPack(PyObject* data) {
 
 void InitXlaModuleBindings(py::module m) {
   BindPythonFunction(m, "_prepare_to_exit", &PrepareToExit);
-  BindPythonFunction(m, "_xla_runtime_is_initialized", []() {
+  BindPythonFunction(m, "_xla_runtime_is_initialized", []() -> absl::StatusOr<bool> {
     return runtime::GetComputationClientIfInitialized() != nullptr;
   });
-  BindPythonFunction(m, "_xla_computation_cache_is_initialized", []() {
+  BindPythonFunction(m, "_xla_computation_cache_is_initialized", []() -> absl::StatusOr<bool> {
     return XLAGraphExecutor::Get()->IsComputationCacheInitialized();
   });
   BindPythonFunction(m, "_get_git_revs", &GetRevisions);
-  BindPythonFunction(m, "_get_xla_tensor_dimension_size",
-                     [](const at::Tensor& tensor, int dim) {
-                       return GetXlaTensorDimensionSize(tensor, dim);
-                     });
+  BindPythonFunction(m, "_get_xla_tensor_dimension_size", &GetXlaTensorDimensionSize);
   BindPythonFunction(
       m, "_xla_user_computation",
       [](const std::string& opname, const std::vector<at::Tensor>& inputs,
