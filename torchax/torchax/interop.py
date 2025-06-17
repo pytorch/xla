@@ -102,18 +102,21 @@ class JittableModule(torch.nn.Module):
       res = getattr(self._model, method_name)(*args, **kwargs)
     return res
 
-  def forward(self, *args, **kwargs):
-    if 'forward' not in self._jitted:
+  def jittable_call(self, method_name: str, *args, **kwargs):
+    if method_name not in self._jitted:
       jitted = jax_jit(
-          functools.partial(self.functional_call, 'forward'),
+          functools.partial(self.functional_call, method_name),
           kwargs_for_jax_jit=self._extra_jit_args,
       )
 
       def jitted_forward(*args, **kwargs):
         return jitted(self.params, self.buffers, *args, **kwargs)
 
-      self._jitted['forward'] = jitted_forward
-    return self._jitted['forward'](*args, **kwargs)
+      self._jitted[method_name] = jitted_forward
+    return self._jitted[method_name](*args, **kwargs)
+
+  def forward(self, *args, **kwargs):
+    return self.jittable_call('forward', *args, **kwargs)
 
   def __getattr__(self, key):
     if key == '_model':
