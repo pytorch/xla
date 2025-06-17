@@ -459,7 +459,9 @@ def get_tuned_block_sizes(
     in_block = q_block
     out_block = in_block
     kv_block = 2 * num_kv_pages_per_blk * page_size * 2 * num_kv_heads_per_blk * head_dim * kv_dtype.itemsize
-    l_ref = num_kv_heads_per_blk * bq * 2 * num_kv_heads_per_blk * 128 * jnp.float32.dtype.itemsize
+    l_ref = num_kv_heads_per_blk * bq * 2 * (
+        num_q_heads_per_blk //
+        num_kv_heads_per_blk) * 128 * jnp.float32.dtype.itemsize
     m_ref = l_ref
     acc_ref = bq * num_q_heads_per_blk * head_dim * jnp.float32.dtype.itemsize
     return 2 * (in_block + out_block) + kv_block + l_ref + m_ref + acc_ref
