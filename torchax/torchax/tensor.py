@@ -370,6 +370,8 @@ class Environment(contextlib.ContextDecorator):
           return jax.devices("cpu")[0]
         case "tpu":
           return jax.devices("tpu")[0]
+        case _:
+          raise AttributeError(f"Cannot handle env.target_device {self.target_device}")
 
     return None  # fallback to torch
 
