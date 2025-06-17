@@ -644,9 +644,8 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   tx = maybe_get_torchax()
   if tx is not None and isinstance(t, tx.tensor.Tensor):
     from jax.sharding import PartitionSpec as P, NamedSharding
-    op_sharding = tuple(str(i) if i is not None else i for i in partition_spec)
     jmesh = mesh.get_jax_mesh()
-    t.shard_(NamedSharding(jmesh, P(*op_sharding)))
+    t.shard_(NamedSharding(jmesh, P(*partition_spec)))
     return t
 
   op_sharding = mesh.get_op_sharding(partition_spec)
@@ -986,8 +985,9 @@ def apply_xla_patch_to_nn_linear(module: torch.nn.Module):
   for name, child in module.named_children():
     if isinstance(child,
                   torch.nn.Linear) and not isinstance(child, EinsumLinear):
-      einsum_linear = EinsumLinear(
-          child.in_features, child.out_features, bias=child.bias is not None)
+      with torch.device('meta'):
+        einsum_linear = EinsumLinear(
+            child.in_features, child.out_features, bias=child.bias is not None)
       einsum_linear.load_state_dict(
           child.state_dict(), strict=True, assign=True)
       setattr(module, name, einsum_linear)

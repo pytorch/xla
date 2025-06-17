@@ -55,24 +55,26 @@ class CustomConv2(nn.Module):
 class ConvTest(base_test_util.TestCase):
 
   def test_conv1(self):
+    env = torchax.default_env()
     m = CustomConv1()
     arg = torch.randn((20, 1, 50))
     res = m(arg)
 
     jax_weights, jax_func = torchax.extract_jax(m)
-    arg = torchax.tensor.t2j(arg)
+    arg = env.t2j_copy(arg)
     res2 = jax_func(jax_weights, (arg,))
-    res2_torch = torchax.tensor.j2t(res2)
+    res2_torch = env.j2t_copy(res2)
     self.assertTrue(torch.allclose(res, res2_torch))
 
   def test_conv2(self):
+    env = torchax.default_env()
     m = CustomConv2()
     arg = torch.randn((20, 4, 50, 100))
     res = m(arg)
     jax_weights, jax_func = torchax.extract_jax(m)
-    arg = torchax.tensor.t2j(arg)
+    arg = env.t2j_copy(arg)
     res2 = jax_func(jax_weights, (arg,))
-    res2_torch = torchax.tensor.j2t(res2)
+    res2_torch = env.j2t_copy(res2)
     self.assertTrue(torch.allclose(res, res2_torch, atol=1e-4, rtol=1e-4))
 
 
