@@ -139,10 +139,11 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       }
 
       llvm::sort(groups, [](const BoundaryGroup& a, const BoundaryGroup& b) {
-        return a.first_order < b.first_order;  // inner → outer
+        return a.first_order > b.first_order;  // inner → outer
       });
 
       for (auto& grp : groups) {
+        op_order_map = BuildOpOrderMap(func_op);
         if (mlir::failed(BuildStableHLOComposite(grp.ops, op_order_map))) {
           func_op.emitError() << "failed to build composite.";
           return signalPassFailure();
