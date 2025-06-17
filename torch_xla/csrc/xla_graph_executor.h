@@ -156,8 +156,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // so that different versions of the code will likely produce different
   // hashes even with the same tensors. This ensures that we don't reuse
   // stale compilation results in the persistent compilation cache (e.g.
-  // if we fix a bug in torch_xla and rerun the program, we want to compile
-  // again).
+  // if we fix a bug in torch_xla in a new commit and rerun the program, we want
+  // to compile again).
   torch::lazy::hash_t GetGraphHash(const std::vector<XLATensorPtr>& tensors);
 
   void MaybeDumpGraph(std::string name, torch::lazy::hash_t hash);
@@ -296,6 +296,13 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   XLAGraphExecutor() = default;
 
+  // The pytorch git revision and the torch_xla git revision are included when
+  // computing the .hash field of the returned value, so that different versions
+  // of the code will likely produce different hashes even with the same
+  // tensors. This ensures that we don't reuse stale compilation results in the
+  // persistent compilation cache (e.g. if we fix a bug in torch_xla in a new
+  // commit and rerun the program, we want to compile again).
+  //
   // We don't use upstream CollectSyncTensors as we need to enable GSPMD.
   SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensorPtr>& tensors,

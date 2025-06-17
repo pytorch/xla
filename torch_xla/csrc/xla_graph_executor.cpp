@@ -527,14 +527,9 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
   }
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
 
-  // Seed the hash with the pytorch git revision and the torch_xla git
-  // revision, so that different versions of the code can produce
-  // different hashes for the same graph.
-  torch::lazy::hash_t res_hash = torch::lazy::StringHash(TORCH_GITREV);
-  MergeHash({torch::lazy::StringHash(XLA_GITREV),  //
-             coll.hash,                            //
-             torch::lazy::Hash(po_data.parameter_sequence)},
-            &res_hash);
+  // The pytorch/torch_xla revisions are already included in coll.hash.
+  torch::lazy::hash_t res_hash = coll.hash;
+  MergeHash(torch::lazy::Hash(po_data.parameter_sequence), &res_hash);
   if (GetAliasWithBufferDonorConfig()) {
     std::vector<size_t> buffer_donor_index =
         GetBufferDonorIndexFromUserConfig(po_data.parameters_data);
@@ -638,9 +633,11 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   // The force_ltc_data controls aliasing compilation, so effectively the same
   // graph with on/off force_ltc_data should not match, hash wise.
   coll.hash = torch::lazy::MHash(config.force_ltc_data);
-  // Ensure the compilation environment and git revision are reflected in the
-  // hash.
+  // Ensure that the compilation environment and git revisions are reflected
+  // in the hash, so that different versions of the code can produce different
+  // hashes for the same graph.
   MergeHash({runtime::GetComputationClient()->HashCompilationEnv(),
+             torch::lazy::StringHash(TORCH_GITREV),
              torch::lazy::StringHash(XLA_GITREV)},
             &coll.hash);
   coll.config = config;
