@@ -134,8 +134,23 @@ def compile(fn, options: Optional[CompileOptions] = None):
 @contextmanager
 def jax_device(target_device: str, env: tensor.Environment | None = None):
   """
-    When moving to Jax, manage where it tensor's device is 
-    """
+  to("jax") cannot differentiate the device/platform (cpu vs tpu). 
+  Use this context manager to control jax array's storage device
+  
+  Examples:
+
+  a = torch.ones(3, 3)
+
+  with jax_device("cpu"):
+    b = a.to("jax") 
+  
+  with jax_device("tpu"):
+    c = a.to("jax") 
+  
+  with jax_device("tpu"):
+    c = b.to("jax") 
+
+  """
   if env is None:
     env = default_env()
 
