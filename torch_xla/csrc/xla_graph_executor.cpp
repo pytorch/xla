@@ -525,8 +525,16 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
         static_cast<XlaDeviceType>(tensor->GetDevice().type())));
   }
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
+
+  // Seed the hash with the pytorch git revision and the torch_xla git
+  // revision, so that differennt versions of the code can produce
+  // different hashes for the same graph.
   torch::lazy::hash_t res_hash = torch::lazy::HashCombine(
-      coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+      torch::lazy::Hash(std::string_view(TORCH_GITREV)),
+      torch::lazy::Hash(std::string_view(XLA_GITREV)));
+  res_hash = torch::lazy::HashCombine(res_hash, coll.hash);
+  res_hash = torch::lazy::HashCombine(
+      res_hash, torch::lazy::Hash(po_data.parameter_sequence));
   if (GetAliasWithBufferDonorConfig()) {
     std::vector<size_t> buffer_donor_index =
         GetBufferDonorIndexFromUserConfig(po_data.parameters_data);

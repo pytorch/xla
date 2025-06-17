@@ -415,15 +415,19 @@ For more detailed debugging information, refer to the [XLA troubleshoot](https:/
 ## Compilation Caching
 
 The XLA compiler converts the traced HLO into an executable which runs
-on the devices. Compilation can be time consuming, and in cases where
+on the devices. Compilation can be time consuming. In case
 the HLO doesn't change across executions, the compilation result can be
 persisted to disk for reuse, significantly reducing development
 iteration time.
 
-Note that if the HLO changes between executions, a recompilation will
-still occur.
+NOTE:
 
-This is currently an experimental opt-in API, which must be activated
+* If the HLO changes between executions, a recompilation will still
+  occur.
+* When the version of `torch_xla` changes, a recompilation will occur
+  (so that we can generate the executables using the latest compiler).
+
+This is currently an opt-in API, which must be activated
 before any computations are executed. Initialization is done through the
 `initialize_cache` API:
 
@@ -437,9 +441,7 @@ path. The `readonly` parameter can be used to control whether the worker
 will be able to write to the cache, which can be useful when a shared
 cache mount is used for an SPMD workload.
 
-If you want to use persistent compilation cache in the multi process
-training(with `torch_xla.launch` or `xmp.spawn`), you should use the
-different path for different process.
+If you want to use the persistent compilation cache in multi-process training (with `torch_xla.launch` or `xmp.spawn`), you should use different paths for different processes.
 
 ``` python
 def _mp_fn(index):
@@ -451,9 +453,7 @@ if __name__ == '__main__':
   torch_xla.launch(_mp_fn, args=())
 ```
 
-If you don't have the access to the `index`, you can use
-`xr.global_ordinal()`. Check out the runnable example in
-[here](https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_xla_ddp.py).
+If you don't have access to `index`, you can use `xr.global_ordinal()`. Check out the runnable example in [here](https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_xla_ddp.py).
 
 ## Further Reading
 
