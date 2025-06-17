@@ -7,6 +7,7 @@ import torch
 from torch.utils import _pytree as pytree
 from torchax import tensor
 from torchax import distributed  # noqa: F401
+from contextlib import contextmanager
 
 __version__ = "0.0.4"
 VERSION = __version__
@@ -128,3 +129,19 @@ def compile(fn, options: Optional[CompileOptions] = None):
     raise RuntimeError('dynamo mode is not supported yet')
   elif options.mode == 'export':
     raise RuntimeError('export mode is not supported yet')
+
+
+@contextmanager
+def jax_device(target_device: str, env: tensor.Environment | None = None):
+  """
+    When moving to Jax, manage where it tensor's device is 
+    """
+  if env is None:
+    env = default_env()
+
+  prev_target_device = env.target_device
+  try:
+    env.target_device = target_device
+    yield env
+  finally:
+    env.target_device = prev_target_device

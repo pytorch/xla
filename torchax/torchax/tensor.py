@@ -293,6 +293,8 @@ TENSOR_CONSTRUCTORS = {
     torch.as_tensor,
 }
 
+# TODO(wen): use existing types, either from torch or jax
+SUPPORTED_JAX_PLATFROM = ["cpu", "tpu"]
 
 class Environment(contextlib.ContextDecorator):
   """This class holds a set of configurations and "globals" needed
@@ -322,10 +324,19 @@ class Environment(contextlib.ContextDecorator):
 
     self._manually_entered = False
     self.enabled = False
-    self._jax_devices = set(["jax", "jax_cpu", "xla"])
+
     self._prng_key = mutable_array(
         jax.random.key(torch.initial_seed() % (1 << 63)))
     self.autocast_dtype = None
+    self._target_device = "cpu"
+
+  @property
+  def target_device(self):
+    return self._target_device
+
+  @target_device.setter
+  def target_device(self, device:str):
+    self._target_device = device.lower()
 
   def manual_seed(self, key):
     self._prng_key = mutable_array(jax.random.key(key))
@@ -348,8 +359,17 @@ class Environment(contextlib.ContextDecorator):
     if self.config.treat_cuda_as_jax_device and device.startswith("cuda"):
       return jax.local_devices()[0]
 
-    if device.startswith("jax") or device.startswith("xla"):
+    if device.startswith("xla"):
       return jax.local_devices()[0]
+
+    # TODO (wen): jax is NOT a device type, 
+    # once we can register more than one backend, revisit
+    if device.startswith("jax"):
+      match self.target_device:
+        case "cpu":
+          return jax.devices("cpu")[0]
+        case "tpu":
+          return jax.devices("tpu")[0]
 
     return None  # fallback to torch
 
@@ -401,19 +421,34 @@ class Environment(contextlib.ContextDecorator):
   def _to_copy(self, the_tensor, new_dtype, new_device):
     if isinstance(the_tensor, View):
       the_tensor = the_tensor.torch()
+
     if isinstance(the_tensor, Tensor):
+
       arr = the_tensor.jax()
+
       if new_dtype is not None and new_dtype != arr.dtype:
         arr = arr.astype(mappings.t2j_dtype(new_dtype))
+
+      # convert xla tensor to other device
+      # only supported is CPU
       if new_device is not None:
-        # convert xla tensor to other device
-        # only supported is CPU
-        if str(new_device).startswith("cpu"):
-          # converting to a non-jax device: let torch native handle it
-          torch_tensor = self.j2t_copy(arr) if isinstance(the_tensor,
-                                                          Tensor) else arr
-          with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-            return torch_tensor.to(new_device)
+        match str(new_device).lower():
+          case "cpu":
+            # converting to a non-jax device: let torch native handle it
+            torch_tensor = self.j2t_copy(arr) if isinstance(the_tensor,
+                                                            Tensor) else arr
+            with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+              return torch_tensor.to(new_device)
+          case "jax":
+            # move torchax.tensor / jax tensor between devices
+            # I don't know ifgit  this will work after the model is jitted
+            if self.target_device != the_tensor.jax_device.platform:
+              arr = jax.device_put(the_tensor.jax(),
+                                  jax.devices(self.target_device)[0])
+              return Tensor(arr, self)
+          case _:
+            logging.error(f"torchax.Tenosr cannot handle device {new_device}")
+
     else:
       if new_dtype is not None and new_dtype != the_tensor.dtype:
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
