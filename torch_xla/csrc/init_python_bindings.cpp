@@ -82,7 +82,7 @@
 namespace torch_xla {
 namespace {
 
-static int64_t seed_info_id = -127389;
+constexpr int64_t kSeedInfoId = -127389;
 
 // Wraps a python scope (e.g. py::module) to provide more convenient APIs.
 // It behaves like a Scope object but has enhanced behaviors for the def*()
@@ -103,59 +103,77 @@ class PythonScope : public Scope {
   // Defines a __init__ function for the given scope.
   template <typename Func, typename... Extra>
   PythonScope& def_init(Func&& f, const Extra&... extra) {
-    using FnTraits = typename c10::guts::infer_function_traits<Func>::type;
-    using RetType = typename FnTraits::return_type;
-    using ParameterTypes = typename FnTraits::parameter_types;
-
-    PythonFunctionBinder<Func, RetType, ParameterTypes, Extra...>::BindInit(
-        *this, std::forward<Func>(f), extra...);
+    using ParameterTypes =
+        typename c10::guts::infer_function_traits<Func>::type::parameter_types;
+    PythonFunctionBinder<FunctionKind::kInit, ParameterTypes, Extra...>::Bind(
+        *this, "", std::forward<Func>(f), extra...);
     return *this;
   }
 
   // Defines a python function with the given name in the scope.
   template <typename Func, typename... Extra>
   PythonScope& def(const char* name, Func&& f, const Extra&... extra) {
-    using FnTraits = typename c10::guts::infer_function_traits<Func>::type;
-    using RetType = typename FnTraits::return_type;
-    using ParameterTypes = typename FnTraits::parameter_types;
+    using ParameterTypes =
+        typename c10::guts::infer_function_traits<Func>::type::parameter_types;
+    PythonFunctionBinder<FunctionKind::kRegular, ParameterTypes,
+                         Extra...>::Bind(*this, name, std::forward<Func>(f),
+                                         extra...);
+    return *this;
+  }
 
-    PythonFunctionBinder<Func, RetType, ParameterTypes, Extra...>::Bind(
+  // Defines a static python function with the given name in the scope.
+  template <typename Func, typename... Extra>
+  PythonScope& def_static(const char* name, Func&& f, const Extra&... extra) {
+    using ParameterTypes =
+        typename c10::guts::infer_function_traits<Func>::type::parameter_types;
+    PythonFunctionBinder<FunctionKind::kStatic, ParameterTypes, Extra...>::Bind(
         *this, name, std::forward<Func>(f), extra...);
     return *this;
   }
 
  private:
-  template <typename F, typename RetType, typename ParameterTypes,
-            typename... Extra>
+  // The kind of python function.
+  enum class FunctionKind {
+    kInit,     // __init__
+    kRegular,  // a regular (non-static) function
+    kStatic,   // a static function
+  };
+
+  template <FunctionKind kind, typename ParameterTypes, typename... Extra>
   struct PythonFunctionBinder;
 
-  template <typename F, typename RetType, typename... Args, typename... Extra>
-  struct PythonFunctionBinder<
-      F, RetType, c10::guts::typelist::typelist<Args...>, Extra...> {
-    // Binds an __init__ function in the given scope.
-    static void BindInit(Scope& scope, F&& f, const Extra&... extra) {
-      scope.def(py::init(
-          [f = std::move(f)](Args... args) -> RetType {
-            torch::PyWarningHandler handler;
-            return f(args...);
-          },
-          extra...));
-    }
-
+  template <FunctionKind kind, typename... Args, typename... Extra>
+  struct PythonFunctionBinder<kind, c10::guts::typelist::typelist<Args...>,
+                              Extra...> {
     // Binds a python function with the given name in the given scope.
+    template <typename F>
     static void Bind(Scope& scope, const char* const name, F&& f,
                      const Extra&... extra) {
-      scope.def(
-          name,
-          [f = std::move(f)](Args... args) -> RetType {
-            // RAII for emitting Python warnings.
-            //
-            // This turns messages passed to `TORCH_WARN()` in `f` into Python
-            // warnings.
-            torch::PyWarningHandler handler;
-            return f(args...);
-          },
-          extra...);
+      using RetType =
+          typename c10::guts::infer_function_traits<F>::type::return_type;
+
+      if constexpr (kind == FunctionKind::kInit) {
+        scope.def(py::init(
+            [f = std::move(f)](Args... args) -> RetType {
+              torch::PyWarningHandler handler;
+              return f(args...);
+            },
+            extra...));
+      } else {
+        auto lambda = [f = std::move(f)](Args... args) -> RetType {
+          // RAII for emitting Python warnings.
+          //
+          // This turns messages passed to `TORCH_WARN()` in `f` into Python
+          // warnings.
+          torch::PyWarningHandler handler;
+          return f(args...);
+        };
+        if constexpr (kind == FunctionKind::kStatic) {
+          scope.def_static(name, std::move(lambda), extra...);
+        } else {
+          scope.def(name, std::move(lambda), extra...);
+        }
+      }
     }
   };
 };
@@ -3246,7 +3264,7 @@ void InitXlaModuleBindings(py::module m) {
                       backend_data->info());
 
               // TODO(JackCaoG): Make sure this device data is actually seed.
-              int64_t tensor_id = infoptr ? infoptr->tensor_id : seed_info_id;
+              int64_t tensor_id = infoptr ? infoptr->tensor_id : kSeedInfoId;
               tensor_ids.push_back(tensor_id);
               if (uncloned_tensor_map.find(tensor_id) !=
                   uncloned_tensor_map.end()) {
@@ -3262,7 +3280,7 @@ void InitXlaModuleBindings(py::module m) {
           py::arg("output_tensors"),  //
           py::arg("uncloned_tensors") = py::list())
       .def("_get_seed_info_id",  //
-           []() -> int64_t { return seed_info_id; })
+           []() -> int64_t { return kSeedInfoId; })
       .def("_get_base_seed_as_tensor",
            [](const std::string& device_str) -> at::IValue {
              torch::lazy::BackendDevice device =
