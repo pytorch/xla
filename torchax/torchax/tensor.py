@@ -539,6 +539,10 @@ class Environment(contextlib.ContextDecorator):
 
       if self.config.debug_accuracy_for_each_op:
         debug_accuracy(func, old_args, old_kwargs, res)
+
+      for r in torch_pytree.tree_flatten(res)[0]:
+        if isinstance(r, Tensor) and r.dtype != super(torch.Tensor, r).dtype:
+          breakpoint()
       return res
 
   def enable_torch_modes(self):
@@ -588,6 +592,9 @@ class Environment(contextlib.ContextDecorator):
       if isinstance(
           x, torch.distributed._functional_collectives.AsyncCollectiveTensor):
         x = x.wait()
+      if self.config.allow_mixed_tensor_for_scalar_tensor and not isinstance(x, Tensor):
+        if x.squeeze().ndim == 0:
+          return x.item()
       assert isinstance(x, Tensor) or isinstance(x, View), (
           f"Expect a Tensor or a View but got {type(x)}; usually this means there is a mixed math between XLATensor and torch.Tensor"
       )

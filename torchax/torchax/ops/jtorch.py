@@ -50,6 +50,11 @@ def _tensor(data, *, dtype=None, **kwargs):
     leaves = jax.tree_util.tree_leaves(data)
     if len(leaves) > 0:
       dtype = python_types_to_torch_types.get(type(leaves[0]))
+  def to_scalar(x):
+    if isinstance(x, torch.Tensor):
+      return x.item()
+    return x
+  data = jax.tree.map(to_scalar, data)
 
   return jnp.array(
       data, dtype=dtype or mappings.t2j_dtype(torch.get_default_dtype()))
@@ -566,3 +571,9 @@ def torch_Tensor_repeat_interleave(self,
                                    *,
                                    output_size=None):
   return jnp.repeat(self, repeats, axis=dim, total_repeat_length=output_size)
+
+@register_function(torch.nn.functional.conv2d)
+def torch_conv2d(
+  input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1
+):
+  return jaten._aten_conv2d(input, weight, bias, stride, padding, dilation, groups)
