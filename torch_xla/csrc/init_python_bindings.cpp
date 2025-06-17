@@ -106,7 +106,7 @@ class PythonScope : public Scope {
     using ParameterTypes =
         typename c10::guts::infer_function_traits<Func>::type::parameter_types;
     PythonFunctionBinder<FunctionKind::kInit, ParameterTypes, Extra...>::Bind(
-        *this, "", std::forward<Func>(f), extra...);
+        *this, /*name=*/"", std::forward<Func>(f), extra...);
     return *this;
   }
 
@@ -146,6 +146,7 @@ class PythonScope : public Scope {
   struct PythonFunctionBinder<kind, c10::guts::typelist::typelist<Args...>,
                               Extra...> {
     // Binds a python function with the given name in the given scope.
+    // When scope is kInit, the name is ignored.
     template <typename F>
     static void Bind(Scope& scope, const char* const name, F&& f,
                      const Extra&... extra) {
