@@ -7,6 +7,7 @@
 
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
+#include "llvm/ADT/STLExtras.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LogicalResult.h"
@@ -120,8 +121,29 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       std::unordered_map<std::string, llvm::SmallVector<mlir::Operation*>>
           boundary_output_ops_map = BuildBoundaryOutputOpsMap(func_op);
 
-      for (const auto& [unused, ops] : boundary_output_ops_map) {
-        if (mlir::failed(BuildStableHLOComposite(ops, op_order_map))) {
+      struct BoundaryGroup {
+        std::string key;
+        llvm::SmallVector<mlir::Operation*> ops;
+        size_t first_order;  // lexical min
+      };
+
+      llvm::SmallVector<BoundaryGroup> groups;
+      groups.reserve(boundary_output_ops_map.size());
+
+      for (auto& kv : boundary_output_ops_map) {
+        size_t min_ord = std::numeric_limits<size_t>::max();
+        for (mlir::Operation* op : kv.second) {
+          if (op != nullptr) min_ord = std::min(min_ord, op_order_map.at(op));
+        }
+        groups.push_back({kv.first, kv.second, min_ord});
+      }
+
+      llvm::sort(groups, [](const BoundaryGroup& a, const BoundaryGroup& b) {
+        return a.first_order < b.first_order;  // inner → outer
+      });
+
+      for (auto& grp : groups) {
+        if (mlir::failed(BuildStableHLOComposite(grp.ops, op_order_map))) {
           func_op.emitError() << "failed to build composite.";
           return signalPassFailure();
         }
