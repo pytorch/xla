@@ -357,6 +357,5 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
                          expected.sort().values),
           f"Got {val}, expected {expected}")
 
-
 if __name__ == '__main__':
   absltest.main()
