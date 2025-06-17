@@ -1003,14 +1003,14 @@ void BuildProfilerSubmodule(py::module* m) {
       m->def_submodule("profiler", "Profiler integration");
 
   // Define the profiler.ProfilerServer class.
-  PythonScope<py::class_<runtime::profiler::ProfilerServer,
-                         std::unique_ptr<runtime::profiler::ProfilerServer>>>
-      profiler_server_class(profiler, "ProfilerServer");
+  py::class_<runtime::profiler::ProfilerServer,
+             std::unique_ptr<runtime::profiler::ProfilerServer>>(
+      profiler, "ProfilerServer");
 
   // Define the profiler.ScopePusher class.
   py::class_<torch::lazy::ScopePusher,
-             std::unique_ptr<torch::lazy::ScopePusher>>
-      scope_pusher_class(profiler, "ScopePusher");
+             std::unique_ptr<torch::lazy::ScopePusher>>(profiler,
+                                                        "ScopePusher");
 
   // Define functions in the profiler submodule.
   profiler
