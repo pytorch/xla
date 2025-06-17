@@ -16,6 +16,7 @@ import torch.utils._pytree as torch_pytree
 from torchax.view import View, NarrowInfo
 from torchax import config
 from torchax.ops import mappings, ops_registry
+from torchax import amp
 
 logger = logging.getLogger(__name__)
 
@@ -323,6 +324,7 @@ class Environment(contextlib.ContextDecorator):
     self.enabled = False
     self._jax_devices = set(["jax", "jax_cpu", "xla"])
     self.prng_key = jax.random.key(torch.initial_seed() % (1 << 63))
+    self.autocast_dtype = None
 
   def manual_seed(self, key):
     self.prng_key = jax.random.key(key)
@@ -511,6 +513,13 @@ class Environment(contextlib.ContextDecorator):
       try:
         if not op.is_view_op:
           args, kwargs = self.v2t_iso((args, kwargs))
+
+        with self:
+          if self.autocast_dtype is not None:
+            autocast_policy = amp.autocast_policy.get(func)
+            if autocast_policy is not None:
+              args, kwargs = amp.execute_policy(autocast_policy, args, kwargs,
+                                                self.autocast_dtype)
 
         if op.is_jax_function:
           args, kwargs = self.t2j_iso((args, kwargs))
