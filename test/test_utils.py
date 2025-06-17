@@ -386,7 +386,9 @@ class XlaTestCase(unittest.TestCase):
     if device is None:
       device = torch_xla.device()
     tensors = xu.as_list(tensors)
-    cpu_tensors = [t.clone() for t in tensors]
+    cpu_tensors = [
+        t.clone().detach().requires_grad_(t.requires_grad) for t in tensors
+    ]
     xla_tensors = [
         x.to(device).detach().requires_grad_(x.requires_grad) for x in tensors
     ]
