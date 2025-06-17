@@ -326,6 +326,29 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
                          expected.sort().values),
           f"Got {val}, expected {expected}")
 
+  @staticmethod
+  def _send_recv():
+    dist.init_process_group("xla", init_method='xla://')
+    device = torch_xla.device()
+    world_size = xr.world_size()
+    cutoff = world_size // 2
+    index = xr.global_ordinal()
+    tensor = torch.tensor([index + 1], dtype=torch.float, device=device)
+    if index < cutoff:
+      dist.send(tensor, index + cutoff)
+    else:
+      dist.recv(tensor, index - cutoff)
+    return tensor.cpu()
+
+  def test_send_recv(self):
+    """Send tensors on first N/2 devices to second N/2 devices."""
+    results = pjrt.run_multiprocess(self._send_recv)
+    world_size = tpu.num_expected_global_devices()
+    for ordinal, value in results.items():
+      expected = ordinal + 1 if ordinal < world_size // 2 else ordinal + 1 - world_size // 2
+      np.testing.assert_array_equal(value, [expected])
+
+
 
 if __name__ == '__main__':
   absltest.main()

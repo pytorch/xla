@@ -748,9 +748,6 @@ def collective_permute(value: torch.Tensor,
                        pairs: List[List[int]]) -> torch.Tensor:
   """Performs a XLA `CollectivePermute()` operation on the input tensor.
 
-  WARNING: This function is not very reliable, may produce wrong results under
-           certain inputs. Use it at your own risk.
-
   See: https://www.tensorflow.org/xla/operation_semantics#collectivepermute
 
   Args:

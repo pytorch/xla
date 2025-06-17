@@ -166,47 +166,6 @@ class XlaBackendTest(parameterized.TestCase):
     # purge all computations attached the device.
     torch_xla.sync()
 
-  @patch_world(0, 6)
-  def test_send(self):
-    device = torch_xla.device()
-    tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
-    input_list = [tensor]
-
-    with mock.patch.object(
-        torch_xla.distributed.xla_backend.ProcessGroupXla,
-        'make_send_channel_id',
-        new=lambda self, dst_rank, tag: dst_rank * 2):
-      dist.send(tensor, 1)
-
-    send_pattern = r'%send\.\d+ = .+ send\(.+\), channel_id=2'
-    senddone_pattern = r'%send\-done\.\d+ = .+ send\-done\(.+\), channel_id=2'
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
-    hlo_matches(hlo, send_pattern)
-    hlo_matches(hlo, senddone_pattern)
-
-    # Don't try to run Send on CPU because it's not implemented
-    torch_xla._XLAC._clear_pending_irs(str(torch_xla.device()))
-
-  @patch_world(0, 6)
-  def test_recv(self):
-    device = torch_xla.device()
-    tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
-
-    with mock.patch.object(
-        torch_xla.distributed.xla_backend.ProcessGroupXla,
-        'make_recv_channel_id',
-        new=lambda self, src_rank, tag: src_rank * 3):
-      dist.recv(tensor, 1)
-
-    recv_pattern = r'%recv\.\d+ = .+ recv\(.+\), channel_id=3'
-    recvdone_pattern = r'%recv\-done\.\d+ = .+ recv\-done\(.+\), channel_id=3'
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
-    hlo_matches(hlo, recv_pattern)
-    hlo_matches(hlo, recvdone_pattern)
-
-    # Don't try to run Recv on CPU because it's not implemented
-    torch_xla._XLAC._clear_pending_irs(str(torch_xla.device()))
-
   @patch_world(rank=0, size=12)
   def test_new_group_no_ranks(self):
     with new_group_barrier_disabled():
