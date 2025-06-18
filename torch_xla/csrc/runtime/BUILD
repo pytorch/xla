@@ -24,6 +24,7 @@ cc_library(
         ":env_vars",
         ":ifrt_computation_client",
         ":pjrt_computation_client",
+        "@com_google_absl//absl/log:absl_check",
         "@tsl//tsl/platform:stacktrace",
     ],
 )

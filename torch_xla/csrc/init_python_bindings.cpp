@@ -172,6 +172,22 @@ class PythonScope : public Scope {
   };
 };
 
+static void ConsumeAndMaybeThrow(absl::Status status) {
+  if (status.ok()) {
+    return;
+  }
+
+  throw std::runtime_error(std::string(status.message()));
+}
+
+template <class T>
+static T ConsumeAndMaybeThrow(absl::StatusOr<T> status) {
+  if (status.ok()) {
+    return std::move(status.value());
+  }
+  ConsumeAndMaybeThrow(status.status());
+}
+
 struct NoGilSection {
   NoGilSection() : state(PyEval_SaveThread()) {}
   ~NoGilSection() { PyEval_RestoreThread(state); }
@@ -1681,7 +1697,10 @@ void InitXlaModuleBindings(py::module m) {
             XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
            })
       .def("_init_computation_client",
-           []() { runtime::GetComputationClient(); })
+           []() {
+             auto status = runtime::status::GetComputationClient();
+             ConsumeAndMaybeThrow(status);
+           })
       .def("_xla_get_device_hw_type",
            [](const at::Tensor& tensor) {
             XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
