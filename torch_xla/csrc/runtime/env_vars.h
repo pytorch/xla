@@ -37,6 +37,8 @@ inline constexpr char kEnvDistSvcMaxMissingHeartbeats[] =
     "DIST_SERVICE_MAX_MISSING_HEARTBEATS";
 inline constexpr char kEnvDistSvcShutdownTimeoutInMin[] =
     "DIST_SERVICE_SHUTDOWN_TIMEOUT_IN_MIN";
+inline constexpr char kEnvShowCppErrorContext[] =
+    "XLA_SHOW_CPP_ERROR_CONTEXT";
 
 }  // namespace env
 }  // namespace runtime

@@ -64,6 +64,7 @@
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -171,18 +172,6 @@ class PythonScope : public Scope {
     }
   };
 };
-
-static void ConsumeAndMaybeThrow(absl::Status status) {
-  if (!status.ok()) {
-    throw std::runtime_error(std::string(status.message()));
-  }
-}
-
-template <class T>
-static T ConsumeAndMaybeThrow(absl::StatusOr<T> status) {
-  ConsumeAndMaybeThrow(status.status());
-  return std::move(status.value());
-}
 
 struct NoGilSection {
   NoGilSection() : state(PyEval_SaveThread()) {}
