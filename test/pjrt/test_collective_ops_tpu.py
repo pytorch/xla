@@ -115,11 +115,14 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
       ]
     else:
       tensors = None
+
     output_tensor = torch.tensor([-1], dtype=torch.float, device=device)
     dist.scatter(output_tensor, tensors, src=0)
     return output_tensor.cpu()
 
   def test_scatter(self):
+    """self._scatter instantiates a list of tensors [[0], [1], ..., [n-1]]
+    on device 0, then scatters it. Device i should therefore receive [i]."""
     results = pjrt.run_multiprocess(self._scatter)
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [ordinal])
@@ -356,6 +359,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
           torch.allclose(val.sort().values,
                          expected.sort().values),
           f"Got {val}, expected {expected}")
+
 
 if __name__ == '__main__':
   absltest.main()

@@ -253,6 +253,10 @@ class ProcessGroupXla(ProcessGroup):
   def gather(self, *args):
     raise NotImplementedError
 
+  # Called by torch.distributed.scatter. Call site example:
+  # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L4146
+  # Input tensors are defined on the source device and scattered
+  # to the output tensors.
   def scatter(self, output_tensor_list: list[torch.Tensor],
               input_tensors_list: list[list[torch.Tensor]],
               opts: ScatterOptions):
