@@ -21,9 +21,9 @@ from torchgen.api.types import (
     kernel_signature,
 )
 
-aten_path = os.path.join(torch_root, "aten", "src", "ATen")
-shape_inference_hdr = os.path.join(torch_root, "torch", "csrc", "lazy", "core",
-                                   "shape_inference.h")
+aten_path = os.path.join(torch_root, "torchgen", "packaged", "ATen")
+shape_inference_hdr = os.path.join(torch_root, "torch", "include",
+                                   "torch", "csrc", "lazy", "core", "shape_inference.h")
 impl_path = os.path.join(xla_root, "__main__",
                          "torch_xla/csrc/aten_xla_type.cpp")
 source_yaml = sys.argv[2]

@@ -35,18 +35,18 @@ python_configure(
 ################################ PyTorch Setup ################################
 
 load("//bazel:dependencies.bzl", "PYTORCH_LOCAL_DIR")
+load("//bazel:torch_repo.bzl", "torch_repo")
 
-new_local_repository(
+torch_repo(
     name = "torch",
-    build_file = "//bazel:torch.BUILD",
-    path = PYTORCH_LOCAL_DIR,
+    dist_dir = "../dist",
 )
 
 ############################# OpenXLA Setup ###############################
 
 # To build PyTorch/XLA with a new revison of OpenXLA, update the xla_hash to
 # the openxla git commit hash and note the date of the commit.
-xla_hash = '9ac36592456e7be0d66506be75fbdacc90dd4e91'  # Committed on 2025-06-11.
+xla_hash = "9ac36592456e7be0d66506be75fbdacc90dd4e91"  # Committed on 2025-06-11.
 
 http_archive(
     name = "xla",
@@ -65,8 +65,6 @@ http_archive(
         "https://github.com/openxla/xla/archive/" + xla_hash + ".tar.gz",
     ],
 )
-
-
 
 # For development, one often wants to make changes to the OpenXLA repository as well
 # as the PyTorch/XLA repository. You can override the pinned repository above with a
@@ -89,14 +87,14 @@ python_init_rules()
 load("@xla//third_party/py:python_init_repositories.bzl", "python_init_repositories")
 
 python_init_repositories(
+    default_python_version = "system",
+    local_wheel_workspaces = ["@torch//:WORKSPACE"],
     requirements = {
         "3.8": "//:requirements_lock_3_8.txt",
         "3.9": "//:requirements_lock_3_9.txt",
         "3.10": "//:requirements_lock_3_10.txt",
         "3.11": "//:requirements_lock_3_11.txt",
     },
-    local_wheel_workspaces = ["@torch//:WORKSPACE"],
-    default_python_version = "system",
 )
 
 load("@xla//third_party/py:python_init_toolchains.bzl", "python_init_toolchains")
@@ -110,8 +108,6 @@ python_init_pip()
 load("@pypi//:requirements.bzl", "install_deps")
 
 install_deps()
-
-
 
 # Initialize OpenXLA's external dependencies.
 load("@xla//:workspace4.bzl", "xla_workspace4")
@@ -133,7 +129,6 @@ xla_workspace1()
 load("@xla//:workspace0.bzl", "xla_workspace0")
 
 xla_workspace0()
-
 
 load(
     "@xla//third_party/gpus:cuda_configure.bzl",
