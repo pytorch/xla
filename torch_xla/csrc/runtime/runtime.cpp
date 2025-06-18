@@ -12,7 +12,9 @@ namespace torch_xla::runtime {
 
 std::atomic<bool> g_computation_client_initialized(false);
 
-static absl::StatusOr<std::unique_ptr<ComputationClient>>
+// Creates a new instance of a `ComputationClient` (e.g. `PjRtComputationClient`),
+// and initializes the computation client
+static absl::StatusOr<absl_nonnull std::unique_ptr<ComputationClient>>
 InitializeComputationClient() {
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
     tsl::testing::InstallStacktraceHandler();
@@ -33,42 +35,24 @@ InitializeComputationClient() {
     return absl::FailedPreconditionError("$PJRT_DEVICE is not set.");
   }
 
+  g_computation_client_initialized = true;
   return client;
 }
 
 absl::StatusOr<ComputationClient*> GetComputationClient() {
-  static std::unique_ptr<ComputationClient> client;
+  static absl::StatusOr<absl_nonnull std::unique_ptr<ComputationClient>> maybeClient = InitializeComputationClient();
 
-  if (client.get() == nullptr) {
-    // Try to initialize the computation client if it's not
-    // already initialized.
-    auto status = InitializeComputationClient();
-
-    if (status.ok()) {
-      client = std::move(status.value());
-      ABSL_CHECK(client.get());
-      g_computation_client_initialized = true;
-    } else {
-      return status.status();
-    }
+  if (!maybeClient.ok()) {
+    return maybeClient.status();
   }
 
-  return client.get();
+  auto client = maybeClient.value().get();
+  ABSL_CHECK(client);
+  return client;
 }
 
-}  // namespace status
-
 ComputationClient* GetComputationClientOrDie() {
-  auto client = GetComputationClient();
-
-  // In order to be backward compatible, we call `XLA_CHECK()`, which throws an
-  // exception.
-  //
-  // Calling either `ConsumeValue()`, `XLA_CHECK_OK()`, or `ABSL_CHECK()` would
-  // crash the process.
-  XLA_CHECK(client.ok()) << client.status().message();
-
-  return client.value();
+  return GetComputationClient().value();
 }
 
 ComputationClient* GetComputationClientIfInitialized() {
