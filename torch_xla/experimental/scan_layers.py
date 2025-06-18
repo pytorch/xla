@@ -116,7 +116,7 @@ def scan_layers(layers: Iterable[torch.nn.Module],
 
   one_layer = _create_or_get_cached_one_layer_fn(first_layer, partition_fn,
                                                  is_layer_pure)
-  
+
   stacked_params_buffers = (stacked_params, stacked_buffers)
   final_carry, _ = scan(
       one_layer,
