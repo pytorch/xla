@@ -152,28 +152,21 @@ class PythonScope : public Scope {
                      const Extra&... extra) {
       using RetType =
           typename c10::guts::infer_function_traits<F>::type::return_type;
+      auto lambda = [f = std::move(f)](Args... args) -> RetType {
+        // RAII for emitting Python warnings.
+        //
+        // This turns messages passed to `TORCH_WARN()` in `f` into Python
+        // warnings.
+        torch::PyWarningHandler handler;
+        return f(args...);
+      };
 
       if constexpr (kind == FunctionKind::kInit) {
-        scope.def(py::init(
-            [f = std::move(f)](Args... args) -> RetType {
-              torch::PyWarningHandler handler;
-              return f(args...);
-            },
-            extra...));
+        scope.def(py::init(std::move(lambda)), extra...);
+      } else if constexpr (kind == FunctionKind::kStatic) {
+        scope.def_static(name, std::move(lambda), extra...);
       } else {
-        auto lambda = [f = std::move(f)](Args... args) -> RetType {
-          // RAII for emitting Python warnings.
-          //
-          // This turns messages passed to `TORCH_WARN()` in `f` into Python
-          // warnings.
-          torch::PyWarningHandler handler;
-          return f(args...);
-        };
-        if constexpr (kind == FunctionKind::kStatic) {
-          scope.def_static(name, std::move(lambda), extra...);
-        } else {
-          scope.def(name, std::move(lambda), extra...);
-        }
+        scope.def(name, std::move(lambda), extra...);
       }
     }
   };
