@@ -43,12 +43,14 @@ class ExportTest(unittest.TestCase):
     model = Interpolate()
     ans = model(*arg)
 
+    env = torchax.default_env()
+
     with torch.no_grad():
       exported = torch.export.export(model, arg)
     weights, func = torchax.export.exported_program_to_jax(exported)
-    argj = tensor.t2j(arg[0])
+    argj = env.t2j_copy(arg[0])
     ans2 = jax.jit(func)(weights, (argj,))[0]
-    ans2 = tensor.j2t(ans2)
+    ans2 = env.j2t_copy(ans2)
     self.assertTrue(torch.allclose(ans, ans2, atol=1e-3))
 
     # Convert to StableHLO
@@ -67,11 +69,11 @@ class ExportTest(unittest.TestCase):
 
     with torch.no_grad():
       exported = torch.export.export(model, arg)
-
+    env = torchax.default_env()
     weights, func = torchax.export.exported_program_to_jax(exported)
-    argj = tensor.t2j(arg[0])
+    argj = env.t2j_copy(arg[0])
     ans2 = jax.jit(func)(weights, (argj,))[0]
-    ans2 = tensor.j2t(ans2)
+    ans2 = env.j2t_copy(ans2)
     self.assertTrue(torch.allclose(ans, ans2, atol=1e-5))
 
     # Convert to StableHLO

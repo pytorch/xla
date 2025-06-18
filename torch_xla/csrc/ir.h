@@ -100,7 +100,7 @@ class XlaNode : public torch::lazy::Node {
   XlaNode(torch::lazy::OpKind op, xla::Shape xla_shape, size_t num_outputs,
           torch::lazy::hash_t hash_seed);
 
-  virtual ~XlaNode();
+  ~XlaNode() override;
 
   // Retrieves the full shape of the IR XlaNode. Note that if this is a
   // multi-output node, the returned shape will be a tuple.

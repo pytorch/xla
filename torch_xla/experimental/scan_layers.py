@@ -67,7 +67,7 @@ def scan_layers(layers: Iterable[torch.nn.Module],
 
     input_data: The input to be given to the first layer from `layers`.
 
-    partition_fn: (Optional[Callable]) The graph parition function passed to AOTAutograd.
+    partition_fn: (Optional[Callable]) The graph partition function passed to AOTAutograd.
       Since this function uses AOTAutograd to trace `fn`, you may override what computation
       happen in the forward and backward passes by specifying different partition functions.
       `default_partition` implies no activation checkpointing. You may specify
@@ -116,7 +116,7 @@ def scan_layers(layers: Iterable[torch.nn.Module],
 
   one_layer = _create_or_get_cached_one_layer_fn(first_layer, partition_fn,
                                                  is_layer_pure)
-
+  
   stacked_params_buffers = (stacked_params, stacked_buffers)
   final_carry, _ = scan(
       one_layer,

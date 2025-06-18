@@ -126,6 +126,7 @@ ptxla_cc_library(
         ":shape_builder",
         ":shape_helper",
         ":version",
+        "//torch_xla/csrc:hash_util",
         "//torch_xla/csrc:thread_pool",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:stablehlo_helper",
@@ -243,6 +244,8 @@ ptxla_cc_library(
     srcs = ["shape_builder.cpp"],
     hdrs = ["shape_builder.h"],
     deps = [
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/base:nullability",
         "@com_google_absl//absl/types:span",
         "@xla//xla:shape_util",
         "@xla//xla:types",
@@ -308,6 +311,8 @@ ptxla_cc_library(
         ":unwrap_data",
         "//torch_xla/csrc/runtime:cache",
         "//torch_xla/csrc/runtime:computation_client",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -329,6 +334,15 @@ cc_library(
     deps = [
         "//torch_xla/csrc/runtime:sys_util",
         "@tsl//tsl/platform:env"
+    ],
+)
+
+cc_library(
+    name = "hash_util",
+    srcs = ["hash_util.cpp"],
+    hdrs = ["hash_util.h"],
+    deps = [
+        "@torch//:headers",
     ],
 )
 
