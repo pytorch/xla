@@ -138,7 +138,7 @@ class InteropTest(unittest.TestCase):
       self.assertEqual(b.jax_device.platform, "cpu")
       self.assertEqual(b.device.type, "jax")
 
-    if is_tpu_available:
+    if is_tpu_available():
       # move torch.tensor to torchax.tensor TPU
       with jax_device("tpu"):
         c = a.to("jax")
