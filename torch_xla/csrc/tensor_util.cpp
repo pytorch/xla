@@ -870,8 +870,8 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     } else {
       source_tensors.push_back(std::make_shared<runtime::AtenSource>(
           tensors[i], std::move(shape), devices[i]));
-      new_handles =
-          runtime::GetComputationClientOrDie()->TransferToDevice(source_tensors);
+      new_handles = runtime::GetComputationClientOrDie()->TransferToDevice(
+          source_tensors);
     }
     handles.insert(handles.end(), new_handles.begin(), new_handles.end());
   }

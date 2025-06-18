@@ -640,7 +640,8 @@ std::vector<int64_t> ShardingUtil::GetAutoShardingMeshIds(
   // as the auto-sharding pass takes only one arrangement for now.
   // TODO(yeounoh) this was not necessary before; replace if this can be done
   // during the auto-sharding pass.
-  int64_t n_devices = runtime::GetComputationClientOrDie()->GetAllDevices().size();
+  int64_t n_devices =
+      runtime::GetComputationClientOrDie()->GetAllDevices().size();
   std::vector<int64_t> device_mesh_ids = std::vector<int64_t>(n_devices);
   std::iota(device_mesh_ids.begin(), device_mesh_ids.end(), 0);
 
@@ -740,8 +741,9 @@ void ShardingUtil::ReshardParameters(
         data_to_reshard, shardings_to_reshard));
   } else {
     for (int i = 0; i < data_to_reshard.size(); ++i) {
-      auto output = WrapXlaData(runtime::GetComputationClientOrDie()->ReshardData(
-          {data_to_reshard[i]}, {shardings_to_reshard[i]}));
+      auto output =
+          WrapXlaData(runtime::GetComputationClientOrDie()->ReshardData(
+              {data_to_reshard[i]}, {shardings_to_reshard[i]}));
       outputs.insert(outputs.end(), output.begin(), output.end());
     }
   }

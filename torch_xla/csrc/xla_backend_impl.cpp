@@ -118,7 +118,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const std::string& device,
       c10::ArrayRef<std::string> devices) const override {
     return runtime::GetComputationClientOrDie()->GetCompilationDevices(device,
-                                                                  devices);
+                                                                       devices);
   }
 
   std::vector<torch::lazy::ComputationPtr> Compile(

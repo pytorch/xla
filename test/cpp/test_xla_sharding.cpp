@@ -339,7 +339,8 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
         std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
             tensors_data[0]);
     std::vector<torch_xla::runtime::ComputationClient::DataPtr> shards =
-        torch_xla::runtime::GetComputationClientOrDie()->GetDataShards(xla_data);
+        torch_xla::runtime::GetComputationClientOrDie()->GetDataShards(
+            xla_data);
     EXPECT_EQ(shards.size(), n_devices);
     EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(xla_data->shape(),
                                                    shards[0]->shape()));

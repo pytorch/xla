@@ -335,8 +335,8 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
 
   runtime::ComputationClient::DataPtr data =
       runtime::PjRtComputationClient::CreateData(
-          runtime::GetComputationClientOrDie()->PjRtDeviceToString(device), shape,
-          std::move(pjrt_buffer.value()));
+          runtime::GetComputationClientOrDie()->PjRtDeviceToString(device),
+          shape, std::move(pjrt_buffer.value()));
 
   at::ScalarType tensor_type = at::toScalarType(dlmt->dl_tensor.dtype);
   XLATensorPtr xla_tensor = XLATensor::Create(data, tensor_type);

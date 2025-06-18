@@ -12,7 +12,8 @@ namespace torch_xla::runtime {
 
 std::atomic<bool> g_computation_client_initialized(false);
 
-static absl::StatusOr<std::unique_ptr<ComputationClient>> InitializeComputationClient() {
+static absl::StatusOr<std::unique_ptr<ComputationClient>>
+InitializeComputationClient() {
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
     tsl::testing::InstallStacktraceHandler();
   }
@@ -71,7 +72,8 @@ ComputationClient* GetComputationClientOrDie() {
 }
 
 ComputationClient* GetComputationClientIfInitialized() {
-  return g_computation_client_initialized ? GetComputationClientOrDie() : nullptr;
+  return g_computation_client_initialized ? GetComputationClientOrDie()
+                                          : nullptr;
 }
 
 }  // namespace torch_xla::runtime
