@@ -365,3 +365,13 @@ ptxla_cc_library(
         "@pybind11//:pybind11_embed",
     ],
 )
+
+cc_library(
+    name = "status",
+    srcs = ["status.cpp"],
+    hdrs = ["status.h"],
+    deps = [
+        "//torch_xla/csrc/runtime:sys_util",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
