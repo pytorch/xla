@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git89cc066 )
+                  master (2.8.0+gitaaff959 )
                 </div>
               
             
@@ -836,13 +836,18 @@ Therefore we need to take advantage of PyTorch/XLA’s debugging flags to identi
 <section id="compilation-caching">
 <h2>Compilation Caching<a class="headerlink" href="#compilation-caching" title="Permalink to this heading">¶</a></h2>
 <p>The XLA compiler converts the traced HLO into an executable which runs
-on the devices. Compilation can be time consuming, and in cases where
+on the devices. Compilation can be time consuming. In case
 the HLO doesn’t change across executions, the compilation result can be
 persisted to disk for reuse, significantly reducing development
 iteration time.</p>
-<p>Note that if the HLO changes between executions, a recompilation will
-still occur.</p>
-<p>This is currently an experimental opt-in API, which must be activated
+<p>NOTE:</p>
+<ul class="simple">
+<li><p>If the HLO changes between executions, a recompilation will still
+occur.</p></li>
+<li><p>When the version of <code class="docutils literal notranslate"><span class="pre">torch_xla</span></code> changes, a recompilation will occur
+(so that we can generate the executables using the latest compiler).</p></li>
+</ul>
+<p>This is currently an opt-in API, which must be activated
 before any computations are executed. Initialization is done through the
 <code class="docutils literal notranslate"><span class="pre">initialize_cache</span></code> API:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
@@ -853,9 +858,7 @@ before any computations are executed. Initialization is done through the
 path. The <code class="docutils literal notranslate"><span class="pre">readonly</span></code> parameter can be used to control whether the worker
 will be able to write to the cache, which can be useful when a shared
 cache mount is used for an SPMD workload.</p>
-<p>If you want to use persistent compilation cache in the multi process
-training(with <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code> or <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code>), you should use the
-different path for different process.</p>
+<p>If you want to use the persistent compilation cache in multi-process training (with <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code> or <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code>), you should use different paths for different processes.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">_mp_fn</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
   <span class="c1"># cache init needs to happens inside the mp_fn.</span>
   <span class="n">xr</span><span class="o">.</span><span class="n">initialize_cache</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/tmp/xla_cache_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">readonly</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -865,9 +868,7 @@ different path for different process.</p>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">())</span>
 </pre></div>
 </div>
-<p>If you don’t have the access to the <code class="docutils literal notranslate"><span class="pre">index</span></code>, you can use
-<code class="docutils literal notranslate"><span class="pre">xr.global_ordinal()</span></code>. Check out the runnable example in
-<a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_xla_ddp.py">here</a>.</p>
+<p>If you don’t have access to <code class="docutils literal notranslate"><span class="pre">index</span></code>, you can use <code class="docutils literal notranslate"><span class="pre">xr.global_ordinal()</span></code>. Check out the runnable example in <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_xla_ddp.py">here</a>.</p>
 </section>
 <section id="further-reading">
 <h2>Further Reading<a class="headerlink" href="#further-reading" title="Permalink to this heading">¶</a></h2>
