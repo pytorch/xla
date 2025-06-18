@@ -323,6 +323,7 @@ class Environment(contextlib.ContextDecorator):
     self.enabled = False
     self._jax_devices = set(["jax", "jax_cpu", "xla"])
     self.prng_key = jax.random.key(torch.initial_seed() % (1 << 63))
+    self.default_device_or_sharding = jax.local_devices()[0]
 
   def manual_seed(self, key):
     self.prng_key = jax.random.key(key)
@@ -339,10 +340,10 @@ class Environment(contextlib.ContextDecorator):
       return jax.devices("cpu")[0]
 
     if self.config.treat_cuda_as_jax_device and device.startswith("cuda"):
-      return jax.local_devices()[0]
+      return self.default_device_or_sharding
 
     if device.startswith("jax") or device.startswith("xla"):
-      return jax.local_devices()[0]
+      return self.default_device_or_sharding
 
     return None  # fallback to torch
 
@@ -416,6 +417,7 @@ class Environment(contextlib.ContextDecorator):
         return the_tensor
 
       jax_device = self.get_as_jax_device(new_device)
+
       if jax_device:
         arr = self.t2j_copy(the_tensor)
         arr = jax.device_put(arr, jax_device)
@@ -441,15 +443,16 @@ class Environment(contextlib.ContextDecorator):
       # let torch handle it
       with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
         return func(*args, **kwargs)
-    with jax.default_device(jax_device):
-      requires_grad = kwargs.get("requires_grad", False)
-      op = self._get_op_or_decomp(func)
-      res = op.func(*args, **kwargs)
-      if isinstance(res, jax.Array):
-        res = Tensor(res, self)
-      if requires_grad:
-        res.requires_grad = True
-      return res
+
+    requires_grad = kwargs.get("requires_grad", False)
+    op = self._get_op_or_decomp(func)
+    res = op.func(*args, **kwargs)
+    if isinstance(res, jax.Array):
+      res = jax.device_put(res, jax_device)
+      res = Tensor(res, self)
+    if requires_grad:
+      res.requires_grad = True
+    return res
 
   def _torch_Tensor_to(self, args, kwargs):
     the_tensor = args[0]
