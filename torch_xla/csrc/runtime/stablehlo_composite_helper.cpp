@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/runtime/stablehlo_composite_helper.h"
 
-#include <cstdio>
 #include <limits>
 #include <string>
 #include <tuple>
@@ -8,7 +7,6 @@
 
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
-#include "llvm/ADT/STLExtras.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LogicalResult.h"
