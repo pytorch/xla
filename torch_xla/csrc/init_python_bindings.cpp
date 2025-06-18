@@ -1698,8 +1698,7 @@ void InitXlaModuleBindings(py::module m) {
            })
       .def("_init_computation_client",
            []() {
-             auto status = runtime::status::GetComputationClient();
-             ConsumeAndMaybeThrow(status);
+             ConsumeAndMaybeThrow(runtime::status::GetComputationClient());
            })
       .def("_xla_get_device_hw_type",
            [](const at::Tensor& tensor) {
