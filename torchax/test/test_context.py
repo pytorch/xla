@@ -64,6 +64,7 @@ class TestContext(unittest.TestCase):
   def test_jit_with_rng(self):
 
     with xla_env:
+
       def random_op():
         x = torch.randn(3, 3)
         y = torch.randn(3, 3)
@@ -72,22 +73,17 @@ class TestContext(unittest.TestCase):
       random_jit = torchax.interop.jax_jit(random_op)
       self.assertIsInstance(random_jit(), tensor.Tensor)
 
-    # If we run the JIT twice, the random values should be different.
-    with self.assertRaises(AssertionError):
-      torch.testing.assert_close(
-          torchax.tensor.j2t(random_jit()._elem),
-          torchax.tensor.j2t(random_jit()._elem),
-          atol=0,
-          rtol=0)
+      # If we run the JIT twice, the random values should be different.
+      with self.assertRaises(AssertionError):
+        torch.testing.assert_close(random_jit(), random_jit(), atol=0, rtol=0)
 
   def test_generator_seed(self):
     with xla_env:
       x = torch.randn(2, 3, generator=torch.Generator().manual_seed(0))
       y = torch.randn(2, 3, generator=torch.Generator().manual_seed(0))
 
-    # Values will be the same given the same seed.
-    torch.testing.assert_close(
-        torchax.tensor.j2t(x._elem), torchax.tensor.j2t(y._elem))
+      # Values will be the same given the same seed.
+      torch.testing.assert_close(x, y)
 
   def test_buffer(self):
 
