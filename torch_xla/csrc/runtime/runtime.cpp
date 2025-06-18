@@ -12,8 +12,6 @@ namespace torch_xla::runtime {
 
 std::atomic<bool> g_computation_client_initialized(false);
 
-namespace status {
-
 static absl::StatusOr<std::unique_ptr<ComputationClient>> InitializeComputationClient() {
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
     tsl::testing::InstallStacktraceHandler();
@@ -59,8 +57,8 @@ absl::StatusOr<ComputationClient*> GetComputationClient() {
 
 }  // namespace status
 
-ComputationClient* GetComputationClient() {
-  auto client = status::GetComputationClient();
+ComputationClient* GetComputationClientOrDie() {
+  auto client = GetComputationClient();
 
   // In order to be backward compatible, we call `XLA_CHECK()`, which throws an
   // exception.
@@ -73,7 +71,7 @@ ComputationClient* GetComputationClient() {
 }
 
 ComputationClient* GetComputationClientIfInitialized() {
-  return g_computation_client_initialized ? GetComputationClient() : nullptr;
+  return g_computation_client_initialized ? GetComputationClientOrDie() : nullptr;
 }
 
 }  // namespace torch_xla::runtime

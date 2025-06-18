@@ -274,13 +274,13 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
         static_cast<XlaDeviceType>(device.type()));
     std::vector<runtime::ComputationClient::CompileInstance> instances;
     instances.push_back({std::move(computation), device.toString(),
-                         runtime::GetComputationClient()->GetCompilationDevices(
+                         runtime::GetComputationClientOrDie()->GetCompilationDevices(
                              device.toString(), {}),
                          &shape,
                          /*parameter_is_tupled_arguments=*/false, is_sharded});
     std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
         computations =
-            runtime::GetComputationClient()->Compile(std::move(instances));
+            runtime::GetComputationClientOrDie()->Compile(std::move(instances));
     computation = std::move(computations[0]->move_computation());
   }
 

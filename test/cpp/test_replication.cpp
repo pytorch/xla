@@ -48,7 +48,7 @@ void TestSingleReplication(
   }
   std::vector<torch_xla::runtime::ComputationClient::ComputationPtr>
       compiled_computations =
-          torch_xla::runtime::GetComputationClient()->Compile(
+          torch_xla::runtime::GetComputationClientOrDie()->Compile(
               std::move(instances));
 
   std::vector<at::Tensor> tensors;
@@ -65,7 +65,7 @@ void TestSingleReplication(
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
       results[i] =
-          torch_xla::runtime::GetComputationClient()->ExecuteComputation(
+          torch_xla::runtime::GetComputationClientOrDie()->ExecuteComputation(
               *compiled_computations[i],
               {std::dynamic_pointer_cast<
                   torch_xla::runtime::ComputationClient::Data>(
@@ -79,7 +79,7 @@ void TestSingleReplication(
 
   for (size_t i = 0; i < results.size(); ++i) {
     std::vector<xla::Literal> literals =
-        torch_xla::runtime::GetComputationClient()->TransferFromDevice(
+        torch_xla::runtime::GetComputationClientOrDie()->TransferFromDevice(
             results[i]);
     ASSERT_EQ(literals.size(), 1);
 
