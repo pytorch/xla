@@ -5,6 +5,7 @@ example_folder = os.path.dirname(os.path.dirname(
     os.path.dirname(__file__))) + "/examples"
 sys.path.append(example_folder)
 from decoder_only_model import DecoderOnlyConfig, DecoderOnlyModel  # type:ignore
+from absl.testing import parameterized
 
 import unittest
 from copy import deepcopy
@@ -14,19 +15,23 @@ import torch
 import torch.nn as nn
 
 import torch_xla
+import torch_xla.experimental.scan_layers as scan_layers_module
 from torch_xla.experimental.scan_layers import scan_layers
+from functorch.compile import default_partition, min_cut_rematerialization_partition
 
 parent_folder = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(parent_folder)
 from test_utils import XlaTestCase  # type:ignore
 
 
-class ScanLayersTest(XlaTestCase):
+class ScanLayersTest(XlaTestCase, parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
 
     self.device = torch_xla.device()
+    # Clear the cache before each test
+    scan_layers_module._ONE_LAYER_CACHE.clear()
 
   def assert_different_tensor(self, a: torch.Tensor, b: torch.Tensor):
     assert a is not b, f"Expected {a} and {b} to be different tensors"
@@ -44,7 +49,8 @@ class ScanLayersTest(XlaTestCase):
     output = scan_layers(layers, input_data.clone())
     super().compareResults(output, input_data, abs_err=0.0001, rel_err=0.001)
 
-  def test_linear_layers(self):
+  @parameterized.parameters(False, True)
+  def test_linear_layers(self, is_layer_pure: bool):
     # Fix the random seed to avoid flakes.
     with torch.random.fork_rng():
       with torch_xla.xm.fork_rng():
@@ -59,7 +65,8 @@ class ScanLayersTest(XlaTestCase):
     layers_for_loop = deepcopy(layers)
     torch_xla.sync()
 
-    output = scan_layers(layers_for_scan, input_data.clone())
+    output = scan_layers(
+        layers_for_scan, input_data.clone(), is_layer_pure=is_layer_pure)
     self.assert_while_found_in_hlo(output)
     output.sum().backward()
     torch_xla.sync()
@@ -96,7 +103,8 @@ class ScanLayersTest(XlaTestCase):
                                    layer_loop.weight.grad)
       self.assert_different_tensor(layer_scan.bias.grad, layer_loop.bias.grad)
 
-  def test_tuple_layers(self):
+  @parameterized.parameters(False, True)
+  def test_tuple_layers(self, is_layer_pure: bool):
     """Test applying layers that consume and return tuples. Construct a module
     that transforms each element in the tuple.
     """
@@ -125,7 +133,8 @@ class ScanLayersTest(XlaTestCase):
                   torch.randn(64).to(self.device) * 300)
     a = torch.randn(64).to(self.device)
     input_data = tuple(t + a for t in input_data)
-    output = scan_layers(layers_for_scan, input_data)
+    output = scan_layers(
+        layers_for_scan, input_data, is_layer_pure=is_layer_pure)
     self.assert_while_found_in_hlo(output[0])
     self.assert_while_found_in_hlo(output[1])
     output[0].sum().backward()
@@ -272,6 +281,40 @@ class ScanLayersTest(XlaTestCase):
     layer2 = nn.Linear(128, 129).to('xla')
     with self.assertRaisesRegex(ValueError, "Shape mismatch"):
       scan_layers([layer1, layer2], torch.zeros((128,), device='xla'))
+
+  @parameterized.parameters(default_partition,
+                            min_cut_rematerialization_partition)
+  def test_scan_layers_cache(self, partition_fn):
+    # Test that the cache is used correctly.
+    layers = [nn.Linear(64, 64).to(self.device) for _ in range(10)]
+    input_data = torch.randn(64).to(self.device)
+    torch_xla.sync(wait=True)
+
+    scan_layers(
+        layers,
+        input_data.clone(),
+        partition_fn=partition_fn,
+        is_layer_pure=True)
+
+    # Check that the cache is correctly populated.
+    cache_key = (id(partition_fn), id(layers[0]))
+    self.assertIn(cache_key, scan_layers_module._ONE_LAYER_CACHE)
+
+    # Check that the cache is created based on the layer and the cache is properly hit.
+    scan_layers(layers, input_data.clone())
+    scan_layers(layers, input_data.clone())
+    self.assertEqual(len(scan_layers_module._ONE_LAYER_CACHE), 1)
+
+  def test_scan_layers_cache_non_pure(self):
+    # Test that the cache is not used for non-pure layers.
+    layers = [nn.Linear(64, 64).to(self.device) for _ in range(10)]
+    input_data = torch.randn(64).to(self.device)
+    torch_xla.sync(wait=True)
+
+    scan_layers(layers, input_data.clone(), is_layer_pure=False)
+
+    # Check that the cache is not populated.
+    self.assertEqual(len(scan_layers_module._ONE_LAYER_CACHE), 0)
 
 
 if __name__ == '__main__':
