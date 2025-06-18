@@ -180,10 +180,7 @@ static void ConsumeAndMaybeThrow(absl::Status status) {
 
 template <class T>
 static T ConsumeAndMaybeThrow(absl::StatusOr<T> status) {
-  if (status.ok()) {
-    return std::move(status.value());
-  }
-  ConsumeAndMaybeThrow(status.status());
+  return std::move(status.value());
 }
 
 struct NoGilSection {
