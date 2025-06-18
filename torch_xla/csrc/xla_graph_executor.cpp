@@ -29,6 +29,7 @@
 #include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/dtype.h"
+#include "torch_xla/csrc/hash_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/layout_manager.h"
@@ -525,25 +526,25 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
         static_cast<XlaDeviceType>(tensor->GetDevice().type())));
   }
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
-  torch::lazy::hash_t res_hash = torch::lazy::HashCombine(
-      coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+
+  // The pytorch/torch_xla revisions are already included in coll.hash.
+  torch::lazy::hash_t res_hash = coll.hash;
+  MergeHash(torch::lazy::Hash(po_data.parameter_sequence), &res_hash);
   if (GetAliasWithBufferDonorConfig()) {
     std::vector<size_t> buffer_donor_index =
         GetBufferDonorIndexFromUserConfig(po_data.parameters_data);
     // Do not include hash on a empty vector.
     if (buffer_donor_index.size() > 0) {
-      res_hash = torch::lazy::HashCombine(
-          res_hash, torch::lazy::Hash(buffer_donor_index));
+      MergeHash(torch::lazy::Hash(buffer_donor_index), &res_hash);
     }
   }
   {
     // Auto-sharding configs
-    res_hash = torch::lazy::HashCombine(
-        res_hash, torch::lazy::MHash(ShardingUtil::GetAutoSharding()));
-    res_hash = torch::lazy::HashCombine(
-        res_hash,
-        torch::lazy::StringHash(
-            runtime::sys_util::GetEnvString("XLA_AUTO_SPMD_MESH", "").c_str()));
+    MergeHash({torch::lazy::MHash(ShardingUtil::GetAutoSharding()),
+               torch::lazy::StringHash(
+                   runtime::sys_util::GetEnvString("XLA_AUTO_SPMD_MESH", "")
+                       .c_str())},
+              &res_hash);
   }
   DeviceContextArena::Get()->SaveOutputShapes(res_hash,
                                               std::move(output_shapes));
@@ -632,12 +633,13 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   // The force_ltc_data controls aliasing compilation, so effectively the same
   // graph with on/off force_ltc_data should not match, hash wise.
   coll.hash = torch::lazy::MHash(config.force_ltc_data);
-  // Ensure the compilation environment and git revision are reflected in the
-  // hash.
-  coll.hash = torch::lazy::HashCombine(
-      coll.hash, runtime::GetComputationClient()->HashCompilationEnv());
-  coll.hash =
-      torch::lazy::HashCombine(coll.hash, torch::lazy::StringHash(XLA_GITREV));
+  // Ensure that the compilation environment and git revisions are reflected
+  // in the hash, so that different versions of the code can produce different
+  // hashes for the same graph.
+  MergeHash({runtime::GetComputationClient()->HashCompilationEnv(),
+             torch::lazy::StringHash(TORCH_GITREV),
+             torch::lazy::StringHash(XLA_GITREV)},
+            &coll.hash);
   coll.config = config;
   coll.device = *unique_device;
   coll.indices.reserve(tensors.size());
@@ -678,7 +680,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
                     tensors[i]->GetUniqueId(), read_only));
           } else {
             // Add only tensors which need to be synced.
-            coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
+            MergeHash(ir_value.hash(), &coll.hash);
             coll.indices.push_back(i);
           }
         }
@@ -1530,24 +1532,21 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
   ExtractIRAndPrepareXlaData_(tensors, coll.config, coll.indices, ir_values,
                               tensor_data_vec);
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
-  coll.hash = torch::lazy::HashCombine(
-      coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+  MergeHash(torch::lazy::Hash(po_data.parameter_sequence), &coll.hash);
 
   std::vector<size_t> buffer_donor_indices =
       GetBufferDonors(*tensors, coll, po_data.parameters_data);
   if (buffer_donor_indices.size() > 0) {
     // Do not include hash on a empty vector.
-    coll.hash = torch::lazy::HashCombine(
-        coll.hash, torch::lazy::Hash(buffer_donor_indices));
+    MergeHash(torch::lazy::Hash(buffer_donor_indices), &coll.hash);
   }
   {
     // Auto-sharding configs
-    coll.hash = torch::lazy::HashCombine(
-        coll.hash, torch::lazy::MHash(ShardingUtil::GetAutoSharding()));
-    coll.hash = torch::lazy::HashCombine(
-        coll.hash,
-        torch::lazy::StringHash(
-            runtime::sys_util::GetEnvString("XLA_AUTO_SPMD_MESH", "").c_str()));
+    MergeHash({torch::lazy::MHash(ShardingUtil::GetAutoSharding()),
+               torch::lazy::StringHash(
+                   runtime::sys_util::GetEnvString("XLA_AUTO_SPMD_MESH", "")
+                       .c_str())},
+              &coll.hash);
   }
 
   DebugUtil::SaveGraphHash(coll.hash);

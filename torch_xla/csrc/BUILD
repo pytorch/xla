@@ -126,6 +126,7 @@ ptxla_cc_library(
         ":shape_builder",
         ":shape_helper",
         ":version",
+        "//torch_xla/csrc:hash_util",
         "//torch_xla/csrc:thread_pool",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:stablehlo_helper",
@@ -333,6 +334,15 @@ cc_library(
     deps = [
         "//torch_xla/csrc/runtime:sys_util",
         "@tsl//tsl/platform:env"
+    ],
+)
+
+cc_library(
+    name = "hash_util",
+    srcs = ["hash_util.cpp"],
+    hdrs = ["hash_util.h"],
+    deps = [
+        "@torch//:headers",
     ],
 )
 
