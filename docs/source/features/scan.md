@@ -107,6 +107,25 @@ Means over time: tensor([[1.0000],
         [3.0000]], device='xla:0')
 ```
 
+## Use scan cache
+
+Because `scan` uses AOTAutograd to figure out the backward pass of the input
+function/module repeatively on every iteration, it is easy to become tracing-bound compared to
+a for loop implementation. As the [scan cache][retracing-issue] is implemented, users can indicate that provided function (or layers if use `scan_layers`) is pure to activate the caching mechanism. The cache significantly reduced the tracing overhead especially when the the number of iterations is large. The following command trains an example decoder. It finishes in `9m35s` without the cache and `4m59s` with cache.
+
+```bash
+time python3 examples/train_decoder_only_base.py scan.decoder_with_scan.DecoderWithScan     --hidden-size 128     --num-layers 2     --num-attention-heads 8     --num-key-value-heads 4     --intermediate-size 512     --num-steps 500     --print-metrics --is-decoder-layer-pure
+```
+
+
+To enable the cache, simply set `is_fn_pure` (or `is_layer_pure` if use `scan_layers`) to `True`. For example
+
+```python
+final_carry, ys = scan(fn, init_scan, xs_scan, is_fn_pure=is_fn_pure)
+
+scan_layers(layers, input_data, is_layer_pure=True)
+```
+
 ## Limitations
 
 ### AOTAutograd compatibility requirement
@@ -116,16 +135,6 @@ traceable. In particular, as of PyTorch/XLA 2.6, `scan` and `scan_layers` cannot
 trace functions with custom Pallas kernels. That means if your decoder uses,
 for example flash attention, then it is incompatible with `scan`. We are working on
 [supporting this important use case][flash-attn-issue].
-
-### AOTAutograd overhead
-
-Because `scan` uses AOTAutograd to figure out the backward pass of the input
-function/module on every iteration, it is easy to become tracing-bound compared to
-a for loop implementation. In fact, the  `train_decoder_only_base.py` example runs
-slower under `scan` than with for loop as of PyTorch/XLA 2.6 due to this overhead.
-We are working on [improving tracing speed][retracing-issue]. This is less of a
-problem when your model is very large or has many layers, which are the situations
-you would want to use `scan`.
 
 ## Compile time experiments
 

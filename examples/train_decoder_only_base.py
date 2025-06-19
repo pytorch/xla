@@ -130,6 +130,11 @@ if __name__ == '__main__':
       action="store_true",
       help="Print torch_xla metrics at the end of the training",
   )
+  parser.add_argument(
+      "--is-decoder-layer-pure",
+      action="store_true",
+      help="Identify if the decoder layer is pure. If True, the layer function will be cached for performance.",
+  )
   args = parser.parse_args()
 
   # Seed the RNG for deterministic results
@@ -150,6 +155,7 @@ if __name__ == '__main__':
       num_attention_heads=args.num_attention_heads,
       num_key_value_heads=args.num_key_value_heads,
       intermediate_size=args.intermediate_size,
+      is_decoder_layer_pure=args.is_decoder_layer_pure,
   )
 
   params = []
