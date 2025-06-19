@@ -7,9 +7,9 @@ namespace torch_xla {
 
 #define _XLA_RETURN_IF_ERROR_AND_THEN(REXPR, ...) \
   {                                               \
-    auto _status = (REXPR);                       \
-    if (!_status.ok()) {                          \
-      return _status.status();                    \
+    auto& _statusor = (REXPR);                    \
+    if (!_statusor.ok()) {                        \
+      return _statusor.status();                  \
     }                                             \
     __VA_ARGS__                                   \
   }

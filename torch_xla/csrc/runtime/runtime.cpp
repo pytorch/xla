@@ -1,5 +1,6 @@
 #include <torch/csrc/lazy/backend/backend_device.h>
 
+#include "absl/log/absl_check.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
