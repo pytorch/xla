@@ -4,13 +4,9 @@
 
 namespace torch_xla {
 
-void ConsumeAndMaybeThrowImpl(absl::Status status) {
-  throw std::runtime_error(std::string(status.message()));
-}
-
 void ConsumeAndMaybeThrow(absl::Status status) {
   if (!status.ok()) {
-    ConsumeAndMaybeThrowImpl(status);
+    throw std::runtime_error(std::string(status.message()));
   }
 }
 
