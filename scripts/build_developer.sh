@@ -67,7 +67,7 @@ fi
 
 # Rebuild torchvision if _BUILD_BASE is pytorch or vision.
 if [ "$_BUILD_BASE" == "pytorch" ] || [ "$_BUILD_BASE" == "vision" ]; then
-  _VISION_DIR=$_SCRIPT_DIR/../../vision
+  _VISION_DIR=$_SCRIPT_DIR/../../../vision
   if [ -d $_VISION_DIR ]; then
     cd $_VISION_DIR
     python3 setup.py develop
