@@ -12,8 +12,8 @@ namespace torch_xla::runtime {
 
 std::atomic<bool> g_computation_client_initialized(false);
 
-// Creates a new instance of a `ComputationClient` (e.g. `PjRtComputationClient`),
-// and initializes the computation client
+// Creates a new instance of a `ComputationClient` (e.g.
+// `PjRtComputationClient`), and initializes the computation client
 static absl::StatusOr<absl_nonnull std::unique_ptr<ComputationClient>>
 InitializeComputationClient() {
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
@@ -22,9 +22,11 @@ InitializeComputationClient() {
 
   std::unique_ptr<ComputationClient> client;
 
-  // Disable IFRT right now as it currently crashes.
+  // TODO: enable IFRT once it's not crashing anymore.
+  // Ref: https://github.com/pytorch/xla/pull/8267
+  //
   // static bool use_ifrt = sys_util::GetEnvBool("XLA_USE_IFRT", false);
-  static bool use_ifrt = false;
+  static const bool use_ifrt = false;
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
     if (use_ifrt) {
       client = std::make_unique<IfrtComputationClient>();
@@ -40,7 +42,8 @@ InitializeComputationClient() {
 }
 
 absl::StatusOr<ComputationClient*> GetComputationClient() {
-  static absl::StatusOr<absl_nonnull std::unique_ptr<ComputationClient>> maybeClient = InitializeComputationClient();
+  static absl::StatusOr<absl_nonnull std::unique_ptr<ComputationClient>>
+      maybeClient = InitializeComputationClient();
 
   if (!maybeClient.ok()) {
     return maybeClient.status();

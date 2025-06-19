@@ -524,3 +524,12 @@ ptxla_cc_test(
 #         "@xla//xla/tools:hlo_module_loader",
 #     ],
 # )
+
+ptxla_cc_test(
+    name = "runtime_test",
+    srcs = ["runtime_test.cpp"],
+    deps = [
+        ":runtime",
+        "@tsl//tsl/platform:test_main",
+    ],
+)
