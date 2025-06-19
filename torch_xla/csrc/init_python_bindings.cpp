@@ -180,6 +180,7 @@ static void ConsumeAndMaybeThrow(absl::Status status) {
 
 template <class T>
 static T ConsumeAndMaybeThrow(absl::StatusOr<T> status) {
+  ConsumeAndMaybeThrow(status.status());
   return std::move(status.value());
 }
 
