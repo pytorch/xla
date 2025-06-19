@@ -10,5 +10,4 @@ void ConsumeAndMaybeThrow(absl::Status status) {
   }
 }
 
-}
-
+}  // namespace torch_xla
