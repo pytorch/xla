@@ -79,7 +79,7 @@ class Tensor(torch.Tensor):
 
   @property
   def shape(self):
-    return self._elem.shape
+    return torch.Size(self._elem.shape)
 
   @property
   def ndim(self):
