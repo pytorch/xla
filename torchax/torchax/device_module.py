@@ -1,26 +1,26 @@
 def _is_in_bad_fork():
-  return False
+    return False
 
 
 def manual_seed_all(seed):
-  pass
+    pass
 
 
 def device_count():
-  return 1
+    return 1
 
 
 def get_rng_state():
-  return []
+    return []
 
 
 def set_rng_state(new_state, device):
-  pass
+    pass
 
 
 def is_available():
-  return True
+    return True
 
 
 def current_device():
-  return 0
+    return 0
