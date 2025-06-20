@@ -44,16 +44,13 @@ def _dynamo_backend(model: torch.fx.GraphModule, sample_args: Any):
     return torchax.interop.jax_view(res)
 
   initial_rng_key = torch.tensor(0, device=xla_device, dtype=torch.uint32)
-  computation = xb.jax_func_to_xla_computation(
-      run_jax, sample_args, {'initial_rng_key': initial_rng_key}, 'dynamo_jax')
+
+  computation = xb.JaxCallable(run_jax)
 
   def equivalent(*args, **kwargs):
     kwargs['initial_rng_key'] = torch.randint(
         0, 2**32, (), dtype=torch.uint32, device=xla_device)
-    flattened, _ = pytree.tree_flatten((args, kwargs))
-    res = computation(flattened)
-    if not isinstance(res, (list, tuple)):
-      return (res,)
+    res = computation(*args, **kwargs)
     return res
 
   return make_boxed_func(equivalent)
