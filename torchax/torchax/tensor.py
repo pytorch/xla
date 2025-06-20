@@ -433,8 +433,7 @@ class Environment(contextlib.ContextDecorator):
       if new_dtype is not None and new_dtype != arr.dtype:
         arr = arr.astype(mappings.t2j_dtype(new_dtype))
 
-      # convert xla tensor to other device
-      # only supported is CPU
+
       if new_device is not None:
         match str(new_device).lower():
           case "cpu":
