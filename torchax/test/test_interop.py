@@ -2,8 +2,21 @@ import functools
 import torch
 import unittest
 import torchax
-from torchax import interop
+from torchax import interop, jax_device
 import torchax
+import jax
+
+
+def is_tpu_available():
+  """Checks if any TPU devices are available to JAX."""
+  try:
+    # jax.devices('tpu') will return a list of TPU devices if available.
+    # If no TPUs are found or JAX is not configured for TPU,
+    # it will raise a RuntimeError.
+    tpu_devices = jax.devices('tpu')
+    return len(tpu_devices) > 0
+  except RuntimeError:
+    return False
 
 
 class InteropTest(unittest.TestCase):
@@ -115,6 +128,38 @@ class InteropTest(unittest.TestCase):
     actual = functional_forward(m_jitted.params, m_jitted.buffers, x)
     # assert
     torch.testing.assert_allclose(actual, expected)
+
+  def test_to_jax_device(self):
+    a = torch.ones(3, 3)
+
+    with jax_device("cpu"):
+      # move torch.tensor to torchax.tensor CPU
+      b = a.to("jax")
+      self.assertEqual(b.jax_device.platform, "cpu")
+      self.assertEqual(b.device.type, "jax")
+
+    if is_tpu_available():
+      # move torch.tensor to torchax.tensor TPU
+      with jax_device("tpu"):
+        c = a.to("jax")
+        self.assertEqual(c.jax_device.platform, "tpu")
+        self.assertEqual(c.device.type, "jax")
+
+      # move torchax.tensor on CPU to TPU
+      with jax_device("tpu"):
+        self.assertEqual(b.jax_device.platform, "cpu")
+        self.assertEqual(c.device.type, "jax")
+        c = b.to("jax")
+        self.assertEqual(c.jax_device.platform, "tpu")
+        self.assertEqual(c.device.type, "jax")
+
+      # move torchax.tensor on TPU to CPU
+      with jax_device("cpu"):
+        self.assertEqual(c.jax_device.platform, "tpu")
+        self.assertEqual(c.device.type, "jax")
+        d = c.to("jax")
+        self.assertEqual(d.jax_device.platform, "cpu")
+        self.assertEqual(d.device.type, "jax")
 
 
 if __name__ == '__main__':
