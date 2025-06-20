@@ -59,6 +59,8 @@ line-length = 80
 # Enable preview mode to use rules like E306
 preview = true
 
+indent-width = 2
+
 [tool.ruff.lint]
 select = [
     "E", "F", "W", # Your existing rule selections
