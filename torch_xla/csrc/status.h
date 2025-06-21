@@ -5,11 +5,13 @@
 
 namespace torch_xla {
 
+#define _XLA_STATUS_VAR _statusor
+
 #define _XLA_RETURN_IF_ERROR_AND_THEN(REXPR, ...) \
   {                                               \
-    auto& _statusor = (REXPR);                    \
-    if (!_statusor.ok()) {                        \
-      return _statusor.status();                  \
+    auto& _XLA_STATUS_VAR = (REXPR);              \
+    if (!_XLA_STATUS_VAR.ok()) {                  \
+      return _XLA_STATUS_VAR.status();            \
     }                                             \
     __VA_ARGS__                                   \
   }
@@ -20,7 +22,8 @@ namespace torch_xla {
 // Propagates `REXPR`, in case it's a non-ok status. Otherwise, assign
 // its result to `LHS`.
 #define XLA_ASSIGN_OR_RETURN(LHS, REXPR) \
-  _XLA_RETURN_IF_ERROR_AND_THEN(REXPR, { LHS = std::move(_status.value()); })
+  _XLA_RETURN_IF_ERROR_AND_THEN(REXPR,   \
+                                { LHS = std::move(_XLA_STATUS_VAR.value()); })
 
 // Consumes the `status` and maybe throws an exception if `status` has
 // a non-ok code.
