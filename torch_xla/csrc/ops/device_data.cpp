@@ -17,7 +17,7 @@ DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
               /*hash_seed=*/(uint32_t)101),
       data_(std::move(data)) {
   std::optional<xla::OpSharding> op_sharding =
-      torch_xla::runtime::GetComputationClient()->GetDataSharding(
+      torch_xla::runtime::GetComputationClientOrDie()->GetDataSharding(
           std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data_));
   if (op_sharding.has_value()) {
     // DeviceData Node only has 1 output.

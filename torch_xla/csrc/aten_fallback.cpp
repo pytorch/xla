@@ -77,7 +77,7 @@ bool UseOpenXLAFallbackOnCUDA(const c10::OperatorHandle& op) {
   //      support running OpenXLA fallback operations on CUDA if the current
   //      PyTorch/XLA DeviceType is not CUDA.
   bool device_is_cuda =
-      runtime::GetComputationClient()->GetDeviceType().getType() ==
+      runtime::GetComputationClientOrDie()->GetDeviceType().getType() ==
       XlaDeviceType::CUDA;
 
   //   3. PyTorch must have been compiled with CUDA support. Otherwise, our

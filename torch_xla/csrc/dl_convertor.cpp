@@ -122,7 +122,7 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
       << "Could not extract a valid data handle from the input tensor";
 
   std::shared_ptr<xla::PjRtBuffer> pjrt_buffer =
-      runtime::GetComputationClient()->GetPjRtBuffer(handle);
+      runtime::GetComputationClientOrDie()->GetPjRtBuffer(handle);
   XLA_CHECK(pjrt_buffer != nullptr) << "Could not get a valid pjrt_buffer";
 
   XLA_CHECK(!pjrt_buffer->IsTuple())
@@ -168,14 +168,14 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
 absl::StatusOr<xla::PjRtDevice*> DeviceForDLDevice(const DLDevice& context) {
   switch (context.device_type) {
     case DLDeviceType::kDLCPU:
-      XLA_CHECK_EQ(runtime::GetComputationClient()->GetPlatformID(),
+      XLA_CHECK_EQ(runtime::GetComputationClientOrDie()->GetPlatformID(),
                    xla::CpuId());
-      return runtime::GetComputationClient()->LookupAddressableDevice(
+      return runtime::GetComputationClientOrDie()->LookupAddressableDevice(
           context.device_id);
     case DLDeviceType::kDLCUDA:
-      XLA_CHECK_EQ(runtime::GetComputationClient()->GetPlatformID(),
+      XLA_CHECK_EQ(runtime::GetComputationClientOrDie()->GetPlatformID(),
                    xla::CudaId());
-      return runtime::GetComputationClient()->LookupAddressableDevice(
+      return runtime::GetComputationClientOrDie()->LookupAddressableDevice(
           context.device_id);
     default:
       return tsl::errors::InvalidArgument(
@@ -335,8 +335,8 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
 
   runtime::ComputationClient::DataPtr data =
       runtime::PjRtComputationClient::CreateData(
-          runtime::GetComputationClient()->PjRtDeviceToString(device), shape,
-          std::move(pjrt_buffer.value()));
+          runtime::GetComputationClientOrDie()->PjRtDeviceToString(device),
+          shape, std::move(pjrt_buffer.value()));
 
   at::ScalarType tensor_type = at::toScalarType(dlmt->dl_tensor.dtype);
   XLATensorPtr xla_tensor = XLATensor::Create(data, tensor_type);

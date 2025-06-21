@@ -24,6 +24,7 @@ cc_library(
         ":env_vars",
         ":ifrt_computation_client",
         ":pjrt_computation_client",
+        "@com_google_absl//absl/log:absl_check",
         "@tsl//tsl/platform:stacktrace",
     ],
 )
@@ -523,3 +524,12 @@ ptxla_cc_test(
 #         "@xla//xla/tools:hlo_module_loader",
 #     ],
 # )
+
+ptxla_cc_test(
+    name = "runtime_test",
+    srcs = ["runtime_test.cpp"],
+    deps = [
+        ":runtime",
+        "@tsl//tsl/platform:test_main",
+    ],
+)
