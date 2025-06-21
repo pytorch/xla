@@ -120,8 +120,30 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       std::unordered_map<std::string, llvm::SmallVector<mlir::Operation*>>
           boundary_output_ops_map = BuildBoundaryOutputOpsMap(func_op);
 
-      for (const auto& [unused, ops] : boundary_output_ops_map) {
-        if (mlir::failed(BuildStableHLOComposite(ops, op_order_map))) {
+      struct BoundaryGroup {
+        std::string key;
+        llvm::SmallVector<mlir::Operation*> ops;
+        size_t last_order;
+      };
+
+      llvm::SmallVector<BoundaryGroup> groups;
+      groups.reserve(boundary_output_ops_map.size());
+
+      for (auto& kv : boundary_output_ops_map) {
+        size_t last_ord = 0;
+        for (mlir::Operation* op : kv.second) {
+          if (op != nullptr) last_ord = std::max(last_ord, op_order_map.at(op));
+        }
+        groups.push_back({kv.first, kv.second, last_ord});
+      }
+
+      llvm::sort(groups, [](const BoundaryGroup& a, const BoundaryGroup& b) {
+        return a.last_order < b.last_order;
+      });
+
+      for (auto& grp : groups) {
+        op_order_map = BuildOpOrderMap(func_op);
+        if (mlir::failed(BuildStableHLOComposite(grp.ops, op_order_map))) {
           func_op.emitError() << "failed to build composite.";
           return signalPassFailure();
         }
@@ -319,6 +341,22 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         result.replaceAllUsesWith(
             composite_op->getResult(composite_result_i++));
       }
+    }
+
+    llvm::DenseSet<mlir::Operation*> wrapper_set(output_ops.begin(),
+                                                 output_ops.end());
+
+    for (mlir::Operation* mark : output_ops)
+      if (mark->use_empty()) mark->erase();
+
+    for (mlir::Operation* op : llvm::reverse(impl_ops)) {
+      if (wrapper_set.contains(op) || !op->use_empty()) continue;
+
+      bool pure_or_composite = mlir::wouldOpBeTriviallyDead(op) ||
+                               llvm::isa<mlir::stablehlo::CompositeOp>(op) ||
+                               llvm::isa<mlir::stablehlo::CustomCallOp>(op);
+
+      if (pure_or_composite) op->erase();
     }
 
     if (!mlir::sortTopologically(composite_op->getBlock())) {
