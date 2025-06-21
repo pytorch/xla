@@ -6,6 +6,7 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/ifrt_computation_client.h"
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
+#include "torch_xla/csrc/status.h"
 #include "tsl/platform/stacktrace_handler.h"
 
 namespace torch_xla::runtime {
@@ -47,11 +48,8 @@ absl::StatusOr<ComputationClient * absl_nonnull> GetComputationClient() {
       *new absl::StatusOr<ComputationClient * absl_nonnull>(
           InitializeComputationClient());
 
-  if (!maybe_client.ok()) {
-    return maybe_client.status();
-  }
-
-  auto* client = maybe_client.value();
+  ComputationClient* client;
+  XLA_ASSIGN_OR_RETURN(client, maybe_client);
   ABSL_CHECK(client);
   return client;
 }
