@@ -45,7 +45,6 @@ function run_torch_xla_cpp_tests() {
                "test_aten_xla_tensor_3"
                "test_aten_xla_tensor_4"
                "pjrt_computation_client_test"
-               "runtime_test"
                # Disable IFRT test as it currently crashes
                #"ifrt_computation_client_test")
                "test_aten_xla_tensor_5"
@@ -54,6 +53,7 @@ function run_torch_xla_cpp_tests() {
                "test_lazy"
                "test_replication"
                "test_tensor"
+               "test_runtime"
                # disable test_xla_backend_intf since it is flaky on upstream
                #"test_xla_backend_intf"
                "test_xla_sharding")

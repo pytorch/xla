@@ -5,7 +5,7 @@
 namespace torch_xla::runtime {
 
 TEST(RuntimeTest, NullComputationClient) {
-  auto client = GetComputationClientIfInitialized();
+  auto* client = GetComputationClientIfInitialized();
   EXPECT_EQ(client, nullptr);
 }
 
@@ -19,13 +19,13 @@ TEST(RuntimeTest, GetComputationClientSuccess) {
   // Check all the APIs return the same valid ComputationClient.
 
   client = GetComputationClientOrDie();
-  EXPECT_NE(client, nullptr);
+  ASSERT_NE(client, nullptr);
 
   auto status = GetComputationClient();
-  EXPECT_TRUE(status.ok());
-  EXPECT_EQ(client, status.value());
+  ASSERT_TRUE(status.ok());
 
-  EXPECT_EQ(client, GetComputationClientIfInitialized());
+  EXPECT_EQ(status.value(), client);
+  EXPECT_EQ(GetComputationClientIfInitialized(), client);
 }
 
 }  // namespace torch_xla::runtime

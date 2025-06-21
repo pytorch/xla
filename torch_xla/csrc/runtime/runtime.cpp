@@ -14,13 +14,11 @@ std::atomic<bool> g_computation_client_initialized(false);
 
 // Creates a new instance of a `ComputationClient` (e.g.
 // `PjRtComputationClient`), and initializes the computation client
-static absl::StatusOr<absl_nonnull std::unique_ptr<ComputationClient>>
+static absl::StatusOr<ComputationClient * absl_nonnull>
 InitializeComputationClient() {
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
     tsl::testing::InstallStacktraceHandler();
   }
-
-  std::unique_ptr<ComputationClient> client;
 
   // TODO: enable IFRT once it's not crashing anymore.
   // Ref: https://github.com/pytorch/xla/pull/8267
@@ -28,33 +26,37 @@ InitializeComputationClient() {
   // static bool use_ifrt = sys_util::GetEnvBool("XLA_USE_IFRT", false);
   static const bool use_ifrt = false;
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
-    if (use_ifrt) {
-      client = std::make_unique<IfrtComputationClient>();
-    } else {
-      client = std::make_unique<PjRtComputationClient>();
-    }
+    auto* client =
+        (use_ifrt)
+            ? static_cast<ComputationClient*>(new IfrtComputationClient())
+            : static_cast<ComputationClient*>(new PjRtComputationClient());
+    g_computation_client_initialized = true;
+    return client;
   } else {
     return absl::FailedPreconditionError("$PJRT_DEVICE is not set.");
   }
-
-  g_computation_client_initialized = true;
-  return client;
 }
 
-absl::StatusOr<ComputationClient*> GetComputationClient() {
-  static absl::StatusOr<absl_nonnull std::unique_ptr<ComputationClient>>
-      maybeClient = InitializeComputationClient();
+absl::StatusOr<ComputationClient * absl_nonnull> GetComputationClient() {
+  // Reference to singleton Status-wrapped ComputationClient instance.
+  //
+  // Since we only allow a single initialization, as soon as this function is
+  // called, we store the initialization result in this trivially destructible
+  // reference.
+  static auto& maybe_client =
+      *new absl::StatusOr<ComputationClient * absl_nonnull>(
+          InitializeComputationClient());
 
-  if (!maybeClient.ok()) {
-    return maybeClient.status();
+  if (!maybe_client.ok()) {
+    return maybe_client.status();
   }
 
-  auto client = maybeClient.value().get();
+  auto* client = maybe_client.value();
   ABSL_CHECK(client);
   return client;
 }
 
-ComputationClient* GetComputationClientOrDie() {
+ComputationClient* absl_nonnull GetComputationClientOrDie() {
   return GetComputationClient().value();
 }
 
