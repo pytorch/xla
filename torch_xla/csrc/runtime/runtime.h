@@ -6,7 +6,7 @@
 namespace torch_xla::runtime {
 
 // Returns the ComputationClient singleton.
-absl::StatusOr<ComputationClient* absl_nonnull> GetComputationClient();
+absl::StatusOr<ComputationClient * absl_nonnull> GetComputationClient();
 
 ABSL_DEPRECATED(
     "Use status::GetComputationClient(), instead. "

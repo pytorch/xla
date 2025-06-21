@@ -1,6 +1,6 @@
-#include "torch_xla/csrc/runtime/runtime.h"
-
 #include <gtest/gtest.h>
+
+#include "torch_xla/csrc/runtime/runtime.h"
 
 namespace torch_xla::runtime {
 
