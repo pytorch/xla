@@ -9,6 +9,10 @@ from torchax import tensor
 from torchax import distributed  # noqa: F401
 from contextlib import contextmanager
 
+# DO NOT MERGE
+# THIS IS A TRIVAL CHANGE TO A SOURCE FILE TO TRIGGER
+# A NEW BUILD OF THE PACKAGE IN THE CICD PIPELINE.
+
 __version__ = "0.0.4"
 VERSION = __version__
 

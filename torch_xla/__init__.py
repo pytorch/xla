@@ -7,6 +7,10 @@ import warnings
 
 import torch
 
+# DO NOT MERGE
+# THIS IS A TRIVAL CHANGE TO A SOURCE FILE TO TRIGGER
+# A NEW BUILD OF THE PACKAGE IN THE CICD PIPELINE.
+
 if not torch.cuda.is_available():
   # Load _XLAC_cuda_functions to RTLD_GLOBAL, so that it can be used by _XLAC.
   flags = sys.getdlopenflags()
