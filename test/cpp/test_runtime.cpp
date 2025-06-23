@@ -4,12 +4,7 @@
 
 namespace torch_xla::runtime {
 
-TEST(RuntimeTest, NullComputationClient) {
-  auto* client = GetComputationClientIfInitialized();
-  EXPECT_EQ(client, nullptr);
-}
-
-TEST(RuntimeTest, GetComputationClientSuccess) {
+TEST(RuntimeTest, ComputationClientInitialization) {
   ComputationClient* client;
 
   client = GetComputationClientIfInitialized();

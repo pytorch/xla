@@ -31,6 +31,7 @@ InitializeComputationClient() {
             ? static_cast<ComputationClient*>(new IfrtComputationClient())
             : static_cast<ComputationClient*>(new PjRtComputationClient());
     g_computation_client_initialized = true;
+    ABSL_CHECK(client);
     return client;
   } else {
     return absl::FailedPreconditionError("$PJRT_DEVICE is not set.");
@@ -46,14 +47,7 @@ absl::StatusOr<ComputationClient * absl_nonnull> GetComputationClient() {
   static auto& maybe_client =
       *new absl::StatusOr<ComputationClient * absl_nonnull>(
           InitializeComputationClient());
-
-  if (!maybe_client.ok()) {
-    return maybe_client.status();
-  }
-
-  auto* client = maybe_client.value();
-  ABSL_CHECK(client);
-  return client;
+  return maybe_client;
 }
 
 ComputationClient* absl_nonnull GetComputationClientOrDie() {
