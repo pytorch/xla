@@ -178,6 +178,13 @@ bool XLATensorImpl::is_contiguous_custom(at::MemoryFormat memory_format) const {
   return true;
 }
 
+c10::SymBool XLATensorImpl::sym_is_contiguous_custom(
+    at::MemoryFormat memory_format) const {
+  // Storage is always contiguous, but the tensor metadata is_contiguous_ might
+  // be false due to the update in the functionalization layer..
+  return true;
+}
+
 void XLATensorImpl::SetupSizeProperties() {
   size_t generation = tensor_->generation();
   if (generation != generation_) {
