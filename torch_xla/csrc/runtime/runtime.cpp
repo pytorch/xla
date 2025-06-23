@@ -24,7 +24,7 @@ InitializeComputationClient() {
   // Ref: https://github.com/pytorch/xla/pull/8267
   //
   // static bool use_ifrt = sys_util::GetEnvBool("XLA_USE_IFRT", false);
-  static const bool use_ifrt = false;
+  const bool use_ifrt = false;
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
     auto* client =
         (use_ifrt)
