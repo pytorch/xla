@@ -521,7 +521,7 @@ std::vector<torch::lazy::BackendDataPtr> ShardingUtil::CreateShardedPlaceholder(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        runtime::GetComputationClient()->CreateDataPlaceholder(
+        runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
             GetVirtualDevice().toString(), sharding_specs[i]->shape,
             sharding_specs[i]->sharding);
 
@@ -563,7 +563,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        runtime::GetComputationClient()->CreateDataPlaceholder(
+        runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
             GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
             (*sharding_specs)[i]->sharding);
 
@@ -609,7 +609,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
         local_shards[j], shard_shape, devices[j]));
   }
-  return runtime::GetComputationClient()->TransferShardsToDevice(
+  return runtime::GetComputationClientOrDie()->TransferShardsToDevice(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 
@@ -625,7 +625,7 @@ std::vector<int64_t> ShardingUtil::GetAutoShardingMesh() {
       total_devices *= i;
     }
     XLA_CHECK_EQ(total_devices,
-                 runtime::GetComputationClient()->GetAllDevices().size())
+                 runtime::GetComputationClientOrDie()->GetAllDevices().size())
         << "Invalid auto-sharding mesh_shape: "
         << absl::StrJoin(mesh_shape, ",");
   }
@@ -640,7 +640,8 @@ std::vector<int64_t> ShardingUtil::GetAutoShardingMeshIds(
   // as the auto-sharding pass takes only one arrangement for now.
   // TODO(yeounoh) this was not necessary before; replace if this can be done
   // during the auto-sharding pass.
-  int64_t n_devices = runtime::GetComputationClient()->GetAllDevices().size();
+  int64_t n_devices =
+      runtime::GetComputationClientOrDie()->GetAllDevices().size();
   std::vector<int64_t> device_mesh_ids = std::vector<int64_t>(n_devices);
   std::iota(device_mesh_ids.begin(), device_mesh_ids.end(), 0);
 
@@ -736,12 +737,13 @@ void ShardingUtil::ReshardParameters(
   bool group_sharding =
       runtime::sys_util::GetEnvBool("XLA_AUTO_USE_GROUP_SHARDING", true);
   if (group_sharding) {
-    outputs = WrapXlaData(runtime::GetComputationClient()->ReshardData(
+    outputs = WrapXlaData(runtime::GetComputationClientOrDie()->ReshardData(
         data_to_reshard, shardings_to_reshard));
   } else {
     for (int i = 0; i < data_to_reshard.size(); ++i) {
-      auto output = WrapXlaData(runtime::GetComputationClient()->ReshardData(
-          {data_to_reshard[i]}, {shardings_to_reshard[i]}));
+      auto output =
+          WrapXlaData(runtime::GetComputationClientOrDie()->ReshardData(
+              {data_to_reshard[i]}, {shardings_to_reshard[i]}));
       outputs.insert(outputs.end(), output.begin(), output.end());
     }
   }

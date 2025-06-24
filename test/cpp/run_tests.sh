@@ -99,7 +99,8 @@ if [[ "$RUN_CPP_TESTS" == "cpp_tests" ]]; then
               "test_tensor"
               # disable test_xla_backend_intf since it is flaky on upstream
               #"test_xla_backend_intf"
-              "test_xla_sharding")
+              "test_xla_sharding"
+              "test_runtime")
 fi
 for name in "${test_names[@]}"; do
   echo "Running $name cpp test..."

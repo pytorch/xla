@@ -149,3 +149,12 @@ ptxla_cc_test(
     )
     for test in glob(["test_aten_xla_tensor*cpp"])
 ]
+
+ptxla_cc_test(
+    name = "test_runtime",
+    srcs = ["test_runtime.cpp"],
+    deps = [
+        "//torch_xla/csrc/runtime:runtime",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

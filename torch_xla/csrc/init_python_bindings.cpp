@@ -172,6 +172,18 @@ class PythonScope : public Scope {
   };
 };
 
+static void ConsumeAndMaybeThrow(absl::Status status) {
+  if (!status.ok()) {
+    throw std::runtime_error(std::string(status.message()));
+  }
+}
+
+template <class T>
+static T ConsumeAndMaybeThrow(absl::StatusOr<T> status) {
+  ConsumeAndMaybeThrow(status.status());
+  return std::move(status.value());
+}
+
 struct NoGilSection {
   NoGilSection() : state(PyEval_SaveThread()) {}
   ~NoGilSection() { PyEval_RestoreThread(state); }
@@ -217,7 +229,7 @@ torch::lazy::BackendDevice GetDeviceOrCurrent(const std::string& device_str) {
 
 void WaitDeviceOps(absl::Span<const std::string> devices = {}) {
   XLAGraphExecutor::Get()->WaitDeviceOps(devices);
-  runtime::GetComputationClient()->WaitDeviceOps(devices);
+  runtime::GetComputationClientOrDie()->WaitDeviceOps(devices);
 }
 
 void PrepareToExit() {
@@ -671,7 +683,7 @@ void StepMarker(const std::string& device_str,
   bool debug_mode = runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
     std::string report = runtime::metrics::CreatePerformanceReport(
-        runtime::GetComputationClient()->GetMetrics());
+        runtime::GetComputationClientOrDie()->GetMetrics());
     if (!report.empty()) {
       std::string fout =
           runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
@@ -920,7 +932,7 @@ py::dict GetMemoryInfo(const std::string& device_str) {
     NoGilSection nogil;
     torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
     mem_info =
-        runtime::GetComputationClient()->GetMemoryInfo(device.toString());
+        runtime::GetComputationClientOrDie()->GetMemoryInfo(device.toString());
   }
   auto py_dict = py::dict();
   py_dict["bytes_used"] = mem_info.bytes_used;
@@ -1228,7 +1240,7 @@ class PyLoweringContext {
 
     // Fetch this parameter data
     std::vector<xla::Literal> literals =
-        runtime::GetComputationClient()->TransferFromDevice(
+        runtime::GetComputationClientOrDie()->TransferFromDevice(
             UnwrapXlaData(device_data));
 
     // Create a mapping from paramater id to the tensor data
@@ -1469,9 +1481,9 @@ void InitXlaModuleBindings(py::module m) {
             CreateComputationShapeFromTensor(tensor, nullptr);
         if (minibatch) {
           int num_local_devices =
-              runtime::GetComputationClient()->GetLocalDevices().size();
+              runtime::GetComputationClientOrDie()->GetLocalDevices().size();
           int num_global_devices =
-              runtime::GetComputationClient()->GetAllDevices().size();
+              runtime::GetComputationClientOrDie()->GetAllDevices().size();
           XLA_CHECK(tile_assignment.size() == num_global_devices)
               << "Minibatch sharding only supports sharding along the batch "
                  "dimension";
@@ -1681,7 +1693,9 @@ void InitXlaModuleBindings(py::module m) {
             XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
            })
       .def("_init_computation_client",
-           []() { runtime::GetComputationClient(); })
+           []() {
+             ConsumeAndMaybeThrow(runtime::GetComputationClient());
+           })
       .def("_xla_get_device_hw_type",
            [](const at::Tensor& tensor) {
             XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
@@ -1695,16 +1709,16 @@ void InitXlaModuleBindings(py::module m) {
               // Under SPMD context, there is only one virtual devices from
               // user perspective.
               std::vector<std::string> all_devices =
-                  runtime::GetComputationClient()->GetAllDevices();
+                  runtime::GetComputationClientOrDie()->GetAllDevices();
               all_devices.resize(1);
               return all_devices;
             } else {
-              return runtime::GetComputationClient()->GetLocalDevices();
+              return runtime::GetComputationClientOrDie()->GetLocalDevices();
             }
            })
       .def("_get_stream_for_cuda_device",
            [](const int device_id) {
-            return runtime::GetComputationClient()->GetCudaStreamForDevice(
+            return runtime::GetComputationClientOrDie()->GetCudaStreamForDevice(
                 device_id);
            })
       .def("_xla_num_devices",
@@ -1712,17 +1726,17 @@ void InitXlaModuleBindings(py::module m) {
             if (UseVirtualDevice()) {
               return 1;
             } else {
-              return runtime::GetComputationClient()->GetNumLocalDevices();
+              return runtime::GetComputationClientOrDie()->GetNumLocalDevices();
             }
            })
       .def("_xla_num_global_devices",
            []() -> int64_t {
-            return runtime::GetComputationClient()->GetNumDevices();
+            return runtime::GetComputationClientOrDie()->GetNumDevices();
            })
       .def("_xla_get_all_devices",
            []() {
             std::vector<std::string> all_devices =
-                runtime::GetComputationClient()->GetAllDevices();
+                runtime::GetComputationClientOrDie()->GetAllDevices();
             if (UseVirtualDevice()) {
               // Under SPMD context, there is only one virtual devices from
               // user perspective.
@@ -1733,22 +1747,22 @@ void InitXlaModuleBindings(py::module m) {
             }
            })
       .def("_xla_get_runtime_devices",
-           []() { return runtime::GetComputationClient()->GetLocalDevices(); })
+           []() { return runtime::GetComputationClientOrDie()->GetLocalDevices(); })
       .def("_xla_num_runtime_devices",
            []() -> int64_t {
-            return runtime::GetComputationClient()->GetNumLocalDevices();
+            return runtime::GetComputationClientOrDie()->GetNumLocalDevices();
            })
       .def("_xla_get_all_runtime_devices",
            []() {
             std::vector<std::string> all_devices =
-                runtime::GetComputationClient()->GetAllDevices();
+                runtime::GetComputationClientOrDie()->GetAllDevices();
             return all_devices;
            })
       .def(
           "_xla_real_devices",
           [](const std::optional<std::vector<std::string>> devices) {
             if (!devices) {
-              return runtime::GetComputationClient()->GetLocalDevices();
+              return runtime::GetComputationClientOrDie()->GetLocalDevices();
             }
 
             std::vector<std::string> xla_devices;
@@ -1763,27 +1777,27 @@ void InitXlaModuleBindings(py::module m) {
           "_xla_device_kind",
           [](const std::string& device) {
             auto xla_device = bridge::AtenDeviceToXlaDevice(device).toString();
-            return runtime::GetComputationClient()->GetDeviceKind(xla_device);
+            return runtime::GetComputationClientOrDie()->GetDeviceKind(xla_device);
           },
           py::arg("device") = "")
       .def("_xla_set_replication_devices",
            [](const std::vector<std::string>& devices) {
             auto replication_devices =
                 std::make_shared<std::vector<std::string>>(devices);
-            runtime::GetComputationClient()->SetReplicationDevices(
+            runtime::GetComputationClientOrDie()->SetReplicationDevices(
                 std::move(replication_devices));
            })
       .def("_xla_get_replication_devices",
            []() {
             auto replication_devices =
-                runtime::GetComputationClient()->GetReplicationDevices();
+                runtime::GetComputationClientOrDie()->GetReplicationDevices();
             return replication_devices != nullptr ? *replication_devices
                                                   : std::vector<std::string>();
            })
       .def("_xla_get_replication_devices_count",
            []() {
             auto replication_devices =
-                runtime::GetComputationClient()->GetReplicationDevices();
+                runtime::GetComputationClientOrDie()->GetReplicationDevices();
             return replication_devices != nullptr ? replication_devices->size()
                                                   : 0;
            })
@@ -2125,7 +2139,7 @@ void InitXlaModuleBindings(py::module m) {
           [](py::object py_shape) {
             xla::Shape shape = op_builder::PyShapeToShape(py_shape);
             auto xla_tensor =
-                XLATensor::Create(torch_xla::runtime::GetComputationClient()
+                XLATensor::Create(torch_xla::runtime::GetComputationClientOrDie()
                                       ->CreateDataPlaceholder(
                                           bridge::GetCurrentDevice().toString(),
                                           std::move(shape)));
@@ -2145,9 +2159,9 @@ void InitXlaModuleBindings(py::module m) {
             return device.ordinal();
            })
       .def("_xla_get_process_index",
-           []() { return runtime::GetComputationClient()->GetProcessIndex(); })
+           []() { return runtime::GetComputationClientOrDie()->GetProcessIndex(); })
       .def("_xla_get_num_processes",
-           []() { return runtime::GetComputationClient()->GetNumProcesses(); })
+           []() { return runtime::GetComputationClientOrDie()->GetNumProcesses(); })
       .def("_xla_get_num_cached_compilation_graph",
            []() -> int64_t {
             return XLAGraphExecutor::Get()->GetNumGraphHash();
@@ -2161,7 +2175,7 @@ void InitXlaModuleBindings(py::module m) {
             const absl::flat_hash_map<
                 std::string, runtime::ComputationClient::DeviceAttribute>
                 attributes =
-                    runtime::GetComputationClient()->GetDeviceAttributes(
+                    runtime::GetComputationClientOrDie()->GetDeviceAttributes(
                         bridge::AtenDeviceToXlaDevice(device_str).toString());
 
             py::dict dict;
@@ -2173,13 +2187,13 @@ void InitXlaModuleBindings(py::module m) {
       .def("_xla_get_all_device_attributes",
            []() {
             std::vector<std::string> global_devices =
-                runtime::GetComputationClient()->GetAllDevices();
+                runtime::GetComputationClientOrDie()->GetAllDevices();
             std::vector<py::dict> list;
             for (auto const& device : global_devices) {
               const absl::flat_hash_map<
                   std::string,
                   runtime::ComputationClient::DeviceAttribute>& attributes =
-                  runtime::GetComputationClient()->GetDeviceAttributes(device);
+                  runtime::GetComputationClientOrDie()->GetDeviceAttributes(device);
               py::dict dict;
               for (auto const& [name, value] : attributes) {
                 dict[py::str(name)] = py::cast(value);
@@ -2355,7 +2369,7 @@ void InitXlaModuleBindings(py::module m) {
             // standalone library.
             return torch::lazy::CreateMetricReport() +
                    runtime::metrics_reader::CreateMetricReport(
-                       runtime::GetComputationClient()->GetMetrics());
+                       runtime::GetComputationClientOrDie()->GetMetrics());
            })
       .def("_short_xla_metrics_report",
            [](const py::list& counter_names, const py::list& metric_names) {
@@ -2615,7 +2629,7 @@ void InitXlaModuleBindings(py::module m) {
             XLA_CHECK(UseVirtualDevice())
                 << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
             auto local_devices =
-                runtime::GetComputationClient()->GetLocalDevices();
+                runtime::GetComputationClientOrDie()->GetLocalDevices();
             XLA_CHECK(local_devices.size() == shards.size())
                 << "Must specify a shard for each local device";
             XLA_CHECK(!global_shape.has_value() ||
@@ -2699,7 +2713,7 @@ void InitXlaModuleBindings(py::module m) {
                   std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
                       xtensor->GetXlaData());
               std::vector<runtime::ComputationClient::DataPtr> shard_handles =
-                  runtime::GetComputationClient()->GetDataShards(handle);
+                  runtime::GetComputationClientOrDie()->GetDataShards(handle);
               handles.insert(handles.end(), shard_handles.begin(),
                              shard_handles.end());
               element_types.insert(
@@ -2713,7 +2727,7 @@ void InitXlaModuleBindings(py::module m) {
             // Populate the resulting vector of shards and device strings
             std::vector<std::vector<std::pair<at::Tensor, std::string>>> result;
             int shards_per_tensor =
-                runtime::GetComputationClient()->GetLocalDevices().size();
+                runtime::GetComputationClientOrDie()->GetLocalDevices().size();
             result.reserve(cpu_shards.size() / shards_per_tensor);
             for (int i = 0; i < cpu_shards.size(); i += shards_per_tensor) {
               std::vector<std::pair<at::Tensor, std::string>> shard_devices;
@@ -2750,7 +2764,7 @@ void InitXlaModuleBindings(py::module m) {
                   std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
                       xtensor->GetXlaData());
               auto shards =
-                  runtime::GetComputationClient()->GetDataShards(handle);
+                  runtime::GetComputationClientOrDie()->GetDataShards(handle);
               std::vector<std::string> shard_devices;
               for (auto& shard : shards) {
                 shard_devices.push_back(shard->device());
@@ -2804,7 +2818,7 @@ void InitXlaModuleBindings(py::module m) {
             XLA_CHECK(xtensor->sharding_spec() != nullptr)
                 << "Cannot load local shards into a non sharded tensor";
             XLA_CHECK(devices.size() ==
-                      runtime::GetComputationClient()->GetLocalDevices().size())
+                      runtime::GetComputationClientOrDie()->GetLocalDevices().size())
                 << "Shards must be provided for all local devices";
             auto sharding = xtensor->sharding_spec()->sharding;
             auto sharding_spec = xtensor->sharding_spec();
@@ -2829,9 +2843,9 @@ void InitXlaModuleBindings(py::module m) {
           "_ensure_xla_coordinator_initialized",
           [](int global_rank, int world_size, std::string master_addr,
              std::string master_port) {
-            auto comp_client = runtime::GetComputationClient();
+            auto comp_client = runtime::GetComputationClientOrDie();
             if (!comp_client->CoordinatorInitialized()) {
-              runtime::GetComputationClient()->InitializeCoordinator(
+              runtime::GetComputationClientOrDie()->InitializeCoordinator(
                   global_rank, world_size, master_addr, master_port);
             }
           },
@@ -2846,7 +2860,7 @@ void InitXlaModuleBindings(py::module m) {
           // effect.
           "_activate_preemption_sync_manager",
           []() {
-            auto comp_client = runtime::GetComputationClient();
+            auto comp_client = runtime::GetComputationClientOrDie();
             XLA_CHECK(comp_client->CoordinatorInitialized())
                 << "Coordinator must be initialized";
             auto& coordinator = comp_client->GetCoordinator();
@@ -2857,7 +2871,7 @@ void InitXlaModuleBindings(py::module m) {
           // is active
           "_deactivate_preemption_sync_manager",
           []() {
-            auto comp_client = runtime::GetComputationClient();
+            auto comp_client = runtime::GetComputationClientOrDie();
             XLA_CHECK(comp_client->CoordinatorInitialized())
                 << "Coordinator must be initialized";
             auto& coordinator = comp_client->GetCoordinator();
@@ -2869,7 +2883,7 @@ void InitXlaModuleBindings(py::module m) {
           // PreemptionSyncManager activated.
           "_sync_point_reached",
           [](int step) {
-            auto comp_client = runtime::GetComputationClient();
+            auto comp_client = runtime::GetComputationClientOrDie();
             XLA_CHECK(comp_client->CoordinatorInitialized())
                 << "Coordinator must be initialized";
             auto& coordinator = comp_client->GetCoordinator();
@@ -2996,7 +3010,7 @@ void InitXlaModuleBindings(py::module m) {
       .def("_xla_register_custom_call_target",
            [](const std::string& fn_name, const py::capsule& function_ptr,
               const std::string& platform) {
-            runtime::GetComputationClient()->RegisterCustomCall(
+            runtime::GetComputationClientOrDie()->RegisterCustomCall(
                 fn_name, function_ptr.get_pointer(), platform);
            })
       .def("_set_xla_custom_op_name_prefix",
@@ -3150,33 +3164,35 @@ void InitXlaModuleBindings(py::module m) {
                }
                XLA_ERROR() << "Could not get buffer for tensor";
              }
-             runtime::GetComputationClient()->OnReadyCallback(data, callback);
+             runtime::GetComputationClientOrDie()->OnReadyCallback(data,
+                                                                   callback);
            })
-      .def(
-          "_unsafe_buffer_pointer",
-          [](const at::Tensor& input) -> std::uintptr_t {
-            XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-            XLA_CHECK(xtensor) << "The input is not an XLA tensor.";
-            if (xtensor->CurrentDataHandle() != nullptr) {
-              std::shared_ptr<runtime::ComputationClient::Data> data =
-                  std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-                      xtensor->CurrentDataHandle());
-              return runtime::GetComputationClient()->UnsafeBufferPointer(data);
-            } else if (xtensor->CurrentIrValue().node != nullptr) {
-              DeviceData* device_data =
-                  DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-              if (device_data != nullptr) {
-                torch::lazy::BackendDataPtr data = device_data->data();
-                return runtime::GetComputationClient()->UnsafeBufferPointer(
-                    UnwrapXlaData(data));
-              } else {
-                XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
-                               "with IR that's not DeviceData";
-              }
-            }
-            XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
-                           "without a data handle or an IR.";
-          })
+      .def("_unsafe_buffer_pointer",
+           [](const at::Tensor& input) -> std::uintptr_t {
+             XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+             XLA_CHECK(xtensor) << "The input is not an XLA tensor.";
+             if (xtensor->CurrentDataHandle() != nullptr) {
+               std::shared_ptr<runtime::ComputationClient::Data> data =
+                   std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                       xtensor->CurrentDataHandle());
+               return runtime::GetComputationClientOrDie()->UnsafeBufferPointer(
+                   data);
+             } else if (xtensor->CurrentIrValue().node != nullptr) {
+               DeviceData* device_data =
+                   DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+               if (device_data != nullptr) {
+                 torch::lazy::BackendDataPtr data = device_data->data();
+                 return runtime::GetComputationClientOrDie()
+                     ->UnsafeBufferPointer(UnwrapXlaData(data));
+               } else {
+                 XLA_ERROR()
+                     << "Could not get the buffer pointer for XLATensor "
+                        "with IR that's not DeviceData";
+               }
+             }
+             XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
+                            "without a data handle or an IR.";
+           })
       .def(
           // from an XLA tensor to a PyCapsule.
           // When consuming the PyCapsule, we should synchronize
