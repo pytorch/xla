@@ -3,13 +3,13 @@
 #include <c10/util/Exception.h>
 
 #include "absl/log/initialize.h"
-#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
+#include "torch_xla/csrc/status.h"
 #include "xla/pjrt/c/pjrt_c_api.h"
 #include "xla/pjrt/distributed/client.h"
 #include "xla/pjrt/distributed/distributed.h"
@@ -110,8 +110,8 @@ InitializePjRt(const std::string& device_type) {
                    << ", coordinator address=" << master_addr << ":" << port;
 
         // Use the XlaCoordinator as the distributed key-value store.
-        coordinator = std::make_unique<XlaCoordinator>(
-            global_process_rank, global_world_size, master_addr, port);
+        coordinator = ConsumeAndMaybeThrow(XlaCoordinator::Create(
+            global_process_rank, global_world_size, master_addr, port));
         std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
             coordinator->GetClient();
         kv_store = xla::GetDistributedKeyValueStore(distributed_client,
@@ -183,8 +183,8 @@ InitializePjRt(const std::string& device_type) {
           runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
       std::string port = runtime::sys_util::GetEnvString(
           "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
-      coordinator = std::make_unique<XlaCoordinator>(
-          global_process_rank, global_world_size, master_addr, port);
+      coordinator = ConsumeAndMaybeThrow(XlaCoordinator::Create(
+          global_process_rank, global_world_size, master_addr, port));
       std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
           coordinator->GetClient();
       kv_store = xla::GetDistributedKeyValueStore(distributed_client,

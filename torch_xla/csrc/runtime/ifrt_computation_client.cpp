@@ -15,6 +15,7 @@
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
+#include "torch_xla/csrc/status.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
@@ -163,8 +164,8 @@ void IfrtComputationClient::InitializeCoordinator(int global_rank,
                                                   std::string port) {
   XLA_CHECK(coordinator_ == nullptr)
       << "Can only initialize the XlaCoordinator once.";
-  coordinator_ = std::make_unique<XlaCoordinator>(global_rank, world_size,
-                                                  master_addr, port);
+  coordinator_ = ConsumeAndMaybeThrow(
+      XlaCoordinator::Create(global_rank, world_size, master_addr, port));
 }
 
 XlaCoordinator& IfrtComputationClient::GetCoordinator() {

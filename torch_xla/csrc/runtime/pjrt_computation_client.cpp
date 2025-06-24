@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
@@ -18,6 +17,7 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
+#include "torch_xla/csrc/status.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
@@ -155,8 +155,8 @@ void PjRtComputationClient::InitializeCoordinator(int global_rank,
                                                   std::string port) {
   XLA_CHECK(coordinator_ == nullptr)
       << "Can only initialize the XlaCoordinator once.";
-  coordinator_ = std::make_unique<XlaCoordinator>(global_rank, world_size,
-                                                  master_addr, port);
+  coordinator_ = ConsumeAndMaybeThrow(
+      XlaCoordinator::Create(global_rank, world_size, master_addr, port));
 }
 
 XlaCoordinator& PjRtComputationClient::GetCoordinator() {

@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include "absl/base/nullability.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/tsl/distributed_runtime/preemption/preemption_sync_manager.h"
 
@@ -12,11 +13,17 @@ namespace runtime {
 // XlaCoordinator serves as the point of entry for all operations which
 // required the XLA distributed runtime, such as preemption coordination.
 class XlaCoordinator {
+ private:
+  // Private struct for making the constructor private, but still callable
+  // with std::make_unique<T>() function.
+  struct PrivateUse {
+    explicit PrivateUse() = default;
+  };
+
  public:
   static inline const std::string kDefaultCoordinatorPort = "8547";
 
-  XlaCoordinator(int global_rank, int world_size, std::string master_addr,
-                 std::string port);
+  XlaCoordinator(PrivateUse);
 
   ~XlaCoordinator();
 
@@ -41,7 +48,17 @@ class XlaCoordinator {
   // false otherwise.
   bool ReachedSyncPoint(int step);
 
+  // Creates a new instance of XlaCoordinator, and initializes it.
+  static absl::StatusOr<absl_nonnull std::unique_ptr<XlaCoordinator>> Create(
+      int global_rank, int world_size, std::string master_addr,
+      std::string port);
+
  private:
+  // Convenience function called by `Create()` that initializes the current
+  // XlaCoordinator.
+  absl::Status Initialize(int global_rank, int world_size,
+                          std::string master_addr, std::string port);
+
   std::unique_ptr<xla::DistributedRuntimeService> dist_runtime_service_;
   std::shared_ptr<xla::DistributedRuntimeClient> dist_runtime_client_;
   std::unique_ptr<tsl::PreemptionSyncManager> preemption_sync_manager_;
