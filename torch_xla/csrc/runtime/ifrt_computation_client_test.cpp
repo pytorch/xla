@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
+#include "torch_xla/csrc/status.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/logging.h"
 #include "tsl/platform/statusor.h"
@@ -36,7 +36,7 @@ absl::StatusOr<xla::XlaComputation> MakeComputation() {
 TEST(PjRtComputationClientTest, Init) {
   // Get a CPU client.
   tsl::setenv("PJRT_DEVICE", "CPU", true);
-  auto client = std::make_unique<IfrtComputationClient>();
+  auto client = GetValueOrThrow(IfrtComputationClient::Create());
   std::string device = client->GetDefaultDevice();
 
   // Compose a computation.
