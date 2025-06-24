@@ -31,7 +31,6 @@ InitializeComputationClient() {
             ? static_cast<ComputationClient*>(new IfrtComputationClient())
             : static_cast<ComputationClient*>(new PjRtComputationClient());
     g_computation_client_initialized = true;
-    ABSL_CHECK(client);
     return client;
   } else {
     return absl::FailedPreconditionError("$PJRT_DEVICE is not set.");
