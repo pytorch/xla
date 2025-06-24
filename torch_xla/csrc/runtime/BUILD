@@ -212,6 +212,7 @@ cc_library(
         "//torch_xla/csrc:status",
         "@torch//:headers",
         "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/log:absl_check",
         "@xla//xla/pjrt:pjrt_c_api_client",
         "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
         "@xla//xla/pjrt/gpu:se_gpu_pjrt_client",
