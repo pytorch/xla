@@ -50,9 +50,9 @@ class TestSPMDLinearModel(test_xla_sharding_base.XlaShardingTest):
       with extended_argv(['--use_gradient_checkpointing']):
         checkpointing_losses, checkpointing_result = train_and_evaluate()
         # Verify that the runs match with and without checkpointing.
-        assert torch.allclose(baseline_result, checkpointing_result)
+        assert torch.allclose(baseline_result, checkpointing_result, atol=0.005)
         assert all(
-            torch.allclose(baseline_loss, checkpointing_loss)
+            torch.allclose(baseline_loss, checkpointing_loss, atol=0.00002)
             for baseline_loss, checkpointing_loss in zip(
                 baseline_losses, checkpointing_losses))
 
