@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch_xla
 import torch_xla.core.xla_model as xm
+from torch_xla.debug import metrics
 import unittest
 import test_utils
 import pytorch_test_base
@@ -149,6 +150,19 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
           dest.index_copy_(dim, idx, src)
           ref_index_copy(dest2, dim, idx, src)
           self.assertEqual(dest, dest2)
+
+  def test_glu_backward_not_falling_back(self):
+    conv = torch.nn.Conv2d(in_channels=4, out_channels=8, kernel_size=3, padding=1).to('xla')
+    criterion = torch.nn.MSELoss()
+    optimizer = torch.optim.SGD(conv.parameters(), lr=0.00005)
+    x = torch.randn(1, 4, 100, 100).to('xla')  # batch_size=1, channels=4, height=100, width=100
+    y_target = torch.randn(1, 4, 100, 100).to('xla')  # batch_size=1, channels=4, height=100, width=100
+    x = conv(x)
+    y = torch.nn.functional.glu(x, dim=1)
+    loss = criterion(y, y_target)
+    loss.backward()
+    optimizer.step()
+    self.assertNotIn('aten::glu_backward', metrics.executed_fallback_ops())
 
 
 instantiate_device_type_tests(TestPythonOps, globals())
