@@ -1,7 +1,7 @@
 ########## Begin section for release and nightly ########
 # Define common configuration parameters for 2.7 release and nightly
 locals {
-  tpu_python_versions = ["3.9", "3.10", "3.11"]
+  tpu_python_versions = ["3.9", "3.10", "3.11", "3.12"]
   release_git_tag         = "v2.7.0-rc5"
   release_package_version = "2.7.0-rc5"
   release_pytorch_git_rev = "v2.7.0-rc10"
