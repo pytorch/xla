@@ -17,21 +17,32 @@ static std::string LocationStrWithSpace(const char* file, const int32_t line) {
   return absl::StrCat(" (at ", file, ":", line, ")");
 }
 
-absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
+absl::Status MaybeWithLocation(absl::Status&& status, const char* file,
                                const int32_t line) {
   ABSL_CHECK(!status.ok());
-  std::string_view message = status.message();
+
+  // Return the same status if we don't need to add the C++ source location.
+  if (!showCppErrorContext()) {
+    return status;
+  }
+
   return absl::Status(
       status.code(),
-      (showCppErrorContext())
-          ? absl::StrCat(message, LocationStrWithSpace(file, line))
-          : message);
+      absl::StrCat(status.message(), LocationStrWithSpace(file, line)));
 }
 
-absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
+absl::Status MaybeWithNewMessage(absl::Status&& status, const char* file,
                                  const int32_t line,
                                  const std::string_view new_message) {
   ABSL_CHECK(!status.ok());
+
+  // Return the same status if:
+  //   1. we don't need to add the C++ source location.
+  //   2. there's no new message to replace the old one.
+  if (!showCppErrorContext() && new_message.empty()) {
+    return status;
+  }
+
   std::string_view old_message = status.message();
 
   // Replace the old status message with `new_message`, if it's not empty.
@@ -58,7 +69,7 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
   return absl::Status(status.code(), absl::StrCat(message, context));
 }
 
-void ConsumeAndMaybeThrow(absl::Status status) {
+void ConsumeAndMaybeThrow(absl::Status&& status) {
   if (!status.ok()) {
     throw std::runtime_error(std::string(status.message()));
   }

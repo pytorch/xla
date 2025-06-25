@@ -12,16 +12,16 @@ namespace torch_xla {
 // propagating. Then, if `kEnvShowCppErrorContext` environment variable is set,
 // the location information will be shown.
 #define XLA_ERROR_WITH_LOCATION(STATUS) \
-  ::torch_xla::MaybeWithLocation(STATUS, __FILE__, __LINE__)
+  ::torch_xla::MaybeWithLocation(std::move(STATUS), __FILE__, __LINE__)
 
-#define _XLA_RETURN_IF_ERROR(EXPR, THEN, ...)                                  \
-  do {                                                                         \
-    auto _status_var = (EXPR);                                                 \
-    if (!_status_var.ok()) {                                                   \
-      return ::torch_xla::MaybeWithNewMessage(_status_var, __FILE__, __LINE__, \
-                                              ##__VA_ARGS__);                  \
-    }                                                                          \
-    THEN;                                                                      \
+#define _XLA_RETURN_IF_ERROR(EXPR, THEN, ...)                         \
+  do {                                                                \
+    auto _status_var = (EXPR);                                        \
+    if (!_status_var.ok()) {                                          \
+      return ::torch_xla::MaybeWithNewMessage(                        \
+          std::move(_status_var), __FILE__, __LINE__, ##__VA_ARGS__); \
+    }                                                                 \
+    THEN;                                                             \
   } while (0)
 
 // Propagates `REXPR`, in case it's a non-ok status.
@@ -37,7 +37,7 @@ namespace torch_xla {
 // Maybe shows location information in the status message.
 //
 // This function assumes that `status` is a non-ok status.
-absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
+absl::Status MaybeWithLocation(absl::Status&& status, const char* file,
                                const int32_t line);
 
 // Maybe replace the current `status` message with `new_message`.
@@ -49,15 +49,16 @@ absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
 //
 // This function also appends file location information to the error message, if
 // `kEnvShowCppErrorContext` is set.
-absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
+absl::Status MaybeWithNewMessage(absl::Status&& status, const char* file,
                                  const int32_t line,
                                  const std::string_view new_message = "");
 
 template <class T>
-absl::Status MaybeWithNewMessage(const absl::StatusOr<T>& status,
-                                 const char* file, const int32_t line,
+absl::Status MaybeWithNewMessage(absl::StatusOr<T>&& status, const char* file,
+                                 const int32_t line,
                                  const std::string_view new_message = "") {
-  return MaybeWithNewMessage(status.status(), file, line, new_message);
+  return MaybeWithNewMessage(std::move(status).status(), file, line,
+                             new_message);
 }
 
 // Consumes the `status` and maybe throws an exception if `status` has
@@ -65,13 +66,13 @@ absl::Status MaybeWithNewMessage(const absl::StatusOr<T>& status,
 //
 // Ideally, this function should be used only used in the project's
 // boundary, e.g. when we need to throw an exception for the user to see.
-void ConsumeAndMaybeThrow(absl::Status status);
+void ConsumeAndMaybeThrow(absl::Status&& status);
 
 // Consumes the `status`, either returning the value it holds (for
 // ok status), or throwing an exception.
 template <class T>
-T ConsumeAndMaybeThrow(absl::StatusOr<T> status) {
-  ConsumeAndMaybeThrow(status.status());
+T ConsumeAndMaybeThrow(absl::StatusOr<T>&& status) {
+  ConsumeAndMaybeThrow(std::move(status).status());
   return std::move(status.value());
 }
 
