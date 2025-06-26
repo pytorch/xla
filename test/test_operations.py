@@ -755,7 +755,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_embedding_module(self):
     num_embeddings = 16
     embed_dim = 4
-    input_shape = (2, 3) 
+    input_shape = (2, 3)
 
     xla_device = torch_xla.device()
 
@@ -764,10 +764,11 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     m = nn.Embedding(num_embeddings, embed_dim)
     xla_m = nn.Embedding(num_embeddings, embed_dim).to(xla_device)
-    xla_m.weight.data.copy_(m.weight.data)       # keep parameters in sync
+    # keep parameters in sync
+    xla_m.weight.data.copy_(m.weight.data)
 
     output = m(idx)
-    xla_output  = xla_m(xla_idx)
+    xla_output = xla_m(xla_idx)
     self.assertEqual(output, xla_output.cpu())
 
     output.sum().backward()
