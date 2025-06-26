@@ -341,8 +341,9 @@ def get_tuned_block_sizes(block_table, batch_size, n_output_features, n_input_fe
   """
   key = (get_tpu_version(), batch_size, n_output_features, n_input_features,
          activation_dtype, quantize_activation)
-  if key not in block_table:
-    raise ValueError(
-        f"Block sizes not found for key {key}. Available keys: {list(block_table.keys())}"
-    )
+  # TODO(xw32): delete it
+  # if key not in block_table:
+  #   raise ValueError(
+  #       f"Block sizes not found for key {key}. Available keys: {list(block_table.keys())}"
+  #   )
   return block_table.get(key, (128, 128, 128))

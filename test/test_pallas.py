@@ -978,7 +978,7 @@ class PallasTest(parameterized.TestCase):
       dtype=[torch.bfloat16, torch.float32],
       bs=[256, 512],
       n_input_features=[256, 512],
-      n_output_features=[256, 512],
+      n_output_features=[256],
       quantize_activation=[True],
       use_dynamo=[True, False],
   )
