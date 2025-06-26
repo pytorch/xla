@@ -403,7 +403,7 @@ def _get_jax_install_requirements():
   jax = f'jax @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/jax/jax-{_jax_version}-py3-none-any.whl'
 
   jaxlib = []
-  for python_minor_version in [9, 10, 11]:
+  for python_minor_version in [9, 10, 11, 12]:
     jaxlib.append(
         f'jaxlib @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/jaxlib/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
     )
