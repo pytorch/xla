@@ -10,12 +10,12 @@ namespace torch_xla {
 namespace runtime {
 namespace sys_util {
 
-std::string GetEnvString(const char* name, const std::string& defval) {
-  const char* env = std::getenv(name);
+std::string GetEnvString(const char* const name, const std::string& defval) {
+  const char* const env = std::getenv(name);
   return env != nullptr ? env : defval;
 }
 
-std::string GetEnvOrdinalPath(const char* name, const std::string& defval,
+std::string GetEnvOrdinalPath(const char* const name, const std::string& defval,
                               const int64_t ordinal) {
   std::string path = GetEnvString(name, defval);
   if (!path.empty()) {
@@ -26,23 +26,23 @@ std::string GetEnvOrdinalPath(const char* name, const std::string& defval,
   return path;
 }
 
-std::string GetEnvOrdinalPath(const char* name, const std::string& defval,
-                              const char* ordinal_env) {
+std::string GetEnvOrdinalPath(const char* const name, const std::string& defval,
+                              const char* const ordinal_env) {
   return GetEnvOrdinalPath(name, defval, GetEnvInt(ordinal_env, -1));
 }
 
-int64_t GetEnvInt(const char* name, int64_t defval) {
-  const char* env = std::getenv(name);
+int64_t GetEnvInt(const char* const name, const int64_t defval) {
+  const char* const env = std::getenv(name);
   return env != nullptr ? std::atol(env) : defval;
 }
 
-double GetEnvDouble(const char* name, double defval) {
-  const char* env = std::getenv(name);
+double GetEnvDouble(const char* const name, const double defval) {
+  const char* const env = std::getenv(name);
   return env != nullptr ? std::atof(env) : defval;
 }
 
-bool GetEnvBool(const char* name, bool defval) {
-  const char* env = std::getenv(name);
+bool GetEnvBool(const char* const name, const bool defval) {
+  const char* const env = std::getenv(name);
   if (env == nullptr) {
     return defval;
   }
@@ -56,7 +56,7 @@ bool GetEnvBool(const char* name, bool defval) {
 }
 
 int64_t NowNs() {
-  auto now = std::chrono::high_resolution_clock::now();
+  const auto now = std::chrono::high_resolution_clock::now();
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
              now.time_since_epoch())
       .count();
