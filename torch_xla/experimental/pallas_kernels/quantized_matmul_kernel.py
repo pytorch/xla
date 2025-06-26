@@ -194,15 +194,12 @@ def quantized_matmul_int8(
 ):
   assert zero_point is None, "Not implemented: zero_point is not supported."
   assert quant_block_size is None, "Not implemented: quant_block_size is not supported."
+  assert batch_block_size is not None and out_block_size is not None and in_block_size is not None
 
-  orig_bs, orig_in_features = x.shape
-  orig_out_features, _ = w.shape
-  if batch_block_size is None or out_block_size is None or in_block_size is None:
-    batch_block_size, out_block_size, in_block_size = get_tuned_block_sizes(TUNED_BLOCK_SIZES, orig_bs, orig_out_features, orig_in_features, jnp.dtype(x.dtype).name, quantize_activation)
-    
+  bs = x.shape[0]
   orig_batch_block_size = batch_block_size
-  if orig_bs < 128:
-    batch_block_size = orig_bs
+  if bs < 128:
+    batch_block_size = bs
 
   assert x.shape[1] == w.shape[
       1], f"x.shape[1] ({x.shape[1]}) must be equal to w.shape[1] ({w.shape[1]})"
