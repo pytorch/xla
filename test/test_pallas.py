@@ -1,6 +1,7 @@
 import logging
 import sys
 import unittest
+from unittest.mock import patch
 from absl.testing import parameterized
 
 import torch
@@ -885,9 +886,6 @@ class PallasTest(parameterized.TestCase):
       n_output_features,
       quantize_activation,
       use_dynamo,
-      batch_block_size=None,
-      out_block_size=None,
-      in_block_size=None,
       atol=1.5,
       n_bits=8,
   ):
@@ -918,17 +916,12 @@ class PallasTest(parameterized.TestCase):
     scalar_xla = scalar.to('xla')
     if use_dynamo:
 
-      def quantized_matmul_int8_wrapper(x, w_int, scalar, quantize_activation,
-                                        batch_block_size, out_block_size,
-                                        in_block_size):
+      def quantized_matmul_int8_wrapper(x, w_int, scalar, quantize_activation):
         return torch.ops.xla.quantized_matmul_int8(
             x,
             w_int,
             scalar,
-            quantize_activation=quantize_activation,
-            batch_block_size=batch_block_size,
-            out_block_size=out_block_size,
-            in_block_size=in_block_size)
+            quantize_activation=quantize_activation)
 
       quantized_matmul_int8 = torch.compile(
           quantized_matmul_int8_wrapper, backend="openxla")
@@ -941,36 +934,37 @@ class PallasTest(parameterized.TestCase):
         w_int_xla,
         scalar_xla,
         quantize_activation=quantize_activation,
-        batch_block_size=batch_block_size,
-        out_block_size=out_block_size,
-        in_block_size=in_block_size).cpu()
+    ).cpu()
 
     self.assertEqual(actual.shape, expected.shape)
     self.assertEqual(actual.dtype, expected.dtype)
     self.assertTrue(torch.allclose(actual, expected, atol=atol))
 
   @parameterized.product(
-      dtype=[torch.bfloat16, torch.float32],
-      bs=[256, 512],
-      n_input_features=[256, 512],
-      n_output_features=[256, 512],
+      dtype=[torch.bfloat16],
+      bs=[128],
+      n_input_features=[8192],
+      n_output_features=[1280],
       quantize_activation=[True],
-      kernel_block_sizes=[(None, None, None), (256, 256, 256)],
       use_dynamo=[True, False],
   )
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 5,
                    "This test only works on TPUv5+.")
-  def test_quantized_matmul_int8_wrapper(
+  @patch(
+      'torch_xla.experimental.pallas_kernels.quantized_matmul_kernel.get_tpu_version'
+  )
+  def test_quantized_matmul_int8_wrapper_key_exists_in_table(
       self,
+      get_tpu_version,
       dtype,
       bs,
       n_input_features,
       n_output_features,
       quantize_activation,
-      kernel_block_sizes,
       use_dynamo,
   ):
-    batch_block_size, out_block_size, in_block_size = kernel_block_sizes
+    tpu_version_to_use = 6
+    get_tpu_version.return_value = tpu_version_to_use
     self._test_quantized_matmul_int8(
         dtype,
         bs,
@@ -978,9 +972,35 @@ class PallasTest(parameterized.TestCase):
         n_output_features,
         quantize_activation,
         use_dynamo=use_dynamo,
-        batch_block_size=batch_block_size,
-        out_block_size=out_block_size,
-        in_block_size=in_block_size)
+    )
+
+  @parameterized.product(
+      dtype=[torch.bfloat16, torch.float32],
+      bs=[256, 512],
+      n_input_features=[256, 512],
+      n_output_features=[256, 512],
+      quantize_activation=[True],
+      use_dynamo=[True, False],
+  )
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 5,
+                   "This test only works on TPUv5+.")
+  def test_quantized_matmul_int8_wrapper_key_not_exists_in_table(
+      self,
+      dtype,
+      bs,
+      n_input_features,
+      n_output_features,
+      quantize_activation,
+      use_dynamo,
+  ):
+    self._test_quantized_matmul_int8(
+        dtype,
+        bs,
+        n_input_features,
+        n_output_features,
+        quantize_activation,
+        use_dynamo=use_dynamo,
+    )
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")

@@ -324,21 +324,25 @@ def get_tpu_version() -> int:
   return int(kind[-1])
 
 
-def get_tuned_block_sizes(batch_size, n_output_features, n_input_features,
+def get_tuned_block_sizes(block_table, batch_size, n_output_features, n_input_features,
                           activation_dtype, quantize_activation):
   """
     Retrieve the tuned block sizes for the given parameters.
-    
+
     Args:
         batch_size (int): The batch size.
         n_output_features (int): The number of output features.
         n_input_features (int): The number of input features.
         activation_dtype (str): The data type of the activation ('bfloat16' or 'float32').
         quantize_activation (bool): Whether to quantize the activation.
-        
+
     Returns:
         tuple: A tuple containing the batch_block_size, out_block_size, and in_block_size.
-    """
+  """
   key = (get_tpu_version(), batch_size, n_output_features, n_input_features,
          activation_dtype, quantize_activation)
-  return TUNED_BLOCK_SIZES.get(key, (128, 128, 128))
+  if key not in block_table:
+    raise ValueError(
+        f"Block sizes not found for key {key}. Available keys: {list(block_table.keys())}"
+    )
+  return block_table.get(key, (128, 128, 128))
