@@ -676,18 +676,18 @@ std::string PjRtComputationClient::SerializeComputation(
 
 ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
     const std::string& serialized) {
-  absl::StatusOr<std::unique_ptr<xla::PjRtExecutable>> executable_or =
-      client_->DeserializeExecutable(serialized, std::nullopt);
-  if (!executable_or.ok()) {
+  // TODO: change due to cl/738659701
+  absl::StatusOr<std::unique_ptr<xla::PjRtLoadedExecutable>>
+      loaded_executable_or = client_->LoadSerializedExecutable(
+          serialized, std::nullopt, xla::LoadOptions());
+  if (!loaded_executable_or.ok()) {
     TF_LOG(WARNING) << "Failed to deserialize executable: "
-                    << executable_or.status();
+                    << loaded_executable_or.status();
     return nullptr;
   }
-  std::unique_ptr<xla::PjRtExecutable> executable =
-      std::move(executable_or.value());
-  std::unique_ptr<xla::PjRtLoadedExecutable> loaded_executable =
-      client_->Load(std::move(executable), xla::LoadOptions()).value();
 
+  std::unique_ptr<xla::PjRtLoadedExecutable> loaded_executable =
+      std::move(loaded_executable_or.value());
   auto hlo_modules = loaded_executable->GetHloModules();
   if (!hlo_modules.ok()) {
     TF_LOG(WARNING)

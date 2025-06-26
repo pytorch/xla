@@ -3093,7 +3093,7 @@ void InitXlaModuleBindings(py::module m) {
           // are running with `torch.compile`. The buffer associated with the
           // data has `should_donate_buffer_` set to true will be donated to the
           // output. This can be used if:
-          // 1. You are using torch.compile, and there is an inplace udpate of a
+          // 1. You are using torch.compile, and there is an inplace update of a
           //    tensor so that the current buffer can be donated after
           //    computation.
           // 2. You want to explicitly donate a tensor because it is not

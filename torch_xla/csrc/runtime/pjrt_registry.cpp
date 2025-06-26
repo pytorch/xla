@@ -119,12 +119,42 @@ InitializePjRt(const std::string& device_type) {
       }
       const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(
           absl::AsciiStrToLower(device_type), plugin->library_path());
-      XLA_CHECK_OK(pjrt::InitializePjrtPlugin(device_type));
+
+      // Retry InitializePjrtPlugin for up to 20 seconds
+      absl::Status init_status;
+      for (int retry = 0; retry < 20; ++retry) {
+        init_status = pjrt::InitializePjrtPlugin(device_type);
+        if (init_status.ok()) {
+          break;
+        }
+        TF_VLOG(3) << "InitializePjrtPlugin failed (attempt " << (retry + 1)
+                   << "/20): " << init_status.ToString();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+      }
+      XLA_CHECK_OK(init_status);
+
       auto create_options = plugin->client_create_options();
-      client = xla::GetCApiClient(
-                   absl::AsciiStrToUpper(device_type),
-                   {create_options.begin(), create_options.end()}, kv_store)
-                   .value();
+
+      // Workaround `UNKNOWN: TPU initialization failed: open(/dev/vfio/4):
+      // Device or resource busy: Device or resource busy; Couldn't open iommu
+      // group /dev/vfio/4`.
+      //
+      // Retry GetCApiClient for up to 20 seconds
+      absl::StatusOr<std::unique_ptr<xla::PjRtClient>> client_or;
+      for (int retry = 0; retry < 20; ++retry) {
+        client_or = xla::GetCApiClient(
+            absl::AsciiStrToUpper(device_type),
+            {create_options.begin(), create_options.end()}, kv_store);
+        if (client_or.ok()) {
+          break;
+        }
+        TF_VLOG(3) << "GetCApiClient failed (attempt " << (retry + 1)
+                   << "/20): " << client_or.status().ToString();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+      }
+      XLA_CHECK_OK(client_or.status());
+      client = std::move(client_or).value();
+
       profiler::RegisterProfilerForPlugin(c_api);
     }
   } else if (device_type == "CPU") {
@@ -141,9 +171,55 @@ InitializePjRt(const std::string& device_type) {
         env::kEnvTpuLibraryPath,
         sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
-    absl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
+
+    // Common retry parameters
+    constexpr auto max_retry_duration = std::chrono::seconds(20);
+    constexpr auto retry_delay = std::chrono::seconds(1);
+
+    // Retry loop for TPU plugin initialization
+    auto start_time = std::chrono::steady_clock::now();
+    absl::Status tpu_status;
+    do {
+      tpu_status = pjrt::InitializePjrtPlugin("tpu");
+      if (tpu_status.ok()) {
+        break;
+      }
+
+      auto elapsed = std::chrono::steady_clock::now() - start_time;
+      if (elapsed >= max_retry_duration) {
+        break;
+      }
+
+      TF_VLOG(1) << "Failed to initialize TPU plugin, retrying in "
+                 << retry_delay.count() << "s. Error: " << tpu_status;
+      std::this_thread::sleep_for(retry_delay);
+    } while (true);
+
     XLA_CHECK_OK(tpu_status);
-    client = std::move(xla::GetCApiClient("TPU").value());
+
+    // Retry loop for getting TPU client with 1s intervals, up to 10s total
+    start_time = std::chrono::steady_clock::now();
+    absl::StatusOr<std::unique_ptr<xla::PjRtClient>> client_result;
+    do {
+      client_result = xla::GetCApiClient("TPU");
+      if (client_result.ok()) {
+        break;
+      }
+
+      auto elapsed = std::chrono::steady_clock::now() - start_time;
+      if (elapsed >= max_retry_duration) {
+        break;
+      }
+
+      TF_VLOG(1) << "Failed to get TPU client, retrying in "
+                 << retry_delay.count()
+                 << "s. Error: " << client_result.status();
+      std::this_thread::sleep_for(retry_delay);
+    } while (true);
+
+    XLA_CHECK_OK(client_result.status());
+    client = std::move(client_result.value());
+
     const PJRT_Api* c_api =
         static_cast<xla::PjRtCApiClient*>(client.get())->pjrt_c_api();
     profiler::RegisterProfilerForPlugin(c_api);
