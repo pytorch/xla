@@ -87,15 +87,15 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     os.environ.pop(xenv.TPU_PROCESS_BOUNDS, None)
 
   def test_tensor_oom(self):
-    a = torch.randn((1000000000, 1000000000), device="xla")
-    with self.assertRaises(RuntimeError) as cm:
+    a = torch.randn((4000000000, 4000000000), device="xla")
+    with self.assertRaises(Exception) as cm:
       # The above tensor doesn't fit in HBM. It should result in a python
       # exception instead of crashing.
       a.sum()
 
     self.assertEqual(
-        str(cm.exception),
-        "",
+        (type(cm.exception).__name__, str(cm.exception)),
+        ("RuntimeError", "")
     )
 
   def test_xla_devices_multiprocess(self):
