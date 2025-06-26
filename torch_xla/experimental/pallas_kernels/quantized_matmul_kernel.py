@@ -7,84 +7,167 @@ from jax.experimental.pallas import tpu as pltpu
 import jax.numpy as jnp
 
 
-def _quantize_array(
-    x: jax.Array,  # [bs_block_size, in_block_size]
-    x_abs_max_val: jax.Array,  # [1, bs_block_size]
-):
-  n_bits = 8
-  int_min = -2**(n_bits - 1)
-  int_max = 2**(n_bits - 1) - 1
-  scale = (x_abs_max_val / int_max).T  # [bs_block_size, 1]
-  # Need to explicitly cast to f32 because Mosaic can't directly jnp.round a
-  # bf16 array.
-  # It seems x/0 in Pallas generates inf/-inf instead of an exception.
-  x_int = jnp.clip(
-      jnp.round((x / scale).astype(jnp.float32)), int_min,
-      int_max).astype(jnp.int8)
-  return x_int, scale.astype(x.dtype)
+NUM_LANES = 128
+NUM_SUBLANES = 8
 
+def _broadcast_to_shape(arr, shape, broadcast_dim):
+  if arr.shape == shape:
+    return arr
+  assert len(arr.shape) == len(shape)
+  assert len(shape) == 2
+  assert broadcast_dim in [0, 1]
 
-def matmul_kernel(
-    x_ref,  # (batch_block_size, in_block_size)
-    w_ref,  # (out_block_size, in_block_size)
-    scalar_ref,  # (1, out_block_size)
-    x_abs_max_val,  # (1, batch_block_size)
-    out_ref,  # (batch_block_size, out_block_size)
-    acc_ref,  # (batch_block_size, out_block_size)
-    *,
-    quantize_activation,
-    batch_block_size,
-    out_block_size,
-    in_block_size,
+  non_broadcast_dim = 0 if broadcast_dim == 1 else 1
+  assert arr.shape[non_broadcast_dim] == shape[non_broadcast_dim]
+  assert shape[broadcast_dim] % arr.shape[broadcast_dim] == 0
+  # no-op concatenation.
+  return jnp.concatenate(
+      [arr for _ in range(shape[broadcast_dim] // arr.shape[broadcast_dim])], axis=broadcast_dim
+  )
+
+def quantize_array_kernel(x_ref, out_ref, scale_ref, *, quant_dtype, quant_nbits):
+  x = x_ref[...].astype(jnp.float32)
+  max_val = jnp.max(jnp.abs(x), axis=-1, keepdims=True)
+  int_min = -2**(quant_nbits - 1)
+  int_max = 2**(quant_nbits - 1) - 1
+  scale = max_val / int_max
+  x_int = jnp.clip(jnp.round((x / scale).astype(jnp.float32)), int_min, int_max).astype(quant_dtype)
+
+  out_ref[...] = x_int
+  scale_ref[...] = scale.astype(x_ref.dtype)
+
+def quantize_array(
+    x: jax.Array,  # [m, n]
+    vmem_limit_bytes,
 ):
+  quant_dtype = jnp.int8
+  quant_nbits = 8
+  m, n = x.shape
+  
+  def within_vmem_limit(m_block_size, n, orig_dtype, vmem_limit_bytes):
+    return 2*(2*m_block_size * n + m_block_size)*orig_dtype.itemsize <= vmem_limit_bytes
+  
+  def find_m_block_size(x, vmem_limit_bytes):
+    m, n = x.shape
+    for m_block_size in [1024, 512, 256]:
+      if m % m_block_size == 0 and within_vmem_limit(m_block_size, n, x.dtype, vmem_limit_bytes):
+        return m_block_size
+    if not within_vmem_limit(m, n, x.dtype, vmem_limit_bytes):
+      raise ValueError(f"Cannot find m_block_size for {x.shape=} with vmem_limit_bytes={vmem_limit_bytes}")
+    return m
+  bm = find_m_block_size(x, vmem_limit_bytes)
+
+  input_spec = pl.BlockSpec((bm, n), lambda i: (i, 0))
+  scale_spec = pl.BlockSpec((bm, 1), lambda i: (i, 0))
+  output_shape = jax.ShapeDtypeStruct((m, n), dtype=quant_dtype)
+  scale_shape = jax.ShapeDtypeStruct((m, 1), dtype=x.dtype)
+  kernel = pl.pallas_call(
+      functools.partial(
+          quantize_array_kernel,
+          quant_dtype=quant_dtype,
+          quant_nbits=quant_nbits,
+      ),
+      grid_spec=pltpu.PrefetchScalarGridSpec(
+          num_scalar_prefetch=0,
+          in_specs=[
+              input_spec,
+          ],
+          out_specs=[
+              input_spec,
+              scale_spec,
+          ],
+          grid=(m // bm,),
+      ),
+      out_shape=(output_shape, scale_shape),
+      compiler_params=pltpu.TPUCompilerParams(
+          dimension_semantics=("parallel",),
+          vmem_limit_bytes=vmem_limit_bytes,
+      ),
+  )
+
+  return kernel(x)
+
+def w8a8_matmul_kernel(x_ref, x_scalar_ref, w_ref, w_scalar_ref, out_ref, acc_ref, *, x_orig_dtype, batch_block_size, out_block_size, in_block_size):
   bs_idx, out_idx, in_idx = pl.program_id(0), pl.program_id(1), pl.program_id(2)
   nsteps = pl.num_programs(2)
-  x_ref_dtype = x_ref.dtype
-  assert x_ref.shape == (batch_block_size,
-                         in_block_size), "x_ref shape is not correct"
-  assert w_ref.shape == (out_block_size,
-                         in_block_size), "w_ref shape is not correct"
-  assert scalar_ref.shape == (1,
-                              out_block_size), "scalar_ref shape is not correct"
-  assert x_abs_max_val.shape == (
-      1, batch_block_size), "x_max_val shape is not correct"
-  assert out_ref.shape == (batch_block_size,
-                           out_block_size), "out_ref shape is not correct"
-  assert acc_ref.shape == (batch_block_size,
-                           out_block_size), "acc_ref shape is not correct"
-
+  
   @pl.when(in_idx == 0)
   def _():
     acc_ref[...] = jnp.zeros_like(acc_ref)
 
-  if quantize_activation:
-    x, x_scale = _quantize_array(x_ref[...], x_abs_max_val[...])
-    acc_ref[...] += jax.lax.dot_general(
-        x,
-        w_ref[...],
-        (((1,), (1,)), ((), ())),
-        preferred_element_type=jnp.int32,
-    )
-  else:
-    acc_ref[...] += jax.lax.dot_general(
-        x_ref[...],
-        w_ref[...],
-        (((1,), (1,)), ((), ())),
-    )
+  x = x_ref[...]
+  w = w_ref[...]
+  acc_ref[...] += jax.lax.dot_general(
+      x,
+      w,
+      (((1,), (1,)), ((), ())),
+      preferred_element_type=jnp.int32,
+  )
 
   @pl.when(in_idx == nsteps - 1)
   def _():
-    acc = acc_ref[...]
-    scalar = scalar_ref[...]
-    acc *= scalar
-    if quantize_activation:
-      acc *= x_scale
-    out_ref[...] = acc.astype(x_ref_dtype)
+    acc = acc_ref[...]  # [batch_block_size, out_block_size]
+    w_scalar = w_scalar_ref[...]  # [NUM_SUBLANES, out_block_size]
+    acc *= _broadcast_to_shape(w_scalar, acc.shape, broadcast_dim=0)
+    x_scalar = x_scalar_ref[...]  # [batch_block_size, NUM_LANES]
+    acc *= _broadcast_to_shape(x_scalar, acc.shape, broadcast_dim=1)
+    out_ref[...] = acc.astype(x_orig_dtype)
 
+def w8a8_matmul(
+    x: jax.Array,  # [bs, n_input_features]
+    x_scalar: jax.Array,  # [bs, 1]
+    w: jax.Array,  # [n_output_features, n_input_features]
+    w_scalar: jax.Array,  # [1, n_output_features]
+    x_orig_dtype,
+    batch_block_size,
+    out_block_size,
+    in_block_size,
+    vmem_limit_bytes,
+):
+  assert x.dtype == jnp.int8, f"x.dtype ({x.dtype}) must be int8"
+  assert w.dtype == jnp.int8, f"w.dtype ({w.dtype}) must be int8"
 
-def _next_multiple(x, multiple):
-  return ((x + multiple - 1) // multiple) * multiple
+  bs, n_input_features = x.shape
+  n_output_features, _ = w.shape
+  x_scalar = jnp.broadcast_to(x_scalar, (x_scalar.shape[0], NUM_LANES))
+  w_scalar = jnp.broadcast_to(w_scalar, (NUM_SUBLANES, w_scalar.shape[1]))
 
+  acc_dtype = jnp.int32
+  kernel = pl.pallas_call(
+      functools.partial(
+          w8a8_matmul_kernel,
+          x_orig_dtype=x_orig_dtype,
+          batch_block_size=batch_block_size,
+          out_block_size=out_block_size,
+          in_block_size=in_block_size),
+      grid_spec=pltpu.PrefetchScalarGridSpec(
+          num_scalar_prefetch=0,
+          in_specs=[
+              pl.BlockSpec((batch_block_size, in_block_size), lambda b, o, i:
+                           (b, i)),  # x
+              pl.BlockSpec((batch_block_size, NUM_LANES), lambda b, o, i:
+                           (b, 0)),  # x_scalar
+              pl.BlockSpec((out_block_size, in_block_size), lambda b, o, i:
+                           (o, i)),  # w
+              pl.BlockSpec((NUM_SUBLANES, out_block_size), lambda b, o, i:
+                           (0, o)),  # w_scalar
+          ],
+          out_specs=pl.BlockSpec((batch_block_size, out_block_size),
+                                 lambda b, o, i: (b, o)),
+          scratch_shapes=[
+              pltpu.VMEM((batch_block_size, out_block_size), acc_dtype)
+          ],
+          grid=(bs // batch_block_size,
+                n_output_features // out_block_size,
+                n_input_features // in_block_size),
+      ),
+      out_shape=jax.ShapeDtypeStruct((bs, n_output_features), x_orig_dtype),
+      compiler_params=pltpu.TPUCompilerParams(
+          dimension_semantics=("parallel", "parallel", "arbitrary"),
+          vmem_limit_bytes=vmem_limit_bytes,
+      ),
+  )
+  return kernel(x, x_scalar, w, w_scalar)
 
 @functools.partial(
     jax.jit,
@@ -112,44 +195,19 @@ def quantized_matmul_int8(
   assert zero_point is None, "Not implemented: zero_point is not supported."
   assert quant_block_size is None, "Not implemented: quant_block_size is not supported."
 
-  # x_max_val cannot be [bs, 128] where 128 is the minormost dimension of the vreg because it'll be costly to store
-  # [bs_block_size, 128] in VMEM ([bs_balock_size, 1:] will be padding).
-  # We need the global max values to be computed before the kernel.
-  x_abs_max_val = jnp.max(jnp.abs(x), axis=-1, keepdims=False)  # [bs]
-  x_abs_max_val = jnp.expand_dims(x_abs_max_val, axis=0)  # [1, bs]
-  assert x_abs_max_val.shape == (1, x.shape[0])
-
   orig_bs, orig_in_features = x.shape
   orig_out_features, _ = w.shape
   if batch_block_size is None or out_block_size is None or in_block_size is None:
-    batch_block_size, out_block_size, in_block_size = get_tuned_block_sizes(
-        orig_bs, orig_out_features, orig_in_features,
-        jnp.dtype(x.dtype).name, quantize_activation)
-
-  padded_bs = _next_multiple(orig_bs, batch_block_size)
-  if orig_bs < padded_bs:
-    x = jnp.pad(x, ((0, padded_bs - orig_bs), (0, 0)))
-    x_abs_max_val = jnp.pad(x_abs_max_val, ((0, 0), (0, padded_bs - orig_bs)))
-  padded_out_features = _next_multiple(orig_out_features, out_block_size)
-  if orig_out_features < padded_out_features:
-    w = jnp.pad(w, ((0, padded_out_features - orig_out_features), (0, 0)))
-    scalar = jnp.pad(scalar, (0, padded_out_features - orig_out_features))
-  padded_in_features = _next_multiple(orig_in_features, in_block_size)
-  if orig_in_features < padded_in_features:
-    x = jnp.pad(x, ((0, 0), (0, padded_in_features - orig_in_features)))
-    w = jnp.pad(w, ((0, 0), (0, padded_in_features - orig_in_features)))
-
-  if scalar.dtype != jnp.float32:
-    scalar = scalar.astype(jnp.float32)
-  scalar = jnp.expand_dims(scalar, axis=0)  # [1, n_output_features]
+    batch_block_size, out_block_size, in_block_size = get_tuned_block_sizes(TUNED_BLOCK_SIZES, orig_bs, orig_out_features, orig_in_features, jnp.dtype(x.dtype).name, quantize_activation)
+    
+  orig_batch_block_size = batch_block_size
+  if orig_bs < 128:
+    batch_block_size = orig_bs
 
   assert x.shape[1] == w.shape[
       1], f"x.shape[1] ({x.shape[1]}) must be equal to w.shape[1] ({w.shape[1]})"
   assert w.shape[0] == scalar.shape[
-      1], f"w.shape[0] ({w.shape[0]}) must be equal to scalar.shape[1] ({scalar.shape[1]})"
-  assert x_abs_max_val.shape == (
-      1, x.shape[0]
-  ), f"x_max_val.shape ({x_abs_max_val.shape}) must be equal to (1, x.shape[0]) ({1, {x.shape[0]}})"
+      0], f"w.shape[0] ({w.shape[0]}) must be equal to scalar.shape[0] ({scalar.shape[0]})"
   assert x.shape[
       0] % batch_block_size == 0, f"x.shape[0] ({x.shape[0]}) must be a multiple of block size ({batch_block_size})"
   assert w.shape[
@@ -157,45 +215,21 @@ def quantized_matmul_int8(
   assert x.shape[
       1] % in_block_size == 0, f"x.shape[1] ({x.shape[1]}) must be a multiple of block size ({in_block_size})"
 
-  acc_dtype = jnp.int32 if quantize_activation else x.dtype
-  kernel = pl.pallas_call(
-      functools.partial(
-          matmul_kernel,
-          quantize_activation=quantize_activation,
-          batch_block_size=batch_block_size,
-          out_block_size=out_block_size,
-          in_block_size=in_block_size),
-      grid_spec=pltpu.PrefetchScalarGridSpec(
-          num_scalar_prefetch=0,
-          in_specs=[
-              pl.BlockSpec((batch_block_size, in_block_size), lambda b, o, i:
-                           (b, i)),
-              pl.BlockSpec((out_block_size, in_block_size), lambda b, o, i:
-                           (o, i)),
-              pl.BlockSpec((1, out_block_size), lambda b, o, i:
-                           (0, o)),  # scalar
-              pl.BlockSpec((1, batch_block_size), lambda b, o, i:
-                           (0, b)),  # x_abs_max_val
-          ],
-          out_specs=pl.BlockSpec((batch_block_size, out_block_size),
-                                 lambda b, o, i: (b, o)),
-          scratch_shapes=[
-              pltpu.VMEM((batch_block_size, out_block_size), acc_dtype)
-          ],
-          grid=(padded_bs // batch_block_size,
-                padded_out_features // out_block_size,
-                padded_in_features // in_block_size),
-      ),
-      out_shape=jax.ShapeDtypeStruct((padded_bs, padded_out_features), x.dtype),
-      compiler_params=pltpu.TPUCompilerParams(
-          dimension_semantics=("parallel", "parallel", "arbitrary"),
-          vmem_limit_bytes=vmem_limit_bytes,
-      ),
-  )
+  x_orig_dtype = x.dtype
+  x_int, x_scalar = quantize_array(x, vmem_limit_bytes)
+  assert x_int.dtype == jnp.int8, f"x_int.dtype ({x_int.dtype}) must be int8"
+  assert w.dtype == jnp.int8, f"w.dtype ({w.dtype}) must be int8"
 
-  out = kernel(x, w, scalar, x_abs_max_val)
+  if scalar.dtype != jnp.float32:
+    scalar = scalar.astype(jnp.float32)
+  scalar = jnp.expand_dims(scalar, axis=0)  # [1, n_output_features]
 
-  return out[:orig_bs, :orig_out_features]
+  kernel_name = f'quantized_matmul_int8_{orig_batch_block_size}_{out_block_size}_{in_block_size}'
+  # The named_scope is used for autotune. Different block sizes only impact the
+  # pallas_call.
+  with jax.named_scope(kernel_name):
+    out = w8a8_matmul(x_int, x_scalar, w, scalar, x_orig_dtype, batch_block_size, out_block_size, in_block_size, vmem_limit_bytes)
+  return out
 
 
 # Below are tuned block sizes.
@@ -212,70 +246,70 @@ def quantized_matmul_int8(
 #    - out_block_size
 #    - in_block_size
 TUNED_BLOCK_SIZES = {
-    (6, 16, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
-    (6, 16, 4096, 4096, 'bfloat16', True): (128, 2048, 2048),
-    (6, 16, 28672, 4096, 'bfloat16', True): (128, 1792, 2048),
-    (6, 16, 4096, 14336, 'bfloat16', True): (128, 512, 7168),
-    (6, 16, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
-    (6, 16, 8192, 1024, 'bfloat16', True): (128, 8192, 256),
-    (6, 16, 7168, 8192, 'bfloat16', True): (128, 512, 8192),
-    (6, 16, 8192, 3584, 'bfloat16', True): (128, 2048, 3584),
-    (6, 32, 6144, 4096, 'bfloat16', True): (128, 1536, 4096),
-    (6, 32, 4096, 4096, 'bfloat16', True): (128, 4096, 2048),
-    (6, 32, 28672, 4096, 'bfloat16', True): (128, 2048, 2048),
-    (6, 32, 4096, 14336, 'bfloat16', True): (128, 256, 14336),
-    (6, 32, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
-    (6, 32, 8192, 1024, 'bfloat16', True): (128, 1024, 1024),
-    (6, 32, 7168, 8192, 'bfloat16', True): (128, 3584, 2048),
-    (6, 32, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
-    (6, 64, 6144, 4096, 'bfloat16', True): (128, 512, 4096),
-    (6, 64, 4096, 4096, 'bfloat16', True): (128, 2048, 2048),
-    (6, 64, 28672, 4096, 'bfloat16', True): (128, 1792, 2048),
-    (6, 64, 4096, 14336, 'bfloat16', True): (128, 4096, 1024),
-    (6, 64, 1280, 8192, 'bfloat16', True): (128, 1280, 4096),
-    (6, 64, 8192, 1024, 'bfloat16', True): (128, 4096, 1024),
-    (6, 64, 7168, 8192, 'bfloat16', True): (128, 512, 8192),
-    (6, 64, 8192, 3584, 'bfloat16', True): (128, 2048, 1792),
-    (6, 128, 6144, 4096, 'bfloat16', True): (128, 1536, 4096),
-    (6, 128, 4096, 4096, 'bfloat16', True): (128, 1024, 4096),
-    (6, 128, 28672, 4096, 'bfloat16', True): (128, 1024, 4096),
-    (6, 128, 4096, 14336, 'bfloat16', True): (128, 2048, 2048),
-    (6, 128, 1280, 8192, 'bfloat16', True): (128, 640, 4096),
+    (6, 1024, 1280, 8192, 'bfloat16', True): (512, 1280, 8192),
+    (6, 1024, 28672, 4096, 'bfloat16', True): (1024, 1792, 4096),
+    (6, 1024, 4096, 14336, 'bfloat16', True): (1024, 256, 14336),
+    (6, 1024, 4096, 4096, 'bfloat16', True): (1024, 512, 4096),
+    (6, 1024, 6144, 4096, 'bfloat16', True): (1024, 768, 4096),
+    (6, 1024, 7168, 8192, 'bfloat16', True): (1024, 256, 8192),
+    (6, 1024, 8192, 1024, 'bfloat16', True): (1024, 4096, 1024),
+    (6, 1024, 8192, 3584, 'bfloat16', True): (1024, 1024, 3584),
+    (6, 128, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 128, 28672, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 128, 4096, 14336, 'bfloat16', True): (128, 256, 14336),
+    (6, 128, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 128, 6144, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 128, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
     (6, 128, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
-    (6, 128, 7168, 8192, 'bfloat16', True): (128, 896, 8192),
-    (6, 128, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
-    (6, 256, 6144, 4096, 'bfloat16', True): (256, 1536, 4096),
-    (6, 256, 4096, 4096, 'bfloat16', True): (256, 512, 4096),
-    (6, 256, 28672, 4096, 'bfloat16', True): (256, 896, 4096),
-    (6, 256, 4096, 14336, 'bfloat16', True): (256, 4096, 2048),
-    (6, 256, 1280, 8192, 'bfloat16', True): (256, 1280, 4096),
-    (6, 256, 8192, 1024, 'bfloat16', True): (256, 2048, 1024),
-    (6, 256, 7168, 8192, 'bfloat16', True): (256, 512, 8192),
-    (6, 256, 8192, 3584, 'bfloat16', True): (256, 1024, 3584),
-    (6, 512, 6144, 4096, 'bfloat16', True): (512, 2048, 4096),
-    (6, 512, 4096, 4096, 'bfloat16', True): (512, 1024, 4096),
-    (6, 512, 28672, 4096, 'bfloat16', True): (512, 1792, 4096),
-    (6, 512, 4096, 14336, 'bfloat16', True): (512, 4096, 1792),
-    (6, 512, 1280, 8192, 'bfloat16', True): (512, 1280, 2048),
-    (6, 512, 8192, 1024, 'bfloat16', True): (512, 4096, 1024),
-    (6, 512, 7168, 8192, 'bfloat16', True): (512, 1792, 4096),
-    (6, 512, 8192, 3584, 'bfloat16', True): (512, 2048, 3584),
-    (6, 1024, 6144, 4096, 'bfloat16', True): (1024, 1024, 4096),
-    (6, 1024, 4096, 4096, 'bfloat16', True): (1024, 2048, 4096),
-    (6, 1024, 28672, 4096, 'bfloat16', True): (1024, 3584, 4096),
-    (6, 1024, 4096, 14336, 'bfloat16', True): (1024, 2048, 2048),
-    (6, 1024, 1280, 8192, 'bfloat16', True): (1024, 1280, 2048),
-    (6, 1024, 8192, 1024, 'bfloat16', True): (256, 8192, 1024),
-    (6, 1024, 7168, 8192, 'bfloat16', True): (1024, 1792, 8192),
-    (6, 1024, 8192, 3584, 'bfloat16', True): (1024, 2048, 3584),
-    (6, 2048, 6144, 4096, 'bfloat16', True): (256, 6144, 4096),
-    (6, 2048, 4096, 4096, 'bfloat16', True): (1024, 2048, 4096),
-    (6, 2048, 28672, 4096, 'bfloat16', True): (1024, 4096, 4096),
-    (6, 2048, 4096, 14336, 'bfloat16', True): (1024, 4096, 1024),
+    (6, 128, 8192, 3584, 'bfloat16', True): (128, 512, 3584),
+    (6, 16, 1280, 8192, 'bfloat16', True): (128, 1280, 2048),
+    (6, 16, 28672, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 16, 4096, 14336, 'bfloat16', True): (128, 1024, 2048),
+    (6, 16, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 16, 6144, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 16, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 16, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 16, 8192, 3584, 'bfloat16', True): (128, 4096, 896),
     (6, 2048, 1280, 8192, 'bfloat16', True): (512, 1280, 8192),
+    (6, 2048, 28672, 4096, 'bfloat16', True): (2048, 1024, 4096),
+    (6, 2048, 4096, 14336, 'bfloat16', True): (2048, 512, 14336),
+    (6, 2048, 4096, 4096, 'bfloat16', True): (256, 4096, 4096),
+    (6, 2048, 6144, 4096, 'bfloat16', True): (2048, 256, 4096),
+    (6, 2048, 7168, 8192, 'bfloat16', True): (2048, 512, 8192),
     (6, 2048, 8192, 1024, 'bfloat16', True): (256, 8192, 1024),
-    (6, 2048, 7168, 8192, 'bfloat16', True): (1024, 1792, 8192),
-    (6, 2048, 8192, 3584, 'bfloat16', True): (2048, 2048, 3584),
+    (6, 2048, 8192, 3584, 'bfloat16', True): (1024, 512, 3584),
+    (6, 256, 1280, 8192, 'bfloat16', True): (256, 256, 8192),
+    (6, 256, 28672, 4096, 'bfloat16', True): (256, 3584, 2048),
+    (6, 256, 4096, 14336, 'bfloat16', True): (256, 1024, 3584),
+    (6, 256, 4096, 4096, 'bfloat16', True): (256, 512, 4096),
+    (6, 256, 6144, 4096, 'bfloat16', True): (256, 768, 4096),
+    (6, 256, 7168, 8192, 'bfloat16', True): (256, 512, 8192),
+    (6, 256, 8192, 1024, 'bfloat16', True): (256, 2048, 1024),
+    (6, 256, 8192, 3584, 'bfloat16', True): (256, 1024, 3584),
+    (6, 32, 1280, 8192, 'bfloat16', True): (128, 1280, 2048),
+    (6, 32, 28672, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 32, 4096, 14336, 'bfloat16', True): (128, 1024, 3584),
+    (6, 32, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 32, 6144, 4096, 'bfloat16', True): (128, 1536, 2048),
+    (6, 32, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 32, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 32, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 512, 1280, 8192, 'bfloat16', True): (512, 256, 8192),
+    (6, 512, 28672, 4096, 'bfloat16', True): (512, 4096, 4096),
+    (6, 512, 4096, 14336, 'bfloat16', True): (512, 256, 14336),
+    (6, 512, 4096, 4096, 'bfloat16', True): (512, 1024, 4096),
+    (6, 512, 6144, 4096, 'bfloat16', True): (512, 1024, 4096),
+    (6, 512, 7168, 8192, 'bfloat16', True): (512, 512, 8192),
+    (6, 512, 8192, 1024, 'bfloat16', True): (512, 4096, 1024),
+    (6, 512, 8192, 3584, 'bfloat16', True): (512, 2048, 3584),
+    (6, 64, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 64, 28672, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 64, 4096, 14336, 'bfloat16', True): (128, 512, 7168),
+    (6, 64, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 64, 6144, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 64, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 64, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 64, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
 }
 
 
