@@ -128,7 +128,8 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
         break
     expected_block_sizes = TUNED_BLOCK_SIZES[key0]
     _, bs, n_output_features, n_input_features, activation_dtype, quantize_activation = key0
-    actual_block_sizes = get_tuned_block_sizes(TUNED_BLOCK_SIZES, bs, n_output_features,
+    actual_block_sizes = get_tuned_block_sizes(TUNED_BLOCK_SIZES, bs,
+                                               n_output_features,
                                                n_input_features,
                                                activation_dtype,
                                                quantize_activation)
