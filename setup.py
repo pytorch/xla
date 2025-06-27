@@ -108,7 +108,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = True  # Whether to use nightly or stable libtpu and JAX.
 
-_libtpu_version = '0.0.17'
+_libtpu_version = '0.0.18'
 _libtpu_date = '20250617'
 
 _jax_version = '0.6.2'
@@ -434,7 +434,7 @@ setup(
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",
     ],
-    python_requires=">=3.8.0",
+    python_requires=">=3.10.0",
     packages=packages_to_include,
     package_dir=package_dir_mapping,
     ext_modules=[
