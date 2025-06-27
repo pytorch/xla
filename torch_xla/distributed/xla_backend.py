@@ -239,7 +239,7 @@ class ProcessGroupXla(ProcessGroup):
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L877
   def send(self, tensors, dst_rank, tag=0):
     logging.warning(
-        "Individual send/recv ops are inefficient on an XLA device. Consider using xla_model.collective_permute()."
+        "Individual send/recv ops are inefficient on an XLA device. Consider using xla_model.collective_permute() and specifying all source-target pairs."
     )
     results = []
     for t in tensors:
@@ -249,7 +249,8 @@ class ProcessGroupXla(ProcessGroup):
       # the receiving process the provided tensor receives the result, while
       # in the sending process it is unchanged. The solution used here is to
       # have every process copy a linear combination of the two tensors, but
-      # send/recv use different coefficients to achieve different outcomes.
+      # the coefficients differ so in send the output is t, the original
+      # tensor, while in recv the output is result_t.
       with torch.no_grad():
         t.copy_(result_t * 0.0 + t * 1.0)
       results.append(result_t)
@@ -258,10 +259,14 @@ class ProcessGroupXla(ProcessGroup):
   # Call site e.g.
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L913
   def recv(self, out_tensors, src_rank, tag=0):
+    logging.warning(
+        "Individual send/recv ops are inefficient on an XLA device. Consider using xla_model.collective_permute() and specifying all source-target pairs."
+    )
     results = []
     for ot in out_tensors:
       result_t = xm.collective_permute(
           ot, pairs=[[src_rank, xr.global_ordinal()]])
+      # See send() for an explanation.
       with torch.no_grad():
         ot.copy_(result_t * 1.0 + ot * 0.0)
       results.append(result_t)
