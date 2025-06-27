@@ -73,7 +73,6 @@ namespace torch_xla {
 absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
                                int32_t line);
 
-
 const absl::Status& GetStatus(const absl::Status& status);
 
 template <class T>
