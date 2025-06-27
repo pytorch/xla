@@ -100,10 +100,8 @@ void ConsumeAndMaybeThrow(absl::Status status);
 // ok status), or throwing an exception.
 template <class T>
 T ConsumeAndMaybeThrow(absl::StatusOr<T>&& status) {
-  if (status.ok()) {
-    return std::move(status).value();
-  }
   ConsumeAndMaybeThrow(status.status());
+  return std::move(status).value();
 }
 
 }  // namespace torch_xla
