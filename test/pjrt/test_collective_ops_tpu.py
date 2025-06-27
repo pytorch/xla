@@ -327,25 +327,51 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
           f"Got {val}, expected {expected}")
 
   @staticmethod
-  def _send_recv():
+  def _send_recv_pipeline():
     dist.init_process_group("xla", init_method='xla://')
     device = torch_xla.device()
     world_size = xr.world_size()
     cutoff = world_size // 2
     index = xr.global_ordinal()
-    tensor = torch.tensor([index + 1], dtype=torch.float, device=device)
+    tensor = torch.tensor([index], dtype=torch.float, device=device)
     if index < cutoff:
       dist.send(tensor, index + cutoff)
     else:
       dist.recv(tensor, index - cutoff)
     return tensor.cpu()
 
-  def test_send_recv(self):
+  @staticmethod
+  def _send_recv_permute():
+    dist.init_process_group("xla", init_method='xla://')
+    device = torch_xla.device()
+    world_size = xr.world_size()
+    index = xr.global_ordinal()
+    sending_tensor = torch.tensor([index], dtype=torch.float, device=device)
+    receiving_tensor = torch.tensor([-1.0], dtype=torch.float, device=device)
+    if index % 2 == 0:
+      dist.send(sending_tensor, (index + 1) % world_size)
+      dist.recv(receiving_tensor, (index - 1) % world_size)
+    else:
+      dist.recv(receiving_tensor, (index - 1) % world_size)
+      dist.send(sending_tensor, (index + 1) % world_size)
+    return receiving_tensor.cpu()
+
+  @absltest.skipUnless(tpu.num_available_devices() % 2 == 0)
+  def test_send_recv_pipeline(self):
     """Send tensors on first N/2 devices to second N/2 devices."""
-    results = pjrt.run_multiprocess(self._send_recv)
+    results = pjrt.run_multiprocess(self._send_recv_pipeline)
     world_size = tpu.num_expected_global_devices()
     for ordinal, value in results.items():
-      expected = ordinal + 1 if ordinal < world_size // 2 else ordinal + 1 - world_size // 2
+      expected = ordinal if ordinal < world_size // 2 else ordinal - world_size // 2
+      np.testing.assert_array_equal(value, [expected])
+
+  @absltest.skipUnless(tpu.num_available_devices() % 2 == 0)
+  def test_send_recv_permute(self):
+    """Send tensor on device i to i + 1 (module world size)."""
+    results = pjrt.run_multiprocess(self._send_recv_permute)
+    world_size = tpu.num_expected_global_devices()
+    for ordinal, value in results.items():
+      expected = (ordinal - 1) % world_size
       np.testing.assert_array_equal(value, [expected])
 
 
