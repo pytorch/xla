@@ -13,20 +13,21 @@ __version__ = "0.0.4"
 VERSION = __version__
 
 __all__ = [
-    'default_env',
-    'extract_jax',
-    'enable_globally',
+  "default_env",
+  "extract_jax",
+  "enable_globally",
 ]
 
 from jax._src import xla_bridge
 
-os.environ.setdefault('ENABLE_RUNTIME_UPTIME_TELEMETRY', '1')
+os.environ.setdefault("ENABLE_RUNTIME_UPTIME_TELEMETRY", "1")
 
 # torchax:oss-begin
-if getattr(jax.config, 'jax_pjrt_client_create_options', None):
+if getattr(jax.config, "jax_pjrt_client_create_options", None):
   jax.config.update(
-      'jax_pjrt_client_create_options',
-      f'ml_framework_name:PyTorch/XLA2;ml_framework_version:{"v0.0.1"}')
+    "jax_pjrt_client_create_options",
+    f"ml_framework_name:PyTorch/XLA2;ml_framework_version:{'v0.0.1'}",
+  )
 # torchax:oss-end
 
 env = None
@@ -49,7 +50,7 @@ def extract_jax(mod: torch.nn.Module, env=None):
 
   states = env.t2j_copy(states)
 
-  #@jax.jit
+  # @jax.jit
   def jax_func(states, inputs):
     (states, inputs) = env.j2t_iso((states, inputs))
     with env:
@@ -79,29 +80,30 @@ def disable_temporarily():
     enable_globally()
 
 
-torch.utils.rename_privateuse1_backend('jax')
+torch.utils.rename_privateuse1_backend("jax")
 unsupported_dtype = [torch.quint8]
 torch.utils.generate_methods_for_privateuse1_backend(
-    for_tensor=True,
-    for_module=True,
-    for_storage=True,
-    unsupported_dtype=unsupported_dtype)
+  for_tensor=True,
+  for_module=True,
+  for_storage=True,
+  unsupported_dtype=unsupported_dtype,
+)
 
 import jax
 import torchax.device_module
 
-torch._register_device_module('jax', torchax.device_module)
+torch._register_device_module("jax", torchax.device_module)
 
 
 def enable_accuracy_mode():
-  jax.config.update('jax_enable_x64', True)
-  jax.config.update('jax_default_matmul_precision', 'highest')
+  jax.config.update("jax_enable_x64", True)
+  jax.config.update("jax_default_matmul_precision", "highest")
   default_env().config.internal_respect_torch_return_dtypes = True
 
 
 def enable_performance_mode():
-  jax.config.update('jax_enable_x64', False)
-  jax.config.update('jax_default_matmul_precision', 'default')
+  jax.config.update("jax_enable_x64", False)
+  jax.config.update("jax_default_matmul_precision", "default")
   default_env().config.internal_respect_torch_return_dtypes = False
 
 
@@ -109,15 +111,17 @@ def enable_performance_mode():
 class CompileOptions:
   # only valid if compiling nn.Module
   methods_to_compile: List[str] = dataclasses.field(
-      default_factory=lambda: ['forward'])
+    default_factory=lambda: ["forward"]
+  )
   jax_jit_kwargs: Dict[str, Any] = dataclasses.field(default_factory=dict)
-  mode: str = 'jax'  # or dynamo or export
+  mode: str = "jax"  # or dynamo or export
 
 
 def compile(fn, options: Optional[CompileOptions] = None):
   options = options or CompileOptions()
-  if options.mode == 'jax':
+  if options.mode == "jax":
     from torchax import interop
+
     if isinstance(fn, torch.nn.Module):
       module = interop.JittableModule(fn, extra_jit_args=options.jax_jit_kwargs)
       for n in options.methods_to_compile:

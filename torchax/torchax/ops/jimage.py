@@ -7,19 +7,16 @@ def cubic_kernel(x, a=-0.75):
   absx = jnp.abs(x)
   x2 = absx * absx
   x3 = x2 * absx
-  cond1 = (absx <= 1)
+  cond1 = absx <= 1
   cond2 = (absx > 1) & (absx < 2)
   f1 = (a + 2) * x3 - (a + 3) * x2 + 1
   f2 = a * x3 - 5 * a * x2 + 8 * a * absx - 4 * a
   return jnp.where(cond1, f1, jnp.where(cond2, f2, 0.0))
 
 
-def compute_contribs(in_size,
-                     out_size,
-                     scale,
-                     support=2.0,
-                     align_corners=False,
-                     dtype=None):
+def compute_contribs(
+  in_size, out_size, scale, support=2.0, align_corners=False, dtype=None
+):
   if align_corners:
     if out_size == 1:
       in_coords = jnp.zeros((1,), dtype=dtype)
@@ -48,10 +45,10 @@ def gather_weights(img, idxs, axis):
 
 def interpolate_along_axis_bchw(img, idxs, weights, axis):
   """
-    Interpolate along H (axis=2) or W (axis=3) for tensor (B, C, H, W).
-    idxs: (out_size, 4) int32 indices
-    weights: (out_size, 4) float32 weights
-    """
+  Interpolate along H (axis=2) or W (axis=3) for tensor (B, C, H, W).
+  idxs: (out_size, 4) int32 indices
+  weights: (out_size, 4) float32 weights
+  """
   assert axis in (2, 3), "Axis must be 2 (H) or 3 (W)"
   out_size = idxs.shape[0]
   k = idxs.shape[1]  # Typically 4 for cubic
@@ -66,13 +63,15 @@ def interpolate_along_axis_bchw(img, idxs, weights, axis):
     def gather_one(offset):
       return jnp.take(img, idx[offset], axis=axis)  # shape (B, C, H, W)
 
-    gathered = jnp.stack([gather_one(o) for o in range(k)],
-                         axis=0)  # (4, B, C, H, W)
+    gathered = jnp.stack(
+      [gather_one(o) for o in range(k)], axis=0
+    )  # (4, B, C, H, W)
     weighted = jnp.tensordot(w, gathered, axes=(0, 0))  # (B, C, H, W)
     return weighted
 
   out = jax.vmap(gather_and_weight)(
-      jnp.arange(out_size))  # (out_size, B, C, H, W)
+    jnp.arange(out_size)
+  )  # (out_size, B, C, H, W)
 
   # Move the interpolated axis back into place
   if axis == 2:  # interpolated over H
@@ -94,20 +93,20 @@ def interpolate_bicubic_no_aa(img, out_h, out_w, align_corners=False):
     scale_x = out_w / w
 
   idxs_y, weights_y = compute_contribs(
-      h,
-      out_h,
-      scale_y,
-      align_corners=align_corners,
-      dtype=img.dtype,
+    h,
+    out_h,
+    scale_y,
+    align_corners=align_corners,
+    dtype=img.dtype,
   )
   tmp = interpolate_along_axis_bchw(img, idxs_y, weights_y, axis=2)
 
   idxs_x, weights_x = compute_contribs(
-      w,
-      out_w,
-      scale_x,
-      align_corners=align_corners,
-      dtype=img.dtype,
+    w,
+    out_w,
+    scale_x,
+    align_corners=align_corners,
+    dtype=img.dtype,
   )
   out = interpolate_along_axis_bchw(tmp, idxs_x, weights_x, axis=3)
   return out
