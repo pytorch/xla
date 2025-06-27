@@ -34,13 +34,12 @@ namespace torch_xla {
 // 1. Returns early with an error status (potentially modified by the provided
 //    additional messages)
 // 2. Proceeds with the given `then` block if successful
-#define XLA_RETURN_IF_ERROR_IMPL(expr, var, then, ...)              \
-  auto var = (expr);                                                \
-  if (!var.ok()) {                                                  \
-    return ::torch_xla::MaybeWithNewMessage(                        \
-        ::torch_xla::GetStatus(std::move(var)), __FILE__, __LINE__, \
-        ##__VA_ARGS__);                                             \
-  }                                                                 \
+#define XLA_RETURN_IF_ERROR_IMPL(expr, var, then, ...)                   \
+  auto var = (expr);                                                     \
+  if (!var.ok()) {                                                       \
+    return ::torch_xla::MaybeWithNewMessage(                             \
+        ::torch_xla::GetStatus(var), __FILE__, __LINE__, ##__VA_ARGS__); \
+  }                                                                      \
   then;
 
 // Propagates `rexpr`, in case it's a non-ok status.
@@ -78,7 +77,7 @@ absl::Status MaybeWithLocation(absl::Status status, const char* file,
 absl::Status GetStatus(absl::Status status);
 
 template <class T>
-absl::Status GetStatus(absl::StatusOr<T>&& status) {
+absl::Status GetStatus(const absl::StatusOr<T>& status) {
   return status.status();
 }
 
@@ -109,7 +108,7 @@ void ConsumeAndMaybeThrow(absl::Status status);
 // Consumes the `status`, either returning the value it holds (for
 // ok status), or throwing an exception.
 template <class T>
-T ConsumeAndMaybeThrow(absl::StatusOr<T>&& status) {
+T ConsumeAndMaybeThrow(const absl::StatusOr<T>& status) {
   ConsumeAndMaybeThrow(status.status());
   return std::move(status).value();
 }
