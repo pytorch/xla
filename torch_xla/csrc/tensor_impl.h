@@ -51,7 +51,10 @@ class XLATensorImpl : public c10::TensorImpl {
 
   int64_t numel_custom() const override;
 
-  bool is_contiguous_custom(at::MemoryFormat memory_format) const override;
+  // TODO add override once https://github.com/pytorch/pytorch/pull/155590 lands
+  // and remove is_contiguous_custom.
+  bool is_contiguous_custom(at::MemoryFormat memory_format) const;
+  c10::SymBool sym_is_contiguous_custom(at::MemoryFormat memory_format) const;
 
   const at::Storage& storage() const override;
 

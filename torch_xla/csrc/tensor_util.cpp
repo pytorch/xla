@@ -553,7 +553,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     // The tensor is bypassing the virtual device, so it should be replicated
     // to all devices.
     std::vector<std::string> local_devices =
-        runtime::GetComputationClient()->GetLocalDevices();
+        runtime::GetComputationClientOrDie()->GetLocalDevices();
     auto replicated_data =
         std::vector<at::Tensor>(local_devices.size(), tensor);
     return ShardingUtil::CreateShardedData(replicated_data, local_devices,
@@ -565,7 +565,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
       std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));
 
   auto handles =
-      runtime::GetComputationClient()->TransferToDevice(source_tensors);
+      runtime::GetComputationClientOrDie()->TransferToDevice(source_tensors);
   XLA_CHECK_EQ(handles.size(), 1);
   return handles.front();
 }
@@ -813,7 +813,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
         << "can't mix virtual device and real device.";
 
     std::vector<std::string> local_devices =
-        runtime::GetComputationClient()->GetLocalDevices();
+        runtime::GetComputationClientOrDie()->GetLocalDevices();
     std::vector<runtime::ComputationClient::DataPtr> handles;
     for (size_t i = 0; i < tensors.size(); ++i) {
       auto device = ParseDeviceString(devices[i]);
@@ -834,7 +834,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
         tensors[i], std::move(shape), devices[i]));
   }
   return WrapXlaData(
-      runtime::GetComputationClient()->TransferToDevice(source_tensors));
+      runtime::GetComputationClientOrDie()->TransferToDevice(source_tensors));
 }
 
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
@@ -858,7 +858,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
 
       std::vector<std::string> local_devices =
-          runtime::GetComputationClient()->GetLocalDevices();
+          runtime::GetComputationClientOrDie()->GetLocalDevices();
       // Shards the input tensors with padding, to split evenly.
       // The execution requires consistent shard sizes, and the zero-padded
       // values should be ignored.
@@ -870,8 +870,8 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     } else {
       source_tensors.push_back(std::make_shared<runtime::AtenSource>(
           tensors[i], std::move(shape), devices[i]));
-      new_handles =
-          runtime::GetComputationClient()->TransferToDevice(source_tensors);
+      new_handles = runtime::GetComputationClientOrDie()->TransferToDevice(
+          source_tensors);
     }
     handles.insert(handles.end(), new_handles.begin(), new_handles.end());
   }
@@ -909,7 +909,7 @@ std::vector<xla::Literal> ReleaseGilAndTransferData(
     save = PyEval_SaveThread();
   }
   std::vector<xla::Literal> literals =
-      runtime::GetComputationClient()->TransferFromDevice(
+      runtime::GetComputationClientOrDie()->TransferFromDevice(
           UnwrapXlaData(xla_data));
   if (save) {
     PyEval_RestoreThread(save);

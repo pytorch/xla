@@ -129,30 +129,30 @@ def compile(fn, options: Optional[CompileOptions] = None):
       return module
     else:
       return interop.jax_jit(fn)
-  elif options.mode == "dynamo":
-    raise RuntimeError("dynamo mode is not supported yet")
-  elif options.mode == "export":
-    raise RuntimeError("export mode is not supported yet")
+  elif options.mode == 'dynamo':
+    raise RuntimeError('dynamo mode is not supported yet')
+  elif options.mode == 'export':
+    raise RuntimeError('export mode is not supported yet')
 
 
 @contextmanager
 def jax_device(target_device: str, env: tensor.Environment | None = None):
   """
-  to("jax") cannot differentiate the device/platform (cpu vs tpu).
+  to("jax") cannot differentiate the device/platform (cpu vs tpu). 
   Use this context manager to control jax array's storage device
-
+  
   Examples:
 
   a = torch.ones(3, 3)
 
   with jax_device("cpu"):
-    b = a.to("jax")
-
+    b = a.to("jax") 
+  
   with jax_device("tpu"):
-    c = a.to("jax")
-
+    c = a.to("jax") 
+  
   with jax_device("tpu"):
-    c = b.to("jax")
+    c = b.to("jax") 
 
   """
   if env is None:

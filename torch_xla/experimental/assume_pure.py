@@ -44,6 +44,9 @@ def j2t_autograd(fn):
   the PyTorch autograd framework by saving the residuals into the context object.
   """
   import torchax.interop
+  # When j2t_autograd calls call_jax, the first arg is vjp, and the second
+  # arg is the actual function. So we want the hash key to be based on the second
+  # arg.
   return torchax.interop.j2t_autograd(
       fn, call_jax=lambda fn, *args: xb.call_jax(fn, args))
 

@@ -5,7 +5,7 @@ import torch_xla.runtime as xr
 from torch_xla._internal import rendezvous
 import logging
 import os
-from torch._C._distributed_c10d import ProcessGroup, AllgatherOptions
+from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
@@ -46,7 +46,7 @@ class ProcessGroupXla(ProcessGroup):
   def getBackendName(self):
     return 'xla'
 
-  # pytorch's process group is unable to retrive the group size from python level. It should
+  # pytorch's process group is unable to retrieve the group size from python level. It should
   # already been support in C++ level: https://github.com/pytorch/pytorch/blob/7b1988f9222f3dec5cc2012afce84218199748ae/torch/csrc/distributed/c10d/ProcessGroup.cpp#L148-L152
   # For now we manually set the group name property as a temporary solution.
   def _set_group_name(self, name: str) -> None:
@@ -253,8 +253,22 @@ class ProcessGroupXla(ProcessGroup):
   def gather(self, *args):
     raise NotImplementedError
 
-  def scatter(self, *args):
-    raise NotImplementedError
+  # Called by torch.distributed.scatter. Call site example:
+  # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L4146
+  # Input tensors are defined on the source device and scattered
+  # to the output tensors.
+  def scatter(self, output_tensor_list: list[torch.Tensor],
+              input_tensors_list: list[list[torch.Tensor]],
+              opts: ScatterOptions):
+    if xr.global_ordinal() == opts.rootRank:
+      inputs = input_tensors_list
+    else:
+      inputs = [[torch.zeros_like(output_tensor)] * xr.world_size()
+                for output_tensor in output_tensor_list]
+
+    rs_opts = ReduceScatterOptions()
+    rs_opts.reduceOp = dist.ReduceOp.SUM
+    return self.reduce_scatter(output_tensor_list, inputs, rs_opts)
 
   # Dummy channel id maker. Different backend (TPU, GPU, etc) should replace
   # the maker with their specific one. See unit test in
@@ -412,7 +426,7 @@ def new_xla_process_group(ranks=None,
       else:
         pg._mesh = [ranks]
     else:
-      logging.warn(
+      logging.warning(
           f'Can\'t infer process group mesh from given ranks "{str(ranks)}". '
           'The process group will use the entire world as its collective comm group.'
       )

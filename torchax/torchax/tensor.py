@@ -146,7 +146,8 @@ class Tensor(torch.Tensor):
 
   @property
   def data(self):
-    logger.warn("In-place to .data modifications still results a copy on TPU")
+    logger.warning(
+        "In-place to .data modifications still results a copy on TPU")
     return self
 
   @data.setter
@@ -385,8 +386,7 @@ class Environment(contextlib.ContextDecorator):
           return jax.devices("tpu")[0]
         case _:
           raise AttributeError(
-            f"Cannot handle env.target_device {self.target_device}"
-          )
+              f"Cannot handle env.target_device {self.target_device}")
 
     return None  # fallback to torch
 
@@ -442,6 +442,7 @@ class Environment(contextlib.ContextDecorator):
       the_tensor = the_tensor.torch()
 
     if isinstance(the_tensor, Tensor):
+
       arr = the_tensor.jax()
 
       if new_dtype is not None and new_dtype != arr.dtype:
@@ -451,22 +452,16 @@ class Environment(contextlib.ContextDecorator):
         match str(new_device).lower():
           case "cpu":
             # converting to a non-jax device: let torch native handle it
-            torch_tensor = (
-              self.j2t_copy(arr) if isinstance(the_tensor, Tensor) else arr
-            )
-            with (
-              mode_utils.no_dispatch(),
-              torch._C.DisableTorchFunction(),
-            ):
+            torch_tensor = self.j2t_copy(arr) if isinstance(the_tensor,
+                                                            Tensor) else arr
+            with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
               return torch_tensor.to(new_device)
           case "jax":
             # move torchax.tensor / jax tensor between devices
             # I don't know ifgit  this will work after the model is jitted
             if self.target_device != the_tensor.jax_device.platform:
-              arr = jax.device_put(
-                the_tensor.jax(),
-                jax.devices(self.target_device)[0],
-              )
+              arr = jax.device_put(the_tensor.jax(),
+                                   jax.devices(self.target_device)[0])
               return Tensor(arr, self)
           case _:
             logging.error(f"torchax.Tenosr cannot handle device {new_device}")

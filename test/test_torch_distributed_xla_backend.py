@@ -360,7 +360,6 @@ class XlaBackendTest(parameterized.TestCase):
       'allreduce_coalesced',
       'alltoall',
       'gather',
-      'scatter',
       'recv_anysource',
       'monitored_barrier',
   )
