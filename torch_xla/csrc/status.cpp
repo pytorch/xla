@@ -6,9 +6,10 @@
 
 namespace torch_xla {
 
-bool showCppErrorContext() {
-  return runtime::sys_util::GetEnvBool(runtime::env::kEnvShowCppErrorContext,
-                                       false);
+static bool ShowCppErrorContext() {
+  static const bool show_cpp_error_context = runtime::sys_util::GetEnvBool(
+      runtime::env::kEnvShowCppErrorContext, false);
+  return show_cpp_error_context;
 }
 
 // Common function for generating file location information with a space in the
@@ -17,12 +18,12 @@ static std::string LocationStrWithSpace(const char* file, const int32_t line) {
   return absl::StrCat(" (at ", file, ":", line, ")");
 }
 
-absl::Status MaybeWithLocation(absl::Status&& status, const char* file,
+absl::Status MaybeWithLocation(absl::Status status, const char* file,
                                const int32_t line) {
   ABSL_CHECK(!status.ok());
 
   // Return the same status if we don't need to add the C++ source location.
-  if (!showCppErrorContext()) {
+  if (!ShowCppErrorContext()) {
     return status;
   }
 
@@ -31,7 +32,9 @@ absl::Status MaybeWithLocation(absl::Status&& status, const char* file,
       absl::StrCat(status.message(), LocationStrWithSpace(file, line)));
 }
 
-absl::Status MaybeWithNewMessage(absl::Status&& status, const char* file,
+absl::Status GetStatus(absl::Status status) { return status; }
+
+absl::Status MaybeWithNewMessage(absl::Status status, const char* file,
                                  const int32_t line,
                                  const std::string_view new_message) {
   ABSL_CHECK(!status.ok());
@@ -39,7 +42,7 @@ absl::Status MaybeWithNewMessage(absl::Status&& status, const char* file,
   // Return the same status if:
   //   1. we don't need to add the C++ source location.
   //   2. there's no new message to replace the old one.
-  if (!showCppErrorContext() && new_message.empty()) {
+  if (!ShowCppErrorContext() && new_message.empty()) {
     return status;
   }
 
@@ -49,7 +52,7 @@ absl::Status MaybeWithNewMessage(absl::Status&& status, const char* file,
   //
   // The idea is that whenever `new_message` is given, it should have more
   // context to give a better error message to the user.
-  std::string_view message = (new_message.empty()) ? old_message : new_message;
+  std::string_view message = new_message.empty() ? old_message : new_message;
 
   // If `kEnvShowCppErrorContext` is set, show the context of this error.
   // In other words, show:
@@ -59,7 +62,7 @@ absl::Status MaybeWithNewMessage(absl::Status&& status, const char* file,
   // This should give more context for developers. Showing the older error
   // messages alongside their debug information.
   std::string context;
-  if (showCppErrorContext()) {
+  if (ShowCppErrorContext()) {
     context = LocationStrWithSpace(file, line);
     if (!new_message.empty()) {
       context = absl::StrCat(context, "\nFrom Error: ", old_message);
@@ -69,7 +72,7 @@ absl::Status MaybeWithNewMessage(absl::Status&& status, const char* file,
   return absl::Status(status.code(), absl::StrCat(message, context));
 }
 
-void ConsumeAndMaybeThrow(absl::Status&& status) {
+void ConsumeAndMaybeThrow(absl::Status status) {
   if (!status.ok()) {
     throw std::runtime_error(std::string(status.message()));
   }

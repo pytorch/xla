@@ -1,3 +1,12 @@
+// This file provides utilities for handling error statuses in the PyTorch/XLA
+// project.
+//
+// The main features are:
+// - Macros for creating error statuses with location information (__FILE__ and
+// __LINE__)
+// - Functions for propagating errors while optionally capturing new messages
+// - Utilities for modifying existing status messages with additional context
+
 #ifndef XLA_TORCH_XLA_CSRC_STATUS_H_
 #define XLA_TORCH_XLA_CSRC_STATUS_H_
 
@@ -9,71 +18,92 @@ namespace torch_xla {
 // line information) to the status message.
 //
 // This should be used whenever we are returning new error status, instead of
-// propagating. Then, if `kEnvShowCppErrorContext` environment variable is set,
-// the location information will be shown.
-#define XLA_ERROR_WITH_LOCATION(STATUS) \
-  ::torch_xla::MaybeWithLocation(std::move(STATUS), __FILE__, __LINE__)
+// propagating. Then, if `XLA_SHOW_CPP_ERROR_CONTEXT` environment variable is
+// set, the location information will be shown.
+#define XLA_ERROR_WITH_LOCATION(status) \
+  ::torch_xla::MaybeWithLocation(status, __FILE__, __LINE__)
 
-#define _XLA_RETURN_IF_ERROR(EXPR, THEN, ...)                         \
-  do {                                                                \
-    auto _status_var = (EXPR);                                        \
-    if (!_status_var.ok()) {                                          \
-      return ::torch_xla::MaybeWithNewMessage(                        \
-          std::move(_status_var), __FILE__, __LINE__, ##__VA_ARGS__); \
-    }                                                                 \
-    THEN;                                                             \
-  } while (0)
+#define XLA_CONCAT(a, b) XLA_CONCAT_IMPL(a, b)
+#define XLA_CONCAT_IMPL(a, b) a##b
 
-// Propagates `REXPR`, in case it's a non-ok status.
-#define XLA_RETURN_IF_ERROR(REXPR, ...) \
-  _XLA_RETURN_IF_ERROR(REXPR, {}, ##__VA_ARGS__)
+// Unique identifier for the status variable for the current line.
+#define XLA_STATUS_VAR XLA_CONCAT(status__, __LINE__)
 
-// Propagates `REXPR`, in case it's a non-ok status. Otherwise, assign
-// its result to `LHS`.
-#define XLA_ASSIGN_OR_RETURN(LHS, REXPR, ...) \
-  _XLA_RETURN_IF_ERROR(                       \
-      REXPR, { LHS = std::move(_status_var.value()); }, ##__VA_ARGS__)
+// Provides a flexible way to handle error checking with optional message
+// modification. It evaluates `expr`, checks if it's OK, and either:
+// 1. Returns early with an error status (potentially modified by the provided
+//    additional messages)
+// 2. Proceeds with the given `then` block if successful
+#define XLA_RETURN_IF_ERROR_IMPL(expr, var, then, ...)              \
+  auto var = (expr);                                                \
+  if (!var.ok()) {                                                  \
+    return ::torch_xla::MaybeWithNewMessage(                        \
+        ::torch_xla::GetStatus(std::move(var)), __FILE__, __LINE__, \
+        ##__VA_ARGS__);                                             \
+  }                                                                 \
+  then;
+
+// Propagates `rexpr`, in case it's a non-ok status.
+#define XLA_RETURN_IF_ERROR(rexpr, ...) \
+  XLA_RETURN_IF_ERROR_IMPL(rexpr, XLA_STATUS_VAR, {}, ##__VA_ARGS__)
+
+// Propagates `rexpr`, in case it's a non-ok status. Otherwise, assign
+// its result to `lhs`.
+#define XLA_ASSIGN_OR_RETURN(lhs, rexpr, ...)                       \
+  XLA_RETURN_IF_ERROR_IMPL(rexpr, XLA_STATUS_VAR,                   \
+                           lhs = std::move(XLA_STATUS_VAR).value(); \
+                           , ##__VA_ARGS__)
 
 // Maybe shows location information in the status message.
 //
 // This function assumes that `status` is a non-ok status.
-absl::Status MaybeWithLocation(absl::Status&& status, const char* file,
-                               const int32_t line);
+//
+// This function consumes `status`, and if `XLA_SHOW_CPP_ERROR_CONTEXT` is set,
+// appends the current sourcelocation information to the status message.
+// Otherwise, it simply returns `status`.
+absl::Status MaybeWithLocation(absl::Status status, const char* file,
+                               int32_t line);
+
+// Returns a Status from either another Status, or a StatusOr.
+absl::Status GetStatus(absl::Status status);
+
+template <class T>
+absl::Status GetStatus(absl::StatusOr<T>&& status) {
+  return status.status();
+}
 
 // Maybe replace the current `status` message with `new_message`.
 //
 // This function assumes that `status` is a non-ok status.
 //
+// The `status` message will get replaced if `new_message` is provided.
+// Otherwise, i.e. if it's empty, the old message will remain as the main error
+// message.
+//
 // Rationale: if given, `new_message` has more context, which makes it possible
 // for better error messages to the user.
 //
 // This function also appends file location information to the error message, if
-// `kEnvShowCppErrorContext` is set.
-absl::Status MaybeWithNewMessage(absl::Status&& status, const char* file,
-                                 const int32_t line,
-                                 const std::string_view new_message = "");
-
-template <class T>
-absl::Status MaybeWithNewMessage(absl::StatusOr<T>&& status, const char* file,
-                                 const int32_t line,
-                                 const std::string_view new_message = "") {
-  return MaybeWithNewMessage(std::move(status).status(), file, line,
-                             new_message);
-}
+// `XLA_SHOW_CPP_ERROR_CONTEXT` is set.
+absl::Status MaybeWithNewMessage(absl::Status status, const char* file,
+                                 int32_t line,
+                                 std::string_view new_message = "");
 
 // Consumes the `status` and maybe throws an exception if `status` has
 // a non-ok code.
 //
 // Ideally, this function should be used only used in the project's
 // boundary, e.g. when we need to throw an exception for the user to see.
-void ConsumeAndMaybeThrow(absl::Status&& status);
+void ConsumeAndMaybeThrow(absl::Status status);
 
 // Consumes the `status`, either returning the value it holds (for
 // ok status), or throwing an exception.
 template <class T>
 T ConsumeAndMaybeThrow(absl::StatusOr<T>&& status) {
-  ConsumeAndMaybeThrow(std::move(status).status());
-  return std::move(status.value());
+  if (status.ok()) {
+    return std::move(status).value();
+  }
+  ConsumeAndMaybeThrow(status.status());
 }
 
 }  // namespace torch_xla
