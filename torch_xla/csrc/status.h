@@ -58,9 +58,9 @@ namespace torch_xla {
 //
 // This function assumes that `status` is a non-ok status.
 //
-// This function consumes `status`, and if `XLA_SHOW_CPP_ERROR_CONTEXT` is set,
-// appends the current sourcelocation information to the status message.
-// Otherwise, it simply returns `status`.
+// If `XLA_SHOW_CPP_ERROR_CONTEXT` is set, appends the current source
+// location information to the status message. Otherwise, it simply returns
+// `status`.
 absl::Status MaybeWithLocation(absl::Status status, const char* file,
                                int32_t line);
 
@@ -81,7 +81,7 @@ absl::Status GetStatus(absl::StatusOr<T>&& status) {
 // message.
 //
 // Rationale: if given, `new_message` has more context, which makes it possible
-// for better error messages to the user.
+// to construct better error messages to the user.
 //
 // This function also appends file location information to the error message, if
 // `XLA_SHOW_CPP_ERROR_CONTEXT` is set.
