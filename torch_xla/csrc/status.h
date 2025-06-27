@@ -44,11 +44,21 @@ namespace torch_xla {
   then;
 
 // Propagates `rexpr`, in case it's a non-ok status.
-#define XLA_RETURN_IF_ERROR(rexpr, ...) \
-  XLA_RETURN_IF_ERROR_IMPL(rexpr, XLA_STATUS_VAR, {}, ##__VA_ARGS__)
+#define XLA_RETURN_IF_ERROR(rexpr, ...)                                \
+  do {                                                                 \
+    XLA_RETURN_IF_ERROR_IMPL(rexpr, XLA_STATUS_VAR, {}, ##__VA_ARGS__) \
+  } while (false)
 
 // Propagates `rexpr`, in case it's a non-ok status. Otherwise, assign
 // its result to `lhs`.
+//
+// Note 1: `lhs` might be a variable declarate, e.g:
+//
+//     XLA_ASSIGN_OR_RETURN(int value, FnThatReturnsStatus(), ...);
+//
+// Note 2: this macro will be replaced by multiple statements that live on
+//         the scope it was called (see XLA_RETURN_IF_ERROR_IMPL).
+//
 #define XLA_ASSIGN_OR_RETURN(lhs, rexpr, ...)                       \
   XLA_RETURN_IF_ERROR_IMPL(rexpr, XLA_STATUS_VAR,                   \
                            lhs = std::move(XLA_STATUS_VAR).value(); \
