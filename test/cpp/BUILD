@@ -158,3 +158,12 @@ ptxla_cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+ptxla_cc_test(
+    name = "test_status",
+    srcs = ["test_status.cpp"],
+    deps = [
+        "//torch_xla/csrc:status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
