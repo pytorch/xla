@@ -37,6 +37,9 @@ inline constexpr char kEnvDistSvcMaxMissingHeartbeats[] =
     "DIST_SERVICE_MAX_MISSING_HEARTBEATS";
 inline constexpr char kEnvDistSvcShutdownTimeoutInMin[] =
     "DIST_SERVICE_SHUTDOWN_TIMEOUT_IN_MIN";
+
+// When set to true, this enables showing C++ error context in backtraces,
+// which can be helpful for debugging but may clutter logs when not needed
 inline constexpr char kEnvShowCppErrorContext[] =
     "XLA_SHOW_CPP_ERROR_CONTEXT";
 

@@ -9,7 +9,8 @@
 namespace torch_xla {
 namespace runtime {
 
-absl::Status XlaCoordinator::Initialize(int global_rank, int world_size,
+absl::Status XlaCoordinator::Initialize(int global_rank,
+                                        int world_size,
                                         std::string master_addr,
                                         std::string port) {
   std::string dist_service_addr = absl::StrJoin({master_addr, port}, ":");

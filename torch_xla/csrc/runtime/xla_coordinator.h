@@ -15,8 +15,10 @@ namespace runtime {
 class XlaCoordinator {
  private:
   // Private struct for making the constructor private, but still callable
-  // with std::make_unique<T>() function.
+  // as: `std::make_unique<XlaCoordinator>(PrivateUse())`.
   struct PrivateUse {
+    // Constructor needs to be explicit for allowing only instanciation
+    // within a private context.
     explicit PrivateUse() = default;
   };
 
@@ -49,6 +51,12 @@ class XlaCoordinator {
   bool ReachedSyncPoint(int step);
 
   // Creates a new instance of XlaCoordinator, and initializes it.
+  // Forwards the parameters to the `Initialize()` function.
+  //
+  // @param global_rank Rank of the current Node.
+  // @param world_size Total number of nodes.
+  // @param master_addr Network address to the distributed service.
+  // @param port Port to be used in the address to the distributed service.
   static absl::StatusOr<absl_nonnull std::unique_ptr<XlaCoordinator>> Create(
       int global_rank, int world_size, std::string master_addr,
       std::string port);
