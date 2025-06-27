@@ -18,7 +18,7 @@ static std::string LocationStrWithSpace(const char* file, const int32_t line) {
   return absl::StrCat(" (at ", file, ":", line, ")");
 }
 
-absl::Status MaybeWithLocation(absl::Status status, const char* file,
+absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
                                const int32_t line) {
   ABSL_CHECK(!status.ok());
 
@@ -32,9 +32,9 @@ absl::Status MaybeWithLocation(absl::Status status, const char* file,
       absl::StrCat(status.message(), LocationStrWithSpace(file, line)));
 }
 
-absl::Status GetStatus(absl::Status status) { return status; }
+const absl::Status& GetStatus(const absl::Status& status) { return status; }
 
-absl::Status MaybeWithNewMessage(absl::Status status, const char* file,
+absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
                                  const int32_t line,
                                  const std::string_view new_message) {
   ABSL_CHECK(!status.ok());

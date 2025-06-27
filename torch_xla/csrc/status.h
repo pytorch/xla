@@ -70,14 +70,14 @@ namespace torch_xla {
 // If `XLA_SHOW_CPP_ERROR_CONTEXT` is set, appends the current source
 // location information to the status message. Otherwise, it simply returns
 // `status`.
-absl::Status MaybeWithLocation(absl::Status status, const char* file,
+absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
                                int32_t line);
 
-// Returns a Status from either another Status, or a StatusOr.
-absl::Status GetStatus(absl::Status status);
+
+const absl::Status& GetStatus(const absl::Status& status);
 
 template <class T>
-absl::Status GetStatus(const absl::StatusOr<T>& status) {
+const absl::Status& GetStatus(const absl::StatusOr<T>& status) {
   return status.status();
 }
 
@@ -94,7 +94,7 @@ absl::Status GetStatus(const absl::StatusOr<T>& status) {
 //
 // This function also appends file location information to the error message, if
 // `XLA_SHOW_CPP_ERROR_CONTEXT` is set.
-absl::Status MaybeWithNewMessage(absl::Status status, const char* file,
+absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
                                  int32_t line,
                                  std::string_view new_message = "");
 
@@ -103,14 +103,20 @@ absl::Status MaybeWithNewMessage(absl::Status status, const char* file,
 //
 // Ideally, this function should be used only used in the project's
 // boundary, e.g. when we need to throw an exception for the user to see.
-void ConsumeAndMaybeThrow(absl::Status status);
+void ConsumeAndMaybeThrow(const absl::Status& status);
 
 // Consumes the `status`, either returning the value it holds (for
 // ok status), or throwing an exception.
 template <class T>
-T ConsumeAndMaybeThrow(const absl::StatusOr<T>& status) {
+T ConsumeAndMaybeThrow(absl::StatusOr<T>&& status) {
   ConsumeAndMaybeThrow(status.status());
   return std::move(status).value();
+}
+
+template <class T>
+T ConsumeAndMaybeThrow(const absl::StatusOr<T>& status) {
+  ConsumeAndMaybeThrow(status.status());
+  return status.value();
 }
 
 }  // namespace torch_xla
