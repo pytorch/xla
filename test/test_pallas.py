@@ -937,8 +937,8 @@ class PallasTest(parameterized.TestCase):
         quantize_activation=quantize_activation,
     ).cpu()
 
-    print(f'Output max diff: {torch.max(torch.abs(expected - actual))}')
-    print(f'Output mean diff: {torch.mean(torch.abs(expected - actual))}')
+    # print(f'Output max diff: {torch.max(torch.abs(expected - actual))}')
+    # print(f'Output mean diff: {torch.mean(torch.abs(expected - actual))}')
     rel_error = self._compute_rel_error(expected, actual)
 
     self.assertEqual(actual.shape, expected.shape)
