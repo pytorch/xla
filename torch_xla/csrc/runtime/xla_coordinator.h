@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include "absl/base/nullability.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/tsl/distributed_runtime/preemption/preemption_sync_manager.h"
 
@@ -12,11 +13,19 @@ namespace runtime {
 // XlaCoordinator serves as the point of entry for all operations which
 // required the XLA distributed runtime, such as preemption coordination.
 class XlaCoordinator {
+ private:
+  // Private struct for making the constructor private, but still callable
+  // as: `std::make_unique<XlaCoordinator>(PrivateUse())`.
+  struct PrivateUse {
+    // Constructor needs to be explicit for disallowing implicit construction
+    // from `{}`.
+    explicit PrivateUse() = default;
+  };
+
  public:
   static inline const std::string kDefaultCoordinatorPort = "8547";
 
-  XlaCoordinator(int global_rank, int world_size, std::string master_addr,
-                 std::string port);
+  XlaCoordinator(PrivateUse);
 
   ~XlaCoordinator();
 
@@ -41,7 +50,23 @@ class XlaCoordinator {
   // false otherwise.
   bool ReachedSyncPoint(int step);
 
+  // Creates a new instance of XlaCoordinator, and initializes it.
+  // Forwards the parameters to the `Initialize()` function.
+  //
+  // @param global_rank Rank of the current Node.
+  // @param world_size Total number of nodes.
+  // @param master_addr Network address to the distributed service.
+  // @param port Port to be used in the address to the distributed service.
+  static absl::StatusOr<absl_nonnull std::unique_ptr<XlaCoordinator>> Create(
+      int global_rank, int world_size, std::string master_addr,
+      std::string port);
+
  private:
+  // Convenience function called by `Create()` that initializes the current
+  // XlaCoordinator.
+  absl::Status Initialize(int global_rank, int world_size,
+                          std::string master_addr, std::string port);
+
   std::unique_ptr<xla::DistributedRuntimeService> dist_runtime_service_;
   std::shared_ptr<xla::DistributedRuntimeClient> dist_runtime_client_;
   std::unique_ptr<tsl::PreemptionSyncManager> preemption_sync_manager_;

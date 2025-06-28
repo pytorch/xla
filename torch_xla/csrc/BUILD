@@ -264,6 +264,7 @@ ptxla_cc_library(
     deps = [
         ":device",
         ":dtype",
+        ":status",
         ":tensor",
         ":version",
         "//torch_xla/csrc/runtime",
@@ -363,5 +364,17 @@ ptxla_cc_library(
     deps = [
         "@local_config_python//:python_headers",
         "@pybind11//:pybind11_embed",
+    ],
+)
+
+cc_library(
+    name = "status",
+    srcs = ["status.cpp"],
+    hdrs = ["status.h"],
+    deps = [
+        "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc/runtime:env_vars",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
