@@ -110,7 +110,7 @@ InitializePjRt(const std::string& device_type) {
                    << ", coordinator address=" << master_addr << ":" << port;
 
         // Use the XlaCoordinator as the distributed key-value store.
-        coordinator = ConsumeAndMaybeThrow(XlaCoordinator::Create(
+        coordinator = GetValueOrThrow(XlaCoordinator::Create(
             global_process_rank, global_world_size, master_addr, port));
         std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
             coordinator->GetClient();
@@ -183,7 +183,7 @@ InitializePjRt(const std::string& device_type) {
           runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
       std::string port = runtime::sys_util::GetEnvString(
           "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
-      coordinator = ConsumeAndMaybeThrow(XlaCoordinator::Create(
+      coordinator = GetValueOrThrow(XlaCoordinator::Create(
           global_process_rank, global_world_size, master_addr, port));
       std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
           coordinator->GetClient();

@@ -6,7 +6,11 @@
 
 namespace torch_xla {
 
-static bool ShowCppErrorContext() {
+// Returns whether we should show C++ error context.
+//
+// More specifically, whether the `XLA_SHOW_CPP_ERROR_CONTEXT` environment
+// variable is set or not.
+static bool ShouldShowCppErrorContext() {
   static const bool show_cpp_error_context = runtime::sys_util::GetEnvBool(
       runtime::env::kEnvShowCppErrorContext, false);
   return show_cpp_error_context;
@@ -23,7 +27,7 @@ absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
   ABSL_CHECK(!status.ok());
 
   // Return the same status if we don't need to add the C++ source location.
-  if (!ShowCppErrorContext()) {
+  if (!ShouldShowCppErrorContext()) {
     return status;
   }
 
@@ -31,8 +35,6 @@ absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
       status.code(),
       absl::StrCat(status.message(), LocationStrWithSpace(file, line)));
 }
-
-const absl::Status& GetStatus(const absl::Status& status) { return status; }
 
 absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
                                  const int32_t line,
@@ -42,7 +44,7 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
   // Return the same status if:
   //   1. we don't need to add the C++ source location.
   //   2. there's no new message to replace the old one.
-  if (!ShowCppErrorContext() && new_message.empty()) {
+  if (!ShouldShowCppErrorContext() && new_message.empty()) {
     return status;
   }
 
@@ -54,7 +56,7 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
   // context to give a better error message to the user.
   std::string_view message = new_message.empty() ? old_message : new_message;
 
-  // If `kEnvShowCppErrorContext` is set, show the context of this error.
+  // If `XLA_SHOW_CPP_ERROR_CONTEXT` is set, show the context of this error.
   // In other words, show:
   //   - The error location
   //   - The old messages that were replaced by `new_message`.
@@ -62,7 +64,7 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
   // This should give more context for developers. Showing the older error
   // messages alongside their debug information.
   std::string context;
-  if (ShowCppErrorContext()) {
+  if (ShouldShowCppErrorContext()) {
     context = LocationStrWithSpace(file, line);
     if (!new_message.empty()) {
       context = absl::StrCat(context, "\nFrom Error: ", old_message);
@@ -72,7 +74,7 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
   return absl::Status(status.code(), absl::StrCat(message, context));
 }
 
-void ConsumeAndMaybeThrow(const absl::Status& status) {
+void MaybeThrow(const absl::Status& status) {
   if (!status.ok()) {
     throw std::runtime_error(std::string(status.message()));
   }

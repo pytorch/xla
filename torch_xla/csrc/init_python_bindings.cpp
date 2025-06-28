@@ -36,6 +36,7 @@
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"
+#include "status.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_fallback.h"
@@ -1683,7 +1684,7 @@ void InitXlaModuleBindings(py::module m) {
            })
       .def("_init_computation_client",
            []() {
-             ConsumeAndMaybeThrow(runtime::GetComputationClient());
+             GetValueOrThrow(runtime::GetComputationClient());
            })
       .def("_xla_get_device_hw_type",
            [](const at::Tensor& tensor) {

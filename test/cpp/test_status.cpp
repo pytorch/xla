@@ -30,26 +30,26 @@ TEST(StatusTest, MaybeWithNewMessageNonEmptyNewMessage) {
   EXPECT_EQ(result.message(), new_err_string);
 }
 
-TEST(StatusTest, ConsumeAndMaybeThrowWithOkStatus) {
+TEST(StatusTest, MaybeThrowWithOkStatus) {
   absl::Status ok_status = absl::OkStatus();
-  EXPECT_NO_THROW(ConsumeAndMaybeThrow(ok_status));
+  EXPECT_NO_THROW(MaybeThrow(ok_status));
 }
 
-TEST(StatusTest, ConsumeAndMaybeThrowWithErrorStatus) {
+TEST(StatusTest, MaybeThrowWithErrorStatus) {
   absl::Status error_status = absl::InvalidArgumentError("Test error");
-  EXPECT_THROW(ConsumeAndMaybeThrow(error_status), std::runtime_error);
+  EXPECT_THROW(MaybeThrow(error_status), std::runtime_error);
 }
 
-TEST(StatusTest, ConsumeAndMaybeThrowWithOkStatusOr) {
+TEST(StatusTest, GetValueOrThrowWithOkStatusOr) {
   int value = 42;
   absl::StatusOr<int> status_or = value;
-  int result = ConsumeAndMaybeThrow(std::move(status_or));
+  int result = GetValueOrThrow(std::move(status_or));
   EXPECT_EQ(result, value);
 }
 
-TEST(StatusTest, ConsumeAndMaybeThrowWithErrorStatusOr) {
+TEST(StatusTest, GetValueOrThrowWithErrorStatusOr) {
   absl::StatusOr<int> status_or = absl::InvalidArgumentError("Test error");
-  EXPECT_THROW(ConsumeAndMaybeThrow(std::move(status_or)), std::runtime_error);
+  EXPECT_THROW(GetValueOrThrow(std::move(status_or)), std::runtime_error);
 }
 
 TEST(StatusTest, MacroReturnIfError) {

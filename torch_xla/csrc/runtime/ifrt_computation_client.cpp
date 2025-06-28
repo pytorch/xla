@@ -164,7 +164,7 @@ void IfrtComputationClient::InitializeCoordinator(int global_rank,
                                                   std::string port) {
   XLA_CHECK(coordinator_ == nullptr)
       << "Can only initialize the XlaCoordinator once.";
-  coordinator_ = ConsumeAndMaybeThrow(
+  coordinator_ = GetValueOrThrow(
       XlaCoordinator::Create(global_rank, world_size, master_addr, port));
 }
 

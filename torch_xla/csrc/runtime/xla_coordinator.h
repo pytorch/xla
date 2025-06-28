@@ -17,8 +17,8 @@ class XlaCoordinator {
   // Private struct for making the constructor private, but still callable
   // as: `std::make_unique<XlaCoordinator>(PrivateUse())`.
   struct PrivateUse {
-    // Constructor needs to be explicit for allowing only instanciation
-    // within a private context.
+    // Constructor needs to be explicit for disallowing implicit construction
+    // from `{}`.
     explicit PrivateUse() = default;
   };
 
