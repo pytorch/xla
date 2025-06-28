@@ -72,7 +72,7 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
   return absl::Status(status.code(), absl::StrCat(message, context));
 }
 
-void ConsumeAndMaybeThrow(absl::Status status) {
+void ConsumeAndMaybeThrow(const absl::Status& status) {
   if (!status.ok()) {
     throw std::runtime_error(std::string(status.message()));
   }
