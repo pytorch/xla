@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
@@ -496,8 +497,8 @@ std::shared_ptr<xla::PjRtBuffer> PjRtComputationClient::GetPjRtBuffer(
   }
 }
 
-std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
-    absl::Span<const DataPtr> handles) {
+absl::StatusOr<std::vector<xla::Literal>>
+PjRtComputationClient::TransferFromDevice(absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromDeviceMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferFromDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);
@@ -510,8 +511,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
     // Use XLA replication to reassemble the sharded data. If input handle
     // is not sharded, then it is a no-op.
     std::shared_ptr<PjRtData> pjrt_data = ReplicateShardedData(handle);
-    XLA_CHECK(pjrt_data) << "PjRt_data is null in " << __FUNCTION__;
-    XLA_CHECK(pjrt_data->buffer != nullptr)
+    ABSL_CHECK(pjrt_data) << "PjRt_data is null in " << __FUNCTION__;
+    ABSL_CHECK(pjrt_data->buffer != nullptr)
         << "PjRt buffer is null in " << __FUNCTION__;
 
     xla::Literal& literal =
@@ -520,11 +521,11 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
 
     total_size += literal.size_bytes();
   }
-  for (auto& future : futures) {
-    absl::Status status = future.Await();
-    XLA_CHECK_OK(status) << "Failed to await future from buffer to literal in"
-                         << __FUNCTION__;
-  }
+  auto joined = xla::JoinFutures(futures);
+  XLA_RETURN_IF_ERROR(
+      joined.Await(),
+      absl::StrCat(__FUNCTION__,
+                   ": failed to await future from buffer to literal."));
   InboundDataMetric()->AddSample(total_size);
 
   return literals;
@@ -761,10 +762,8 @@ PjRtComputationClient::ExecuteComputation(
 
   std::optional<xla::PjRtFuture<>> returned_future;
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
-      pjrt_computation.executable
-          ->ExecuteSharded(buffers, pjrt_device, execute_options,
-                           returned_future)
-          .value();
+      GetValueOrThrow(pjrt_computation.executable->ExecuteSharded(
+          buffers, pjrt_device, execute_options, returned_future));
 
   returned_future->OnReady(std::move(
       [timed, op_tracker = std::move(op_tracker)](absl::Status unused) mutable {
@@ -866,10 +865,8 @@ PjRtComputationClient::ExecuteReplicated(
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_execute",
         tsl::profiler::TraceMeLevel::kInfo);
-    results = pjrt_computation.executable
-                  ->Execute(std::move(argument_handles), execute_options,
-                            returned_futures)
-                  .value();
+    results = GetValueOrThrow(pjrt_computation.executable->Execute(
+        std::move(argument_handles), execute_options, returned_futures));
 
     (*returned_futures)[0].OnReady(
         std::move([timed, op_tracker = std::move(op_tracker)](

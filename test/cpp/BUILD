@@ -40,6 +40,7 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:runtime",
         "//torch_xla/csrc/runtime:debug_macros",
         "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc:status",
         "//torch_xla/csrc:tensor",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest",

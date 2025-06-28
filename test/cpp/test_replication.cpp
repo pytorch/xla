@@ -10,6 +10,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -78,9 +79,8 @@ void TestSingleReplication(
   counter.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    std::vector<xla::Literal> literals =
-        torch_xla::runtime::GetComputationClientOrDie()->TransferFromDevice(
-            results[i]);
+    std::vector<xla::Literal> literals = GetValueOrThrow(
+        runtime::GetComputationClientOrDie()->TransferFromDevice(results[i]));
     ASSERT_EQ(literals.size(), 1);
 
     // The result must be the original tensor value, multiplied by the number of
