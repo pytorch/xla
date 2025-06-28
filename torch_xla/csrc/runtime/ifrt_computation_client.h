@@ -62,7 +62,7 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
-  std::vector<xla::Literal> TransferFromDevice(
+  absl::StatusOr<std::vector<xla::Literal>> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
 
   std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;

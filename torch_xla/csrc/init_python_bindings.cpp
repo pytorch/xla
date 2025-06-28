@@ -1229,9 +1229,9 @@ class PyLoweringContext {
         lowering_ctx.GetParametersData();
 
     // Fetch this parameter data
-    std::vector<xla::Literal> literals =
+    std::vector<xla::Literal> literals = GetValueOrThrow(
         runtime::GetComputationClientOrDie()->TransferFromDevice(
-            UnwrapXlaData(device_data));
+            UnwrapXlaData(device_data)));
 
     // Create a mapping from paramater id to the tensor data
     std::unordered_map<int64_t, at::Tensor> results;

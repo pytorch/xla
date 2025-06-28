@@ -123,6 +123,7 @@ cc_library(
         ":tf_logging",
         ":xla_coordinator",
         "//torch_xla/csrc:status",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:span",
