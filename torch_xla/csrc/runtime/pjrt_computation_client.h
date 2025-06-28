@@ -25,8 +25,17 @@ namespace torch_xla {
 namespace runtime {
 
 class PjRtComputationClient : public ComputationClient {
+ private:
+  // Private struct for making the constructor private, but still callable
+  // as: `std::make_unique<PjRtComputationClient>(PrivateUse())`.
+  struct PrivateUse {
+    // Constructor needs to be explicit for disallowing implicit construction
+    // from `{}`.
+    explicit PrivateUse() = default;
+  };
+
  public:
-  PjRtComputationClient();
+  PjRtComputationClient(PrivateUse);
   ~PjRtComputationClient() override;
 
   DataPtr CreateDataPlaceholder(
@@ -163,6 +172,10 @@ class PjRtComputationClient : public ComputationClient {
   void OnReadyCallback(DataPtr data,
                        const std::function<void()>& callback) override;
 
+  // Creates a new instance of PjRtComputationClient and initializes it.
+  static absl::StatusOr<absl_nonnull std::unique_ptr<PjRtComputationClient>>
+  Create();
+
  private:
   friend class PjRtComputationClientTest;
 
@@ -171,6 +184,10 @@ class PjRtComputationClient : public ComputationClient {
   void FakeXlaCompileForTesting(std::function<absl::Status()> function) {
     fake_xla_compile_ = std::move(function);
   }
+
+  // Convenience function called by `Create()` that initializes the current
+  // PjRtComputationClient.
+  absl::Status Initialize();
 
   std::unique_ptr<xla::PjRtClient> client_;
   std::unique_ptr<XlaCoordinator> coordinator_;
