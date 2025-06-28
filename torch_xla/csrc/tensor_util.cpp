@@ -24,6 +24,7 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
@@ -909,8 +910,8 @@ std::vector<xla::Literal> ReleaseGilAndTransferData(
     save = PyEval_SaveThread();
   }
   std::vector<xla::Literal> literals =
-      runtime::GetComputationClientOrDie()->TransferFromDevice(
-          UnwrapXlaData(xla_data));
+      GetValueOrThrow(runtime::GetComputationClientOrDie()->TransferFromDevice(
+          UnwrapXlaData(xla_data)));
   if (save) {
     PyEval_RestoreThread(save);
   }

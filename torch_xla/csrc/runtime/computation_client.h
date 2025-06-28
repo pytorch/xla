@@ -318,7 +318,7 @@ class ComputationClient {
   // Note: `TransferFromDevice` call will block until the `DataPtrs` are ready
   // if they were created by `TransferToDevice` or `Execute*`. Calling this from
   // python while holding the GIL can cause deadlocks!
-  virtual std::vector<xla::Literal> TransferFromDevice(
+  virtual absl::StatusOr<std::vector<xla::Literal>> TransferFromDevice(
       absl::Span<const DataPtr> handles) = 0;
 
   virtual std::uintptr_t UnsafeBufferPointer(const DataPtr handle) = 0;

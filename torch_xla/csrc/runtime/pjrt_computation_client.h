@@ -65,7 +65,7 @@ class PjRtComputationClient : public ComputationClient {
       absl::Span<const DataPtr> handles,
       absl::Span<const xla::OpSharding> shardings) override;
 
-  std::vector<xla::Literal> TransferFromDevice(
+  absl::StatusOr<std::vector<xla::Literal>> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
 
   std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;

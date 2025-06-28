@@ -79,9 +79,8 @@ void TestSingleReplication(
   counter.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    std::vector<xla::Literal> literals =
-        torch_xla::runtime::GetComputationClientOrDie()->TransferFromDevice(
-            results[i]);
+    std::vector<xla::Literal> literals = GetValueOrThrow(
+        runtime::GetComputationClientOrDie()->TransferFromDevice(results[i]));
     ASSERT_EQ(literals.size(), 1);
 
     // The result must be the original tensor value, multiplied by the number of
