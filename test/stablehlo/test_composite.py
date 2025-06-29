@@ -147,10 +147,10 @@ class XlaMarkPatternTest(unittest.TestCase):
     stablehlo = self.run_func_get_stablehlo(M(), input_args)
     self.assertEqual(stablehlo.count("stablehlo.composite \"test.sdpa\""), 2)
     self.assertTrue(
-        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}'
+        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl}'
         in stablehlo)
     self.assertTrue(
-        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}'
+        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl_0}'
         in stablehlo)
 
   def test_composite_builder_sdpa_pattern(self):
@@ -175,10 +175,10 @@ class XlaMarkPatternTest(unittest.TestCase):
     stablehlo = self.run_func_get_stablehlo(M(), input_args)
     self.assertEqual(stablehlo.count("stablehlo.composite \"test.sdpa\""), 2)
     self.assertTrue(
-        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}'
+        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl}'
         in stablehlo)
     self.assertTrue(
-        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}'
+        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl_0}'
         in stablehlo)
 
   def test_composite_builder_export_sdpa_pattern(self):
@@ -208,10 +208,10 @@ class XlaMarkPatternTest(unittest.TestCase):
     stablehlo = stablehlo_gm.get_stablehlo_text()
     self.assertEqual(stablehlo.count("stablehlo.composite \"test.sdpa\""), 2)
     self.assertTrue(
-        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}'
+        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl}'
         in stablehlo)
     self.assertTrue(
-        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}'
+        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl_0}'
         in stablehlo)
     if has_tf_package():
       self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
@@ -240,10 +240,10 @@ class XlaMarkPatternTest(unittest.TestCase):
     stablehlo = stablehlo_gm.get_stablehlo_text()
     self.assertEqual(stablehlo.count("stablehlo.composite \"test.sdpa\""), 2)
     self.assertTrue(
-        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}'
+        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl}'
         in stablehlo)
     self.assertTrue(
-        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}'
+        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl_0}'
         in stablehlo)
     if has_tf_package():
       self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
