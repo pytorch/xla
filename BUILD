@@ -79,6 +79,8 @@ test_suite(
         "//test/cpp:test_xla_sharding",
         "//test/cpp:test_runtime",
         "//test/cpp:test_status",
+        "//test/cpp:test_status_DontShowCppErrorContext",
+        "//test/cpp:test_status_ShowCppErrorContext",
         "//torch_xla/csrc/runtime:pjrt_computation_client_test",
         # "//torch_xla/csrc/runtime:ifrt_computation_client_test",
     ],
