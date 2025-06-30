@@ -4,6 +4,61 @@ manual_nightly_builds = [
 
 manual_versioned_builds = [
 
+
+  {
+    git_tag         = "v2.8.0"
+    package_version = "2.8.0"
+    pytorch_git_rev = "v2.8.0"
+    accelerator     = "tpu"
+    python_version  = "3.11"
+    bundle_libtpu   = "0"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.8.0"
+    package_version = "2.8.0"
+    pytorch_git_rev = "v2.8.0"
+    accelerator     = "tpu"
+    python_version  = "3.12"
+    bundle_libtpu   = "0"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.8.0"
+    package_version = "2.8.0"
+    pytorch_git_rev = "v2.8.0"
+    accelerator     = "tpu"
+    python_version  = "3.13"
+    bundle_libtpu   = "0"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.8.0"
+    package_version = "2.8.0"
+    pytorch_git_rev = "v2.8.0"
+    accelerator     = "cuda"
+    cuda_version    = "12.6"
+    python_version  = "3.9"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.8.0"
+    package_version = "2.8.0"
+    pytorch_git_rev = "v2.8.0"
+    accelerator     = "cuda"
+    cuda_version    = "12.6"
+    python_version  = "3.10"
+    cxx11_abi       = "1"
+  },
+  {
+    git_tag         = "v2.8.0"
+    package_version = "2.8.0"
+    pytorch_git_rev = "v2.8.0"
+    accelerator     = "cuda"
+    cuda_version    = "12.6"
+    python_version  = "3.11"
+    cxx11_abi       = "1"
+  },
   {
     git_tag         = "v2.7.0"
     package_version = "2.7.0"
