@@ -34,7 +34,7 @@ jobs:
         id: commit
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
         run: |
-          echo "torch_commit=$(git ls-remote https://github.com/pytorch/pytorch.git HEAD | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "torch_commit=$(git ls-remote https://github.com/pytorch/pytorch.git refs/heads/release/2.8 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
       - name: Report no code changes
         if: needs.check_code_changes.outputs.has_code_changes == 'false'
         run: |
