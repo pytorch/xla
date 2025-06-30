@@ -4,12 +4,12 @@
 Usage:
 
   scripts/update_deps.py
-  scripts/update_deps.py --use_nightly
+  scripts/update_deps.py --use_latest
 
     By default, updates to the latest stable JAX release and its corresponding
     OpenXLA and libtpu versions.
 
-    With --use_nightly, updates to the latest nightly builds of OpenXLA,
+    With --use_latest, updates to the latest nightly builds of OpenXLA,
     libtpu, and JAX.
 """
 
@@ -427,13 +427,13 @@ def update_libtpu(target_date: str | None = None) -> bool:
   return success
 
 
-def update_jax(use_nightly: bool) -> bool:
+def update_jax(use_latest: bool) -> bool:
   """Updates the jax/jaxlib versions in setup.py.
 
   Returns:
     True if the setup.py file was updated, False otherwise.
   """
-  if use_nightly:
+  if use_latest:
     result = find_latest_jax_nightly()
     if not result:
       return False
@@ -484,18 +484,18 @@ def main() -> None:
   parser = argparse.ArgumentParser(
       description="Updates third party dependencies.")
   parser.add_argument(
-      '--use_nightly',
+      '--use_latest',
       action='store_true',
       default=False,
       help='Update to latest nightly versions instead of latest stable versions.'
   )
   args = parser.parse_args()
 
-  if args.use_nightly:
+  if args.use_latest:
     logger.info('Updating to latest nightly versions...')
     openxla_updated = update_openxla()
     libtpu_updated = update_libtpu()
-    jax_updated = update_jax(use_nightly=True)
+    jax_updated = update_jax(use_latest=True)
     if not (openxla_updated and libtpu_updated and jax_updated):
       sys.exit(1)
   else:
@@ -512,7 +512,7 @@ def main() -> None:
     openxla_updated = update_openxla(xla_commit)
     libtpu_updated = update_libtpu(
         target_date=jax_release_date.replace('-', ''))
-    jax_updated = update_jax(use_nightly=False)
+    jax_updated = update_jax(use_latest=False)
     if not (openxla_updated and libtpu_updated and jax_updated):
       sys.exit(1)
 
