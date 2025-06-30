@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitffce7fb )
+                  master (2.8.0+git3d92aa7 )
                 </div>
               
             
@@ -489,8 +489,8 @@ for more details on how to use the MLIR code generated from it.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">export</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torchvision</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla2</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tx</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla2.export</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchax</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchax.export</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
 
@@ -549,10 +549,10 @@ We are working in adding support for torch.export now.</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch.library</span><span class="w"> </span><span class="kn">import</span> <span class="n">Library</span><span class="p">,</span> <span class="n">impl</span><span class="p">,</span> <span class="n">impl_abstract</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla2</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla2.export</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla2.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">jaten</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla2.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">jlibrary</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchax.export</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchax.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">jaten</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchax.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">jlibrary</span>
 
 
 <span class="c1"># Create a `mylib` library which has a basic SDPA op.</span>
@@ -601,7 +601,7 @@ We are working in adding support for torch.export now.</p>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">torch_xla2</span><span class="o">.</span><span class="n">default_env</span><span class="p">()</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_torch_native_for_cpu_tensor</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">torchax</span><span class="o">.</span><span class="n">default_env</span><span class="p">()</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_torch_native_for_cpu_tensor</span> <span class="o">=</span> <span class="kc">False</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">test_basic_sdpa_library</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 
@@ -617,7 +617,7 @@ We are working in adding support for torch.export now.</p>
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">arg</span><span class="p">,</span> <span class="n">arg</span><span class="p">,</span> <span class="p">)</span>
 
     <span class="n">exported</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">export</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">)</span>
-    <span class="n">stablehlo</span> <span class="o">=</span> <span class="n">torch_xla2</span><span class="o">.</span><span class="n">export</span><span class="o">.</span><span class="n">exported_program_to_stablehlo</span><span class="p">(</span><span class="n">exported</span><span class="p">)</span>
+    <span class="n">stablehlo</span> <span class="o">=</span> <span class="n">torchax</span><span class="o">.</span><span class="n">export</span><span class="o">.</span><span class="n">exported_program_to_stablehlo</span><span class="p">(</span><span class="n">exported</span><span class="p">)</span>
     <span class="n">module_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">stablehlo</span><span class="o">.</span><span class="n">mlir_module</span><span class="p">())</span>
 
     <span class="c1">## TODO Update this machinery from producing function calls to producing</span>
