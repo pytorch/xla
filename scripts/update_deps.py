@@ -393,13 +393,9 @@ def update_libtpu(target_date: str | None = None) -> bool:
     setup_lines = f.readlines()
 
   # Update the lines for specifying the libtpu version.
-  found_use_nightly, found_libtpu_version, found_libtpu_date, found_libtpu_wheel = False, False, False, False
+  found_libtpu_version, found_libtpu_date, found_libtpu_wheel = False, False, False
   for i, line in enumerate(setup_lines):
-    if re.match(r'USE_NIGHTLY\s*=', line):
-      found_use_nightly = True
-      # If target_date is None, we are in nightly mode.
-      setup_lines[i] = f"USE_NIGHTLY = {target_date is None}\n"
-    elif re.match(r'_libtpu_version\s*=', line):
+    if re.match(r'_libtpu_version\s*=', line):
       found_libtpu_version = True
       setup_lines[i] = f"_libtpu_version = '{version}'\n"
     elif re.match(r'_libtpu_date\s*=', line):
@@ -415,8 +411,6 @@ def update_libtpu(target_date: str | None = None) -> bool:
             "_libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_libtpu_date}+nightly-"
             + suffix + "_{platform_machine}'\n")
 
-  if not found_use_nightly:
-    logger.error('Could not find USE_NIGHTLY in setup.py.')
   if not found_libtpu_version:
     logger.error('Could not find _libtpu_version in setup.py.')
   if not found_libtpu_date:
@@ -427,7 +421,7 @@ def update_libtpu(target_date: str | None = None) -> bool:
   with open(_SETUP_PATH, 'w') as f:
     f.writelines(setup_lines)
 
-  success = found_use_nightly and found_libtpu_version and found_libtpu_date and found_libtpu_wheel
+  success = found_libtpu_version and found_libtpu_date and found_libtpu_wheel
   if success:
     logger.info('Updated the libtpu version in setup.py.')
   return success
@@ -456,12 +450,9 @@ def update_jax(use_nightly: bool) -> bool:
     setup_lines = f.readlines()
 
   # Update the lines for specifying jax/jaxlib versions.
-  found_use_nightly, found_jax_version, found_jaxlib_version, found_jax_date = False, False, False, False
+  found_jax_version, found_jaxlib_version, found_jax_date = False, False, False
   for i, line in enumerate(setup_lines):
-    if re.match(r'USE_NIGHTLY\s*=', line):
-      found_use_nightly = True
-      setup_lines[i] = f"USE_NIGHTLY = {use_nightly}\n"
-    elif re.match(r'_jax_version\s*=', line):
+    if re.match(r'_jax_version\s*=', line):
       found_jax_version = True
       setup_lines[i] = f"_jax_version = '{jax_version}'\n"
     elif re.match(r'_jaxlib_version\s*=', line):
@@ -471,8 +462,6 @@ def update_jax(use_nightly: bool) -> bool:
       found_jax_date = True
       setup_lines[i] = f"_jax_date = '{date}'  # Date for jax and jaxlib.\n"
 
-  if not found_use_nightly:
-    logger.error('Could not find USE_NIGHTLY in setup.py.')
   if not found_jax_version:
     logger.error('Could not find _jax_version in setup.py.')
   if not found_jaxlib_version:
@@ -483,7 +472,7 @@ def update_jax(use_nightly: bool) -> bool:
   with open(_SETUP_PATH, 'w') as f:
     f.writelines(setup_lines)
 
-  success = found_use_nightly and found_jax_version and found_jaxlib_version and found_jax_date
+  success = found_jax_version and found_jaxlib_version and found_jax_date
   if success:
     logger.info('Updated the jax/jaxlib versions in setup.py.')
   return success
