@@ -128,7 +128,8 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
         break
     expected_block_sizes = TUNED_BLOCK_SIZES[key0]
     _, bs, n_output_features, n_input_features, activation_dtype, quantize_activation = key0
-    actual_block_sizes = get_tuned_block_sizes(bs, n_output_features,
+    actual_block_sizes = get_tuned_block_sizes(TUNED_BLOCK_SIZES, bs,
+                                               n_output_features,
                                                n_input_features,
                                                activation_dtype,
                                                quantize_activation)
@@ -145,12 +146,17 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
                                                   n_input_features,
                                                   n_output_features,
                                                   quantize_activation):
-    self._test_quantized_matmul(
-        dtype,
-        bs,
-        n_input_features,
-        n_output_features,
-        quantize_activation=quantize_activation)
+    with self.assertRaises(AssertionError):
+      self._test_quantized_matmul(
+          dtype,
+          bs,
+          n_input_features,
+          n_output_features,
+          quantize_activation=quantize_activation,
+          batch_block_size=None,
+          out_block_size=None,
+          in_block_size=None,
+      )
 
 
 if __name__ == "__main__":
