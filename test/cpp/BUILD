@@ -167,3 +167,23 @@ ptxla_cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+ptxla_cc_test(
+    name = "test_status_DontShowCppErrorContext",
+    srcs = ["test_status_DontShowCppErrorContext.cpp"],
+    deps = [
+        "//torch_xla/csrc:status",
+        "//torch_xla/csrc/runtime:env_vars",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+ptxla_cc_test(
+    name = "test_status_ShowCppErrorContext",
+    srcs = ["test_status_ShowCppErrorContext.cpp"],
+    deps = [
+        "//torch_xla/csrc:status",
+        "//torch_xla/csrc/runtime:env_vars",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
