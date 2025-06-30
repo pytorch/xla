@@ -106,7 +106,9 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 # 4. After the local build succeeds, create a PR and wait for the CI result. Fix
 #    CI errors as needed until all required checks pass.
 
-USE_NIGHTLY = True  # Whether to use nightly or stable libtpu and JAX.
+# Whether to use nightly or stable libtpu and JAX.
+# Automatically modified when update_deps script is run.
+USE_NIGHTLY = False
 
 _libtpu_version = '0.0.18'
 _libtpu_date = '20250617'
