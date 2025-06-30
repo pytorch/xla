@@ -5,7 +5,7 @@ import torch_xla.runtime as xr
 from torch_xla._internal import rendezvous
 import logging
 import os
-from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions
+from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions, GatherOptions
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
@@ -250,7 +250,14 @@ class ProcessGroupXla(ProcessGroup):
     output.copy_(result)
     return _ret_work(output)
 
-  def gather(self, *args):
+  def gather(self, output_tensors_list: list[list[torch.Tensor]], input_tensor_list: list[torch.Tensor], opts: GatherOptions):
+    if xr.global_ordinal() == opts.rootRank:
+      outputs = output_tensors_list
+    else:
+      outputs = [[torch.zeros_like(input_tensor)] * xr.world_size() for input_tensor in input_tensor_list]
+    return self.allgather(outputs, input_tensor_list)
+
+
     raise NotImplementedError
 
   # Called by torch.distributed.scatter. Call site example:
