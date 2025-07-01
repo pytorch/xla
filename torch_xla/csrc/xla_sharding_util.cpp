@@ -219,7 +219,8 @@ bool ShardingUtil::EqualOpShardings(const xla::OpSharding& a,
 }
 
 // function to normalize tile_assignment
-std::vector<int64_t> ShardingUtil::NormalizeTileAssignment(const std::vector<int64_t>& tile_assignment) {
+std::vector<int64_t> ShardingUtil::NormalizeTileAssignment(
+    const std::vector<int64_t>& tile_assignment) {
   // Check if the tile_assignment is empty
   if (tile_assignment.empty()) {
     TF_LOG(WARNING) << "Invalid argument: tile_assignment is empty";
@@ -227,15 +228,17 @@ std::vector<int64_t> ShardingUtil::NormalizeTileAssignment(const std::vector<int
   }
 
   // Find the minimum value in the tile_assignment
-  int64_t min_value = *std::min_element(tile_assignment.begin(), tile_assignment.end());
+  int64_t min_value =
+      *std::min_element(tile_assignment.begin(), tile_assignment.end());
 
   // check if min_value of tile_assignment is positive
   XLA_CHECK(min_value >= 0)
-          << "min_value of tile_assignment cannot be negative";
+      << "min_value of tile_assignment cannot be negative";
 
   // Create a vector to store the normalized tile_assignment
   std::vector<int64_t> normalized_tile_assignment;
-  normalized_tile_assignment.reserve(tile_assignment.size());  // Reserve space to avoid reallocations
+  normalized_tile_assignment.reserve(
+      tile_assignment.size());  // Reserve space to avoid reallocations
 
   // Normalize each device ID by subtracting the minimum value
   for (const auto& device : tile_assignment) {

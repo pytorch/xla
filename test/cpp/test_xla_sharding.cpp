@@ -44,14 +44,15 @@ class XLAShardingTest : public AtenXlaTensorTestBase {
 TEST_F(XLAShardingTest, NormalizeTileAssignment) {
   // Test with an empty tile assignment
   std::vector<int64_t> empty_tile_assignment = {};
-  auto normalized = ShardingUtil::NormalizeTileAssignment(empty_tile_assignment);
+  auto normalized =
+      ShardingUtil::NormalizeTileAssignment(empty_tile_assignment);
   EXPECT_TRUE(normalized.empty());
 
   // Test with positive values
   std::vector<int64_t> positive_tile_assignment = {3, 1, 4, 2};
   normalized = ShardingUtil::NormalizeTileAssignment(positive_tile_assignment);
   EXPECT_EQ(normalized, std::vector<int64_t>({2, 0, 3, 1}));
-  
+
   // Test with all identical values
   std::vector<int64_t> identical_tile_assignment = {5, 5, 5, 5};
   normalized = ShardingUtil::NormalizeTileAssignment(identical_tile_assignment);
@@ -59,11 +60,13 @@ TEST_F(XLAShardingTest, NormalizeTileAssignment) {
 
   // Test with negative values
   std::vector<int64_t> negative_tile_assignment = {-3, -1, -4, -2};
-  EXPECT_THROW(ShardingUtil::NormalizeTileAssignment(negative_tile_assignment), std::runtime_error);
-  
+  EXPECT_THROW(ShardingUtil::NormalizeTileAssignment(negative_tile_assignment),
+               std::runtime_error);
+
   // Test with mixed positive and negative values
   std::vector<int64_t> mixed_tile_assignment = {3, -1, 4, 2};
-  EXPECT_THROW(ShardingUtil::NormalizeTileAssignment(mixed_tile_assignment), std::runtime_error);
+  EXPECT_THROW(ShardingUtil::NormalizeTileAssignment(mixed_tile_assignment),
+               std::runtime_error);
 }
 
 TEST_F(XLAShardingTest, GetShardShape) {
