@@ -158,7 +158,7 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.9.0')
+  version = os.getenv('TORCH_XLA_VERSION', '2.8.0')
   if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
       version += '+git' + xla_git_sha[:7]
@@ -335,14 +335,21 @@ with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
   long_description = f.read()
 
 # Finds torch_xla and its subpackages
-# We specify 'torchax.torchax' to find the nested package correctly.
-packages_to_include = find_packages(
-    include=['torch_xla', 'torch_xla.*', 'torchax', 'torchax.*'])
+# 1. Find `torch_xla` and its subpackages automatically from the root.
+packages_to_include = find_packages(include=['torch_xla', 'torch_xla.*'])
 
-# Map the top-level 'torchax' package name to its source location
-package_dir_mapping = {
-    'torchax': 'torchax/torchax',
-}
+# 2. Explicitly find the contents of the nested `torchax` package.
+#    Find all sub-packages within the torchax directory (e.g., 'ops').
+torchax_source_dir = 'torchax/torchax'
+torchax_subpackages = find_packages(where=torchax_source_dir)
+#    Construct the full list of packages, starting with the top-level
+#    'torchax' and adding all the discovered sub-packages.
+packages_to_include.extend(['torchax'] +
+                           ['torchax.' + pkg for pkg in torchax_subpackages])
+
+# 3. The package_dir mapping explicitly tells setuptools where the 'torchax'
+#    package's source code begins. `torch_xla` source code is inferred.
+package_dir_mapping = {'torchax': torchax_source_dir}
 
 
 class Develop(develop.develop):
