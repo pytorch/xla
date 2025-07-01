@@ -250,35 +250,44 @@ class ProcessGroupXla(ProcessGroup):
     output.copy_(result)
     return _ret_work(output)
 
+  # Called by torch.distributed.gather. Call site example:
+  # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L4043
+  # Input tensors are gathered into list of output tensors on the dst device.
+  # Output tensors list is None for all non-dst devices.
+  # This is an inefficient operation. In order to avoid XLA deadlocks it
+  # performs redundant gathers on non-dst devices and materializes the result.
   def gather(self, output_tensors_list: list[list[torch.Tensor]],
              input_tensor_list: list[torch.Tensor], opts: GatherOptions):
     rank = xr.global_ordinal()
-    input_tensor = input_tensor_list[0]
-    is_scalar = input_tensor.dim() == 0
-    input_for_all_gather = (
-        input_tensor.clone().reshape(1) if is_scalar else input_tensor)
 
-    gathered_tensor = xm.all_gather(
-        input_for_all_gather, dim=0, groups=self._mesh, pin_layout=False)
-    torch_xla.sync()
+    for i, input_tensor in enumerate(input_tensor_list):
+      is_scalar = input_tensor.dim() == 0
+      input_for_all_gather = (
+          input_tensor.clone().reshape(1) if is_scalar else input_tensor)
+
+      gathered_tensor = xm.all_gather(
+          input_for_all_gather, dim=0, groups=self._mesh, pin_layout=False)
+      # Syncing is required to keep the heterogeneous copying below at the
+      # Python layer, avoiding deadlocks due to mismatched HLO.
+      torch_xla.sync()
+
+      if rank == opts.rootRank:
+        output_tensors = output_tensors_list[i]
+        if is_scalar:
+          for j in range(xr.world_size()):
+            output_tensors[j].copy_(gathered_tensor[j])
+        else:
+          chunk_size = input_tensor.shape[0]
+          gathered_chunks = torch.split(gathered_tensor, chunk_size, dim=0)
+          for j, chunk in enumerate(gathered_chunks):
+            if chunk.shape != output_tensors[j].shape:
+              chunk = chunk.reshape(output_tensors[j].shape)
+            output_tensors[j].copy_(chunk)
 
     if rank == opts.rootRank:
-      output_tensors = output_tensors_list[0]
-      if is_scalar:
-        for i in range(xr.world_size()):
-          output_tensors[i].copy_(gathered_tensor[i])
-      else:
-        chunk_size = input_tensor.shape[0]
-        gathered_chunks = torch.split(gathered_tensor, chunk_size, dim=0)
-        for i, chunk in enumerate(gathered_chunks):
-          if chunk.shape != output_tensors[i].shape:
-            chunk = chunk.reshape(output_tensors[i].shape)
-          output_tensors[i].copy_(chunk)
-
-    if rank == opts.rootRank:
-      return _ret_work(output_tensors_list[0])
+      return _ret_work(output_tensors_list)
     else:
-      return _ret_work([])
+      return _ret_work([[]])
 
   # Called by torch.distributed.scatter. Call site example:
   # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L4146

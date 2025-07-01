@@ -153,6 +153,9 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(('scalar', True), ('tensor', False))
   def test_gather(self, scalar):
+    # self._gather instantiates tensor i or [i], depending on the value of
+    # `scalar`, on device i. The results are gathered on device 0.
+    # All other devices get None.
     results = pjrt.run_multiprocess(self._gather, scalar)
     if scalar:
       expected = [
