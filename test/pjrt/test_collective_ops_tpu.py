@@ -131,13 +131,19 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
     dist.init_process_group("xla", init_method='xla://')
     device = torch_xla.device()
     world_size = xr.world_size()
+
+    # If scalar, tensors are tensor(i). Otherwise they are tensor([i]).
+    # The two cases follow different and should be tested separately.
     if scalar:
       item = xr.global_ordinal()
       dummy = -1.0
     else:
       item = [xr.global_ordinal()]
       dummy = [-1.0]
+  
     tensor = torch.tensor(item, device=device, dtype=torch.float)
+
+    # Instantiate tensors on device 0 to receive the results
     output_tensors = None
     if xr.global_ordinal() == 0:
       output_tensors = [
