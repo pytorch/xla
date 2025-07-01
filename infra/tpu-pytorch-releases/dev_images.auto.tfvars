@@ -6,7 +6,7 @@ dev_images = [
   },
   {
     accelerator = "tpu"
-    extra_tags  = ["tpu"]
+    extra_tags  = ["tpu_312"]
     python_version = "3.12"
   },
   {
