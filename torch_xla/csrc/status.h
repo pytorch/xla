@@ -69,8 +69,8 @@ namespace torch_xla {
 //     Previous error message. (at <cpp-source-file>:<line>)
 //     ...
 //
-#define XLA_RETURN_IF_ERROR(rexpr, ...)                                 \
-  do {                                                                  \
+#define XLA_RETURN_IF_ERROR(rexpr, ...)                                  \
+  do {                                                                   \
     XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_, {}, ##__VA_ARGS__) \
   } while (false)
 
@@ -99,7 +99,7 @@ namespace torch_xla {
 //     Previous error message. (at <cpp-source-file>:<line>)
 //     ...
 //
-#define XLA_ASSIGN_OR_RETURN(lhs, rexpr, ...)                        \
+#define XLA_ASSIGN_OR_RETURN(lhs, rexpr, ...)                         \
   XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_,                   \
                             lhs = std::move(XLA_STATUS_VAR_).value(), \
                             ##__VA_ARGS__)
