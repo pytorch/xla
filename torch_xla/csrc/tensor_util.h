@@ -32,7 +32,7 @@ absl::StatusOr<std::vector<xla::Literal>> ReleaseGilAndTransferData(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data);
 
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
-std::vector<at::Tensor> XlaDataToTensors(
+absl::StatusOr<std::vector<at::Tensor>> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     absl::Span<const at::ScalarType> dest_element_type);
 

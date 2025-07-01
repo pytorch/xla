@@ -922,11 +922,11 @@ absl::StatusOr<std::vector<xla::Literal>> ReleaseGilAndTransferData(
   return literals;
 }
 
-std::vector<at::Tensor> XlaDataToTensors(
+absl::StatusOr<std::vector<at::Tensor>> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     absl::Span<const at::ScalarType> dest_element_type) {
-  std::vector<xla::Literal> literals =
-      GetValueOrThrow(ReleaseGilAndTransferData(xla_data));
+  XLA_ASSIGN_OR_RETURN(std::vector<xla::Literal> literals,
+                       ReleaseGilAndTransferData(xla_data));
   std::vector<at::Tensor> tensors(literals.size());
   absl::BlockingCounter counter(literals.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
