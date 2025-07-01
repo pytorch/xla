@@ -1,12 +1,12 @@
 {
   "name": "tpu-contributor",
-  "image": "us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu",
+  "image": "us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.12_tpuvm",
   "runArgs": [
     "--privileged",
     "--net=host",
     "--shm-size=16G"
   ],
-  "initializeCommand": "docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu",
+  "initializeCommand": "docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.12_tpuvm",
   "customizations": {
     "vscode": {
       "extensions": [
