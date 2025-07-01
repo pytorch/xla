@@ -296,6 +296,7 @@ class BuildBazelExtension(build_ext.build_ext):
         'bazel', 'build', ext.bazel_target,
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
+
     build_cpp_tests = build_util.check_env_flag('BUILD_CPP_TESTS', default='0')
     if build_cpp_tests:
       bazel_argv.append('//:cpp_tests')
