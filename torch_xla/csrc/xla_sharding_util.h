@@ -45,6 +45,9 @@ class ShardingUtil {
   static bool EqualOpShardings(const xla::OpSharding& a,
                                const xla::OpSharding& b);
 
+  // Returns tile_assignment after normalizing
+  static std::vector<int64_t> NormalizeTileAssignment(const std::vector<int64_t>& tile_assignment);
+
   // Creates an xla::OpSharding. `tile_assignmnent` is required for TILED
   // `sharding_type` and `replication_groups` for `PARTIAL`.
   static xla::OpSharding CreateOpSharding(const py::list& tile_assignment,
