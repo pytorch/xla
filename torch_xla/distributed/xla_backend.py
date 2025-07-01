@@ -1,11 +1,12 @@
 import torch
 import torch.distributed as dist
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 from torch_xla._internal import rendezvous
 import logging
 import os
-from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions
+from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions, ReduceOptions
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
@@ -224,11 +225,24 @@ class ProcessGroupXla(ProcessGroup):
   def barrier(self, opts):
     return _ret_work([])
 
-  # Call site:
-  # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L1417
-  # `reduce` is not needed by DeepSpeed for now.
-  def reduce(self, *args):
-    raise NotImplementedError
+  # Called by torch.distributed.reduce. Call site example:
+  # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L2925
+  # Tensors are reduced but result is only saved on dst device.
+  # Input tensor is unchanged on all other devices.
+  # This is an inefficient operation. In order to avoid XLA deadlocks it
+  # performs redundant reductions on all devices and materializes the result.
+  def reduce(self, tensors: list[torch.Tensor], opts: ReduceOptions):
+    rank = xr.global_ordinal()
+    dst = opts.rootRank
+    reduce_type = self._get_reduce_type(opts.reduceOp)
+    for tensor in tensors:
+      result = xm.all_reduce(reduce_type, inputs=tensor)
+      torch_xla.sync()
+
+      if rank == dst:
+        tensor.copy_(result)
+
+    return _ret_work(tensors)
 
   def allreduce_coalesced(self, *args):
     raise NotImplementedError
