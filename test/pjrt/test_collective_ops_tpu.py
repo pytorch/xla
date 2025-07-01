@@ -140,7 +140,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
     else:
       item = [xr.global_ordinal()]
       dummy = [-1.0]
-  
+
     tensor = torch.tensor(item, device=device, dtype=torch.float)
 
     # Instantiate tensors on device 0 to receive the results
