@@ -111,6 +111,7 @@ def quantized_matmul_int8(
 ):
   assert zero_point is None, "Not implemented: zero_point is not supported."
   assert quant_block_size is None, "Not implemented: quant_block_size is not supported."
+  assert batch_block_size is not None and out_block_size is not None and in_block_size is not None
 
   # x_max_val cannot be [bs, 128] where 128 is the minormost dimension of the vreg because it'll be costly to store
   # [bs_block_size, 128] in VMEM ([bs_balock_size, 1:] will be padding).
@@ -121,10 +122,6 @@ def quantized_matmul_int8(
 
   orig_bs, orig_in_features = x.shape
   orig_out_features, _ = w.shape
-  if batch_block_size is None or out_block_size is None or in_block_size is None:
-    batch_block_size, out_block_size, in_block_size = get_tuned_block_sizes(
-        orig_bs, orig_out_features, orig_in_features,
-        jnp.dtype(x.dtype).name, quantize_activation)
 
   padded_bs = _next_multiple(orig_bs, batch_block_size)
   if orig_bs < padded_bs:
@@ -193,7 +190,11 @@ def quantized_matmul_int8(
       ),
   )
 
-  out = kernel(x, w, scalar, x_abs_max_val)
+  kernel_name = f'quantized_matmul_int8_{batch_block_size}_{out_block_size}_{in_block_size}'
+  # The named_scope is used for autotune. Different block sizes only impact the
+  # pallas_call.
+  with jax.named_scope(kernel_name):
+    out = kernel(x, w, scalar, x_abs_max_val)
 
   return out[:orig_bs, :orig_out_features]
 
@@ -212,70 +213,70 @@ def quantized_matmul_int8(
 #    - out_block_size
 #    - in_block_size
 TUNED_BLOCK_SIZES = {
-    (6, 16, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
-    (6, 16, 4096, 4096, 'bfloat16', True): (128, 2048, 2048),
-    (6, 16, 28672, 4096, 'bfloat16', True): (128, 1792, 2048),
-    (6, 16, 4096, 14336, 'bfloat16', True): (128, 512, 7168),
-    (6, 16, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
-    (6, 16, 8192, 1024, 'bfloat16', True): (128, 8192, 256),
-    (6, 16, 7168, 8192, 'bfloat16', True): (128, 512, 8192),
-    (6, 16, 8192, 3584, 'bfloat16', True): (128, 2048, 3584),
-    (6, 32, 6144, 4096, 'bfloat16', True): (128, 1536, 4096),
-    (6, 32, 4096, 4096, 'bfloat16', True): (128, 4096, 2048),
-    (6, 32, 28672, 4096, 'bfloat16', True): (128, 2048, 2048),
-    (6, 32, 4096, 14336, 'bfloat16', True): (128, 256, 14336),
-    (6, 32, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
-    (6, 32, 8192, 1024, 'bfloat16', True): (128, 1024, 1024),
-    (6, 32, 7168, 8192, 'bfloat16', True): (128, 3584, 2048),
-    (6, 32, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
-    (6, 64, 6144, 4096, 'bfloat16', True): (128, 512, 4096),
-    (6, 64, 4096, 4096, 'bfloat16', True): (128, 2048, 2048),
-    (6, 64, 28672, 4096, 'bfloat16', True): (128, 1792, 2048),
-    (6, 64, 4096, 14336, 'bfloat16', True): (128, 4096, 1024),
-    (6, 64, 1280, 8192, 'bfloat16', True): (128, 1280, 4096),
-    (6, 64, 8192, 1024, 'bfloat16', True): (128, 4096, 1024),
-    (6, 64, 7168, 8192, 'bfloat16', True): (128, 512, 8192),
-    (6, 64, 8192, 3584, 'bfloat16', True): (128, 2048, 1792),
-    (6, 128, 6144, 4096, 'bfloat16', True): (128, 1536, 4096),
-    (6, 128, 4096, 4096, 'bfloat16', True): (128, 1024, 4096),
-    (6, 128, 28672, 4096, 'bfloat16', True): (128, 1024, 4096),
-    (6, 128, 4096, 14336, 'bfloat16', True): (128, 2048, 2048),
-    (6, 128, 1280, 8192, 'bfloat16', True): (128, 640, 4096),
-    (6, 128, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
-    (6, 128, 7168, 8192, 'bfloat16', True): (128, 896, 8192),
-    (6, 128, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
-    (6, 256, 6144, 4096, 'bfloat16', True): (256, 1536, 4096),
-    (6, 256, 4096, 4096, 'bfloat16', True): (256, 512, 4096),
-    (6, 256, 28672, 4096, 'bfloat16', True): (256, 896, 4096),
-    (6, 256, 4096, 14336, 'bfloat16', True): (256, 4096, 2048),
-    (6, 256, 1280, 8192, 'bfloat16', True): (256, 1280, 4096),
-    (6, 256, 8192, 1024, 'bfloat16', True): (256, 2048, 1024),
-    (6, 256, 7168, 8192, 'bfloat16', True): (256, 512, 8192),
-    (6, 256, 8192, 3584, 'bfloat16', True): (256, 1024, 3584),
-    (6, 512, 6144, 4096, 'bfloat16', True): (512, 2048, 4096),
-    (6, 512, 4096, 4096, 'bfloat16', True): (512, 1024, 4096),
-    (6, 512, 28672, 4096, 'bfloat16', True): (512, 1792, 4096),
-    (6, 512, 4096, 14336, 'bfloat16', True): (512, 4096, 1792),
-    (6, 512, 1280, 8192, 'bfloat16', True): (512, 1280, 2048),
-    (6, 512, 8192, 1024, 'bfloat16', True): (512, 4096, 1024),
-    (6, 512, 7168, 8192, 'bfloat16', True): (512, 1792, 4096),
-    (6, 512, 8192, 3584, 'bfloat16', True): (512, 2048, 3584),
-    (6, 1024, 6144, 4096, 'bfloat16', True): (1024, 1024, 4096),
-    (6, 1024, 4096, 4096, 'bfloat16', True): (1024, 2048, 4096),
-    (6, 1024, 28672, 4096, 'bfloat16', True): (1024, 3584, 4096),
-    (6, 1024, 4096, 14336, 'bfloat16', True): (1024, 2048, 2048),
     (6, 1024, 1280, 8192, 'bfloat16', True): (1024, 1280, 2048),
-    (6, 1024, 8192, 1024, 'bfloat16', True): (256, 8192, 1024),
+    (6, 1024, 28672, 4096, 'bfloat16', True): (1024, 3584, 4096),
+    (6, 1024, 4096, 14336, 'bfloat16', True): (1024, 4096, 2048),
+    (6, 1024, 4096, 4096, 'bfloat16', True): (1024, 1024, 4096),
+    (6, 1024, 6144, 4096, 'bfloat16', True): (1024, 1536, 4096),
     (6, 1024, 7168, 8192, 'bfloat16', True): (1024, 1792, 8192),
+    (6, 1024, 8192, 1024, 'bfloat16', True): (256, 8192, 1024),
     (6, 1024, 8192, 3584, 'bfloat16', True): (1024, 2048, 3584),
-    (6, 2048, 6144, 4096, 'bfloat16', True): (256, 6144, 4096),
-    (6, 2048, 4096, 4096, 'bfloat16', True): (1024, 2048, 4096),
-    (6, 2048, 28672, 4096, 'bfloat16', True): (1024, 4096, 4096),
-    (6, 2048, 4096, 14336, 'bfloat16', True): (1024, 4096, 1024),
+    (6, 128, 1280, 8192, 'bfloat16', True): (128, 1280, 2048),
+    (6, 128, 28672, 4096, 'bfloat16', True): (128, 1024, 4096),
+    (6, 128, 4096, 14336, 'bfloat16', True): (128, 1024, 3584),
+    (6, 128, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 128, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
+    (6, 128, 7168, 8192, 'bfloat16', True): (128, 896, 4096),
+    (6, 128, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 128, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 16, 1280, 8192, 'bfloat16', True): (128, 1280, 2048),
+    (6, 16, 28672, 4096, 'bfloat16', True): (128, 1024, 4096),
+    (6, 16, 4096, 14336, 'bfloat16', True): (128, 1024, 3584),
+    (6, 16, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 16, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
+    (6, 16, 7168, 8192, 'bfloat16', True): (128, 896, 4096),
+    (6, 16, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 16, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
     (6, 2048, 1280, 8192, 'bfloat16', True): (512, 1280, 8192),
-    (6, 2048, 8192, 1024, 'bfloat16', True): (256, 8192, 1024),
+    (6, 2048, 28672, 4096, 'bfloat16', True): (1024, 4096, 4096),
+    (6, 2048, 4096, 14336, 'bfloat16', True): (1024, 4096, 2048),
+    (6, 2048, 4096, 4096, 'bfloat16', True): (1024, 2048, 4096),
+    (6, 2048, 6144, 4096, 'bfloat16', True): (1024, 3072, 4096),
     (6, 2048, 7168, 8192, 'bfloat16', True): (1024, 1792, 8192),
-    (6, 2048, 8192, 3584, 'bfloat16', True): (2048, 2048, 3584),
+    (6, 2048, 8192, 1024, 'bfloat16', True): (256, 8192, 1024),
+    (6, 2048, 8192, 3584, 'bfloat16', True): (1024, 2048, 3584),
+    (6, 256, 1280, 8192, 'bfloat16', True): (256, 1280, 2048),
+    (6, 256, 28672, 4096, 'bfloat16', True): (256, 1792, 4096),
+    (6, 256, 4096, 14336, 'bfloat16', True): (256, 1024, 3584),
+    (6, 256, 4096, 4096, 'bfloat16', True): (256, 1024, 4096),
+    (6, 256, 6144, 4096, 'bfloat16', True): (256, 1024, 4096),
+    (6, 256, 7168, 8192, 'bfloat16', True): (256, 1024, 4096),
+    (6, 256, 8192, 1024, 'bfloat16', True): (256, 4096, 1024),
+    (6, 256, 8192, 3584, 'bfloat16', True): (256, 1024, 3584),
+    (6, 32, 1280, 8192, 'bfloat16', True): (128, 1280, 2048),
+    (6, 32, 28672, 4096, 'bfloat16', True): (128, 1024, 4096),
+    (6, 32, 4096, 14336, 'bfloat16', True): (128, 1024, 3584),
+    (6, 32, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 32, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
+    (6, 32, 7168, 8192, 'bfloat16', True): (128, 896, 4096),
+    (6, 32, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 32, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 512, 1280, 8192, 'bfloat16', True): (512, 1280, 2048),
+    (6, 512, 28672, 4096, 'bfloat16', True): (512, 3584, 4096),
+    (6, 512, 4096, 14336, 'bfloat16', True): (512, 4096, 1792),
+    (6, 512, 4096, 4096, 'bfloat16', True): (512, 1024, 4096),
+    (6, 512, 6144, 4096, 'bfloat16', True): (512, 1024, 4096),
+    (6, 512, 7168, 8192, 'bfloat16', True): (512, 1024, 8192),
+    (6, 512, 8192, 1024, 'bfloat16', True): (512, 4096, 1024),
+    (6, 512, 8192, 3584, 'bfloat16', True): (512, 2048, 3584),
+    (6, 64, 1280, 8192, 'bfloat16', True): (128, 1280, 2048),
+    (6, 64, 28672, 4096, 'bfloat16', True): (128, 1024, 4096),
+    (6, 64, 4096, 14336, 'bfloat16', True): (128, 512, 7168),
+    (6, 64, 4096, 4096, 'bfloat16', True): (128, 1024, 4096),
+    (6, 64, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
+    (6, 64, 7168, 8192, 'bfloat16', True): (128, 896, 4096),
+    (6, 64, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 64, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
 }
 
 
@@ -290,21 +291,22 @@ def get_tpu_version() -> int:
   return int(kind[-1])
 
 
-def get_tuned_block_sizes(batch_size, n_output_features, n_input_features,
-                          activation_dtype, quantize_activation):
+def get_tuned_block_sizes(block_table, batch_size, n_output_features,
+                          n_input_features, activation_dtype,
+                          quantize_activation):
   """
     Retrieve the tuned block sizes for the given parameters.
-    
+
     Args:
         batch_size (int): The batch size.
         n_output_features (int): The number of output features.
         n_input_features (int): The number of input features.
         activation_dtype (str): The data type of the activation ('bfloat16' or 'float32').
         quantize_activation (bool): Whether to quantize the activation.
-        
+
     Returns:
         tuple: A tuple containing the batch_block_size, out_block_size, and in_block_size.
-    """
+  """
   key = (get_tpu_version(), batch_size, n_output_features, n_input_features,
          activation_dtype, quantize_activation)
-  return TUNED_BLOCK_SIZES.get(key, (128, 128, 128))
+  return block_table.get(key, (None, None, None))
