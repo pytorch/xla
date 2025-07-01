@@ -10,6 +10,8 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/status.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace at {
 // This function is defined in the codegenerated RegisterDispatchKey.cpp file.
@@ -92,7 +94,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDataPtr data,
       std::optional<at::ScalarType> logical_scalar_type) const override {
     // TODO(JackCaoG): handle the logical_scalar_type == nullptr case
-    return XlaDataToTensors({data}, {*logical_scalar_type})[0];
+    return GetValueOrThrow(XlaDataToTensors({data}, {*logical_scalar_type}))[0];
   }
 
   std::unique_ptr<torch::lazy::LoweringContext> CreateLoweringContext(
