@@ -1,12 +1,11 @@
 dev_images = [
   {
     accelerator = "tpu"
-    extra_tags  = ["tpu"]
     python_version = "3.10"
   },
   {
     accelerator = "tpu"
-    extra_tags  = ["tpu_312"]
+    extra_tags  = ["tpu"]
     python_version = "3.12"
   },
   {
