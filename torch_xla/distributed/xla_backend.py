@@ -1,10 +1,10 @@
 import torch
 import torch.distributed as dist
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 from torch_xla._internal import rendezvous
 import logging
-import os
 from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions, GatherOptions
 
 
@@ -250,15 +250,35 @@ class ProcessGroupXla(ProcessGroup):
     output.copy_(result)
     return _ret_work(output)
 
-  def gather(self, output_tensors_list: list[list[torch.Tensor]], input_tensor_list: list[torch.Tensor], opts: GatherOptions):
-    if xr.global_ordinal() == opts.rootRank:
-      outputs = output_tensors_list
+  def gather(self, output_tensors_list: list[list[torch.Tensor]],
+             input_tensor_list: list[torch.Tensor], opts: GatherOptions):
+    rank = xr.global_ordinal()
+    input_tensor = input_tensor_list[0]
+    is_scalar = input_tensor.dim() == 0
+    input_for_all_gather = (
+        input_tensor.clone().reshape(1) if is_scalar else input_tensor)
+
+    gathered_tensor = xm.all_gather(
+        input_for_all_gather, dim=0, groups=self._mesh, pin_layout=False)
+    torch_xla.sync()
+
+    if rank == opts.rootRank:
+      output_tensors = output_tensors_list[0]
+      if is_scalar:
+        for i in range(xr.world_size()):
+          output_tensors[i].copy_(gathered_tensor[i])
+      else:
+        chunk_size = input_tensor.shape[0]
+        gathered_chunks = torch.split(gathered_tensor, chunk_size, dim=0)
+        for i, chunk in enumerate(gathered_chunks):
+          if chunk.shape != output_tensors[i].shape:
+            chunk = chunk.reshape(output_tensors[i].shape)
+          output_tensors[i].copy_(chunk)
+
+    if rank == opts.rootRank:
+      return _ret_work(output_tensors_list[0])
     else:
-      outputs = [[torch.zeros_like(input_tensor)] * xr.world_size() for input_tensor in input_tensor_list]
-    return self.allgather(outputs, input_tensor_list)
-
-
-    raise NotImplementedError
+      return _ret_work([])
 
   # Called by torch.distributed.scatter. Call site example:
   # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L4146

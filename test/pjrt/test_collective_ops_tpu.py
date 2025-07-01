@@ -127,32 +127,46 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
       np.testing.assert_array_equal(value, [ordinal])
 
   @staticmethod
-  def _gather():
+  def _gather(scalar: bool = False):
     dist.init_process_group("xla", init_method='xla://')
     device = torch_xla.device()
     world_size = xr.world_size()
-    tensor = torch.tensor([xr.global_ordinal()],
-                          device=device,
-                          dtype=torch.float)
+    if scalar:
+      item = xr.global_ordinal()
+      dummy = -1.0
+    else:
+      item = [xr.global_ordinal()]
+      dummy = [-1.0]
+    tensor = torch.tensor(item, device=device, dtype=torch.float)
     output_tensors = None
     if xr.global_ordinal() == 0:
       output_tensors = [
-          torch.tensor([-1.0], device=device, dtype=torch.float)
+          torch.tensor(dummy, device=device, dtype=torch.float)
           for _ in range(world_size)
       ]
 
     dist.gather(tensor, output_tensors, dst=0)
-    if output_tensors is None:
+    if not output_tensors:
       return None
     else:
       return [t.cpu() for t in output_tensors]
 
-  def test_gather(self):
-    results = pjrt.run_multiprocess(self._gather)
-    expected = list(range(tpu.num_expected_global_devices()))
+  @parameterized.named_parameters(('scalar', True), ('tensor', False))
+  def test_gather(self, scalar):
+    results = pjrt.run_multiprocess(self._gather, scalar)
+    if scalar:
+      expected = [
+          torch.tensor(i, dtype=torch.float)
+          for i in range(tpu.num_expected_global_devices())
+      ]
+    else:
+      expected = [
+          torch.tensor([i], dtype=torch.float)
+          for i in range(tpu.num_expected_global_devices())
+      ]
     for ordinal, value in results.items():
       if ordinal == 0:
-        np.testing.assert_array_equal(value, expected)
+        torch.testing.assert_close(value, expected)
       else:
         assert value is None
 
