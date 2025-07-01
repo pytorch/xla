@@ -1100,10 +1100,8 @@ def _multi_queries_paged_attention_nonkernel(
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
   num_query_per_kv = num_query_heads // num_kv_heads
-
   lengths = lengths.cpu()
   page_indices = page_indices.cpu()
-
   outputs: List[torch.Tensor] = []
   for i in range(batch_size):
     kv_len = lengths[i]
