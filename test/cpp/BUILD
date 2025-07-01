@@ -169,8 +169,8 @@ ptxla_cc_test(
 )
 
 ptxla_cc_test(
-    name = "test_status_DontShowCppErrorContext",
-    srcs = ["test_status_DontShowCppErrorContext.cpp"],
+    name = "test_status_dont_show_cpp_error_context",
+    srcs = ["test_status_dont_show_cpp_error_context.cpp"],
     deps = [
         "//torch_xla/csrc:status",
         "//torch_xla/csrc/runtime:env_vars",
@@ -179,8 +179,8 @@ ptxla_cc_test(
 )
 
 ptxla_cc_test(
-    name = "test_status_ShowCppErrorContext",
-    srcs = ["test_status_ShowCppErrorContext.cpp"],
+    name = "test_status_show_cpp_error_context",
+    srcs = ["test_status_show_cpp_error_context.cpp"],
     deps = [
         "//torch_xla/csrc:status",
         "//torch_xla/csrc/runtime:env_vars",
