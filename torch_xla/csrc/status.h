@@ -71,7 +71,7 @@ namespace torch_xla {
 //
 #define XLA_RETURN_IF_ERROR(rexpr, ...)                                 \
   do {                                                                  \
-    XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR, {}, ##__VA_ARGS__) \
+    XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_, {}, ##__VA_ARGS__) \
   } while (false)
 
 // Propagates `rexpr`, in case it's a non-ok status. Otherwise, assign
@@ -100,8 +100,8 @@ namespace torch_xla {
 //     ...
 //
 #define XLA_ASSIGN_OR_RETURN(lhs, rexpr, ...)                        \
-  XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR,                   \
-                            lhs = std::move(XLA_STATUS_VAR).value(), \
+  XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_,                   \
+                            lhs = std::move(XLA_STATUS_VAR_).value(), \
                             ##__VA_ARGS__)
 
 // Maybe shows location information in the status message.
