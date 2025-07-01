@@ -1334,7 +1334,7 @@ class PyLoweringContext {
   std::string GetHloJsonText() {
     const xla::HloModuleProto& proto = computation.proto();
     std::string result;
-    google::protobuf::util::MessageToJsonString(proto, &result);
+    XLA_CHECK(google::protobuf::util::MessageToJsonString(proto, &result).ok());
     return result;
   }
 
