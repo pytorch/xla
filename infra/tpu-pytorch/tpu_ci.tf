@@ -9,5 +9,6 @@ module "v4_arc_cluster" {
   max_tpu_nodes     = 32
   github_repo_url   = "https://github.com/pytorch/xla"
   # Dockerfile for this image can be found at test/tpu/Dockerfile
+  # TODO(https://github.com/pytorch/xla/issues/8946): Update latest tag
   runner_image      = "gcr.io/tpu-pytorch/tpu-ci-runner:test"
 }
