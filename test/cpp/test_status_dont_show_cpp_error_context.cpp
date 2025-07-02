@@ -5,62 +5,178 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/status.h"
 
+// Reminder
+// ========
+//
+// This file is a companion to test_status_show_cpp_error_context.cpp.
+// This file specifically tests behavior when XLA_SHOW_CPP_ERROR_CONTEXT is
+// set to "false".
+//
+// If you add or delete a test in this file, please make the corresponding
+// change in test_status_show_cpp_error_context.cpp as well, adapting for
+// XLA_SHOW_CPP_ERROR_CONTEXT being "true" in that file.
+
 namespace torch_xla {
+namespace {
+
+using absl::Status;
+using absl::StatusCode;
+using absl::StatusOr;
+using absl::StrCat;
+
+constexpr char new_message[] = "New test error message";
+constexpr char message[] = "Test error message";
+constexpr char test_file[] = "test_file.cpp";
+constexpr int32_t line = 42;
+
+TEST(StatusWithoutErrorContextTest, MaybeThrowWithOkStatus) {
+  Status ok_status = absl::OkStatus();
+  EXPECT_NO_THROW(MaybeThrow(ok_status));
+}
+
+TEST(StatusWithoutErrorContextTest, MaybeThrowWithErrorStatus) {
+  Status error_status = absl::InvalidArgumentError(message);
+  EXPECT_THROW(MaybeThrow(error_status), std::runtime_error);
+}
+
+TEST(StatusWithoutErrorContextTest, GetValueOrThrowWithOkStatusOr) {
+  int value = 42;
+  StatusOr<int> status_or = value;
+  int result = GetValueOrThrow(std::move(status_or));
+  EXPECT_EQ(result, value);
+}
+
+TEST(StatusWithoutErrorContextTest, GetValueOrThrowWithErrorStatusOr) {
+  StatusOr<int> status_or = absl::InvalidArgumentError(message);
+  EXPECT_THROW(GetValueOrThrow(std::move(status_or)), std::runtime_error);
+}
 
 TEST(StatusWithoutErrorContextTest, MaybeWithLocationRetunsSameStatus) {
-  absl::Status error_status = absl::InvalidArgumentError("Test error message");
-  absl::Status result = MaybeWithLocation(error_status, "test_file.cpp", 42);
+  Status error_status = absl::InvalidArgumentError(message);
+  Status result = MaybeWithLocation(error_status, test_file, line);
   EXPECT_EQ(result, error_status);
 }
 
 TEST(StatusWithoutErrorContextTest, MaybeWithNewMessageEmptyNewMessage) {
-  absl::Status error_status = absl::InvalidArgumentError("Original error");
-  absl::Status result = MaybeWithNewMessage(error_status, "test_file.cpp", 42);
+  Status error_status = absl::InvalidArgumentError(message);
+  Status result = MaybeWithNewMessage(error_status, test_file, line);
   EXPECT_EQ(result, error_status);
 }
 
 TEST(StatusWithoutErrorContextTest, MaybeWithNewMessageNonEmptyNewMessage) {
-  constexpr char new_err_string[] = "New error message";
-  absl::Status error_status = absl::InvalidArgumentError("Original error");
-  absl::Status result =
-      MaybeWithNewMessage(error_status, "test_file.cpp", 42, new_err_string);
+  Status error_status = absl::InvalidArgumentError(message);
+  Status result =
+      MaybeWithNewMessage(error_status, test_file, line, new_message);
 
-  ASSERT_FALSE(result.ok());
   ASSERT_NE(result, error_status);
+  ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.code(), error_status.code());
-  EXPECT_EQ(result.message(), new_err_string);
+  EXPECT_EQ(result.message(), std::string_view(new_message));
+}
+
+TEST(StatusWithoutErrorContextTest, MacroReturnIfError) {
+  int value = 42;
+
+  auto test_function = [=]() -> StatusOr<int> {
+    Status ok_status = absl::OkStatus();
+    XLA_RETURN_IF_ERROR(ok_status);
+    return value;
+  };
+
+  StatusOr<int> result = test_function();
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(result.value(), value);
 }
 
 TEST(StatusWithoutErrorContextTest, MacroReturnIfErrorWithError) {
-  constexpr char err_string[] = "Test error";
-
-  auto test_function = [=]() -> absl::Status {
-    absl::Status error_status = absl::InvalidArgumentError(err_string);
+  auto test_function = [=]() -> Status {
+    Status error_status = absl::InvalidArgumentError(message);
     XLA_RETURN_IF_ERROR(error_status);
     return absl::OkStatus();
   };
 
-  absl::Status result = test_function();
+  Status result = test_function();
   ASSERT_FALSE(result.ok());
-  EXPECT_EQ(result.code(), absl::StatusCode::kInvalidArgument);
-  EXPECT_EQ(result.message(), err_string);
+  EXPECT_EQ(result.code(), StatusCode::kInvalidArgument);
+  EXPECT_EQ(result.message(), std::string_view(message));
 }
 
-TEST(StatusWithoutErrorContextTest, MacroAssignOrReturnWithError) {
-  auto test_function = []() -> absl::StatusOr<int> {
-    absl::StatusOr<int> status_or = absl::InvalidArgumentError("Test error");
+TEST(StatusWithErrorContextTest, MacroReturnIfErrorWithNestedError) {
+  auto test_function = []() -> Status {
+    Status error_status = absl::InvalidArgumentError(message);
+    XLA_RETURN_IF_ERROR(error_status);
+    return absl::OkStatus();
+  };
+
+  auto outer_test_function = [&]() -> Status {
+    XLA_RETURN_IF_ERROR(test_function());
+    return absl::OkStatus();
+  };
+
+  Status result = outer_test_function();
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(result.code(), StatusCode::kInvalidArgument);
+  EXPECT_EQ(result.message(), std::string_view(message));
+}
+
+TEST(StatusWithoutErrorContextTest, MacroReturnIfErrorWithErrorWithNewMessage) {
+  auto test_function = [=]() -> Status {
+    Status error_status = absl::InvalidArgumentError(message);
+    XLA_RETURN_IF_ERROR(error_status, new_message);
+    return absl::OkStatus();
+  };
+
+  Status result = test_function();
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(result.code(), StatusCode::kInvalidArgument);
+  EXPECT_EQ(result.message(), std::string_view(new_message));
+}
+
+TEST(StatusWithoutErrorContextTest, MacroAssignOrReturn) {
+  int initial_value = 42;
+  int expected_value = initial_value * 2;
+
+  auto test_function = [=]() -> StatusOr<int> {
+    StatusOr<int> status_or = initial_value;
     XLA_ASSIGN_OR_RETURN(int value, status_or);
     return value * 2;
   };
 
-  absl::StatusOr<int> result = test_function();
+  StatusOr<int> result = test_function();
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(result.value(), expected_value);
+}
+
+TEST(StatusWithoutErrorContextTest, MacroAssignOrReturnWithError) {
+  auto test_function = []() -> StatusOr<int> {
+    StatusOr<int> status_or = absl::InvalidArgumentError(message);
+    XLA_ASSIGN_OR_RETURN(int value, status_or);
+    return value * 2;
+  };
+
+  StatusOr<int> result = test_function();
   ASSERT_FALSE(result.ok());
-  EXPECT_EQ(result.status().code(), absl::StatusCode::kInvalidArgument);
+  EXPECT_EQ(result.status().code(), StatusCode::kInvalidArgument);
+  EXPECT_EQ(result.status().message(), std::string_view(message));
+}
+
+TEST(StatusWithoutErrorContextTest,
+     MacroAssignOrReturnWithErrorWithNewMessage) {
+  auto test_function = []() -> StatusOr<int> {
+    StatusOr<int> status_or = absl::InvalidArgumentError(message);
+    XLA_ASSIGN_OR_RETURN(int value, status_or, new_message);
+    return value * 2;
+  };
+
+  StatusOr<int> result = test_function();
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(result.status().code(), StatusCode::kInvalidArgument);
+  EXPECT_EQ(result.status().message(), std::string_view(new_message));
 }
 
 TEST(StatusWithoutErrorContextTest, MacroErrorWithLocation) {
-  absl::Status error_status = absl::InvalidArgumentError("Test error");
-  absl::Status result = XLA_ERROR_WITH_LOCATION(error_status);
+  Status error_status = absl::InvalidArgumentError(message);
+  Status result = XLA_ERROR_WITH_LOCATION(error_status);
   EXPECT_EQ(result, error_status);
 }
 
@@ -69,6 +185,7 @@ void SetUp() {
          /* replace= */ 1);
 }
 
+}  // namespace
 }  // namespace torch_xla
 
 int main(int argc, char **argv) {

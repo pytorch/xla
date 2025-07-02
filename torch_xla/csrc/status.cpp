@@ -63,13 +63,11 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
   //
   // This should give more context for developers. Showing the older error
   // messages alongside their debug information.
-  std::string context;
-  if (ShouldShowCppErrorContext()) {
-    context = LocationStrWithSpace(file, line);
-    if (!new_message.empty()) {
-      context = absl::StrCat(context, "\nFrom Error: ", old_message);
-    }
-  }
+  std::string location = LocationStrWithSpace(file, line);
+  std::string context =
+      (ShouldShowCppErrorContext() && !new_message.empty())
+          ? std::string(absl::StrCat(location, "\nFrom Error: ", old_message))
+          : std::string();
 
   return absl::Status(status.code(), absl::StrCat(message, context));
 }
