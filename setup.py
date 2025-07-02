@@ -65,7 +65,6 @@ import build_util
 
 import platform
 
-print(os.getcwd())
 platform_machine = platform.machine()
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
