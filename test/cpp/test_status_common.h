@@ -216,6 +216,27 @@ TEST_P(StatusTest, MacroReturnIfErrorWithErrorWithNewMessage) {
   }
 }
 
+TEST_P(StatusTest, MacroReturnIfErrorWithLocationWithError) {
+  int32_t errline = 0;
+
+  auto test_function = [&errline]() -> absl::Status {
+    absl::Status error_status = absl::InvalidArgumentError(message);
+    errline = __LINE__ + 1;
+    XLA_RETURN_IF_ERROR_WITH_LOCATION(error_status);
+    return absl::OkStatus();
+  };
+
+  absl::Status result = test_function();
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(result.code(), absl::StatusCode::kInvalidArgument);
+  if (IsShowCppErrorContextMode()) {
+    EXPECT_EQ(result.message(), absl::StrCat("Test error message (at ",
+                                             __FILE__, ":", errline, ")"));
+  } else {
+    EXPECT_EQ(result.message(), std::string_view(message));
+  }
+}
+
 TEST_P(StatusTest, MacroAssignOrReturn) {
   int initial_value = 42;
   int expected_value = initial_value * 2;
@@ -264,6 +285,28 @@ TEST_P(StatusTest, MacroAssignOrReturnWithErrorWithNewMessage) {
                            errline, ")\nFrom Error: Test error message"));
   } else {
     EXPECT_EQ(result.status().message(), std::string_view(new_message));
+  }
+}
+
+TEST_P(StatusTest, MacroAssignOrReturnWithLocationWithError) {
+  int32_t errline = 0;
+
+  auto test_function = [&errline]() -> absl::StatusOr<int> {
+    absl::StatusOr<int> status_or = absl::InvalidArgumentError(message);
+    errline = __LINE__ + 1;
+    XLA_ASSIGN_OR_RETURN_WITH_LOCATION(int value, status_or);
+    return value * 2;
+  };
+
+  absl::StatusOr<int> result = test_function();
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(result.status().code(), absl::StatusCode::kInvalidArgument);
+  if (IsShowCppErrorContextMode()) {
+    EXPECT_EQ(
+        result.status().message(),
+        absl::StrCat("Test error message (at ", __FILE__, ":", errline, ")"));
+  } else {
+    EXPECT_EQ(result.status().message(), std::string_view(message));
   }
 }
 
