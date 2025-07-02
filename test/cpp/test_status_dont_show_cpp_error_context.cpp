@@ -106,7 +106,7 @@ TEST(StatusWithErrorContextTest, MacroReturnIfErrorWithNestedError) {
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(message));
   };
 
-  auto test_function = []() -> Status {
+  auto test_function = [&]() -> Status {
     XLA_RETURN_IF_ERROR(inner_test_function());
     return absl::OkStatus();
   };
