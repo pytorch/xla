@@ -1,5 +1,6 @@
 import torch
 import torch.distributed as dist
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 from torch_xla._internal import rendezvous
@@ -245,14 +246,7 @@ class ProcessGroupXla(ProcessGroup):
     for t in tensors:
       result_t = xm.collective_permute(
           t, pairs=[[xr.global_ordinal(), dst_rank]])
-      # Every process must have the same IR, otherwise they deadlock. But in
-      # the receiving process the provided tensor receives the result, while
-      # in the sending process it is unchanged. The solution used here is to
-      # have every process copy a linear combination of the two tensors, but
-      # the coefficients differ so in send the output is t, the original
-      # tensor, while in recv the output is result_t.
-      with torch.no_grad():
-        t.copy_(result_t * 0.0 + t * 1.0)
+      torch_xla.sync()
       results.append(result_t)
     return _ret_work(results)
 
@@ -266,9 +260,9 @@ class ProcessGroupXla(ProcessGroup):
     for ot in out_tensors:
       result_t = xm.collective_permute(
           ot, pairs=[[src_rank, xr.global_ordinal()]])
-      # See send() for an explanation.
+      torch_xla.sync()
       with torch.no_grad():
-        ot.copy_(result_t * 1.0 + ot * 0.0)
+        ot.copy_(result_t)
       results.append(result_t)
     return _ret_work(results)
 

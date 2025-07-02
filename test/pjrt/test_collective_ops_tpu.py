@@ -356,7 +356,8 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       dist.send(sending_tensor, (index + 1) % world_size)
     return receiving_tensor.cpu()
 
-  @absltest.skipUnless(tpu.num_available_devices() % 2 == 0)
+  @absltest.skipUnless(tpu.num_available_devices() % 2 == 0,
+                       "Send/Recv test requires even number of devices")
   def test_send_recv_pipeline(self):
     """Send tensors on first N/2 devices to second N/2 devices."""
     results = pjrt.run_multiprocess(self._send_recv_pipeline)
@@ -365,7 +366,8 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       expected = ordinal if ordinal < world_size // 2 else ordinal - world_size // 2
       np.testing.assert_array_equal(value, [expected])
 
-  @absltest.skipUnless(tpu.num_available_devices() % 2 == 0)
+  @absltest.skipUnless(tpu.num_available_devices() % 2 == 0,
+                       "Send/Recv test requires even number of devices")
   def test_send_recv_permute(self):
     """Send tensor on device i to i + 1 (module world size)."""
     results = pjrt.run_multiprocess(self._send_recv_permute)
