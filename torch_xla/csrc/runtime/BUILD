@@ -24,6 +24,7 @@ cc_library(
         ":env_vars",
         ":ifrt_computation_client",
         ":pjrt_computation_client",
+        "//torch_xla/csrc:status",
         "@com_google_absl//absl/log:absl_check",
         "@tsl//tsl/platform:stacktrace",
     ],

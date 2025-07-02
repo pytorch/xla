@@ -115,10 +115,12 @@ std::vector<std::string> PjRtComputationClient::PjRtDevicesToString(
   return strs;
 }
 
-PjRtComputationClient::PjRtComputationClient() {
+PjRtComputationClient::PjRtComputationClient(PrivateUse) {}
+
+absl::Status PjRtComputationClient::Initialize() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
-  std::tie(client_, coordinator_) =
-      GetValueOrThrow(InitializePjRt(device_type));
+  XLA_ASSIGN_OR_RETURN(std::tie(client_, coordinator_),
+                       InitializePjRt(device_type));
 
   // PjRtDevice IDs are not guaranteed to be dense, so we need to track
   // a device's global ordinal separately from its device ID. Order the
@@ -137,6 +139,15 @@ PjRtComputationClient::PjRtComputationClient() {
   auto tracked_devices = GetLocalDevices();
   tracked_devices.emplace_back(spmd_device_str);
   operation_manager_ = std::move(OperationManager(std::move(tracked_devices)));
+
+  return absl::OkStatus();
+}
+
+absl::StatusOr<absl_nonnull std::unique_ptr<PjRtComputationClient>>
+PjRtComputationClient::Create() {
+  auto pjrt_client = std::make_unique<PjRtComputationClient>(PrivateUse());
+  XLA_RETURN_IF_ERROR(pjrt_client->Initialize());
+  return std::move(pjrt_client);
 }
 
 PjRtComputationClient::~PjRtComputationClient() {
