@@ -110,9 +110,14 @@ TEST(StatusWithErrorContextTest, MacroReturnIfErrorWithError) {
 }
 
 TEST(StatusWithErrorContextTest, MacroReturnIfErrorWithNestedError) {
-  auto test_function = []() -> Status {
-    Status error_status = absl::InvalidArgumentError(message);
-    XLA_RETURN_IF_ERROR(error_status);
+  int32_t errline = 0;
+  auto inner_test_function = [&errline]() -> Status {
+    errline = __LINE__ + 1;
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(message));
+  };
+
+  auto test_function = [&]() -> Status {
+    XLA_RETURN_IF_ERROR(inner_test_function());
     return absl::OkStatus();
   };
 
@@ -124,7 +129,8 @@ TEST(StatusWithErrorContextTest, MacroReturnIfErrorWithNestedError) {
   Status result = outer_test_function();
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.code(), StatusCode::kInvalidArgument);
-  EXPECT_EQ(result.message(), std::string_view(message));
+  EXPECT_EQ(result.message(),
+            StrCat("Test error message (at ", __FILE__, ":", errline, ")"));
 }
 
 TEST(StatusWithErrorContextTest, MacroReturnIfErrorWithErrorWithNewMessage) {
