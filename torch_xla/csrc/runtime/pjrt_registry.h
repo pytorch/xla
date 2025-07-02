@@ -21,7 +21,8 @@ class PjRtPlugin {
 void RegisterPjRtPlugin(std::string name,
                         std::shared_ptr<const PjRtPlugin> plugin);
 
-std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
+absl::StatusOr<std::tuple<absl_nonnull std::unique_ptr<xla::PjRtClient>,
+                          std::unique_ptr<XlaCoordinator>>>
 InitializePjRt(const std::string& device_type);
 
 }  // namespace runtime
