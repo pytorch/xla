@@ -80,6 +80,7 @@ cd $_SCRIPT_DIR/..
 pip uninstall torch_xla torchax torch_xla2 -y
 
 # Build the wheel too, which is useful for other testing purposes.
+rm -f torch_xla.egg-info/SOURCES.txt
 python3 setup.py bdist_wheel
 
 # Link the source files for local development.
