@@ -68,7 +68,7 @@ import platform
 platform_machine = platform.machine()
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-
+print(base_dir)
 # How to update libtpu and JAX to a new nightly build
 # ===================================================
 #
