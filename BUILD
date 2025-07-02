@@ -78,7 +78,6 @@ test_suite(
         "//test/cpp:test_tensor",
         "//test/cpp:test_xla_sharding",
         "//test/cpp:test_runtime",
-        "//test/cpp:test_status",
         "//test/cpp:test_status_dont_show_cpp_error_context",
         "//test/cpp:test_status_show_cpp_error_context",
         "//torch_xla/csrc/runtime:pjrt_computation_client_test",

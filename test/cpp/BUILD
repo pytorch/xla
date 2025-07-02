@@ -160,15 +160,6 @@ ptxla_cc_test(
 )
 
 ptxla_cc_test(
-    name = "test_status",
-    srcs = ["test_status.cpp"],
-    deps = [
-        "//torch_xla/csrc:status",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-ptxla_cc_test(
     name = "test_status_dont_show_cpp_error_context",
     srcs = ["test_status_dont_show_cpp_error_context.cpp"],
     deps = [
