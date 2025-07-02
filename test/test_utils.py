@@ -386,12 +386,16 @@ class XlaTestCase(unittest.TestCase):
     if device is None:
       device = torch_xla.device()
     tensors = xu.as_list(tensors)
+    cpu_tensors = [
+        t.clone().detach().requires_grad_(t.requires_grad) for t in tensors
+    ]
     xla_tensors = [
         x.to(device).detach().requires_grad_(x.requires_grad) for x in tensors
     ]
-    results = xu.as_list(fn(*tensors))
+    cpu_results = xu.as_list(fn(*cpu_tensors))
     xla_results = xu.as_list(fn(*xla_tensors))
-    self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
+    self.compareResults(
+        cpu_results, xla_results, rel_err=rel_err, abs_err=abs_err)
 
 
 @contextmanager

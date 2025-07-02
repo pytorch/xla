@@ -8,7 +8,7 @@ This means, with **torchax** you can:
 * Run PyTorch code on TPUs with as little as 2 lines of code change.
 * Call a JAX function from a PyTorch function, passing in `jax.Array`s.
 * Call a PyTorch function from a JAX function, passing in a `torch.Tensor`s.
-* Use JAX features such as `jax.grad`, `optax`, and `GSMPD` to train a PyTorch
+* Use JAX features such as `jax.grad`, `optax`, and `GSPMD` to train a PyTorch
   model.
 * Use a PyTorch model as feature extractor and use it with a JAX model.
 etc etc.

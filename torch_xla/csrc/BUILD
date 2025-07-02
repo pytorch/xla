@@ -126,6 +126,7 @@ ptxla_cc_library(
         ":shape_builder",
         ":shape_helper",
         ":version",
+        "//torch_xla/csrc:hash_util",
         "//torch_xla/csrc:thread_pool",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:stablehlo_helper",
@@ -243,6 +244,8 @@ ptxla_cc_library(
     srcs = ["shape_builder.cpp"],
     hdrs = ["shape_builder.h"],
     deps = [
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/base:nullability",
         "@com_google_absl//absl/types:span",
         "@xla//xla:shape_util",
         "@xla//xla:types",
@@ -261,6 +264,7 @@ ptxla_cc_library(
     deps = [
         ":device",
         ":dtype",
+        ":status",
         ":tensor",
         ":version",
         "//torch_xla/csrc/runtime",
@@ -334,6 +338,15 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "hash_util",
+    srcs = ["hash_util.cpp"],
+    hdrs = ["hash_util.h"],
+    deps = [
+        "@torch//:headers",
+    ],
+)
+
 ptxla_cc_library(
     name = "unwrap_data",
     srcs = ["unwrap_data.cpp"],
@@ -351,5 +364,17 @@ ptxla_cc_library(
     deps = [
         "@local_config_python//:python_headers",
         "@pybind11//:pybind11_embed",
+    ],
+)
+
+cc_library(
+    name = "status",
+    srcs = ["status.cpp"],
+    hdrs = ["status.h"],
+    deps = [
+        "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc/runtime:env_vars",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/status:statusor",
     ],
 )

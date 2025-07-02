@@ -2495,6 +2495,7 @@ def _aten_diag(input, diagonal=0):
 
 # aten.diagonal
 @op(torch.ops.aten.diagonal)
+@op(torch.ops.aten.diagonal_copy)
 def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
   return jnp.diagonal(input, offset, dim1, dim2)
 

@@ -16,6 +16,7 @@ class DecoderOnlyConfig:
   intermediate_size: int = 32 * 1024
   vocab_size: int = 3200
   use_flash_attention: bool = False
+  is_decoder_layer_pure: bool = False  # Used specifically for scan_layers, to enable caching of the layer function.
 
 
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:

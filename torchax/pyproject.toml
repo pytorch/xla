@@ -40,11 +40,11 @@ classifiers = [
 path = "torchax/__init__.py"
 
 [project.optional-dependencies]
-cpu = ["jax[cpu]>=0.4.30", "jax[cpu]"]
+cpu = ["jax[cpu]>=0.6.2", "jax[cpu]"]
 # Add libtpu index `-f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html`
-tpu = ["jax[cpu]>=0.4.30", "jax[tpu]"]
-cuda = ["jax[cpu]>=0.4.30", "jax[cuda12]"]
-odml = ["jax[cpu]>=0.4.30", "jax[cpu]"]
+tpu = ["jax[cpu]>=0.6.2", "jax[tpu]"]
+cuda = ["jax[cpu]>=0.6.2", "jax[cuda12]"]
+odml = ["jax[cpu]>=0.6.2", "jax[cpu]"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["torchax"]

@@ -57,12 +57,10 @@ class AtenSource : public TensorSource {
     // TODO(ysiraichi): check, first, if tensor lives in a device that the
     // current PjRt client has access. If so, we don't need to go through the
     // CPU.
-    // Set `copy` to false becuase torch can figure out if it needs to copy the
-    // data or not.
     tensor_ = std::move(
         tensor.to(at::TensorOptions().device(at::kCPU).dtype(target_torch_type),
                   /*non_blocking=*/false,
-                  /*copy=*/false, at::MemoryFormat::Contiguous));
+                  /*copy=*/true, at::MemoryFormat::Contiguous));
   }
 
   const void* data() const override { return tensor_.const_data_ptr(); }

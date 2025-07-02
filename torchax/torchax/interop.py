@@ -81,6 +81,12 @@ class JittableModule(torch.nn.Module):
           for extra_keys in v[1:]:
             del self.params[extra_keys]
 
+  @property
+  def __class__(self):
+    # Lie about the class type so that
+    # isinstance(jittable_module, self._model.__class__) works
+    return self._model.__class__
+
   def __call__(self, *args, **kwargs):
     return self.forward(*args, **kwargs)
 

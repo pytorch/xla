@@ -7,10 +7,43 @@ from functorch.compile import default_partition
 
 from torch_xla.experimental.scan import scan
 
+# Because the given function (first layer) need to be wrapped to fit the `scan` API (see _create_one_layer_fn),
+# the wrapped function are different even if the given layers are the same.
+# We cache the wrapped function so that the same layer has the same wrapped function
+# so that the `scan` cache works correctly.
+_ONE_LAYER_CACHE = {}
+
+
+def _create_or_get_cached_one_layer_fn(first_layer: nn.Module,
+                                       partition_fn,
+                                       is_layer_pure: bool = False):
+  cache_key = (id(partition_fn), id(first_layer))
+  if is_layer_pure and cache_key in _ONE_LAYER_CACHE:
+    return _ONE_LAYER_CACHE[cache_key]
+
+  # Use the first layer as the example/template layer.
+  from copy import deepcopy
+  example_layer = deepcopy(first_layer)
+
+  # Define the function to apply at each step
+  def one_layer_fn(carry, params_buffers):
+    # Apply the current layer's weights and biases to the example layer,
+    # then run the resulting layer.
+    output = torch.func.functional_call(  # type: ignore
+        example_layer, params_buffers, carry, strict=True)
+    return output, None
+
+  if is_layer_pure:
+    # Cache the function for pure layers to avoid recomputing it.
+    _ONE_LAYER_CACHE[cache_key] = one_layer_fn
+
+  return one_layer_fn
+
 
 def scan_layers(layers: Iterable[torch.nn.Module],
                 input_data,
-                partition_fn=default_partition):
+                partition_fn=default_partition,
+                is_layer_pure=False):
   """Runs each layer in `layers` sequentially, starting with `input_data`.
 
   `input_data` is provided as input to the first layer in `layers`. The output of one
@@ -34,13 +67,18 @@ def scan_layers(layers: Iterable[torch.nn.Module],
 
     input_data: The input to be given to the first layer from `layers`.
 
-    partition_fn: (Optional[Callable]) The graph parition function passed to AOTAutograd.
+    partition_fn: (Optional[Callable]) The graph partition function passed to AOTAutograd.
       Since this function uses AOTAutograd to trace `fn`, you may override what computation
       happen in the forward and backward passes by specifying different partition functions.
       `default_partition` implies no activation checkpointing. You may specify
       `functorch.compile.min_cut_rematerialization_partition` to use min-cut based
       activation checkpointing. You may also write your own partitioner to insert any custom
       logic such as host offloading of activations.
+    
+    is_layer_pure: (Optional[bool]) If True, the function assumes that the layers are pure
+      functions, meaning that they do not have any side effects and do not depend on any
+      external state. This allows tracing caching.
+      
 
   Returns:
     The output of the last layer from `layers`.
@@ -76,21 +114,16 @@ def scan_layers(layers: Iterable[torch.nn.Module],
   stacked_buffers = tree_map(lambda *tensors: torch.stack(tensors, dim=0),
                              *buffers_list)
 
-  # Use the first layer as the example/template layer.
-  from copy import deepcopy
-  example_layer = deepcopy(first_layer)
-
-  # Define the function to apply at each step
-  def one_layer(carry, params_buffers):
-    # Apply the current layer's weights and biases to the example layer,
-    # then run the resulting layer.
-    output = torch.func.functional_call(  # type: ignore
-        example_layer, params_buffers, carry, strict=True)
-    return output, None
+  one_layer = _create_or_get_cached_one_layer_fn(first_layer, partition_fn,
+                                                 is_layer_pure)
 
   stacked_params_buffers = (stacked_params, stacked_buffers)
   final_carry, _ = scan(
-      one_layer, input_data, stacked_params_buffers, partition_fn=partition_fn)
+      one_layer,
+      input_data,
+      stacked_params_buffers,
+      partition_fn=partition_fn,
+      is_fn_pure=is_layer_pure)
 
   return final_carry
 

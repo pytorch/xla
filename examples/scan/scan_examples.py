@@ -46,10 +46,7 @@ def scan_example_pytree():
 
   # 2) Define our input PyTree, which in this case is just a dictionary with one leaf:
   #    - 'values' is a 1D tensor representing data points we want to scan over.
-  xs = {
-      'values':
-          torch.arange(1, 6, dtype=torch.float32, device='xla')
-  }
+  xs = {'values': torch.arange(1, 6, dtype=torch.float32, device='xla')}
 
   # Here, xs['values'] has shape [5]. The `scan` function will automatically slice
   # out one element (shape []) each iteration.

@@ -180,42 +180,10 @@ class GRU(nn.GRU):
         init['b_ih'] = getattr(self, f'bias_ih_l{layer}', None)
         init['b_hh'] = getattr(self, f'bias_hh_l{layer}', None)
 
-      # Define the step function for scanning over time.
-      # x_t: (batch, current_input_size)
-      # h: (batch, hidden_size)
-      # carry: dictionary containing h and weights/biases.
-      def step_fn(carry, x_t):
-        h = carry['h']
-        w_ih = carry['w_ih']
-        w_hh = carry['w_hh']
-        b_ih = carry.get('b_ih')
-        b_hh = carry.get('b_hh')
-
-        # Get input projections
-        x_linear = F.linear(x_t, w_ih, b_ih)
-        x_r, x_z, x_n = x_linear.chunk(3, dim=1)
-
-        # Get hidden projections
-        h_linear = F.linear(h, w_hh, b_hh)
-        h_r, h_z, h_n = h_linear.chunk(3, dim=1)
-
-        # Compute reset and update gates
-        r = torch.sigmoid(x_r + h_r)
-        z = torch.sigmoid(x_z + h_z)
-
-        # Compute the new gate with proper reset gate application
-        n = torch.tanh(x_n + r * h_n)
-
-        # Update hidden state
-        h_new = (1 - z) * n + z * h
-
-        carry_new = {**carry, 'h': h_new}
-
-        return carry_new, h_new
-
       # Use scan to iterate over the time dimension.
       # Here, scan(fn, init, xs) applies step_fn to each time slice of `output`.
-      final_carry, layer_output = scan(fn=step_fn, init=init, xs=output)
+      final_carry, layer_output = scan(
+          fn=_gru_step_fn, init=init, xs=output, is_fn_pure=True)
       hidden_states.append(final_carry['h'])
       # Apply dropout on the output of the current layer (if not the final layer).
       if layer < self.num_layers - 1 and self.dropout > 0:
@@ -238,3 +206,39 @@ class GRU(nn.GRU):
       output = output.transpose(0, 1)
 
     return output, hidden
+
+
+# Define the step function for scanning over time.
+# This function has to be in global scope to take advantage of the `scan` tracing cache.
+#
+# x_t: (batch, current_input_size)
+# h: (batch, hidden_size)
+# carry: dictionary containing h and weights/biases.
+def _gru_step_fn(carry, x_t):
+  h = carry['h']
+  w_ih = carry['w_ih']
+  w_hh = carry['w_hh']
+  b_ih = carry.get('b_ih')
+  b_hh = carry.get('b_hh')
+
+  # Get input projections
+  x_linear = F.linear(x_t, w_ih, b_ih)
+  x_r, x_z, x_n = x_linear.chunk(3, dim=1)
+
+  # Get hidden projections
+  h_linear = F.linear(h, w_hh, b_hh)
+  h_r, h_z, h_n = h_linear.chunk(3, dim=1)
+
+  # Compute reset and update gates
+  r = torch.sigmoid(x_r + h_r)
+  z = torch.sigmoid(x_z + h_z)
+
+  # Compute the new gate with proper reset gate application
+  n = torch.tanh(x_n + r * h_n)
+
+  # Update hidden state
+  h_new = (1 - z) * n + z * h
+
+  carry_new = {**carry, 'h': h_new}
+
+  return carry_new, h_new

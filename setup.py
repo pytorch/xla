@@ -108,12 +108,12 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = True  # Whether to use nightly or stable libtpu and JAX.
 
-_libtpu_version = '0.0.17'
-_libtpu_date = '20250611'
+_libtpu_version = '0.0.18'
+_libtpu_date = '20250617'
 
 _jax_version = '0.6.2'
 _jaxlib_version = '0.6.2'
-_jax_date = '20250611'  # Date for jax and jaxlib.
+_jax_date = '20250617'  # Date for jax and jaxlib.
 
 if USE_NIGHTLY:
   _libtpu_version += f".dev{_libtpu_date}"
@@ -151,7 +151,7 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.8.0')
+  version = os.getenv('TORCH_XLA_VERSION', '2.9.0')
   if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
       version += '+git' + xla_git_sha[:7]
@@ -403,7 +403,7 @@ def _get_jax_install_requirements():
   jax = f'jax @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/jax/jax-{_jax_version}-py3-none-any.whl'
 
   jaxlib = []
-  for python_minor_version in [9, 10, 11]:
+  for python_minor_version in [9, 10, 11, 12]:
     jaxlib.append(
         f'jaxlib @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/jaxlib/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
     )
@@ -434,7 +434,7 @@ setup(
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",
     ],
-    python_requires=">=3.8.0",
+    python_requires=">=3.10.0",
     packages=packages_to_include,
     package_dir=package_dir_mapping,
     ext_modules=[
