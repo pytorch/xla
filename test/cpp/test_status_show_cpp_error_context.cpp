@@ -135,6 +135,7 @@ TEST(StatusWithErrorContextTest, MacroReturnIfErrorWithNestedError) {
 
 TEST(StatusWithErrorContextTest, MacroReturnIfErrorWithErrorWithNewMessage) {
   int32_t errline = 0;
+
   auto test_function = [&errline]() -> Status {
     Status error_status = absl::InvalidArgumentError(message);
     errline = __LINE__ + 1;
@@ -148,6 +149,23 @@ TEST(StatusWithErrorContextTest, MacroReturnIfErrorWithErrorWithNewMessage) {
   EXPECT_EQ(result.message(),
             StrCat("New test error message (at ", __FILE__, ":", errline,
                    ")\nFrom Error: Test error message"));
+}
+
+TEST(StatusWithErrorContextTest, MacroReturnIfErrorWithLocationWithError) {
+  int32_t errline = 0;
+
+  auto test_function = [&errline]() -> Status {
+    Status error_status = absl::InvalidArgumentError(message);
+    errline = __LINE__ + 1;
+    XLA_RETURN_IF_ERROR_WITH_LOCATION(error_status);
+    return absl::OkStatus();
+  };
+
+  Status result = test_function();
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(result.code(), StatusCode::kInvalidArgument);
+  EXPECT_EQ(result.message(),
+            StrCat("Test error message (at ", __FILE__, ":", errline, ")"));
 }
 
 TEST(StatusWithErrorContextTest, MacroAssignOrReturn) {
@@ -194,6 +212,23 @@ TEST(StatusWithErrorContextTest, MacroAssignOrReturnWithErrorWithNewMessage) {
   EXPECT_EQ(result.status().message(),
             StrCat("New test error message (at ", __FILE__, ":", errline,
                    ")\nFrom Error: Test error message"));
+}
+
+TEST(StatusWithErrorContextTest, MacroAssignOrReturnWithLocationWithError) {
+  int32_t errline = 0;
+
+  auto test_function = [&errline]() -> StatusOr<int> {
+    StatusOr<int> status_or = absl::InvalidArgumentError(message);
+    errline = __LINE__ + 1;
+    XLA_ASSIGN_OR_RETURN_WITH_LOCATION(int value, status_or);
+    return value * 2;
+  };
+
+  StatusOr<int> result = test_function();
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(result.status().code(), StatusCode::kInvalidArgument);
+  EXPECT_EQ(result.status().message(),
+            StrCat("Test error message (at ", __FILE__, ":", errline, ")"));
 }
 
 TEST(StatusWithErrorContextTest, MacroErrorWithLocation) {
