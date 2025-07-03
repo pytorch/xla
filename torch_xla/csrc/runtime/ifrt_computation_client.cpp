@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
@@ -416,8 +417,8 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
       execute_options;
 
-  auto sharded_results = ExecuteReplicated(*computations.front(), {{handle}},
-                                           GetLocalDevices(), execute_options);
+  auto sharded_results = GetValueOrThrow(ExecuteReplicated(
+      *computations.front(), {{handle}}, GetLocalDevices(), execute_options));
   auto replicated_output =
       std::dynamic_pointer_cast<IfrtData>(sharded_results[0])
           ->buffer->FullyReplicatedShard(
@@ -537,16 +538,16 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
   return computations;
 }
 
-std::vector<ComputationClient::DataPtr>
+absl::StatusOr<std::vector<ComputationClient::DataPtr>>
 IfrtComputationClient::ExecuteComputation(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
   // TODO: Implement sharded exec in IFRT
-  XLA_ERROR() << __FUNCTION__ << " not implemented";
+  return absl::UnimplementedError("ExecuteComputation not implemented");
 }
 
-std::vector<ComputationClient::DataPtr>
+absl::StatusOr<std::vector<ComputationClient::DataPtr>>
 IfrtComputationClient::ExecuteReplicated(
     const ComputationClient::Computation& computation,
     const absl::Span<const ComputationClient::DataPtr> arguments,
@@ -591,11 +592,10 @@ IfrtComputationClient::ExecuteReplicated(
   TF_VLOG(5) << "ExecuteReplicated acquiring IFRT device lock for "
              << spmd_device_str << " Done";
 
-  xla::ifrt::LoadedExecutable::ExecuteResult result =
-      ifrt_computation.executable
-          ->Execute(absl::MakeSpan(argument_handles), execute_options,
-                    std::nullopt)
-          .value();
+  XLA_ASSIGN_OR_RETURN_WITH_LOCATION(
+      xla::ifrt::LoadedExecutable::ExecuteResult result,
+      ifrt_computation.executable->Execute(absl::MakeSpan(argument_handles),
+                                           execute_options, std::nullopt));
 
   result.status.OnReady(std::move([timed, op_tracker = std::move(op_tracker)](
                                       absl::Status status) mutable {
@@ -612,7 +612,7 @@ IfrtComputationClient::ExecuteReplicated(
           ? *ifrt_computation.output_shardings_
           : std::vector(outputs.size(),
                         xla::HloSharding::Replicate().ToProto());
-  XLA_CHECK_EQ(output_shardings.size(), outputs.size());
+  ABSL_CHECK_EQ(output_shardings.size(), outputs.size());
 
   std::vector<ComputationClient::DataPtr> data_handles(outputs.size());
   {
