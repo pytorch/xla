@@ -2448,7 +2448,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_construct_large_tensor_raises_error(self):
     a = torch.rand(1024, 1024, 1024, 1024, 1024, device=torch_xla.device())
 
-    with self.assertRaisesRegex(RuntimeError, r"Out of memory allocating \d* bytes"):
+    with self.assertRaisesRegex(RuntimeError,
+                                r"Out of memory allocating \d* bytes"):
       a.cpu()
 
 
