@@ -515,17 +515,14 @@ PjRtComputationClient::TransferFromDevice(absl::Span<const DataPtr> handles) {
     ABSL_CHECK(pjrt_data->buffer != nullptr)
         << "PjRt buffer is null in " << __FUNCTION__;
 
-    xla::Literal& literal =
-        literals.emplace_back(host_output_shape(pjrt_data->buffer.get()));
+    xla::Literal& literal = literals.emplace_back(
+        xla::Literal(host_output_shape(pjrt_data->buffer.get()),
+                     /* allocate_arrays= */ false));
     futures.push_back(pjrt_data->buffer->ToLiteral(&literal));
 
     total_size += literal.size_bytes();
   }
-  auto joined = xla::JoinFutures(futures);
-  XLA_RETURN_IF_ERROR(
-      joined.Await(),
-      absl::StrCat(__FUNCTION__,
-                   ": failed to await future from buffer to literal."));
+  XLA_RETURN_IF_ERROR_WITH_LOCATION(xla::JoinFutures(futures).Await());
   InboundDataMetric()->AddSample(total_size);
 
   return literals;
