@@ -2267,21 +2267,24 @@ void InitXlaModuleBindings(py::module m) {
       .def("_get_stablehlo",
            [](const std::vector<at::Tensor>& tensors, const std::string& device,
               const std::vector<std::string>& devices,
-              bool emit_bytecode) -> py::bytes {
-            NoGilSection nogil;
-            EmitMode mode = emit_bytecode ? EmitMode::kStableHloBytecode
-                                          : EmitMode::kStableHloReadable;
-            std::vector<XLATensorPtr> xtensors;
-            if (tensors.empty()) {
-              torch::lazy::BackendDevice backend_device =
-                  GetDeviceOrCurrent(device);
-              xtensors =
-                  XLAGraphExecutor::Get()->GetLiveTensors(&backend_device);
-            } else {
-              xtensors = GetXlaTensors(tensors, /*want_all=*/false);
+              bool emit_bytecode) {
+            std::string hlo_output;
+            {
+              NoGilSection nogil;
+              EmitMode mode = emit_bytecode ? EmitMode::kStableHloBytecode
+                                            : EmitMode::kStableHloReadable;
+              std::vector<XLATensorPtr> xtensors;
+              if (tensors.empty()) {
+                torch::lazy::BackendDevice backend_device =
+                    GetDeviceOrCurrent(device);
+                xtensors =
+                    XLAGraphExecutor::Get()->GetLiveTensors(&backend_device);
+              } else {
+                xtensors = GetXlaTensors(tensors, /*want_all=*/false);
+              }
+              hlo_output = XLAGraphExecutor::Get()->DumpHloComputation(xtensors, mode);
             }
-            return py::bytes(
-                XLAGraphExecutor::Get()->DumpHloComputation(xtensors, mode));
+            return py::bytes(hlo_output);
            })
       .def("_run_stablehlo",
            [](const std::string& bytecode,
