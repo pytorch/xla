@@ -844,10 +844,11 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
         // tensor results. Both sharded and unsharded results should be
         // "Assign"ed to the corresponding data placeholders.
         std::vector<runtime::ComputationClient::DataPtr> outputs =
-            runtime::GetComputationClientOrDie()->ExecuteReplicated(
-                *async->cached_computation->computation,
-                UnwrapXlaData(async->parameters_data), devices,
-                execute_options);
+            GetValueOrThrow(
+                runtime::GetComputationClientOrDie()->ExecuteReplicated(
+                    *async->cached_computation->computation,
+                    UnwrapXlaData(async->parameters_data), devices,
+                    execute_options));
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing Dynamo IR sharded graph hash "
                    << torch::lazy::HashToString(hash) << " on devices "
@@ -942,8 +943,8 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
   }
 
   std::vector<runtime::ComputationClient::DataPtr> result_data =
-      runtime::GetComputationClientOrDie()->ExecuteComputation(
-          *computations[0], UnwrapXlaData(arguments), device.toString());
+      GetValueOrThrow(runtime::GetComputationClientOrDie()->ExecuteComputation(
+          *computations[0], UnwrapXlaData(arguments), device.toString()));
 
   return WrapXlaData(result_data);
 }
@@ -1119,10 +1120,11 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         // tensor results. Both sharded and unsharded results should be
         // "Assign"ed to the corresponding data placeholders.
         std::vector<runtime::ComputationClient::DataPtr> outputs =
-            runtime::GetComputationClientOrDie()->ExecuteReplicated(
-                *async->cached_computation->computation,
-                UnwrapXlaData(async->parameters_data), devices,
-                execute_options);
+            GetValueOrThrow(
+                runtime::GetComputationClientOrDie()->ExecuteReplicated(
+                    *async->cached_computation->computation,
+                    UnwrapXlaData(async->parameters_data), devices,
+                    execute_options));
         results = WrapXlaData(outputs);
         TORCH_LAZY_COUNTER("ExecuteReplicated", 1);
         TF_VLOG(3) << "Executing IR graph hash "
@@ -1134,11 +1136,13 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " ...";
         std::vector<runtime::ComputationClient::DataPtr> outputs =
-            runtime::GetComputationClientOrDie()->ExecuteComputation(
-                *async->cached_computation->computation,
-                UnwrapXlaData(async->parameters_data), async->device.toString(),
-                {/*explode_tuple=*/true,
-                 /*eager_mode=*/use_eager_mode});
+            GetValueOrThrow(
+                runtime::GetComputationClientOrDie()->ExecuteComputation(
+                    *async->cached_computation->computation,
+                    UnwrapXlaData(async->parameters_data),
+                    async->device.toString(),
+                    {/*explode_tuple=*/true,
+                     /*eager_mode=*/use_eager_mode}));
         results = WrapXlaData(outputs);
         TORCH_LAZY_COUNTER("ExecuteComputation", 1);
         TF_VLOG(3) << "Executing IR graph hash "
