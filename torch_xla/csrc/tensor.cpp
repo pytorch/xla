@@ -40,6 +40,7 @@
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
@@ -512,7 +513,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
     // XlaNode is available on the tensor.
     std::vector<at::Tensor> tensors =
-        XlaDataToTensors({GetXlaData()}, {dtype()});
+        GetValueOrThrow(XlaDataToTensors({GetXlaData()}, {dtype()}));
     tensor = std::move(tensors.front());
     if (!detached) {
       SetTensorData(tensor);
