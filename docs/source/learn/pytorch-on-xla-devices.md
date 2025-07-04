@@ -103,7 +103,7 @@ XLA. The model definition, dataloader, optimizer and training loop can
 work on any device. The only XLA-specific code is a couple lines that
 acquire the XLA device and materializing the tensors. Calling `torch_xla.sync()`
 at the end of each training iteration causes XLA to execute its current
-graph and update the model's parameters. See {ref}`XLA Tensor Deep Dive`
+graph and update the model's parameters. See [](#xla-tensor-deep-dive)
 for more on how XLA creates graphs and runs
 operations.
 

@@ -27,7 +27,6 @@ pytorch_extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinxcontrib.katex",
-    "sphinx.ext.autosectionlabel",
     "sphinx_copybutton",
     # "sphinx_panels",
     # "myst_parser", # Will be activated by myst_nb
@@ -38,6 +37,8 @@ pytorch_extensions = [
 extensions = pytorch_extensions + [
     "myst_nb"
 ]
+# Automatically generate section anchors for selected heading level
+myst_heading_anchors = 3
 
 # Users must manually execute their notebook cells
 # with the correct hardware accelerator.
