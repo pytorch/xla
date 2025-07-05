@@ -4,23 +4,24 @@
 Usage:
 
   scripts/update_deps.py
+  scripts/update_deps.py --use_latest
 
-    updates the versions of OpenXLA, libtpu, and JAX as used in
-    PyTorch/XLA. In particular, it:
+    By default, updates to the latest stable JAX release and its corresponding
+    OpenXLA and libtpu versions.
 
-    - updates OpenXLA to the latest commit,
-    - updates libtpu to the latest nightly build, and
-    - updates JAX to the latest nightly build.
+    With --use_latest, updates to the latest nightly builds of OpenXLA,
+    libtpu, and JAX.
 """
 
+import argparse
+import json
 import logging
 import os
 import platform
 import re
 import sys
-from typing import Optional
-from html.parser import HTMLParser
 import urllib.request
+from html.parser import HTMLParser
 
 logger = logging.getLogger(__name__)
 
@@ -107,34 +108,85 @@ def clean_tmp_dir() -> None:
   os.system(f'mkdir -p {_TMP_DIR}')
 
 
-def get_last_xla_commit_and_date() -> tuple[str, str]:
-  """Finds the latest commit in the master branch of https://github.com/openxla/xla.
+def get_xla_commit_and_date(commit: str | None = None) -> tuple[str, str]:
+  """Find a date, commit pair from https://github.com/openxla/xla.
+  If commit is specified, use that commit.
+  If no commit is specified take the latest commit from main.
 
   Returns:
-    A tuple of the latest commit SHA and its date (YYYY-MM-DD).
+    A tuple of the commit SHA and its date (YYYY-MM-DD).
   """
 
-  # Get the latest commit in the master branch of openxla.
   clean_tmp_dir()
-  os.system(
-      f'git clone --depth=1 https://github.com/openxla/xla {_TMP_DIR}/xla')
-  commit = os.popen(f'cd {_TMP_DIR}/xla && git rev-parse HEAD').read().strip()
+  if commit is None:
+    # Clone the repository to a depth of 1 (just the main branch).
+    os.system(
+        f'git clone --depth=1 https://github.com/openxla/xla {_TMP_DIR}/xla')
+    commit = os.popen(f'cd {_TMP_DIR}/xla && git rev-parse HEAD').read().strip()
+    date = os.popen(
+        f'cd {_TMP_DIR}/xla && git show -s --format=%cd --date=short {commit}'
+    ).read().strip()
+    logger.info(f'Found latest XLA commit {commit} on date {date}')
+  else:
+    # Clone the repository history, but no blobs to save space.
+    os.system(
+        f'git clone --bare --filter=blob:none https://github.com/openxla/xla.git {_TMP_DIR}/xla.git'
+    )
+    date = os.popen(
+        f'git --git-dir={_TMP_DIR}/xla.git show -s --format=%cd --date=short {commit}'
+    ).read().strip()
+    if not date:
+      logging.error(f"Unable to local XLA commit {commit}")
+    logger.info(f'Given XLA commit {commit}, determined date {date}')
 
-  # Get the date of the commit, in the format of YYYY-MM-DD.
-  date = os.popen(
-      f'cd {_TMP_DIR}/xla && git show -s --format=%cd --date=short {commit}'
-  ).read().strip()
   return commit, date
 
 
-def update_openxla() -> bool:
-  """Updates the OpenXLA version in the WORKSPACE file to the latest commit.
+def get_latest_stable_jax_info() -> tuple[str, str, str] | None:
+  """Gets info about the latest stable JAX release from GitHub.
+
+  Returns:
+    A tuple of (JAX version, JAX release date, XLA commit hash).
+  """
+  url = 'https://api.github.com/repos/google/jax/releases/latest'
+  try:
+    with urllib.request.urlopen(url) as response:
+      data = json.loads(response.read().decode())
+  except Exception as e:
+    logger.error(f'Failed to fetch {url}: {e}')
+    return None
+
+  tag_name = data['tag_name']  # e.g., "jax-v0.4.28"
+  jax_version = tag_name.replace('jax-v', '')  # e.g., "0.4.28"
+
+  published_at = data['published_at']  # e.g., "2024-04-26T22:58:34Z"
+  release_date = published_at.split('T')[0]  # e.g., "2024-04-26"
+
+  # The XLA commit is in third_party/xla/workspace.bzl in the JAX repo.
+  workspace_bzl_url = f'https://raw.githubusercontent.com/google/jax/{tag_name}/third_party/xla/workspace.bzl'
+  try:
+    with urllib.request.urlopen(workspace_bzl_url) as response:
+      workspace_content = response.read().decode()
+  except Exception as e:
+    logger.error(f'Failed to fetch {workspace_bzl_url}: {e}')
+    return None
+
+  match = re.search(r'XLA_COMMIT = "([a-f0-9]{40})"', workspace_content)
+  if not match:
+    logger.error(f'Could not find XLA_COMMIT in {workspace_bzl_url}.')
+    return None
+  xla_commit = match.group(1)
+
+  return jax_version, release_date, xla_commit
+
+
+def update_openxla(commit: str | None = None) -> bool:
+  """Updates the OpenXLA version in the WORKSPACE file.
 
   Returns:
     True if the WORKSPACE file was updated, False otherwise.
   """
-
-  commit, date = get_last_xla_commit_and_date()
+  commit, date = get_xla_commit_and_date(commit=commit)
 
   with open(_WORKSPACE_PATH, 'r') as f:
     ws_lines = f.readlines()
@@ -158,14 +210,18 @@ def update_openxla() -> bool:
   return True
 
 
-def find_latest_nightly(html_lines: list[str],
-                        build_re: str) -> Optional[tuple[str, str, str]]:
+def find_latest_nightly(
+    html_lines: list[str],
+    build_re: str,
+    target_date: str | None = None) -> tuple[str, str, str] | None:
   """Finds the latest nightly build from the list of HTML lines.
 
   Args:
     html_lines: A list of HTML lines to search for the nightly build.
     build_re: A regular expression for matching the nightly build line.
       It must have 3 capture groups: the version, the date, and the name suffix.
+    target_date: If specified, find the latest build on or before this date
+      (YYYYMMDD). Otherwise, find the latest build overall.
 
   Returns:
     A tuple of the version, date, and suffix of the latest nightly build,
@@ -180,7 +236,10 @@ def find_latest_nightly(html_lines: list[str],
     if m:
       found_build = True
       version, date, suffix = m.groups()
-      if date > latest_date:
+      if target_date is None:
+        if date > latest_date:
+          latest_version, latest_date, latest_suffix = version, date, suffix
+      elif date <= target_date and date > latest_date:
         latest_version, latest_date, latest_suffix = version, date, suffix
 
   if found_build:
@@ -189,8 +248,12 @@ def find_latest_nightly(html_lines: list[str],
   return None
 
 
-def find_latest_libtpu_nightly() -> Optional[tuple[str, str, str]]:
-  """Finds the latest libtpu nightly build for the current platform.
+def find_libtpu_build(
+    target_date: str | None = None) -> tuple[str, str, str] | None:
+  """Finds a libtpu nightly build for the current platform.
+
+  Args:
+    target_date: If specified, find build for this date. Otherwise, find latest.
 
   Returns:
     A tuple of the version, date, and suffix of the latest libtpu nightly build,
@@ -209,7 +272,7 @@ def find_latest_libtpu_nightly() -> Optional[tuple[str, str, str]]:
   return find_latest_nightly(
       html_lines,
       r'.*<a href=.*?>libtpu/libtpu-(.*?)\.dev(\d{8})\+nightly-(.*?)_' +
-      _PLATFORM + r'\.whl</a>')
+      _PLATFORM + r'\.whl</a>', target_date)
 
 
 def fetch_pep503_page(url: str) -> list[tuple[str, str]]:
@@ -233,7 +296,7 @@ def fetch_pep503_page(url: str) -> list[tuple[str, str]]:
     return []
 
 
-def find_latest_jax_nightly() -> Optional[tuple[str, str, str]]:
+def find_latest_jax_nightly() -> tuple[str, str, str] | None:
   """Finds the latest JAX nightly build using the new package index.
 
   Returns:
@@ -309,15 +372,19 @@ def find_latest_jax_nightly() -> Optional[tuple[str, str, str]]:
   return latest_jax_version, latest_jaxlib_version, latest_jax_date
 
 
-def update_libtpu() -> bool:
-  """Updates the libtpu version in setup.py to the latest nightly build.
+def update_libtpu(target_date: str | None = None) -> bool:
+  """Updates the libtpu version in setup.py.
 
   Returns:
     True if the setup.py file was updated, False otherwise.
   """
 
-  result = find_latest_libtpu_nightly()
+  result = find_libtpu_build(target_date)
   if not result:
+    if target_date:
+      logger.error(f'Could not find libtpu build for date {target_date}.')
+    else:
+      logger.error('Could not find latest libtpu nightly build.')
     return False
 
   version, date, suffix = result
@@ -360,18 +427,24 @@ def update_libtpu() -> bool:
   return success
 
 
-def update_jax() -> bool:
-  """Updates the jax/jaxlib versions in setup.py to the latest nightly build.
+def update_jax(use_latest: bool) -> bool:
+  """Updates the jax/jaxlib versions in setup.py.
 
   Returns:
     True if the setup.py file was updated, False otherwise.
   """
-
-  result = find_latest_jax_nightly()
-  if not result:
-    return False
-
-  jax_version, jaxlib_version, date = result
+  if use_latest:
+    result = find_latest_jax_nightly()
+    if not result:
+      return False
+    jax_version, jaxlib_version, date = result
+  else:
+    jax_info = get_latest_stable_jax_info()
+    if not jax_info:
+      return False
+    jax_version, release_date, _ = jax_info
+    jaxlib_version = jax_version
+    date = release_date.replace('-', '')
 
   with open(_SETUP_PATH, 'r') as f:
     setup_lines = f.readlines()
@@ -408,12 +481,40 @@ def update_jax() -> bool:
 def main() -> None:
   logging.basicConfig(level=logging.INFO)
 
-  openxla_updated = update_openxla()
-  libtpu_updated = update_libtpu()
-  jax_updated = update_jax()
+  parser = argparse.ArgumentParser(
+      description="Updates third party dependencies.")
+  parser.add_argument(
+      '--use_latest',
+      action='store_true',
+      default=False,
+      help='Update to latest nightly versions instead of latest stable versions.'
+  )
+  args = parser.parse_args()
 
-  if not (openxla_updated and libtpu_updated and jax_updated):
-    sys.exit(1)
+  if args.use_latest:
+    logger.info('Updating to latest nightly versions...')
+    openxla_updated = update_openxla()
+    libtpu_updated = update_libtpu()
+    jax_updated = update_jax(use_latest=True)
+    if not (openxla_updated and libtpu_updated and jax_updated):
+      sys.exit(1)
+  else:
+    logger.info('Updating to latest stable versions...')
+    jax_info = get_latest_stable_jax_info()
+    if not jax_info:
+      sys.exit(1)
+
+    jax_version, jax_release_date, xla_commit = jax_info
+    logger.info(
+        f'Found latest stable JAX release {jax_version} from {jax_release_date}, with XLA commit {xla_commit}'
+    )
+
+    openxla_updated = update_openxla(xla_commit)
+    libtpu_updated = update_libtpu(
+        target_date=jax_release_date.replace('-', ''))
+    jax_updated = update_jax(use_latest=False)
+    if not (openxla_updated and libtpu_updated and jax_updated):
+      sys.exit(1)
 
 
 if __name__ == '__main__':
