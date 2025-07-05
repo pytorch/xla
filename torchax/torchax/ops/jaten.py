@@ -16,40 +16,44 @@ from torchax.ops import op_base, mappings
 from torchax import interop
 from torchax.ops import jax_reimplement
 from torchax.view import View
+
 # Keys are OpOverload, value is a callable that takes
 # Tensor
 all_ops = {}
 
 
 def op(*aten, **kwargs):
-
   def inner(func):
     for a in aten:
       ops_registry.register_torch_dispatch_op(a, func, **kwargs)
       continue
 
       if isinstance(a, torch._ops.OpOverloadPacket):
-        opname = a.default.name() if 'default' in a.overloads(
-        ) else a._qualified_op_name
+        opname = (
+          a.default.name()
+          if "default" in a.overloads()
+          else a._qualified_op_name
+        )
       elif isinstance(a, torch._ops.OpOverload):
         opname = a.name()
       else:
-        raise RuntimeError(f'oops {a}')
+        raise RuntimeError(f"oops {a}")
 
       torchfunc = functools.partial(interop.call_jax, func)
       # HACK: to_copy is where we make the initial conversion from CPU tensor to JAX tensor
-      torch.library.impl(opname, 'privateuseone')(
-          torchfunc if a != torch.ops.aten._to_copy else func)
+      torch.library.impl(opname, "privateuseone")(
+        torchfunc if a != torch.ops.aten._to_copy else func
+      )
     return func
 
   return inner
 
 
 @op(
-    torch.ops.aten.view_copy,
-    torch.ops.aten.view,
-    torch.ops.aten._unsafe_view,
-    torch.ops.aten.reshape,
+  torch.ops.aten.view_copy,
+  torch.ops.aten.view,
+  torch.ops.aten._unsafe_view,
+  torch.ops.aten.reshape,
 )
 def _aten_unsafe_view(x, shape):
   return jnp.reshape(x, shape)
@@ -69,13 +73,11 @@ def _aten_add(x, y, *, alpha=1):
   return res
 
 
-@op(torch.ops.aten.copy_,
-    is_jax_function=False,
-    is_view_op=True,
-    needs_env=True)
+@op(
+  torch.ops.aten.copy_, is_jax_function=False, is_view_op=True, needs_env=True
+)
 def _aten_copy(x, y, memory_format=None, env=None):
-
-  if y.device.type == 'cpu':
+  if y.device.type == "cpu":
     y = env.to_xla(y)
 
   if isinstance(x, View):
@@ -164,9 +166,9 @@ def _aten_complex(real, imag):
   Returns:
     A complex array with the specified real and imaginary parts.
   """
-  return jnp.array(
-      real, dtype=jnp.float32) + 1j * jnp.array(
-          imag, dtype=jnp.float32)
+  return jnp.array(real, dtype=jnp.float32) + 1j * jnp.array(
+    imag, dtype=jnp.float32
+  )
 
 
 # aten.exponential_
@@ -215,9 +217,10 @@ def _aten_cholesky(input, upper=False):
 def _aten_linalg_cholesky_ex(input, upper=False, check_errors=False):
   if check_errors:
     raise NotImplementedError(
-        "check_errors=True is not supported in this JAX implementation. "
-        "Check for positive definiteness using jnp.linalg.eigvalsh before "
-        "calling this function.")
+      "check_errors=True is not supported in this JAX implementation. "
+      "Check for positive definiteness using jnp.linalg.eigvalsh before "
+      "calling this function."
+    )
 
   L = jax.scipy.linalg.cholesky(input, lower=not upper)
   if len(L.shape) > 2:
@@ -281,7 +284,8 @@ def _aten_searchsorted(sorted_sequence, values):
   new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
   res = jnp.searchsorted(sorted_sequence, values)
   if sorted_sequence.dtype == np.dtype(
-      np.int32) or sorted_sequence.dtype == np.dtype(np.int32):
+    np.int32
+  ) or sorted_sequence.dtype == np.dtype(np.int32):
     # res = res.astype(new_dtype)
     res = res.astype(np.dtype(np.int64))
   return res  # jnp.searchsorted(sorted_sequence, values)
@@ -396,7 +400,7 @@ def _aten_real(x):
 
 
 @op(torch.Tensor.resize_)
-def _aten_resize_(x, size, interpolation='linear'):
+def _aten_resize_(x, size, interpolation="linear"):
   new_size = tuple(size)
   return jax.numpy.resize(x, new_size)
 
@@ -446,8 +450,9 @@ def _aten_softmax(x, dim, halftofloat=False):
 def _is_int(x):
   if isinstance(x, int):
     return True
-  if isinstance(x, jax.Array) and (x.dtype.name.startswith('int') or
-                                   x.dtype.name.startswith('uint')):
+  if isinstance(x, jax.Array) and (
+    x.dtype.name.startswith("int") or x.dtype.name.startswith("uint")
+  ):
     return True
   return False
 
@@ -459,19 +464,20 @@ def highest_precision_int_dtype(tensor1, tensor2):
     return tensor1.dtype
 
   dtype_hierarchy = {
-      'uint8': 8,
-      'int8': 8,
-      'uint16': 16,
-      'int16': 16,
-      'uint32': 32,
-      'int32': 32,
-      'uint64': 64,
-      'int64': 64,
+    "uint8": 8,
+    "int8": 8,
+    "uint16": 16,
+    "int16": 16,
+    "uint32": 32,
+    "int32": 32,
+    "uint64": 64,
+    "int64": 64,
   }
   return max(
-      tensor1.dtype,
-      tensor2.dtype,
-      key=lambda dtype: dtype_hierarchy[str(dtype)])
+    tensor1.dtype,
+    tensor2.dtype,
+    key=lambda dtype: dtype_hierarchy[str(dtype)],
+  )
 
 
 @op(torch.ops.aten.pow)
@@ -481,7 +487,7 @@ def _aten_pow(x, y):
     y = float(y)
   if _is_int(x) and _is_int(y_orig):
     # Do the math in float then cast
-    res = jnp.power(jnp.astype(x, jnp.dtype('float')), y)
+    res = jnp.power(jnp.astype(x, jnp.dtype("float")), y)
     return res.astype(highest_precision_int_dtype(x, y_orig))
   res = jnp.power(x, y)
   if isinstance(x, float):
@@ -503,21 +509,21 @@ def _aten_view_as_complex(input):
 def _aten_div(x, y, rounding_mode=""):
   res_dtype = None
   if _is_int(x) and _is_int(y):
-    res_dtype = jnp.dtype('float32')
+    res_dtype = jnp.dtype("float32")
 
-  if (isinstance(x, float) or isinstance(y, float)):
+  if isinstance(x, float) or isinstance(y, float):
     res_dtype = new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
 
   if rounding_mode == "floor":
     res = jnp.floor_divide(x, y)
     if _is_int(x) and _is_int(y):
-      res_dtype = jnp.dtype('int64')
+      res_dtype = jnp.dtype("int64")
   else:
     res = x / y
   if rounding_mode == "trunc":
     res = jnp.trunc(res)
     if _is_int(x) and _is_int(y):
-      res_dtype = jnp.dtype('int64')
+      res_dtype = jnp.dtype("int64")
   if res_dtype:
     res = res.astype(res_dtype)
   return res
@@ -543,11 +549,9 @@ def _aten_bmm(x, y):
 
 @op(torch.ops.aten.embedding)
 # embedding(Tensor weight, Tensor indices, SymInt padding_idx=-1, bool scale_grad_by_freq=False, bool sparse=False)
-def _aten_embedding(a,
-                    w,
-                    padding_idx=-1,
-                    scale_grad_by_freq=False,
-                    sparse=False):
+def _aten_embedding(
+  a, w, padding_idx=-1, scale_grad_by_freq=False, sparse=False
+):
   return jnp.take(a, w, axis=0)
 
 
@@ -557,9 +561,9 @@ def _aten_embedding_renorm_(weight, indices, max_norm, norm_type):
   unique_indices = jnp.unique(indices)
 
   norm = jnp.linalg.norm(
-      _aten_embedding(weight, unique_indices),
-      ord=norm_type,
-      axis=1,
+    _aten_embedding(weight, unique_indices),
+    ord=norm_type,
+    axis=1,
   )
 
   indice_idx = jnp.where(norm > max_norm)
@@ -568,41 +572,44 @@ def _aten_embedding_renorm_(weight, indices, max_norm, norm_type):
 
   indices_to_update = unique_indices[indice_idx]
 
-  weight = weight.at[indices_to_update].set(weight[indices_to_update] *
-                                            scale[:, None])
+  weight = weight.at[indices_to_update].set(
+    weight[indices_to_update] * scale[:, None]
+  )
   return weight
 
 
-#- func: _embedding_bag_forward_only(
+# - func: _embedding_bag_forward_only(
 # Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False,
 # int mode=0, bool sparse=False, Tensor? per_sample_weights=None, bool include_last_offset=False, int padding_idx=-1) -> (Tensor, Tensor, Tensor, Tensor)
 @op(torch.ops.aten._embedding_bag)
 @op(torch.ops.aten._embedding_bag_forward_only)
-def _aten__embedding_bag(weight,
-                         indices,
-                         offsets=None,
-                         scale_grad_by_freq=False,
-                         mode=0,
-                         sparse=False,
-                         per_sample_weights=None,
-                         include_last_offset=False,
-                         padding_idx=-1):
+def _aten__embedding_bag(
+  weight,
+  indices,
+  offsets=None,
+  scale_grad_by_freq=False,
+  mode=0,
+  sparse=False,
+  per_sample_weights=None,
+  include_last_offset=False,
+  padding_idx=-1,
+):
   """Jax implementation of the PyTorch _embedding_bag function.
 
-    Args:
-        weight: The learnable weights of the module of shape (num_embeddings, embedding_dim).
-        indices: A LongTensor containing the indices to extract.
-        offsets: A LongTensor containing the starting offset of each bag.
-        scale_grad_by_freq: Whether to scale gradients by the inverse of frequency of the words in the mini-batch.
-        mode: 0 = "sum", 1 = "mean" or 2 = "max"
-        sparse: Whether the gradients with respect to weight should be a sparse tensor.
-        per_sample_weights: If given, each embedding vector is weighted by per_sample_weights
-        include_last_offset: Whether to include the last offset as a valid bag.
-        padding_idx: If specified, the entries at padding_idx do not contribute to the gradient.
+  Args:
+      weight: The learnable weights of the module of shape (num_embeddings, embedding_dim).
+      indices: A LongTensor containing the indices to extract.
+      offsets: A LongTensor containing the starting offset of each bag.
+      scale_grad_by_freq: Whether to scale gradients by the inverse of frequency of the words in the mini-batch.
+      mode: 0 = "sum", 1 = "mean" or 2 = "max"
+      sparse: Whether the gradients with respect to weight should be a sparse tensor.
+      per_sample_weights: If given, each embedding vector is weighted by per_sample_weights
+      include_last_offset: Whether to include the last offset as a valid bag.
+      padding_idx: If specified, the entries at padding_idx do not contribute to the gradient.
 
-    Returns:
-        A tuple of (output, offset2bag, bag_size, max_indices).
-    """
+  Returns:
+      A tuple of (output, offset2bag, bag_size, max_indices).
+  """
   embedded = _aten_embedding(weight, indices, padding_idx)
 
   if offsets is None:
@@ -626,8 +633,11 @@ def _aten__embedding_bag(weight,
   for bag in range(offsets_np.shape[0]):
     start = int(offsets_np[bag])
 
-    end = int(indices.shape[0] if bag +
-              1 == offsets_np.shape[0] else offsets_np[bag + 1])
+    end = int(
+      indices.shape[0]
+      if bag + 1 == offsets_np.shape[0]
+      else offsets_np[bag + 1]
+    )
     bag_size[bag] = end - start
     offset2bag = offset2bag.at[start:end].set(bag)
 
@@ -639,7 +649,8 @@ def _aten__embedding_bag(weight,
       elif mode == 2:
         output_bag = jnp.max(embedded[start:end], axis=0)
         max_indices = max_indices.at[start:end].set(
-            jnp.argmax(embedded[start:end], axis=0))
+          jnp.argmax(embedded[start:end], axis=0)
+        )
 
   # The original code returned offset2bag, bag_size, and max_indices as numpy arrays.
   # Converting them to JAX arrays for consistency.
@@ -658,7 +669,6 @@ def _aten_rsqrt(x):
 @op(torch.ops.aten.expand)
 @op(torch.ops.aten.expand_copy)
 def _aten_expand(x, dims):
-
   def fix_dims(d, xs):
     if d == -1:
       return xs
@@ -667,7 +677,7 @@ def _aten_expand(x, dims):
   shape = list(x.shape)
   if len(shape) < len(dims):
     shape = [
-        1,
+      1,
     ] * (len(dims) - len(shape)) + shape
     # make sure that dims and shape is the same by
     # left pad with 1s. Otherwise the zip below will
@@ -781,8 +791,8 @@ def split_with_sizes(x, sizes, dim=0):
     return tuple(res)
 
   return [
-      x[make_range(rank, dim, start, end)]
-      for start, end in zip([0] + list(splits[:-1]), splits)
+    x[make_range(rank, dim, start, end)]
+    for start, end in zip([0] + list(splits[:-1]), splits)
   ]
 
 
@@ -818,8 +828,9 @@ def _aten_ne(x, y):
 # >> [[0, 1, 2, 3]] shape (1, 4)
 def _indices_along_axis(x, axis):
   return jnp.expand_dims(
-      jnp.arange(x.shape[axis]),
-      axis=[d for d in range(len(x.shape)) if d != axis])
+    jnp.arange(x.shape[axis]),
+    axis=[d for d in range(len(x.shape)) if d != axis],
+  )
 
 
 def _broadcast_indices(indices, shape):
@@ -837,19 +848,17 @@ def _aten_cummax(x, dim):
   indices = _broadcast_indices(indice_along_axis, x.shape)
 
   def cummax_reduce_func(carry, elem):
-    v1, v2 = carry['val'], elem['val']
-    i1, i2 = carry['idx'], elem['idx']
+    v1, v2 = carry["val"], elem["val"]
+    i1, i2 = carry["idx"], elem["idx"]
 
     v = jnp.maximum(v1, v2)
     i = jnp.where(v1 > v2, i1, i2)
-    return {'val': v, 'idx': i}
+    return {"val": v, "idx": i}
 
   res = jax.lax.associative_scan(
-      cummax_reduce_func, {
-          'val': x,
-          'idx': indices
-      }, axis=axis)
-  return res['val'], res['idx']
+    cummax_reduce_func, {"val": x, "idx": indices}, axis=axis
+  )
+  return res["val"], res["idx"]
 
 
 @op(torch.ops.aten.cummin)
@@ -863,19 +872,17 @@ def _aten_cummin(x, dim):
   indices = _broadcast_indices(indice_along_axis, x.shape)
 
   def cummin_reduce_func(carry, elem):
-    v1, v2 = carry['val'], elem['val']
-    i1, i2 = carry['idx'], elem['idx']
+    v1, v2 = carry["val"], elem["val"]
+    i1, i2 = carry["idx"], elem["idx"]
 
     v = jnp.minimum(v1, v2)
     i = jnp.where(v1 < v2, i1, i2)
-    return {'val': v, 'idx': i}
+    return {"val": v, "idx": i}
 
   res = jax.lax.associative_scan(
-      cummin_reduce_func, {
-          'val': x,
-          'idx': indices
-      }, axis=axis)
-  return res['val'], res['idx']
+    cummin_reduce_func, {"val": x, "idx": indices}, axis=axis
+  )
+  return res["val"], res["idx"]
 
 
 @op(torch.ops.aten.cumsum)
@@ -902,11 +909,9 @@ def _aten_cumprod(input, dim, dtype=None, out=None):
 
 
 @op(torch.ops.aten.native_layer_norm)
-def _aten_native_layer_norm(input,
-                            normalized_shape,
-                            weight=None,
-                            bias=None,
-                            eps=1e-5):
+def _aten_native_layer_norm(
+  input, normalized_shape, weight=None, bias=None, eps=1e-5
+):
   """Implements layer normalization in Jax as defined by `aten::native_layer_norm`.
 
   Args:
@@ -971,8 +976,9 @@ def _aten_addbmm(input, batch1, batch2, *, beta=1, alpha=1):
   alpha = jnp.array(alpha).astype(batch1.dtype)
   beta = jnp.array(beta).astype(batch1.dtype)
   mm = jnp.einsum("bxy, byz -> xz", batch1, batch2)
-  return jax.lax.cond(beta == 0, lambda: alpha * mm,
-                      lambda: beta * input + alpha * mm)
+  return jax.lax.cond(
+    beta == 0, lambda: alpha * mm, lambda: beta * input + alpha * mm
+  )
 
 
 @op(torch.ops.aten.gelu)
@@ -996,56 +1002,54 @@ def _aten_squeeze_dim(self, dim=None):
       # NOTE: torch leaves the dims that is not 1 unchanged,
       # but jax raises error.
       dim = [
-          i if i >= 0 else (i + self.ndim) for i in dim if self.shape[i] == 1
+        i if i >= 0 else (i + self.ndim) for i in dim if self.shape[i] == 1
       ]
 
   return jnp.squeeze(self, dim)
 
 
 @op(torch.ops.aten.bucketize)
-def _aten_bucketize(input,
-                    boundaries,
-                    *,
-                    out_int32=False,
-                    right=False,
-                    out=None):
+def _aten_bucketize(
+  input, boundaries, *, out_int32=False, right=False, out=None
+):
   return_type = jnp.int32 if out_int32 else jnp.int64
   return jnp.digitize(input, boundaries, right=not right).astype(return_type)
 
 
 @op(torch.ops.aten.conv2d)
 def _aten_conv2d(
+  input,
+  weight,
+  bias,
+  stride,
+  padding,
+  dilation,
+  groups,
+):
+  return _aten_convolution(
     input,
     weight,
     bias,
     stride,
     padding,
     dilation,
-    groups,
-):
-  return _aten_convolution(
-      input,
-      weight,
-      bias,
-      stride,
-      padding,
-      dilation,
-      transposed=False,
-      output_padding=1,
-      groups=groups)
+    transposed=False,
+    output_padding=1,
+    groups=groups,
+  )
 
 
 @op(torch.ops.aten.convolution)
 def _aten_convolution(
-    input,
-    weight,
-    bias,
-    stride,
-    padding,
-    dilation,
-    transposed,
-    output_padding,
-    groups,
+  input,
+  weight,
+  bias,
+  stride,
+  padding,
+  dilation,
+  transposed,
+  output_padding,
+  groups,
 ):
   num_shape_dim = weight.ndim - 1
   batch_dims = input.shape[:-num_shape_dim]
@@ -1081,7 +1085,8 @@ def _aten_convolution(
       rhs_spec.append(i + 2)
       out_spec.append(i + 2)
     return jax.lax.ConvDimensionNumbers(
-        *map(tuple, (lhs_spec, rhs_spec, out_spec)))
+      *map(tuple, (lhs_spec, rhs_spec, out_spec))
+    )
 
   if transposed:
     rhs = jnp.flip(weight, range(2, 1 + num_shape_dim))
@@ -1092,27 +1097,27 @@ def _aten_convolution(
       rhs_shape.extend(rhs.shape[2:])
       rhs = jnp.reshape(rhs, rhs_shape)
     res = jax.lax.conv_general_dilated(
-        input,
-        rhs,
-        (1,) * len(stride),
-        make_padding(padding, len(stride)),
-        lhs_dilation=stride,
-        rhs_dilation=dilation,
-        dimension_numbers=create_default_conv_dimension_numbers(len(stride)),
-        feature_group_count=groups,
-        batch_group_count=1,
+      input,
+      rhs,
+      (1,) * len(stride),
+      make_padding(padding, len(stride)),
+      lhs_dilation=stride,
+      rhs_dilation=dilation,
+      dimension_numbers=create_default_conv_dimension_numbers(len(stride)),
+      feature_group_count=groups,
+      batch_group_count=1,
     )
   else:
     res = jax.lax.conv_general_dilated(
-        input,
-        weight,
-        stride,
-        make_padding(padding, len(stride)),
-        lhs_dilation=(1,) * len(stride),
-        rhs_dilation=dilation,
-        dimension_numbers=create_default_conv_dimension_numbers(len(stride)),
-        feature_group_count=groups,
-        batch_group_count=1,
+      input,
+      weight,
+      stride,
+      make_padding(padding, len(stride)),
+      lhs_dilation=(1,) * len(stride),
+      rhs_dilation=dilation,
+      dimension_numbers=create_default_conv_dimension_numbers(len(stride)),
+      feature_group_count=groups,
+      batch_group_count=1,
     )
 
   if bias is not None:
@@ -1129,8 +1134,9 @@ def _aten_convolution(
 
 # _native_batch_norm_legit(Tensor input, Tensor? weight, Tensor? bias, Tensor(a!) running_mean, Tensor(b!) running_var, bool training, float momentum, float eps)
 @op(torch.ops.aten._native_batch_norm_legit.default)
-def _aten__native_batch_norm_legit(input, weight, bias, running_mean,
-                                   running_var, training, momentum, eps):
+def _aten__native_batch_norm_legit(
+  input, weight, bias, running_mean, running_var, training, momentum, eps
+):
   """JAX implementation of batch normalization with optional parameters.
   Refers to https://github.com/pytorch/pytorch/blob/cd3a71f754a2248bcfe500de7c9860bd7d2002bf/torch/_decomp/decompositions.py#L1713.
 
@@ -1165,7 +1171,7 @@ def _aten__native_batch_norm_legit(input, weight, bias, running_mean,
   else:
     rstd = jax.lax.rsqrt(running_var.reshape(reshape_dims) + eps)
     saved_mean = jnp.array(
-        [], dtype=input.dtype
+      [], dtype=input.dtype
     )  # No need to calculate batch statistics in inference mode
     saved_rstd = jnp.array([], dtype=input.dtype)
 
@@ -1187,11 +1193,12 @@ def _aten__native_batch_norm_legit(input, weight, bias, running_mean,
 
 
 @op(torch.ops.aten._native_batch_norm_legit_no_training)
-def _aten__native_batch_norm_legit_no_training(input, weight, bias,
-                                               running_mean, running_var,
-                                               momentum, eps):
-  return _aten__native_batch_norm_legit(input, weight, bias, running_mean,
-                                        running_var, False, momentum, eps)
+def _aten__native_batch_norm_legit_no_training(
+  input, weight, bias, running_mean, running_var, momentum, eps
+):
+  return _aten__native_batch_norm_legit(
+    input, weight, bias, running_mean, running_var, False, momentum, eps
+  )
 
 
 @op(torch.ops.aten.relu)
@@ -1205,7 +1212,7 @@ def _aten_cat(tensors, dims=0):
   # torch.cat will ignore the empty tensor, while jnp.concatenate
   # will error if the dims > 0.
   filtered_tensors = [
-      t for t in tensors if not (t.ndim == 1 and t.shape[0] == 0)
+    t for t in tensors if not (t.ndim == 1 and t.shape[0] == 0)
   ]
   if filtered_tensors:
     return jnp.concatenate(filtered_tensors, dims)
@@ -1213,12 +1220,12 @@ def _aten_cat(tensors, dims=0):
 
 
 def _ceil_mode_padding(
-    padding: list[int],
-    input_shape: list[int],
-    kernel_size: list[int],
-    stride: list[int],
-    dilation: list[int],
-    ceil_mode: bool,
+  padding: list[int],
+  input_shape: list[int],
+  kernel_size: list[int],
+  stride: list[int],
+  dilation: list[int],
+  ceil_mode: bool,
 ):
   """Creates low and high padding specification for the given padding (which is symmetric) and ceil mode.
 
@@ -1230,13 +1237,21 @@ def _ceil_mode_padding(
     right_padding = left_padding
 
     input_size = input_shape[2 + i]
-    output_size_rem = (input_size + 2 * left_padding -
-                       (kernel_size[i] - 1) * dilation[i] - 1) % stride[i]
+    output_size_rem = (
+      input_size + 2 * left_padding - (kernel_size[i] - 1) * dilation[i] - 1
+    ) % stride[i]
     if ceil_mode and output_size_rem != 0:
       extra_padding = stride[i] - output_size_rem
-      new_output_size = (input_size + left_padding + right_padding +
-                         extra_padding - (kernel_size[i] - 1) * dilation[i] -
-                         1 + stride[i] - 1) // stride[i] + 1
+      new_output_size = (
+        input_size
+        + left_padding
+        + right_padding
+        + extra_padding
+        - (kernel_size[i] - 1) * dilation[i]
+        - 1
+        + stride[i]
+        - 1
+      ) // stride[i] + 1
       # Ensure that the last pooling starts inside the image.
       size_to_compare = input_size + left_padding
 
@@ -1249,12 +1264,9 @@ def _ceil_mode_padding(
 
 @op(torch.ops.aten.max_pool2d_with_indices)
 @op(torch.ops.aten.max_pool3d_with_indices)
-def _aten_max_pool2d_with_indices(inputs,
-                                  kernel_size,
-                                  strides=None,
-                                  padding=0,
-                                  dilation=1,
-                                  ceil_mode=False):
+def _aten_max_pool2d_with_indices(
+  inputs, kernel_size, strides=None, padding=0, dilation=1, ceil_mode=False
+):
   num_batch_dims = len(inputs.shape) - len(kernel_size) - 1
   kernel_size = tuple(kernel_size)
   # Default stride is kernel_size
@@ -1269,13 +1281,16 @@ def _aten_max_pool2d_with_indices(inputs,
   input_shape = inputs.shape
   if num_batch_dims == 0:
     input_shape = [1, *input_shape]
-  padding = _ceil_mode_padding(padding, input_shape, kernel_size, strides,
-                               dilation, ceil_mode)
+  padding = _ceil_mode_padding(
+    padding, input_shape, kernel_size, strides, dilation, ceil_mode
+  )
 
-  assert len(kernel_size) == len(
-      strides), f"len({kernel_size=}) must equal len({strides=})"
-  assert len(kernel_size) == len(
-      dilation), f"len({kernel_size=}) must equal len({dilation=})"
+  assert len(kernel_size) == len(strides), (
+    f"len({kernel_size=}) must equal len({strides=})"
+  )
+  assert len(kernel_size) == len(dilation), (
+    f"len({kernel_size=}) must equal len({dilation=})"
+  )
   strides = (1,) * (1 + num_batch_dims) + strides
   dims = (1,) * (1 + num_batch_dims) + kernel_size
   dilation = (1,) * (1 + num_batch_dims) + dilation
@@ -1294,14 +1309,16 @@ def _aten_max_pool2d_with_indices(inputs,
   if not isinstance(padding, str):
     padding = tuple(map(tuple, padding))
     assert len(padding) == len(kernel_size), (
-        f"padding {padding} must specify pads for same number of dims as "
-        f"kernel_size {kernel_size}")
-    assert all([len(x) == 2 for x in padding
-               ]), f"each entry in padding {padding} must be length 2"
+      f"padding {padding} must specify pads for same number of dims as "
+      f"kernel_size {kernel_size}"
+    )
+    assert all([len(x) == 2 for x in padding]), (
+      f"each entry in padding {padding} must be length 2"
+    )
     padding = ((0, 0), (0, 0)) + padding
 
-  indices = jnp.arange(np.prod(inputs.shape[-len(kernel_size):]))
-  indices = indices.reshape(inputs.shape[-len(kernel_size):])
+  indices = jnp.arange(np.prod(inputs.shape[-len(kernel_size) :]))
+  indices = indices.reshape(inputs.shape[-len(kernel_size) :])
   indices = jnp.broadcast_to(indices, inputs.shape)
 
   def reduce_fn(a, b):
@@ -1319,21 +1336,22 @@ def _aten_max_pool2d_with_indices(inputs,
   # the indices tensor is usually unused in inference, separating the two
   # can help DCE computations for argmax.
   y = jax.lax.reduce_window(
-      inputs,
-      init_val,
-      jax.lax.max,
-      dims,
-      strides,
-      padding,
-      window_dilation=dilation)
+    inputs,
+    init_val,
+    jax.lax.max,
+    dims,
+    strides,
+    padding,
+    window_dilation=dilation,
+  )
   indices, _ = jax.lax.reduce_window(
-      (indices, inputs),
-      (0, init_val),
-      reduce_fn,
-      dims,
-      strides,
-      padding,
-      window_dilation=dilation,
+    (indices, inputs),
+    (0, init_val),
+    reduce_fn,
+    dims,
+    strides,
+    padding,
+    window_dilation=dilation,
   )
   if is_single_input:
     indices = jnp.squeeze(indices, axis=0)
@@ -1354,17 +1372,19 @@ try:
     from jax.sharding import PartitionSpec as P, NamedSharding
     import ast
     import torch_xla.distributed.spmd as xs
+
     pmesh = xs.Mesh.from_str(mesh)
     assert pmesh is not None
     partition_spec_eval = ast.literal_eval(partition_spec)
     jmesh = pmesh.get_jax_mesh()
     return jax.lax.with_sharding_constraint(
-        t, NamedSharding(jmesh, P(*partition_spec_eval)))
+      t, NamedSharding(jmesh, P(*partition_spec_eval))
+    )
 
   @op(torch.ops.xla.einsum_linear_forward)
   def _xla_einsum_linear_forward(input, weight, bias):
-    with jax.named_scope('einsum_linear_forward'):
-      product = jax.numpy.einsum('...n,mn->...m', input, weight)
+    with jax.named_scope("einsum_linear_forward"):
+      product = jax.numpy.einsum("...n,mn->...m", input, weight)
       if bias is not None:
         return product + bias
       return product
@@ -1378,10 +1398,9 @@ except AttributeError:
 @op(torch.ops.aten.min)
 def _aten_min(x, dim=None, keepdim=False):
   if dim is not None:
-    return _with_reduction_scalar(jnp.min, x, dim,
-                                  keepdim), _with_reduction_scalar(
-                                      jnp.argmin, x, dim,
-                                      keepdim).astype(jnp.int64)
+    return _with_reduction_scalar(
+      jnp.min, x, dim, keepdim
+    ), _with_reduction_scalar(jnp.argmin, x, dim, keepdim).astype(jnp.int64)
   else:
     return _with_reduction_scalar(jnp.min, x, dim, keepdim)
 
@@ -1390,15 +1409,17 @@ def _aten_min(x, dim=None, keepdim=False):
 def _aten_mode(input, dim=-1, keepdim=False, *, out=None):
   if input.ndim == 0:  # single number
     return input, jnp.array(0)
-  dim = (input.ndim +
-         dim) % input.ndim  # jnp.scipy.stats.mode does not accept -1 as dim
+  dim = (
+    input.ndim + dim
+  ) % input.ndim  # jnp.scipy.stats.mode does not accept -1 as dim
   # keepdims must be True for accurate broadcasting
   mode, _ = jax.scipy.stats.mode(input, axis=dim, keepdims=True)
   mode_broadcast = jnp.broadcast_to(mode, input.shape)
   if not keepdim:
     mode = mode.squeeze(axis=dim)
   indices = jnp.argmax(
-      jnp.equal(mode_broadcast, input), axis=dim, keepdims=keepdim)
+    jnp.equal(mode_broadcast, input), axis=dim, keepdims=keepdim
+  )
   return mode, indices
 
 
@@ -1432,7 +1453,8 @@ def _aten_var(x, dim=None, *, correction=1, keepdim=False, out=None):
 @op(torch.ops.prims.broadcast_in_dim)
 def _prims_broadcast_in_dim(t, shape, broadcast_dimensions):
   return jax.lax.broadcast_in_dim(
-      t, shape, broadcast_dimensions=broadcast_dimensions)
+    t, shape, broadcast_dimensions=broadcast_dimensions
+  )
 
 
 # aten.native_group_norm -- should use decomp table
@@ -1475,15 +1497,17 @@ def _aten_native_group_norm(input, weight, bias, N, C, HxW, group, eps=1e-5):
     normalized = (x - mean) * rstd
     return normalized, mean, rstd
 
-  normalized, group_mean, group_rstd = jax.lax.map(group_norm_body,
-                                                   reshaped_input)
+  normalized, group_mean, group_rstd = jax.lax.map(
+    group_norm_body, reshaped_input
+  )
 
   # Reshape back to original input shape
   output = jnp.reshape(normalized, input_shape)
 
   # **Affine transformation**
-  affine_shape = [-1 if i == 1 else 1 for i in range(input.ndim)
-                 ]  # Shape for broadcasting
+  affine_shape = [
+    -1 if i == 1 else 1 for i in range(input.ndim)
+  ]  # Shape for broadcasting
   if weight is not None and bias is not None:
     output = bias.reshape(affine_shape) + output * weight.reshape(affine_shape)
   elif weight is not None:
@@ -1515,11 +1539,13 @@ def _aten_linalg_vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
       The tensor containing the calculated vector norms.
   """
 
-  if ord not in {2, float("inf"), float("-inf"), "fro"
-                } and not isinstance(ord, (int, float)):
+  if ord not in {2, float("inf"), float("-inf"), "fro"} and not isinstance(
+    ord, (int, float)
+  ):
     raise ValueError(
-        f"Unsupported ord value: {ord}. Supported values are 2, inf, -inf, and"
-        " 'fro'.")
+      f"Unsupported ord value: {ord}. Supported values are 2, inf, -inf, and"
+      " 'fro'."
+    )
 
   # Special cases (for efficiency and clarity)
   if ord == 0:
@@ -1527,13 +1553,14 @@ def _aten_linalg_vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
       # float sets it to float64. set it back to input type
       result = jnp.astype(jnp.array(float(self != 0)), self.dtype)
     else:
-      result = _with_reduction_scalar(jnp.sum, jnp.where(self != 0, 1, 0), dim,
-                                      keepdim)
+      result = _with_reduction_scalar(
+        jnp.sum, jnp.where(self != 0, 1, 0), dim, keepdim
+      )
 
   elif ord == 2:  # Euclidean norm
     result = jnp.sqrt(
-        _with_reduction_scalar(jnp.sum,
-                               jnp.abs(self)**2, dim, keepdim))
+      _with_reduction_scalar(jnp.sum, jnp.abs(self) ** 2, dim, keepdim)
+    )
 
   elif ord == float("inf"):
     result = _with_reduction_scalar(jnp.max, jnp.abs(self), dim, keepdim)
@@ -1543,13 +1570,13 @@ def _aten_linalg_vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
 
   elif ord == "fro":  # Frobenius norm
     result = jnp.sqrt(
-        _with_reduction_scalar(jnp.sum,
-                               jnp.abs(self)**2, dim, keepdim))
+      _with_reduction_scalar(jnp.sum, jnp.abs(self) ** 2, dim, keepdim)
+    )
 
   else:  # General case (e.g., ord = 1, ord = 3)
-    result = _with_reduction_scalar(jnp.sum,
-                                    jnp.abs(self)**ord, dim,
-                                    keepdim)**(1.0 / ord)
+    result = _with_reduction_scalar(
+      jnp.sum, jnp.abs(self) ** ord, dim, keepdim
+    ) ** (1.0 / ord)
 
   # (Optional) dtype conversion
   if dtype is not None:
@@ -1585,12 +1612,9 @@ def _aten_sinh(self):
 
 # aten.native_layer_norm_backward
 @op(torch.ops.aten.native_layer_norm_backward)
-def _aten_native_layer_norm_backward(grad_out,
-                                     input,
-                                     normalized_shape,
-                                     weight,
-                                     bias,
-                                     eps=1e-5):
+def _aten_native_layer_norm_backward(
+  grad_out, input, normalized_shape, weight, bias, eps=1e-5
+):
   """Implements the backward pass of layer normalization in Jax as defined by `aten::native_layer_norm_backward`.
 
   Args:
@@ -1604,8 +1628,9 @@ def _aten_native_layer_norm_backward(grad_out,
   Returns:
     A tuple of (grad_input, grad_weight, grad_bias).
   """
-  return jax.lax.native_layer_norm_backward(grad_out, input, normalized_shape,
-                                            weight, bias, eps)
+  return jax.lax.native_layer_norm_backward(
+    grad_out, input, normalized_shape, weight, bias, eps
+  )
 
 
 # aten.reflection_pad3d_backward
@@ -1721,8 +1746,11 @@ def _scatter_index(dim, index):
       target_shape = [1] * len(index_shape)
       target_shape[i] = index_shape[i]
       input_indexes.append(
-          jnp.broadcast_to(
-              jnp.arange(index_shape[i]).reshape(target_shape), index_shape))
+        jnp.broadcast_to(
+          jnp.arange(index_shape[i]).reshape(target_shape),
+          index_shape,
+        )
+      )
   return tuple(input_indexes), tuple(source_indexes)
 
 
@@ -1738,7 +1766,6 @@ def _aten_scatter_add(input, dim, index, src):
 # aten.masked_scatter
 @op(torch.ops.aten.masked_scatter)
 def _aten_masked_scatter(self, mask, source):
-
   broadcast_shape = jnp.broadcast_shapes(self.shape, mask.shape)
 
   if self.shape != broadcast_shape:
@@ -1751,7 +1778,7 @@ def _aten_masked_scatter(self, mask, source):
   source_flat = source.flatten()
 
   true_indices = jnp.where(mask_flat)[0]
-  self_flat = self_flat.at[true_indices].set(source_flat[:len(true_indices)])
+  self_flat = self_flat.at[true_indices].set(source_flat[: len(true_indices)])
   final_arr = self_flat.reshape(self.shape)
 
   return final_arr
@@ -1813,13 +1840,9 @@ def _aten_atan(self):
 
 @op(torch.ops.aten.scatter_reduce)
 @op(torch.ops.aten.scatter)
-def _aten_scatter_reduce(input,
-                         dim,
-                         index,
-                         src,
-                         reduce=None,
-                         *,
-                         include_self=True):
+def _aten_scatter_reduce(
+  input, dim, index, src, reduce=None, *, include_self=True
+):
   if not isinstance(src, jnp.ndarray):
     src = jnp.array(src, dtype=input.dtype)
   input_indexes, source_indexes = _scatter_index(dim, index)
@@ -1906,8 +1929,9 @@ def pool(inputs, init, reduce_fn, window_shape, strides, padding):
   """
   num_batch_dims = inputs.ndim - (len(window_shape) + 1)
   strides = strides or (1,) * len(window_shape)
-  assert len(window_shape) == len(
-      strides), f"len({window_shape}) must equal len({strides})"
+  assert len(window_shape) == len(strides), (
+    f"len({window_shape}) must equal len({strides})"
+  )
   strides = (1,) * (1 + num_batch_dims) + strides
   dims = (1,) * (1 + num_batch_dims) + window_shape
 
@@ -1924,10 +1948,12 @@ def pool(inputs, init, reduce_fn, window_shape, strides, padding):
   if not isinstance(padding, str):
     padding = tuple(map(tuple, padding))
     assert len(padding) == len(window_shape), (
-        f"padding {padding} must specify pads for same number of dims as "
-        f"window_shape {window_shape}")
-    assert all([len(x) == 2 for x in padding
-               ]), f"each entry in padding {padding} must be length 2"
+      f"padding {padding} must specify pads for same number of dims as "
+      f"window_shape {window_shape}"
+    )
+    assert all([len(x) == 2 for x in padding]), (
+      f"each entry in padding {padding} must be length 2"
+    )
     padding = ((0, 0), (0, 0)) + padding
   y = jax.lax.reduce_window(inputs, init, reduce_fn, dims, strides, padding)
   if is_single_input:
@@ -1937,20 +1963,21 @@ def pool(inputs, init, reduce_fn, window_shape, strides, padding):
 
 @op(torch.ops.aten._adaptive_avg_pool2d)
 @op(torch.ops.aten._adaptive_avg_pool3d)
-def adaptive_avg_pool2or3d(input: jnp.ndarray,
-                           output_size: Tuple[int, int]) -> jnp.ndarray:
+def adaptive_avg_pool2or3d(
+  input: jnp.ndarray, output_size: Tuple[int, int]
+) -> jnp.ndarray:
   """
-    Applies a 2/3D adaptive average pooling over an input signal composed of several input planes.
+  Applies a 2/3D adaptive average pooling over an input signal composed of several input planes.
 
-    See :class:`~torch.nn.AdaptiveAvgPool2d` for details and output shape.
+  See :class:`~torch.nn.AdaptiveAvgPool2d` for details and output shape.
 
-    Args:
-        input: input tensor
-        output_size: the target output size (single integer or double-integer tuple)
+  Args:
+      input: input tensor
+      output_size: the target output size (single integer or double-integer tuple)
 
-    Context:
-      https://github.com/pytorch/pytorch/blob/main/torch/_decomp/decompositions.py#L2401
-    """
+  Context:
+    https://github.com/pytorch/pytorch/blob/main/torch/_decomp/decompositions.py#L2401
+  """
   shape = input.shape
   ndim = len(shape)
   out_dim = len(output_size)
@@ -1958,22 +1985,25 @@ def adaptive_avg_pool2or3d(input: jnp.ndarray,
 
   # Preconditions
 
-  assert ndim in (
-      out_dim + 1, out_dim + 2
-  ), f"adaptive_avg_pool{num_spatial_dim}d(): Expected {num_spatial_dim+1}D or {num_spatial_dim+2}D tensor, but got {ndim}"
+  assert ndim in (out_dim + 1, out_dim + 2), (
+    f"adaptive_avg_pool{num_spatial_dim}d(): Expected {num_spatial_dim + 1}D or {num_spatial_dim + 2}D tensor, but got {ndim}"
+  )
   for d in input.shape[-2:]:
-    assert d != 0, "adaptive_avg_pool{num_spactial_dim}d(): Expected input to have non-zero size for " \
-                   f"non-batch dimensions, but input has shape {tuple(shape)}."
+    assert d != 0, (
+      "adaptive_avg_pool{num_spactial_dim}d(): Expected input to have non-zero size for "
+      f"non-batch dimensions, but input has shape {tuple(shape)}."
+    )
 
   # Optimisation (we should also do this in the kernel implementation)
   if all(s % o == 0 for o, s in zip(output_size, shape[-out_dim:])):
     stride = tuple(i // o for i, o in zip(shape[-out_dim:], output_size))
-    kernel = tuple(i - (o - 1) * s
-                   for i, o, s in zip(shape[-out_dim:], output_size, stride))
+    kernel = tuple(
+      i - (o - 1) * s for i, o, s in zip(shape[-out_dim:], output_size, stride)
+    )
     return _aten_avg_pool(
-        input,
-        kernel,
-        strides=stride,
+      input,
+      kernel,
+      strides=stride,
     )
 
   def start_index(a, b, c):
@@ -2025,9 +2055,12 @@ def adaptive_avg_pool2or3d(input: jnp.ndarray,
     reduce_axis = (-3, -1)
   else:
     assert out_dim == 3
-    vals = input[...,
-                 _unsqueeze_to_dim(idx[0], 6),
-                 _unsqueeze_to_dim(idx[1], 4), idx[2]]
+    vals = input[
+      ...,
+      _unsqueeze_to_dim(idx[0], 6),
+      _unsqueeze_to_dim(idx[1], 4),
+      idx[2],
+    ]
     reduce_axis = (-5, -3, -1)
 
   # Shortcut for the simpler case
@@ -2053,7 +2086,12 @@ def adaptive_avg_pool2or3d(input: jnp.ndarray,
 
   for i in range(len(length)):
     vals, length[i] = maybe_mask(
-        vals, length[i], range_max[i], adaptive=adaptive[i], dim=(i - out_dim))
+      vals,
+      length[i],
+      range_max[i],
+      adaptive=adaptive[i],
+      dim=(i - out_dim),
+    )
 
   # We unroll the sum as we assume that the kernels are going to be small
   ret = jnp.sum(vals, axis=reduce_axis)
@@ -2066,13 +2104,13 @@ def adaptive_avg_pool2or3d(input: jnp.ndarray,
 @op(torch.ops.aten.avg_pool2d)
 @op(torch.ops.aten.avg_pool3d)
 def _aten_avg_pool(
-    inputs,
-    kernel_size,
-    strides=None,
-    padding=0,
-    ceil_mode=False,
-    count_include_pad=True,
-    divisor_override=None,
+  inputs,
+  kernel_size,
+  strides=None,
+  padding=0,
+  ceil_mode=False,
+  count_include_pad=True,
+  divisor_override=None,
 ):
   num_batch_dims = len(inputs.shape) - len(kernel_size) - 1
   kernel_size = tuple(kernel_size)
@@ -2085,8 +2123,14 @@ def _aten_avg_pool(
   input_shape = inputs.shape
   if num_batch_dims == 0:
     input_shape = [1, *input_shape]
-  padding = _ceil_mode_padding(padding, input_shape, kernel_size, strides,
-                               [1] * len(kernel_size), ceil_mode)
+  padding = _ceil_mode_padding(
+    padding,
+    input_shape,
+    kernel_size,
+    strides,
+    [1] * len(kernel_size),
+    ceil_mode,
+  )
 
   y = pool(inputs, 0.0, jax.lax.add, kernel_size, strides, padding)
   if divisor_override is not None:
@@ -2119,12 +2163,12 @@ def _aten_avg_pool(
     if len(div_shape) - 2 == len(kernel_size):
       div_shape = (1,) + div_shape[1:]
     y = y / pool(
-        jnp.ones(div_shape, y.dtype),
-        jnp.array(0.0, y.dtype),
-        jax.lax.add,
-        kernel_size,
-        strides,
-        padding,
+      jnp.ones(div_shape, y.dtype),
+      jnp.array(0.0, y.dtype),
+      jax.lax.add,
+      kernel_size,
+      strides,
+      padding,
     )
   return y.astype(inputs.dtype)
 
@@ -2153,7 +2197,7 @@ def _generate_indices(dims, skip_dim_indices=[]):
 @op(torch.ops.aten.reciprocal)
 def _aten_reciprocal(a):
   if _is_int(a):
-    return (1 / a).astype(jnp.dtype('float32'))
+    return (1 / a).astype(jnp.dtype("float32"))
   return 1 / a
 
 
@@ -2203,10 +2247,9 @@ def _aten_round(input, decimals=0):
 @op(torch.ops.aten.max)
 def _aten_max(self, dim=None, keepdim=False):
   if dim is not None:
-    return _with_reduction_scalar(jnp.max, self, dim,
-                                  keepdim), _with_reduction_scalar(
-                                      jnp.argmax, self, dim,
-                                      keepdim).astype(jnp.int64)
+    return _with_reduction_scalar(
+      jnp.max, self, dim, keepdim
+    ), _with_reduction_scalar(jnp.argmax, self, dim, keepdim).astype(jnp.int64)
   else:
     return _with_reduction_scalar(jnp.max, self, dim, keepdim)
 
@@ -2256,21 +2299,21 @@ def _aten_any(self, dim=None, keepdim=False):
 @op(torch.ops.aten.arange.default)
 @op_base.convert_dtype(use_default_dtype=False)
 def _aten_arange(
-    start,
-    end=None,
-    step=None,
-    *,
-    dtype=None,
-    layout=None,
-    requires_grad=False,
-    device=None,
-    pin_memory=False,
+  start,
+  end=None,
+  step=None,
+  *,
+  dtype=None,
+  layout=None,
+  requires_grad=False,
+  device=None,
+  pin_memory=False,
 ):
   return jnp.arange(
-      op_base.maybe_convert_constant_dtype(start, dtype),
-      op_base.maybe_convert_constant_dtype(end, dtype),
-      op_base.maybe_convert_constant_dtype(step, dtype),
-      dtype=dtype,
+    op_base.maybe_convert_constant_dtype(start, dtype),
+    op_base.maybe_convert_constant_dtype(end, dtype),
+    op_base.maybe_convert_constant_dtype(step, dtype),
+    dtype=dtype,
   )
 
 
@@ -2339,7 +2382,6 @@ def _aten_bitwise_xor(self, other):
 # aten.broadcast_tensors
 @op(torch.ops.aten.broadcast_tensors)
 def _aten_broadcast_tensors(*tensors):
-
   def _get_broadcast_shape(shapes):
     """
     Determines the output shape by broadcasting all input shapes.
@@ -2381,12 +2423,16 @@ def _aten_broadcast_tensors(*tensors):
     """
 
     res = tuple(
-        i for i, (in_dim, out_dim) in enumerate(zip(input_shape, output_shape)))
+      i for i, (in_dim, out_dim) in enumerate(zip(input_shape, output_shape))
+    )
     return res
 
   # clean some function's previous wrap
-  if len(tensors) == 1 and len(tensors[0]) >= 1 and isinstance(
-      tensors[0][0], jax.Array):
+  if (
+    len(tensors) == 1
+    and len(tensors[0]) >= 1
+    and isinstance(tensors[0][0], jax.Array)
+  ):
     tensors = tensors[0]
 
   # Get the shapes of all input tensors
@@ -2395,9 +2441,10 @@ def _aten_broadcast_tensors(*tensors):
   output_shape = _get_broadcast_shape(shapes)
   # Broadcast each tensor to the output shape
   broadcasted_tensors = [
-      jax.lax.broadcast_in_dim(t, output_shape,
-                               _broadcast_dimensions(t.shape, output_shape))
-      for t in tensors
+    jax.lax.broadcast_in_dim(
+      t, output_shape, _broadcast_dimensions(t.shape, output_shape)
+    )
+    for t in tensors
   ]
 
   return broadcasted_tensors
@@ -2461,8 +2508,9 @@ def _aten_cdist_forward(x1, x2, p, compute_mode=""):
 @op(torch.ops.aten._pdist_forward)
 def _aten__pdist_forward(x, p=2):
   pairwise_dists = _aten_cdist_forward(x, x, p)
-  condensed_dists = pairwise_dists[jnp.triu_indices(
-      pairwise_dists.shape[0], k=1)]
+  condensed_dists = pairwise_dists[
+    jnp.triu_indices(pairwise_dists.shape[0], k=1)
+  ]
   return condensed_dists
 
 
@@ -2503,8 +2551,11 @@ def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
 def diag_indices_with_offset(input_shape, offset, dim1=0, dim2=1):
   input_len = len(input_shape)
   if dim1 == dim2 or not (0 <= dim1 < input_len and 0 <= dim2 < input_len):
-    raise ValueError("dim1 and dim2 must be different and in range [0, " +
-                     str(input_len - 1) + "]")
+    raise ValueError(
+      "dim1 and dim2 must be different and in range [0, "
+      + str(input_len - 1)
+      + "]"
+    )
 
   size1, size2 = input_shape[dim1], input_shape[dim2]
   if offset >= 0:
@@ -2606,12 +2657,9 @@ def _aten_exp2(input):
 # aten.fill
 @op(torch.ops.aten.fill)
 @op(torch.ops.aten.full_like)
-def _aten_fill(x,
-               value,
-               dtype=None,
-               pin_memory=None,
-               memory_format=None,
-               device=None):
+def _aten_fill(
+  x, value, dtype=None, pin_memory=None, memory_format=None, device=None
+):
   if dtype is None:
     dtype = x.dtype
   else:
@@ -2686,8 +2734,11 @@ def _aten_glu(x, dim=-1):
 # aten.hardtanh
 @op(torch.ops.aten.hardtanh)
 def _aten_hardtanh(input, min_val=-1, max_val=1, inplace=False):
-  if input.dtype == np.int64 and isinstance(max_val, float) and isinstance(
-      min_val, float):
+  if (
+    input.dtype == np.int64
+    and isinstance(max_val, float)
+    and isinstance(min_val, float)
+  ):
     min_val = int(min_val)
     max_val = int(max_val)
   return jnp.clip(input, min_val, max_val)
@@ -2706,7 +2757,8 @@ def _aten_histc(input, bins=100, min=0, max=0):
       max = jnp.max(input)
   range_value = (min, max)
   hist, bin_edges = jnp.histogram(
-      input, bins=bins, range=range_value, weights=None, density=None)
+    input, bins=bins, range=range_value, weights=None, density=None
+  )
   return hist
 
 
@@ -2744,12 +2796,12 @@ def _aten_linalg_eig(A):
 
 
 @op(torch.ops.aten._linalg_eigh)
-def _aten_linalg_eigh(A, UPLO='L'):
+def _aten_linalg_eigh(A, UPLO="L"):
   return jnp.linalg.eigh(A, UPLO)
 
 
 @op(torch.ops.aten.linalg_lstsq)
-def _aten_linalg_lstsq(A, B, rcond=None, driver='gelsy'):
+def _aten_linalg_lstsq(A, B, rcond=None, driver="gelsy"):
   input_dtype = A.dtype
 
   m = A.shape[-2]
@@ -2758,40 +2810,39 @@ def _aten_linalg_lstsq(A, B, rcond=None, driver='gelsy'):
   is_batched = A.ndim > 2
 
   if is_batched:
-
     batch_shape = jnp.broadcast_shapes(A.shape[:-2], B.shape[:-2])
     batch_size = int(np.prod(batch_shape))
     A_reshaped = A.reshape((batch_size,) + A.shape[-2:])
     B_reshaped = B.reshape((batch_size,) + B.shape[-2:])
 
     X, residuals, rank, singular_values = jax.vmap(
-        jnp.linalg.lstsq, in_axes=(0,
-                                   0))(A_reshaped, B_reshaped, rcond=rcond)
+      jnp.linalg.lstsq, in_axes=(0, 0)
+    )(A_reshaped, B_reshaped, rcond=rcond)
 
     X = X.reshape(batch_shape + X.shape[-2:])
 
-    if driver in ['gelsd', 'gelsy', 'gelss']:
+    if driver in ["gelsd", "gelsy", "gelss"]:
       rank = rank.reshape(batch_shape)
     else:
       rank = jnp.array([], dtype=jnp.int64)
 
     full_rank = jnp.all(rank == n)
-    if driver == 'gelsy' or m <= n or (not full_rank):
+    if driver == "gelsy" or m <= n or (not full_rank):
       residuals = jnp.array([], dtype=input_dtype)
     else:
       residuals = residuals.reshape(batch_shape + residuals.shape[-1:])
 
-    if driver in ['gelsd', 'gelss']:
-      singular_values = singular_values.reshape(batch_shape +
-                                                singular_values.shape[-1:])
+    if driver in ["gelsd", "gelss"]:
+      singular_values = singular_values.reshape(
+        batch_shape + singular_values.shape[-1:]
+      )
     else:
       singular_values = jnp.array([], dtype=input_dtype)
 
   else:
-
     X, residuals, rank, singular_values = jnp.linalg.lstsq(A, B, rcond=rcond)
 
-    if driver not in ['gelsd', 'gelsy', 'gelss']:
+    if driver not in ["gelsd", "gelsy", "gelss"]:
       rank = jnp.array([], dtype=jnp.int64)
 
     rank_value = None
@@ -2800,11 +2851,11 @@ def _aten_linalg_lstsq(A, B, rcond=None, driver='gelsy'):
       rank = jnp.array(rank_value, dtype=jnp.int64)
 
     # When driver is ‘gels’, assume that A is full-rank.
-    full_rank = driver == 'gels' or rank_value == n
-    if driver == 'gelsy' or m <= n or (not full_rank):
+    full_rank = driver == "gels" or rank_value == n
+    if driver == "gelsy" or m <= n or (not full_rank):
       residuals = jnp.array([], dtype=input_dtype)
 
-    if driver not in ['gelsd', 'gelss']:
+    if driver not in ["gelsd", "gelss"]:
       singular_values = jnp.array([], dtype=input_dtype)
 
   return X, residuals, rank, singular_values
@@ -2816,14 +2867,15 @@ def _aten_linalg_ldl_factor_ex(A, hermitian=False, check_errors=False):
   # https://github.com/jax-ml/jax/issues/12779
   # TODO: Not tested for complex inputs. Does not support hermitian=True
   pivots = jnp.broadcast_to(
-      jnp.arange(1, A.shape[-1] + 1, dtype=jnp.int32), A.shape[:-1])
+    jnp.arange(1, A.shape[-1] + 1, dtype=jnp.int32), A.shape[:-1]
+  )
   info = jnp.zeros(A.shape[:-2], jnp.int32)
   C = jnp.linalg.cholesky(A)
   if C.size == 0:
     return C, pivots, info
 
   # Fill diagonals of stacked matrices
-  @functools.partial(jnp.vectorize, signature='(k,k),(k,k)->(k,k)')
+  @functools.partial(jnp.vectorize, signature="(k,k),(k,k)->(k,k)")
   def fill_diagonal_batch(x, y):
     return jnp.fill_diagonal(x, jnp.diag(y), inplace=False)
 
@@ -3023,9 +3075,11 @@ def _aten_nonzero_static(input, size, fill_value=-1):
   if size < indices.shape[0]:
     indices = indices[:size]
   elif size > indices.shape[0]:
-    padding = jnp.full((size - indices.shape[0], indices.shape[1]),
-                       fill_value,
-                       dtype=indices.dtype)
+    padding = jnp.full(
+      (size - indices.shape[0], indices.shape[1]),
+      fill_value,
+      dtype=indices.dtype,
+    )
     indices = jnp.concatenate((indices, padding))
 
   return indices
@@ -3036,9 +3090,9 @@ def _aten_nonzero_static(input, size, fill_value=-1):
 def _aten_nonzero(x, as_tuple=False):
   if jnp.ndim(x) == 0 and (as_tuple or x.item() == 0):
     return torch.empty(0, 0, dtype=torch.int64)
-  if jnp.ndim(
-      x
-  ) == 0:  # when x is scalar, return torch.tensor([], size=(1, 0), dtype=torch.int64)
+  if (
+    jnp.ndim(x) == 0
+  ):  # when x is scalar, return torch.tensor([], size=(1, 0), dtype=torch.int64)
     res = torch.empty(1, 0, dtype=torch.int64)
     return jnp.array(res.numpy())
   index_tuple = jnp.nonzero(x)
@@ -3079,28 +3133,30 @@ def _aten_put(self, index, source, accumulate=False):
 # aten.randperm
 # randperm.generator(SymInt n, *, Generator? generator, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None)
 @op(torch.ops.aten.randperm, needs_env=True)
-def _aten_randperm(n,
-                   *,
-                   generator=None,
-                   dtype=None,
-                   layout=None,
-                   device=None,
-                   pin_memory=None,
-                   env=None):
+def _aten_randperm(
+  n,
+  *,
+  generator=None,
+  dtype=None,
+  layout=None,
+  device=None,
+  pin_memory=None,
+  env=None,
+):
   """
-    Generates a random permutation of integers from 0 to n-1.
+  Generates a random permutation of integers from 0 to n-1.
 
-    Args:
-        n: The upper bound (exclusive) of the permutation range.
-        generator: A PRNGKey used as the random key. If None, a new key is created.
-        dtype: The desired data type of the output array. Default is jnp.int64.
-        layout: The desired layout of the output array (e.g., 'row-major', 'column-major').
-        device: The desired device on which to place the output array (e.g., jax.devices()[0]).
-        pin_memory: Whether to pin the output array's memory to the host.
+  Args:
+      n: The upper bound (exclusive) of the permutation range.
+      generator: A PRNGKey used as the random key. If None, a new key is created.
+      dtype: The desired data type of the output array. Default is jnp.int64.
+      layout: The desired layout of the output array (e.g., 'row-major', 'column-major').
+      device: The desired device on which to place the output array (e.g., jax.devices()[0]).
+      pin_memory: Whether to pin the output array's memory to the host.
 
-    Returns:
-        A DeviceArray containing a random permutation of integers from 0 to n-1.
-    """
+  Returns:
+      A DeviceArray containing a random permutation of integers from 0 to n-1.
+  """
   if dtype:
     dtype = mappings.t2j_dtype(dtype)
   else:
@@ -3151,10 +3207,10 @@ def _aten_slice_scatter(input, src, dim=0, start=None, end=None, step=1):
 @op(torch.ops.aten.sort)
 def _aten_sort(a, dim=-1, descending=False, stable=False):
   if a.shape == ():
-    return (a, jnp.astype(0, 'int64'))
+    return (a, jnp.astype(0, "int64"))
   return (
-      jnp.sort(a, axis=dim, stable=stable, descending=descending),
-      jnp.argsort(a, axis=dim, stable=stable, descending=descending),
+    jnp.sort(a, axis=dim, stable=stable, descending=descending),
+    jnp.argsort(a, axis=dim, stable=stable, descending=descending),
   )
 
 
@@ -3196,8 +3252,8 @@ def _aten_topk(input, k, dim=None, largest=True, sorted=True, *, out=None):
   if dim != -1 and dim != len(input.shape) - 1:
     transpose_shape = list(range(len(input.shape)))
     transpose_shape[dim], transpose_shape[-1] = (
-        transpose_shape[-1],
-        transpose_shape[dim],
+      transpose_shape[-1],
+      transpose_shape[dim],
     )
     input = jnp.transpose(input, transpose_shape)
 
@@ -3206,7 +3262,8 @@ def _aten_topk(input, k, dim=None, largest=True, sorted=True, *, out=None):
   if sorted:
     values = jnp.sort(values, descending=True)
     indices = jnp.take_along_axis(
-        indices, jnp.argsort(values, axis=-1, descending=True), axis=-1)
+      indices, jnp.argsort(values, axis=-1, descending=True), axis=-1
+    )
 
   if not largest:
     values = -values  # Negate values back if we found smallest
@@ -3219,31 +3276,35 @@ def _aten_topk(input, k, dim=None, largest=True, sorted=True, *, out=None):
 
 
 # aten.tril_indices
-#tril_indices(int row, int col, int offset=0, *, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None)
+# tril_indices(int row, int col, int offset=0, *, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None)
 @op(torch.ops.aten.tril_indices)
-def _aten_tril_indices(row,
-                       col,
-                       offset=0,
-                       *,
-                       dtype=jnp.int64.dtype,
-                       layout=None,
-                       device=None,
-                       pin_memory=None):
+def _aten_tril_indices(
+  row,
+  col,
+  offset=0,
+  *,
+  dtype=jnp.int64.dtype,
+  layout=None,
+  device=None,
+  pin_memory=None,
+):
   a, b = jnp.tril_indices(row, offset, col)
   return jnp.stack((a, b))
 
 
 # aten.tril_indices
-#tril_indices(int row, int col, int offset=0, *, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None)
+# tril_indices(int row, int col, int offset=0, *, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None)
 @op(torch.ops.aten.triu_indices)
-def _aten_triu_indices(row,
-                       col,
-                       offset=0,
-                       *,
-                       dtype=jnp.int64.dtype,
-                       layout=None,
-                       device=None,
-                       pin_memory=None):
+def _aten_triu_indices(
+  row,
+  col,
+  offset=0,
+  *,
+  dtype=jnp.int64.dtype,
+  layout=None,
+  device=None,
+  pin_memory=None,
+):
   a, b = jnp.triu_indices(row, offset, col)
   return jnp.stack((a, b))
 
@@ -3251,8 +3312,7 @@ def _aten_triu_indices(row,
 @op(torch.ops.aten.unbind_copy)
 def _aten_unbind(a, dim=0):
   return [
-      jax.lax.index_in_dim(a, i, dim, keepdims=False)
-      for i in range(a.shape[dim])
+    jax.lax.index_in_dim(a, i, dim, keepdims=False) for i in range(a.shape[dim])
   ]
 
 
@@ -3261,21 +3321,22 @@ def _aten_unbind(a, dim=0):
 # NOTE: Like the CUDA and CPU implementations, this implementation always sorts
 # the tensor regardless of the `sorted` argument passed to `torch.unique`.
 @op(torch.ops.aten.unique_dim)
-def _aten_unique_dim(input_tensor,
-                     dim,
-                     sort=True,
-                     return_inverse=False,
-                     return_counts=False):
+def _aten_unique_dim(
+  input_tensor, dim, sort=True, return_inverse=False, return_counts=False
+):
   result_tensor_or_tuple = jnp.unique(
-      input_tensor,
-      return_index=False,
-      return_inverse=return_inverse,
-      return_counts=return_counts,
-      axis=dim,
-      equal_nan=False)
+    input_tensor,
+    return_index=False,
+    return_inverse=return_inverse,
+    return_counts=return_counts,
+    axis=dim,
+    equal_nan=False,
+  )
   result_list = (
-      list(result_tensor_or_tuple) if isinstance(result_tensor_or_tuple, tuple)
-      else [result_tensor_or_tuple])
+    list(result_tensor_or_tuple)
+    if isinstance(result_tensor_or_tuple, tuple)
+    else [result_tensor_or_tuple]
+  )
 
   if not return_inverse:
     result_list.insert(1, None)
@@ -3299,12 +3360,13 @@ def _aten_unique_dim(input_tensor,
 @op(torch.ops.aten._unique)
 def _aten_unique(input_tensor, sort=True, return_inverse=False):
   result_tensor_or_tuple = jnp.unique(
-      input_tensor,
-      return_index=False,
-      return_inverse=return_inverse,
-      return_counts=False,
-      axis=None,
-      equal_nan=False)
+    input_tensor,
+    return_index=False,
+    return_inverse=return_inverse,
+    return_counts=False,
+    axis=None,
+    equal_nan=False,
+  )
   if return_inverse:
     return result_tensor_or_tuple
   else:
@@ -3316,24 +3378,23 @@ def _aten_unique(input_tensor, sort=True, return_inverse=False):
 # NOTE: Like the CUDA and CPU implementations, this implementation always sorts
 # the tensor regardless of the `sorted` argument passed to `torch.unique`.
 @op(torch.ops.aten._unique2)
-def _aten_unique2(input_tensor,
-                  sort=True,
-                  return_inverse=False,
-                  return_counts=False):
+def _aten_unique2(
+  input_tensor, sort=True, return_inverse=False, return_counts=False
+):
   return _aten_unique_dim(
-      input_tensor=input_tensor,
-      dim=None,
-      sort=sort,
-      return_inverse=return_inverse,
-      return_counts=return_counts)
+    input_tensor=input_tensor,
+    dim=None,
+    sort=sort,
+    return_inverse=return_inverse,
+    return_counts=return_counts,
+  )
 
 
 # aten.unique_consecutive
 @op(torch.ops.aten.unique_consecutive)
-def _aten_unique_consecutive(input_tensor,
-                             return_inverse=False,
-                             return_counts=None,
-                             dim=None):
+def _aten_unique_consecutive(
+  input_tensor, return_inverse=False, return_counts=None, dim=None
+):
   # Explanation of computations (shown in 1D for simplicity):
   #
   #   Input                                      [a b b c c c d d d d e e e e e]
@@ -3356,17 +3417,19 @@ def _aten_unique_consecutive(input_tensor,
       dim += ndim
 
   nd_slice_0 = tuple(
-      slice(None, -1) if d == dim else slice(None) for d in range(ndim))
+    slice(None, -1) if d == dim else slice(None) for d in range(ndim)
+  )
   nd_slice_1 = tuple(
-      slice(1, None) if d == dim else slice(None) for d in range(ndim))
+    slice(1, None) if d == dim else slice(None) for d in range(ndim)
+  )
 
   axes_to_reduce = tuple(d for d in range(ndim) if d != dim)
 
-  does_not_equal_prior = (
-      jnp.any(
-          input_tensor[nd_slice_0] != input_tensor[nd_slice_1],
-          axis=axes_to_reduce,
-          keepdims=False))
+  does_not_equal_prior = jnp.any(
+    input_tensor[nd_slice_0] != input_tensor[nd_slice_1],
+    axis=axes_to_reduce,
+    keepdims=False,
+  )
 
   if input_tensor.shape[dim] != 0:
     # Prepend `True` to represent the first element of the input.
@@ -3374,17 +3437,21 @@ def _aten_unique_consecutive(input_tensor,
 
   include_indices = jnp.argwhere(does_not_equal_prior)[:, 0]
 
-  output_tensor = input_tensor[tuple(
-      include_indices if d == dim else slice(None) for d in range(ndim))]
+  output_tensor = input_tensor[
+    tuple(include_indices if d == dim else slice(None) for d in range(ndim))
+  ]
 
   if return_inverse or return_counts:
     counts = (
-        jnp.append(include_indices[1:], input_tensor.shape[dim]) -
-        include_indices[:])
+      jnp.append(include_indices[1:], input_tensor.shape[dim])
+      - include_indices[:]
+    )
 
     inverse = (
-        jnp.reshape(jnp.repeat(jnp.arange(len(counts)), counts), inverse_shape)
-        if return_inverse else None)
+      jnp.reshape(jnp.repeat(jnp.arange(len(counts)), counts), inverse_shape)
+      if return_inverse
+      else None
+    )
 
     return output_tensor, inverse, counts
 
@@ -3409,32 +3476,33 @@ def _aten_where(condition, x=None, y=None):
 # aten.to.dtype
 # Tensor(a) self, ScalarType dtype, bool non_blocking=False, bool copy=False, MemoryFormat? memory_format=None
 @op(torch.ops.aten.to.dtype)
-def _aten_to_dtype(a,
-                   dtype,
-                   non_blocking=False,
-                   copy=False,
-                   memory_format=None):
+def _aten_to_dtype(
+  a, dtype, non_blocking=False, copy=False, memory_format=None
+):
   if dtype:
     jaxdtype = mappings.t2j_dtype(dtype)
   return a.astype(jaxdtype)
 
 
 @op(torch.ops.aten.to.dtype_layout)
-def _aten_to_dtype_layout(a,
-                          *,
-                          dtype=None,
-                          layout=None,
-                          device=None,
-                          pin_memory=None,
-                          non_blocking=False,
-                          copy=False,
-                          memory_format=None):
+def _aten_to_dtype_layout(
+  a,
+  *,
+  dtype=None,
+  layout=None,
+  device=None,
+  pin_memory=None,
+  non_blocking=False,
+  copy=False,
+  memory_format=None,
+):
   return _aten_to_dtype(
-      a,
-      dtype,
-      non_blocking=non_blocking,
-      copy=copy,
-      memory_format=memory_format)
+    a,
+    dtype,
+    non_blocking=non_blocking,
+    copy=copy,
+    memory_format=memory_format,
+  )
 
 
 # aten.to.device
@@ -3457,11 +3525,9 @@ def _aten_var_mean_correction(tensor, dim=None, correction=1, keepdim=False):
 
 @op(torch.ops.aten.scalar_tensor)
 @op_base.convert_dtype()
-def _aten_scalar_tensor(s,
-                        dtype=None,
-                        layout=None,
-                        device=None,
-                        pin_memory=None):
+def _aten_scalar_tensor(
+  s, dtype=None, layout=None, device=None, pin_memory=None
+):
   return jnp.array(s, dtype=dtype)
 
 
@@ -3471,9 +3537,16 @@ def _aten_to_device(x, device, dtype):
 
 
 @op(torch.ops.aten.max_pool2d_with_indices_backward)
-def max_pool2d_with_indices_backward_custom(grad_output, self, kernel_size,
-                                            stride, padding, dilation,
-                                            ceil_mode, indices):
+def max_pool2d_with_indices_backward_custom(
+  grad_output,
+  self,
+  kernel_size,
+  stride,
+  padding,
+  dilation,
+  ceil_mode,
+  indices,
+):
   """
   Approximates the gradient calculation of PyTorch's max_pool2d_with_indices_backward.
 
@@ -3529,15 +3602,15 @@ def _aten_tensor_split(ary, indices_or_sections, axis=0):
 @op(torch.ops.aten.randn, needs_env=True)
 @op_base.convert_dtype()
 def _randn(
-    *size,
-    generator=None,
-    out=None,
-    dtype=None,
-    layout=torch.strided,
-    device=None,
-    requires_grad=False,
-    pin_memory=False,
-    env=None,
+  *size,
+  generator=None,
+  out=None,
+  dtype=None,
+  layout=torch.strided,
+  device=None,
+  requires_grad=False,
+  pin_memory=False,
+  env=None,
 ):
   shape = size
   if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
@@ -3551,11 +3624,11 @@ def _randn(
 
 @op(torch.ops.aten.bernoulli.p, needs_env=True)
 def _aten_bernoulli(
-    self,
-    p=0.5,
-    *,
-    generator=None,
-    env=None,
+  self,
+  p=0.5,
+  *,
+  generator=None,
+  env=None,
 ):
   key = env.get_and_rotate_prng_key(generator)
   res = jax.random.uniform(key, self.shape) < p
@@ -3572,14 +3645,14 @@ def geometric(self, p, *, generator=None, env=None):
 @op(torch.ops.aten.randn_like, needs_env=True)
 @op_base.convert_dtype()
 def _aten_randn_like(
-    x,
-    *,
-    dtype=None,
-    layout=None,
-    device=None,
-    pin_memory=False,
-    memory_format=torch.preserve_format,
-    env=None,
+  x,
+  *,
+  dtype=None,
+  layout=None,
+  device=None,
+  pin_memory=False,
+  memory_format=torch.preserve_format,
+  env=None,
 ):
   key = env.get_and_rotate_prng_key()
   return jax.random.normal(key, dtype=dtype or x.dtype, shape=x.shape)
@@ -3588,15 +3661,15 @@ def _aten_randn_like(
 @op(torch.ops.aten.rand, needs_env=True)
 @op_base.convert_dtype()
 def _rand(
-    *size,
-    generator=None,
-    out=None,
-    dtype=None,
-    layout=torch.strided,
-    device=None,
-    requires_grad=False,
-    pin_memory=False,
-    env=None,
+  *size,
+  generator=None,
+  out=None,
+  dtype=None,
+  layout=torch.strided,
+  device=None,
+  requires_grad=False,
+  pin_memory=False,
+  env=None,
 ):
   shape = size
   if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
@@ -3619,30 +3692,40 @@ def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
 
 
 @op(torch.ops.aten.native_batch_norm)
-def _aten_native_batch_norm(input,
-                            weight,
-                            bias,
-                            running_mean,
-                            running_var,
-                            training=False,
-                            momentum=0.1,
-                            eps=1e-5):
-
+def _aten_native_batch_norm(
+  input,
+  weight,
+  bias,
+  running_mean,
+  running_var,
+  training=False,
+  momentum=0.1,
+  eps=1e-5,
+):
   if running_mean is None:
     running_mean = jnp.zeros(
-        input.shape[1], dtype=input.dtype)  # Initialize running mean if None
+      input.shape[1], dtype=input.dtype
+    )  # Initialize running mean if None
   if running_var is None:
     running_var = jnp.ones(
-        input.shape[1],
-        dtype=input.dtype)  # Initialize running variance if None
+      input.shape[1], dtype=input.dtype
+    )  # Initialize running variance if None
 
   if training:
-    return _aten__native_batch_norm_legit(input, weight, bias, running_mean,
-                                          running_var, training, momentum, eps)
+    return _aten__native_batch_norm_legit(
+      input,
+      weight,
+      bias,
+      running_mean,
+      running_var,
+      training,
+      momentum,
+      eps,
+    )
   else:
-    return _aten__native_batch_norm_legit_no_training(input, weight, bias,
-                                                      running_mean, running_var,
-                                                      momentum, eps)
+    return _aten__native_batch_norm_legit_no_training(
+      input, weight, bias, running_mean, running_var, momentum, eps
+    )
 
 
 @op(torch.ops.aten.normal, needs_env=True)
@@ -3661,23 +3744,25 @@ def _aten_lift_fresh(self):
 
 @op(torch.ops.aten.uniform, needs_env=True)
 def _aten_uniform(self, from_=0, to=1, *, generator=None, env=None):
-  assert from_ <= to, f'Uniform from(passed in {from_}) must be less than to(passed in {to})'
+  assert from_ <= to, (
+    f"Uniform from(passed in {from_}) must be less than to(passed in {to})"
+  )
   shape = self.shape
   res = _rand(*shape, generator=generator, env=env)
   return res * (to - from_) + from_
 
 
-#func: randint.low_generator(SymInt low, SymInt high, SymInt[] size, *, Generator? generator, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
+# func: randint.low_generator(SymInt low, SymInt high, SymInt[] size, *, Generator? generator, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
 
 
 @op(torch.ops.aten.randint, needs_env=True)
 @op_base.convert_dtype(use_default_dtype=False)
 def _aten_randint(
-    *args,
-    generator=None,
-    dtype=None,
-    env=None,
-    **kwargs,
+  *args,
+  generator=None,
+  dtype=None,
+  env=None,
+  **kwargs,
 ):
   if len(args) == 3:
     # low, high, size
@@ -3687,7 +3772,8 @@ def _aten_randint(
     low = 0
   else:
     raise AssertionError(
-        f'Expected at 2 or 3 args for Aten::randint, got {len(args)}')
+      f"Expected at 2 or 3 args for Aten::randint, got {len(args)}"
+    )
 
   key = env.get_and_rotate_prng_key(generator)
   res = jax.random.randint(key, size, low, high)
@@ -3696,17 +3782,19 @@ def _aten_randint(
   return res
 
 
-@op(torch.ops.aten.randint_like,
-    torch.ops.aten.randint.generator,
-    needs_env=True)
+@op(
+  torch.ops.aten.randint_like,
+  torch.ops.aten.randint.generator,
+  needs_env=True,
+)
 @op_base.convert_dtype(use_default_dtype=False)
 def _aten_randint_like(
-    input,
-    *args,
-    generator=None,
-    dtype=None,
-    env=None,
-    **kwargs,
+  input,
+  *args,
+  generator=None,
+  dtype=None,
+  env=None,
+  **kwargs,
 ):
   if len(args) == 2:
     low, high = args
@@ -3715,7 +3803,8 @@ def _aten_randint_like(
     low = 0
   else:
     raise AssertionError(
-        f'Expected at 1 or 2 args for Aten::randint_like, got {len(args)}')
+      f"Expected at 1 or 2 args for Aten::randint_like, got {len(args)}"
+    )
 
   shape = input.shape
   dtype = dtype or input.dtype
@@ -3738,7 +3827,8 @@ def _aten_copysign(input, other, *, out=None):
   # regardless of their exact integer dtype, whereas jax.copysign returns
   # float64 when one or both of them is int64.
   if jnp.issubdtype(input.dtype, jnp.integer) and jnp.issubdtype(
-      other.dtype, jnp.integer):
+    other.dtype, jnp.integer
+  ):
     result = result.astype(jnp.float32)
   return result
 
@@ -3774,7 +3864,6 @@ def _aten_special_laguerre_polynomial_l(self, n):
 
   @jnp.vectorize
   def vectorized(x, n_i):
-
     def negative_n(x):
       return jnp.zeros_like(x)
 
@@ -3788,18 +3877,21 @@ def _aten_special_laguerre_polynomial_l(self, n):
       return jnp.ones_like(x)
 
     def default(x):
-
       def f(k, carry):
         p, q = carry
-        return (q, ((k * 2 + (jnp.ones_like(x) - x)) * q - k * p) / (k + 1))
+        return (
+          q,
+          ((k * 2 + (jnp.ones_like(x) - x)) * q - k * p) / (k + 1),
+        )
 
       _, q = jax.lax.fori_loop(1, n_i, f, init_val=(1.0, jnp.ones_like(x) - x))
       return q
 
     return jnp.piecewise(
-        x, [n_i == 1, n_i == 0,
-            jnp.abs(n_i) == jnp.zeros_like(x), n_i < 0],
-        [one_n, zero_n, zero_abs, negative_n, default])
+      x,
+      [n_i == 1, n_i == 0, jnp.abs(n_i) == jnp.zeros_like(x), n_i < 0],
+      [one_n, zero_n, zero_abs, negative_n, default],
+    )
 
   return vectorized(self, n.astype(jnp.int64))
 
@@ -3811,39 +3903,39 @@ def _aten_special_modified_bessel_i0(self):
 
   def small(x):
     A = jnp.array(
-        [
-            -4.41534164647933937950e-18,
-            3.33079451882223809783e-17,
-            -2.43127984654795469359e-16,
-            1.71539128555513303061e-15,
-            -1.16853328779934516808e-14,
-            7.67618549860493561688e-14,
-            -4.85644678311192946090e-13,
-            2.95505266312963983461e-12,
-            -1.72682629144155570723e-11,
-            9.67580903537323691224e-11,
-            -5.18979560163526290666e-10,
-            2.65982372468238665035e-09,
-            -1.30002500998624804212e-08,
-            6.04699502254191894932e-08,
-            -2.67079385394061173391e-07,
-            1.11738753912010371815e-06,
-            -4.41673835845875056359e-06,
-            1.64484480707288970893e-05,
-            -5.75419501008210370398e-05,
-            1.88502885095841655729e-04,
-            -5.76375574538582365885e-04,
-            1.63947561694133579842e-03,
-            -4.32430999505057594430e-03,
-            1.05464603945949983183e-02,
-            -2.37374148058994688156e-02,
-            4.93052842396707084878e-02,
-            -9.49010970480476444210e-02,
-            1.71620901522208775349e-01,
-            -3.04682672343198398683e-01,
-            6.76795274409476084995e-01,
-        ],
-        dtype=self.dtype,
+      [
+        -4.41534164647933937950e-18,
+        3.33079451882223809783e-17,
+        -2.43127984654795469359e-16,
+        1.71539128555513303061e-15,
+        -1.16853328779934516808e-14,
+        7.67618549860493561688e-14,
+        -4.85644678311192946090e-13,
+        2.95505266312963983461e-12,
+        -1.72682629144155570723e-11,
+        9.67580903537323691224e-11,
+        -5.18979560163526290666e-10,
+        2.65982372468238665035e-09,
+        -1.30002500998624804212e-08,
+        6.04699502254191894932e-08,
+        -2.67079385394061173391e-07,
+        1.11738753912010371815e-06,
+        -4.41673835845875056359e-06,
+        1.64484480707288970893e-05,
+        -5.75419501008210370398e-05,
+        1.88502885095841655729e-04,
+        -5.76375574538582365885e-04,
+        1.63947561694133579842e-03,
+        -4.32430999505057594430e-03,
+        1.05464603945949983183e-02,
+        -2.37374148058994688156e-02,
+        4.93052842396707084878e-02,
+        -9.49010970480476444210e-02,
+        1.71620901522208775349e-01,
+        -3.04682672343198398683e-01,
+        6.76795274409476084995e-01,
+      ],
+      dtype=self.dtype,
     )
 
     def f(carry, val):
@@ -3852,40 +3944,41 @@ def _aten_special_modified_bessel_i0(self):
       return (p, q, ((x / 2.0) - 2.0) * q - p + val), None
 
     (p, _, a), _ = jax.lax.scan(
-        f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A)
+      f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A
+    )
 
     return jnp.exp(x) * (0.5 * (a - p))
 
   def default(x):
     B = jnp.array(
-        [
-            -7.23318048787475395456e-18,
-            -4.83050448594418207126e-18,
-            4.46562142029675999901e-17,
-            3.46122286769746109310e-17,
-            -2.82762398051658348494e-16,
-            -3.42548561967721913462e-16,
-            1.77256013305652638360e-15,
-            3.81168066935262242075e-15,
-            -9.55484669882830764870e-15,
-            -4.15056934728722208663e-14,
-            1.54008621752140982691e-14,
-            3.85277838274214270114e-13,
-            7.18012445138366623367e-13,
-            -1.79417853150680611778e-12,
-            -1.32158118404477131188e-11,
-            -3.14991652796324136454e-11,
-            1.18891471078464383424e-11,
-            4.94060238822496958910e-10,
-            3.39623202570838634515e-09,
-            2.26666899049817806459e-08,
-            2.04891858946906374183e-07,
-            2.89137052083475648297e-06,
-            6.88975834691682398426e-05,
-            3.36911647825569408990e-03,
-            8.04490411014108831608e-01,
-        ],
-        dtype=self.dtype,
+      [
+        -7.23318048787475395456e-18,
+        -4.83050448594418207126e-18,
+        4.46562142029675999901e-17,
+        3.46122286769746109310e-17,
+        -2.82762398051658348494e-16,
+        -3.42548561967721913462e-16,
+        1.77256013305652638360e-15,
+        3.81168066935262242075e-15,
+        -9.55484669882830764870e-15,
+        -4.15056934728722208663e-14,
+        1.54008621752140982691e-14,
+        3.85277838274214270114e-13,
+        7.18012445138366623367e-13,
+        -1.79417853150680611778e-12,
+        -1.32158118404477131188e-11,
+        -3.14991652796324136454e-11,
+        1.18891471078464383424e-11,
+        4.94060238822496958910e-10,
+        3.39623202570838634515e-09,
+        2.26666899049817806459e-08,
+        2.04891858946906374183e-07,
+        2.89137052083475648297e-06,
+        6.88975834691682398426e-05,
+        3.36911647825569408990e-03,
+        8.04490411014108831608e-01,
+      ],
+      dtype=self.dtype,
     )
 
     def f(carry, val):
@@ -3894,7 +3987,8 @@ def _aten_special_modified_bessel_i0(self):
       return (p, q, (32.0 / x - 2.0) * q - p + val), None
 
     (p, _, b), _ = jax.lax.scan(
-        f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B)
+      f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B
+    )
 
     return jnp.exp(x) * (0.5 * (b - p)) / jnp.sqrt(x)
 
@@ -3909,38 +4003,38 @@ def _aten_special_modified_bessel_i1(self):
 
   def small(x):
     A = jnp.array(
-        [
-            2.77791411276104639959e-18,
-            -2.11142121435816608115e-17,
-            1.55363195773620046921e-16,
-            -1.10559694773538630805e-15,
-            7.60068429473540693410e-15,
-            -5.04218550472791168711e-14,
-            3.22379336594557470981e-13,
-            -1.98397439776494371520e-12,
-            1.17361862988909016308e-11,
-            -6.66348972350202774223e-11,
-            3.62559028155211703701e-10,
-            -1.88724975172282928790e-09,
-            9.38153738649577178388e-09,
-            -4.44505912879632808065e-08,
-            2.00329475355213526229e-07,
-            -8.56872026469545474066e-07,
-            3.47025130813767847674e-06,
-            -1.32731636560394358279e-05,
-            4.78156510755005422638e-05,
-            -1.61760815825896745588e-04,
-            5.12285956168575772895e-04,
-            -1.51357245063125314899e-03,
-            4.15642294431288815669e-03,
-            -1.05640848946261981558e-02,
-            2.47264490306265168283e-02,
-            -5.29459812080949914269e-02,
-            1.02643658689847095384e-01,
-            -1.76416518357834055153e-01,
-            2.52587186443633654823e-01,
-        ],
-        dtype=self.dtype,
+      [
+        2.77791411276104639959e-18,
+        -2.11142121435816608115e-17,
+        1.55363195773620046921e-16,
+        -1.10559694773538630805e-15,
+        7.60068429473540693410e-15,
+        -5.04218550472791168711e-14,
+        3.22379336594557470981e-13,
+        -1.98397439776494371520e-12,
+        1.17361862988909016308e-11,
+        -6.66348972350202774223e-11,
+        3.62559028155211703701e-10,
+        -1.88724975172282928790e-09,
+        9.38153738649577178388e-09,
+        -4.44505912879632808065e-08,
+        2.00329475355213526229e-07,
+        -8.56872026469545474066e-07,
+        3.47025130813767847674e-06,
+        -1.32731636560394358279e-05,
+        4.78156510755005422638e-05,
+        -1.61760815825896745588e-04,
+        5.12285956168575772895e-04,
+        -1.51357245063125314899e-03,
+        4.15642294431288815669e-03,
+        -1.05640848946261981558e-02,
+        2.47264490306265168283e-02,
+        -5.29459812080949914269e-02,
+        1.02643658689847095384e-01,
+        -1.76416518357834055153e-01,
+        2.52587186443633654823e-01,
+      ],
+      dtype=self.dtype,
     )
 
     def f(carry, val):
@@ -3949,42 +4043,45 @@ def _aten_special_modified_bessel_i1(self):
       return (p, q, ((jnp.abs(x) / 2.0) - 2.0) * q - p + val), None
 
     (p, _, a), _ = jax.lax.scan(
-        f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A)
+      f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A
+    )
 
     return jax.lax.cond(
-        x < 0, lambda: -(0.5 * (a - p) * jnp.abs(x) * jnp.exp(jnp.abs(x))),
-        lambda: 0.5 * (a - p) * jnp.abs(x) * jnp.exp(jnp.abs(x)))
+      x < 0,
+      lambda: -(0.5 * (a - p) * jnp.abs(x) * jnp.exp(jnp.abs(x))),
+      lambda: 0.5 * (a - p) * jnp.abs(x) * jnp.exp(jnp.abs(x)),
+    )
 
   def default(x):
     B = jnp.array(
-        [
-            7.51729631084210481353e-18,
-            4.41434832307170791151e-18,
-            -4.65030536848935832153e-17,
-            -3.20952592199342395980e-17,
-            2.96262899764595013876e-16,
-            3.30820231092092828324e-16,
-            -1.88035477551078244854e-15,
-            -3.81440307243700780478e-15,
-            1.04202769841288027642e-14,
-            4.27244001671195135429e-14,
-            -2.10154184277266431302e-14,
-            -4.08355111109219731823e-13,
-            -7.19855177624590851209e-13,
-            2.03562854414708950722e-12,
-            1.41258074366137813316e-11,
-            3.25260358301548823856e-11,
-            -1.89749581235054123450e-11,
-            -5.58974346219658380687e-10,
-            -3.83538038596423702205e-09,
-            -2.63146884688951950684e-08,
-            -2.51223623787020892529e-07,
-            -3.88256480887769039346e-06,
-            -1.10588938762623716291e-04,
-            -9.76109749136146840777e-03,
-            7.78576235018280120474e-01,
-        ],
-        dtype=self.dtype,
+      [
+        7.51729631084210481353e-18,
+        4.41434832307170791151e-18,
+        -4.65030536848935832153e-17,
+        -3.20952592199342395980e-17,
+        2.96262899764595013876e-16,
+        3.30820231092092828324e-16,
+        -1.88035477551078244854e-15,
+        -3.81440307243700780478e-15,
+        1.04202769841288027642e-14,
+        4.27244001671195135429e-14,
+        -2.10154184277266431302e-14,
+        -4.08355111109219731823e-13,
+        -7.19855177624590851209e-13,
+        2.03562854414708950722e-12,
+        1.41258074366137813316e-11,
+        3.25260358301548823856e-11,
+        -1.89749581235054123450e-11,
+        -5.58974346219658380687e-10,
+        -3.83538038596423702205e-09,
+        -2.63146884688951950684e-08,
+        -2.51223623787020892529e-07,
+        -3.88256480887769039346e-06,
+        -1.10588938762623716291e-04,
+        -9.76109749136146840777e-03,
+        7.78576235018280120474e-01,
+      ],
+      dtype=self.dtype,
     )
 
     def f(carry, val):
@@ -3993,12 +4090,14 @@ def _aten_special_modified_bessel_i1(self):
       return (p, q, (32.0 / jnp.abs(x) - 2.0) * q - p + val), None
 
     (p, _, b), _ = jax.lax.scan(
-        f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B)
+      f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B
+    )
 
     return jax.lax.cond(
-        x < 0, lambda: -(jnp.exp(jnp.abs(x)) *
-                         (0.5 * (b - p)) / jnp.sqrt(jnp.abs(x))),
-        lambda: jnp.exp(jnp.abs(x)) * (0.5 * (b - p)) / jnp.sqrt(jnp.abs(x)))
+      x < 0,
+      lambda: -(jnp.exp(jnp.abs(x)) * (0.5 * (b - p)) / jnp.sqrt(jnp.abs(x))),
+      lambda: jnp.exp(jnp.abs(x)) * (0.5 * (b - p)) / jnp.sqrt(jnp.abs(x)),
+    )
 
   return jnp.piecewise(self, [self <= 8], [small, default])
 
@@ -4016,19 +4115,19 @@ def _aten_special_modified_bessel_k0(self):
 
   def small(x):
     A = jnp.array(
-        [
-            1.37446543561352307156e-16,
-            4.25981614279661018399e-14,
-            1.03496952576338420167e-11,
-            1.90451637722020886025e-09,
-            2.53479107902614945675e-07,
-            2.28621210311945178607e-05,
-            1.26461541144692592338e-03,
-            3.59799365153615016266e-02,
-            3.44289899924628486886e-01,
-            -5.35327393233902768720e-01,
-        ],
-        dtype=self.dtype,
+      [
+        1.37446543561352307156e-16,
+        4.25981614279661018399e-14,
+        1.03496952576338420167e-11,
+        1.90451637722020886025e-09,
+        2.53479107902614945675e-07,
+        2.28621210311945178607e-05,
+        1.26461541144692592338e-03,
+        3.59799365153615016266e-02,
+        3.44289899924628486886e-01,
+        -5.35327393233902768720e-01,
+      ],
+      dtype=self.dtype,
     )
 
     def f(carry, val):
@@ -4037,41 +4136,43 @@ def _aten_special_modified_bessel_k0(self):
       return (p, q, (x * x - 2.0) * q - p + val), None
 
     (p, _, a), _ = jax.lax.scan(
-        f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A)
+      f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A
+    )
 
-    return 0.5 * (a - p) - jnp.log(
-        0.5 * x) * _aten_special_modified_bessel_i0(x)
+    return 0.5 * (a - p) - jnp.log(0.5 * x) * _aten_special_modified_bessel_i0(
+      x
+    )
 
   def default(x):
     B = jnp.array(
-        [
-            5.30043377268626276149e-18,
-            -1.64758043015242134646e-17,
-            5.21039150503902756861e-17,
-            -1.67823109680541210385e-16,
-            5.51205597852431940784e-16,
-            -1.84859337734377901440e-15,
-            6.34007647740507060557e-15,
-            -2.22751332699166985548e-14,
-            8.03289077536357521100e-14,
-            -2.98009692317273043925e-13,
-            1.14034058820847496303e-12,
-            -4.51459788337394416547e-12,
-            1.85594911495471785253e-11,
-            -7.95748924447710747776e-11,
-            3.57739728140030116597e-10,
-            -1.69753450938905987466e-09,
-            8.57403401741422608519e-09,
-            -4.66048989768794782956e-08,
-            2.76681363944501510342e-07,
-            -1.83175552271911948767e-06,
-            1.39498137188764993662e-05,
-            -1.28495495816278026384e-04,
-            1.56988388573005337491e-03,
-            -3.14481013119645005427e-02,
-            2.44030308206595545468e+00,
-        ],
-        dtype=self.dtype,
+      [
+        5.30043377268626276149e-18,
+        -1.64758043015242134646e-17,
+        5.21039150503902756861e-17,
+        -1.67823109680541210385e-16,
+        5.51205597852431940784e-16,
+        -1.84859337734377901440e-15,
+        6.34007647740507060557e-15,
+        -2.22751332699166985548e-14,
+        8.03289077536357521100e-14,
+        -2.98009692317273043925e-13,
+        1.14034058820847496303e-12,
+        -4.51459788337394416547e-12,
+        1.85594911495471785253e-11,
+        -7.95748924447710747776e-11,
+        3.57739728140030116597e-10,
+        -1.69753450938905987466e-09,
+        8.57403401741422608519e-09,
+        -4.66048989768794782956e-08,
+        2.76681363944501510342e-07,
+        -1.83175552271911948767e-06,
+        1.39498137188764993662e-05,
+        -1.28495495816278026384e-04,
+        1.56988388573005337491e-03,
+        -3.14481013119645005427e-02,
+        2.44030308206595545468e00,
+      ],
+      dtype=self.dtype,
     )
 
     def f(carry, val):
@@ -4080,12 +4181,14 @@ def _aten_special_modified_bessel_k0(self):
       return (p, q, (8.0 / x - 2.0) * q - p + val), None
 
     (p, _, b), _ = jax.lax.scan(
-        f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B)
+      f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B
+    )
 
     return jnp.exp(-x) * (0.5 * (b - p)) / jnp.sqrt(x)
 
-  return jnp.piecewise(self, [self <= 2, self < 0, self == 0],
-                       [small, negative, zero, default])
+  return jnp.piecewise(
+    self, [self <= 2, self < 0, self == 0], [small, negative, zero, default]
+  )
 
 
 @op(torch.ops.aten.special_modified_bessel_k1)
@@ -4101,20 +4204,20 @@ def _aten_special_modified_bessel_k1(self):
 
   def small(x):
     A = jnp.array(
-        [
-            -7.02386347938628759343e-18,
-            -2.42744985051936593393e-15,
-            -6.66690169419932900609e-13,
-            -1.41148839263352776110e-10,
-            -2.21338763073472585583e-08,
-            -2.43340614156596823496e-06,
-            -1.73028895751305206302e-04,
-            -6.97572385963986435018e-03,
-            -1.22611180822657148235e-01,
-            -3.53155960776544875667e-01,
-            1.52530022733894777053e+00,
-        ],
-        dtype=self.dtype,
+      [
+        -7.02386347938628759343e-18,
+        -2.42744985051936593393e-15,
+        -6.66690169419932900609e-13,
+        -1.41148839263352776110e-10,
+        -2.21338763073472585583e-08,
+        -2.43340614156596823496e-06,
+        -1.73028895751305206302e-04,
+        -6.97572385963986435018e-03,
+        -1.22611180822657148235e-01,
+        -3.53155960776544875667e-01,
+        1.52530022733894777053e00,
+      ],
+      dtype=self.dtype,
     )
 
     def f(carry, val):
@@ -4124,41 +4227,43 @@ def _aten_special_modified_bessel_k1(self):
       return (p, q, a), None
 
     (p, _, a), _ = jax.lax.scan(
-        f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A)
+      f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A
+    )
 
-    return jnp.log(
-        0.5 * x) * _aten_special_modified_bessel_i1(x) + 0.5 * (a - p) / x
+    return (
+      jnp.log(0.5 * x) * _aten_special_modified_bessel_i1(x) + 0.5 * (a - p) / x
+    )
 
   def default(x):
     B = jnp.array(
-        [
-            -5.75674448366501715755e-18,
-            1.79405087314755922667e-17,
-            -5.68946255844285935196e-17,
-            1.83809354436663880070e-16,
-            -6.05704724837331885336e-16,
-            2.03870316562433424052e-15,
-            -7.01983709041831346144e-15,
-            2.47715442448130437068e-14,
-            -8.97670518232499435011e-14,
-            +3.34841966607842919884e-13,
-            -1.28917396095102890680e-12,
-            5.13963967348173025100e-12,
-            -2.12996783842756842877e-11,
-            9.21831518760500529508e-11,
-            -4.19035475934189648750e-10,
-            2.01504975519703286596e-09,
-            -1.03457624656780970260e-08,
-            5.74108412545004946722e-08,
-            -3.50196060308781257119e-07,
-            2.40648494783721712015e-06,
-            -1.93619797416608296024e-05,
-            1.95215518471351631108e-04,
-            -2.85781685962277938680e-03,
-            1.03923736576817238437e-01,
-            2.72062619048444266945e+00,
-        ],
-        dtype=self.dtype,
+      [
+        -5.75674448366501715755e-18,
+        1.79405087314755922667e-17,
+        -5.68946255844285935196e-17,
+        1.83809354436663880070e-16,
+        -6.05704724837331885336e-16,
+        2.03870316562433424052e-15,
+        -7.01983709041831346144e-15,
+        2.47715442448130437068e-14,
+        -8.97670518232499435011e-14,
+        +3.34841966607842919884e-13,
+        -1.28917396095102890680e-12,
+        5.13963967348173025100e-12,
+        -2.12996783842756842877e-11,
+        9.21831518760500529508e-11,
+        -4.19035475934189648750e-10,
+        2.01504975519703286596e-09,
+        -1.03457624656780970260e-08,
+        5.74108412545004946722e-08,
+        -3.50196060308781257119e-07,
+        2.40648494783721712015e-06,
+        -1.93619797416608296024e-05,
+        1.95215518471351631108e-04,
+        -2.85781685962277938680e-03,
+        1.03923736576817238437e-01,
+        2.72062619048444266945e00,
+      ],
+      dtype=self.dtype,
     )
 
     def f(carry, val):
@@ -4168,12 +4273,14 @@ def _aten_special_modified_bessel_k1(self):
       return (p, q, b), None
 
     (p, _, b), _ = jax.lax.scan(
-        f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B)
+      f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B
+    )
 
     return jnp.exp(-x) * (0.5 * (b - p)) / jnp.sqrt(x)
 
-  return jnp.piecewise(self, [self <= 2, self < 0, self == 0],
-                       [small, negative, zero, default])
+  return jnp.piecewise(
+    self, [self <= 2, self < 0, self == 0], [small, negative, zero, default]
+  )
 
 
 @op(torch.ops.aten.polygamma)
@@ -4199,104 +4306,120 @@ def _aten_special_bessel_j0(self):
 
   def small(x):
     RP = jnp.array(
-        [
-            -4.79443220978201773821e09,
-            1.95617491946556577543e12,
-            -2.49248344360967716204e14,
-            9.70862251047306323952e15,
-        ],
-        dtype=self.dtype,
+      [
+        -4.79443220978201773821e09,
+        1.95617491946556577543e12,
+        -2.49248344360967716204e14,
+        9.70862251047306323952e15,
+      ],
+      dtype=self.dtype,
     )
     RQ = jnp.array(
-        [
-            4.99563147152651017219e02,
-            1.73785401676374683123e05,
-            4.84409658339962045305e07,
-            1.11855537045356834862e10,
-            2.11277520115489217587e12,
-            3.10518229857422583814e14,
-            3.18121955943204943306e16,
-            1.71086294081043136091e18,
-        ],
-        dtype=self.dtype,
+      [
+        4.99563147152651017219e02,
+        1.73785401676374683123e05,
+        4.84409658339962045305e07,
+        1.11855537045356834862e10,
+        2.11277520115489217587e12,
+        3.10518229857422583814e14,
+        3.18121955943204943306e16,
+        1.71086294081043136091e18,
+      ],
+      dtype=self.dtype,
     )
 
     rp = op_base.foreach_loop(RP, lambda carry, rp_i: carry * (x * x) + rp_i)
     rq = op_base.foreach_loop(RQ, lambda carry, rq_i: carry * (x * x) + rq_i)
 
-    return ((x * x - 5.78318596294678452118e00) *
-            (x * x - 3.04712623436620863991e01) * rp / rq)
+    return (
+      (x * x - 5.78318596294678452118e00)
+      * (x * x - 3.04712623436620863991e01)
+      * rp
+      / rq
+    )
 
   def default(x):
     PP = jnp.array(
-        [
-            7.96936729297347051624e-04,
-            8.28352392107440799803e-02,
-            1.23953371646414299388e00,
-            5.44725003058768775090e00,
-            8.74716500199817011941e00,
-            5.30324038235394892183e00,
-            9.99999999999999997821e-01,
-        ],
-        dtype=self.dtype,
+      [
+        7.96936729297347051624e-04,
+        8.28352392107440799803e-02,
+        1.23953371646414299388e00,
+        5.44725003058768775090e00,
+        8.74716500199817011941e00,
+        5.30324038235394892183e00,
+        9.99999999999999997821e-01,
+      ],
+      dtype=self.dtype,
     )
     PQ = jnp.array(
-        [
-            9.24408810558863637013e-04,
-            8.56288474354474431428e-02,
-            1.25352743901058953537e00,
-            5.47097740330417105182e00,
-            8.76190883237069594232e00,
-            5.30605288235394617618e00,
-            1.00000000000000000218e00,
-        ],
-        dtype=self.dtype,
+      [
+        9.24408810558863637013e-04,
+        8.56288474354474431428e-02,
+        1.25352743901058953537e00,
+        5.47097740330417105182e00,
+        8.76190883237069594232e00,
+        5.30605288235394617618e00,
+        1.00000000000000000218e00,
+      ],
+      dtype=self.dtype,
     )
     QP = jnp.array(
-        [
-            -1.13663838898469149931e-02,
-            -1.28252718670509318512e00,
-            -1.95539544257735972385e01,
-            -9.32060152123768231369e01,
-            -1.77681167980488050595e02,
-            -1.47077505154951170175e02,
-            -5.14105326766599330220e01,
-            -6.05014350600728481186e00,
-        ],
-        dtype=self.dtype,
+      [
+        -1.13663838898469149931e-02,
+        -1.28252718670509318512e00,
+        -1.95539544257735972385e01,
+        -9.32060152123768231369e01,
+        -1.77681167980488050595e02,
+        -1.47077505154951170175e02,
+        -5.14105326766599330220e01,
+        -6.05014350600728481186e00,
+      ],
+      dtype=self.dtype,
     )
     QQ = jnp.array(
-        [
-            6.43178256118178023184e01,
-            8.56430025976980587198e02,
-            3.88240183605401609683e03,
-            7.24046774195652478189e03,
-            5.93072701187316984827e03,
-            2.06209331660327847417e03,
-            2.42005740240291393179e02,
-        ],
-        dtype=self.dtype,
+      [
+        6.43178256118178023184e01,
+        8.56430025976980587198e02,
+        3.88240183605401609683e03,
+        7.24046774195652478189e03,
+        5.93072701187316984827e03,
+        2.06209331660327847417e03,
+        2.42005740240291393179e02,
+      ],
+      dtype=self.dtype,
     )
 
     pp = op_base.foreach_loop(
-        PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i)
+      PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i
+    )
     pq = op_base.foreach_loop(
-        PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i)
+      PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i
+    )
     qp = op_base.foreach_loop(
-        QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i)
+      QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i
+    )
     qq = op_base.foreach_loop(
-        QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i)
+      QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i
+    )
 
-    return ((pp / pq * jnp.cos(x - 0.785398163397448309615660845819875721) -
-             5.0 / x *
-             (qp / qq) * jnp.sin(x - 0.785398163397448309615660845819875721)) *
-            0.797884560802865355879892119868763737 / jnp.sqrt(x))
+    return (
+      (
+        pp / pq * jnp.cos(x - 0.785398163397448309615660845819875721)
+        - 5.0
+        / x
+        * (qp / qq)
+        * jnp.sin(x - 0.785398163397448309615660845819875721)
+      )
+      * 0.797884560802865355879892119868763737
+      / jnp.sqrt(x)
+    )
 
   self = jnp.abs(self)
   # Last True condition in  `piecewise` takes priority, but last function is
   # default. See https://github.com/numpy/numpy/issues/16475
-  return jnp.piecewise(self, [self <= 5.0, self < 0.00001],
-                       [small, very_small, default])
+  return jnp.piecewise(
+    self, [self <= 5.0, self < 0.00001], [small, very_small, default]
+  )
 
 
 @op(torch.ops.aten.special_bessel_j1)
@@ -4306,106 +4429,122 @@ def _aten_special_bessel_j1(self):
 
   def small(x):
     RP = jnp.array(
-        [
-            -8.99971225705559398224e08,
-            4.52228297998194034323e11,
-            -7.27494245221818276015e13,
-            3.68295732863852883286e15,
-        ],
-        dtype=self.dtype,
+      [
+        -8.99971225705559398224e08,
+        4.52228297998194034323e11,
+        -7.27494245221818276015e13,
+        3.68295732863852883286e15,
+      ],
+      dtype=self.dtype,
     )
     RQ = jnp.array(
-        [
-            6.20836478118054335476e02,
-            2.56987256757748830383e05,
-            8.35146791431949253037e07,
-            2.21511595479792499675e10,
-            4.74914122079991414898e12,
-            7.84369607876235854894e14,
-            8.95222336184627338078e16,
-            5.32278620332680085395e18,
-        ],
-        dtype=self.dtype,
+      [
+        6.20836478118054335476e02,
+        2.56987256757748830383e05,
+        8.35146791431949253037e07,
+        2.21511595479792499675e10,
+        4.74914122079991414898e12,
+        7.84369607876235854894e14,
+        8.95222336184627338078e16,
+        5.32278620332680085395e18,
+      ],
+      dtype=self.dtype,
     )
 
     rp = op_base.foreach_loop(RP, lambda carry, rp_i: carry * (x * x) + rp_i)
     rq = op_base.foreach_loop(RQ, lambda carry, rq_i: carry * (x * x) + rq_i)
 
-    return (rp / rq * x * (x * x - 1.46819706421238932572e01) *
-            (x * x - 4.92184563216946036703e01))
+    return (
+      rp
+      / rq
+      * x
+      * (x * x - 1.46819706421238932572e01)
+      * (x * x - 4.92184563216946036703e01)
+    )
 
   def default(x):
     PP = jnp.array(
-        [
-            7.62125616208173112003e-04,
-            7.31397056940917570436e-02,
-            1.12719608129684925192e00,
-            5.11207951146807644818e00,
-            8.42404590141772420927e00,
-            5.21451598682361504063e00,
-            1.00000000000000000254e00,
-        ],
-        dtype=self.dtype,
+      [
+        7.62125616208173112003e-04,
+        7.31397056940917570436e-02,
+        1.12719608129684925192e00,
+        5.11207951146807644818e00,
+        8.42404590141772420927e00,
+        5.21451598682361504063e00,
+        1.00000000000000000254e00,
+      ],
+      dtype=self.dtype,
     )
     PQ = jnp.array(
-        [
-            5.71323128072548699714e-04,
-            6.88455908754495404082e-02,
-            1.10514232634061696926e00,
-            5.07386386128601488557e00,
-            8.39985554327604159757e00,
-            5.20982848682361821619e00,
-            9.99999999999999997461e-01,
-        ],
-        dtype=self.dtype,
+      [
+        5.71323128072548699714e-04,
+        6.88455908754495404082e-02,
+        1.10514232634061696926e00,
+        5.07386386128601488557e00,
+        8.39985554327604159757e00,
+        5.20982848682361821619e00,
+        9.99999999999999997461e-01,
+      ],
+      dtype=self.dtype,
     )
     QP = jnp.array(
-        [
-            5.10862594750176621635e-02,
-            4.98213872951233449420e00,
-            7.58238284132545283818e01,
-            3.66779609360150777800e02,
-            7.10856304998926107277e02,
-            5.97489612400613639965e02,
-            2.11688757100572135698e02,
-            2.52070205858023719784e01,
-        ],
-        dtype=self.dtype,
+      [
+        5.10862594750176621635e-02,
+        4.98213872951233449420e00,
+        7.58238284132545283818e01,
+        3.66779609360150777800e02,
+        7.10856304998926107277e02,
+        5.97489612400613639965e02,
+        2.11688757100572135698e02,
+        2.52070205858023719784e01,
+      ],
+      dtype=self.dtype,
     )
     QQ = jnp.array(
-        [
-            7.42373277035675149943e01,
-            1.05644886038262816351e03,
-            4.98641058337653607651e03,
-            9.56231892404756170795e03,
-            7.99704160447350683650e03,
-            2.82619278517639096600e03,
-            3.36093607810698293419e02,
-        ],
-        dtype=self.dtype,
+      [
+        7.42373277035675149943e01,
+        1.05644886038262816351e03,
+        4.98641058337653607651e03,
+        9.56231892404756170795e03,
+        7.99704160447350683650e03,
+        2.82619278517639096600e03,
+        3.36093607810698293419e02,
+      ],
+      dtype=self.dtype,
     )
 
     pp = op_base.foreach_loop(
-        PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i)
+      PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i
+    )
     pq = op_base.foreach_loop(
-        PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i)
+      PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i
+    )
     qp = op_base.foreach_loop(
-        QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i)
+      QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i
+    )
     qq = op_base.foreach_loop(
-        QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i)
+      QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i
+    )
 
-    return ((pp / pq * jnp.cos(x - 2.356194490192344928846982537459627163) -
-             5.0 / x *
-             (qp / qq) * jnp.sin(x - 2.356194490192344928846982537459627163)) *
-            0.797884560802865355879892119868763737 / jnp.sqrt(x))
+    return (
+      (
+        pp / pq * jnp.cos(x - 2.356194490192344928846982537459627163)
+        - 5.0
+        / x
+        * (qp / qq)
+        * jnp.sin(x - 2.356194490192344928846982537459627163)
+      )
+      * 0.797884560802865355879892119868763737
+      / jnp.sqrt(x)
+    )
 
   # If x < 0, bessel_j1(x) = -bessel_j1(-x)
   sign = jnp.sign(self)
   self = jnp.abs(self)
   return sign * jnp.piecewise(
-      self,
-      [self <= 5.0],
-      [small, default],
+    self,
+    [self <= 5.0],
+    [small, default],
   )
 
 
@@ -4422,86 +4561,89 @@ def _aten_special_bessel_y0(self):
 
   def small(x):
     YP = jnp.array(
-        [
-            1.55924367855235737965e04,
-            -1.46639295903971606143e07,
-            5.43526477051876500413e09,
-            -9.82136065717911466409e11,
-            8.75906394395366999549e13,
-            -3.46628303384729719441e15,
-            4.42733268572569800351e16,
-            -1.84950800436986690637e16,
-        ],
-        dtype=self.dtype,
+      [
+        1.55924367855235737965e04,
+        -1.46639295903971606143e07,
+        5.43526477051876500413e09,
+        -9.82136065717911466409e11,
+        8.75906394395366999549e13,
+        -3.46628303384729719441e15,
+        4.42733268572569800351e16,
+        -1.84950800436986690637e16,
+      ],
+      dtype=self.dtype,
     )
     YQ = jnp.array(
-        [
-            1.04128353664259848412e03,
-            6.26107330137134956842e05,
-            2.68919633393814121987e08,
-            8.64002487103935000337e10,
-            2.02979612750105546709e13,
-            3.17157752842975028269e15,
-            2.50596256172653059228e17,
-        ],
-        dtype=self.dtype,
+      [
+        1.04128353664259848412e03,
+        6.26107330137134956842e05,
+        2.68919633393814121987e08,
+        8.64002487103935000337e10,
+        2.02979612750105546709e13,
+        3.17157752842975028269e15,
+        2.50596256172653059228e17,
+      ],
+      dtype=self.dtype,
     )
 
     yp = op_base.foreach_loop(YP, lambda carry, yp_i: carry * (x * x) + yp_i)
     yq = op_base.foreach_loop(YQ, lambda carry, yq_i: carry * (x * x) + yq_i)
 
-    return yp / yq + (0.636619772367581343075535053490057448 * jnp.log(x) *
-                      _aten_special_bessel_j0(x))
+    return yp / yq + (
+      0.636619772367581343075535053490057448
+      * jnp.log(x)
+      * _aten_special_bessel_j0(x)
+    )
 
   def default(x):
     PP = jnp.array(
-        [
-            7.96936729297347051624e-04,
-            8.28352392107440799803e-02,
-            1.23953371646414299388e00,
-            5.44725003058768775090e00,
-            8.74716500199817011941e00,
-            5.30324038235394892183e00,
-            9.99999999999999997821e-01,
-        ],
-        dtype=self.dtype,
+      [
+        7.96936729297347051624e-04,
+        8.28352392107440799803e-02,
+        1.23953371646414299388e00,
+        5.44725003058768775090e00,
+        8.74716500199817011941e00,
+        5.30324038235394892183e00,
+        9.99999999999999997821e-01,
+      ],
+      dtype=self.dtype,
     )
     PQ = jnp.array(
-        [
-            9.24408810558863637013e-04,
-            8.56288474354474431428e-02,
-            1.25352743901058953537e00,
-            5.47097740330417105182e00,
-            8.76190883237069594232e00,
-            5.30605288235394617618e00,
-            1.00000000000000000218e00,
-        ],
-        dtype=self.dtype,
+      [
+        9.24408810558863637013e-04,
+        8.56288474354474431428e-02,
+        1.25352743901058953537e00,
+        5.47097740330417105182e00,
+        8.76190883237069594232e00,
+        5.30605288235394617618e00,
+        1.00000000000000000218e00,
+      ],
+      dtype=self.dtype,
     )
     QP = jnp.array(
-        [
-            -1.13663838898469149931e-02,
-            -1.28252718670509318512e00,
-            -1.95539544257735972385e01,
-            -9.32060152123768231369e01,
-            -1.77681167980488050595e02,
-            -1.47077505154951170175e02,
-            -5.14105326766599330220e01,
-            -6.05014350600728481186e00,
-        ],
-        dtype=self.dtype,
+      [
+        -1.13663838898469149931e-02,
+        -1.28252718670509318512e00,
+        -1.95539544257735972385e01,
+        -9.32060152123768231369e01,
+        -1.77681167980488050595e02,
+        -1.47077505154951170175e02,
+        -5.14105326766599330220e01,
+        -6.05014350600728481186e00,
+      ],
+      dtype=self.dtype,
     )
     QQ = jnp.array(
-        [
-            6.43178256118178023184e01,
-            8.56430025976980587198e02,
-            3.88240183605401609683e03,
-            7.24046774195652478189e03,
-            5.93072701187316984827e03,
-            2.06209331660327847417e03,
-            2.42005740240291393179e02,
-        ],
-        dtype=self.dtype,
+      [
+        6.43178256118178023184e01,
+        8.56430025976980587198e02,
+        3.88240183605401609683e03,
+        7.24046774195652478189e03,
+        5.93072701187316984827e03,
+        2.06209331660327847417e03,
+        2.42005740240291393179e02,
+      ],
+      dtype=self.dtype,
     )
 
     factor = 25.0 / (x * x)
@@ -4510,15 +4652,22 @@ def _aten_special_bessel_y0(self):
     qp = op_base.foreach_loop(QP, lambda carry, qp_i: carry * factor + qp_i)
     qq = op_base.foreach_loop(QQ, lambda carry, qq_i: carry * factor + qq_i)
 
-    return ((pp / pq * jnp.sin(x - 0.785398163397448309615660845819875721) +
-             5.0 / x *
-             (qp / qq) * jnp.cos(x - 0.785398163397448309615660845819875721)) *
-            0.797884560802865355879892119868763737 / jnp.sqrt(x))
+    return (
+      (
+        pp / pq * jnp.sin(x - 0.785398163397448309615660845819875721)
+        + 5.0
+        / x
+        * (qp / qq)
+        * jnp.cos(x - 0.785398163397448309615660845819875721)
+      )
+      * 0.797884560802865355879892119868763737
+      / jnp.sqrt(x)
+    )
 
   return jnp.piecewise(
-      self,
-      [self <= 5.0, self < 0., self == 0.],
-      [small, negative, zero, default],
+    self,
+    [self <= 5.0, self < 0.0, self == 0.0],
+    [small, negative, zero, default],
   )
 
 
@@ -4535,86 +4684,87 @@ def _aten_special_bessel_y1(self):
 
   def small(x):
     YP = jnp.array(
-        [
-            1.26320474790178026440e09,
-            -6.47355876379160291031e11,
-            1.14509511541823727583e14,
-            -8.12770255501325109621e15,
-            2.02439475713594898196e17,
-            -7.78877196265950026825e17,
-        ],
-        dtype=self.dtype,
+      [
+        1.26320474790178026440e09,
+        -6.47355876379160291031e11,
+        1.14509511541823727583e14,
+        -8.12770255501325109621e15,
+        2.02439475713594898196e17,
+        -7.78877196265950026825e17,
+      ],
+      dtype=self.dtype,
     )
     YQ = jnp.array(
-        [
-            5.94301592346128195359e02,
-            2.35564092943068577943e05,
-            7.34811944459721705660e07,
-            1.87601316108706159478e10,
-            3.88231277496238566008e12,
-            6.20557727146953693363e14,
-            6.87141087355300489866e16,
-            3.97270608116560655612e18,
-        ],
-        dtype=self.dtype,
+      [
+        5.94301592346128195359e02,
+        2.35564092943068577943e05,
+        7.34811944459721705660e07,
+        1.87601316108706159478e10,
+        3.88231277496238566008e12,
+        6.20557727146953693363e14,
+        6.87141087355300489866e16,
+        3.97270608116560655612e18,
+      ],
+      dtype=self.dtype,
     )
 
     yp = op_base.foreach_loop(YP, lambda carry, yp_i: carry * (x * x) + yp_i)
     yq = op_base.foreach_loop(YQ, lambda carry, yq_i: carry * (x * x) + yq_i)
 
-    return (x * (yp / yq) +
-            (0.636619772367581343075535053490057448 *
-             (_aten_special_bessel_j1(x) * jnp.log(x) - 1.0 / x)))
+    return x * (yp / yq) + (
+      0.636619772367581343075535053490057448
+      * (_aten_special_bessel_j1(x) * jnp.log(x) - 1.0 / x)
+    )
 
   def default(x):
     PP = jnp.array(
-        [
-            7.62125616208173112003e-04,
-            7.31397056940917570436e-02,
-            1.12719608129684925192e00,
-            5.11207951146807644818e00,
-            8.42404590141772420927e00,
-            5.21451598682361504063e00,
-            1.00000000000000000254e00,
-        ],
-        dtype=self.dtype,
+      [
+        7.62125616208173112003e-04,
+        7.31397056940917570436e-02,
+        1.12719608129684925192e00,
+        5.11207951146807644818e00,
+        8.42404590141772420927e00,
+        5.21451598682361504063e00,
+        1.00000000000000000254e00,
+      ],
+      dtype=self.dtype,
     )
     PQ = jnp.array(
-        [
-            5.71323128072548699714e-04,
-            6.88455908754495404082e-02,
-            1.10514232634061696926e00,
-            5.07386386128601488557e00,
-            8.39985554327604159757e00,
-            5.20982848682361821619e00,
-            9.99999999999999997461e-01,
-        ],
-        dtype=self.dtype,
+      [
+        5.71323128072548699714e-04,
+        6.88455908754495404082e-02,
+        1.10514232634061696926e00,
+        5.07386386128601488557e00,
+        8.39985554327604159757e00,
+        5.20982848682361821619e00,
+        9.99999999999999997461e-01,
+      ],
+      dtype=self.dtype,
     )
     QP = jnp.array(
-        [
-            5.10862594750176621635e-02,
-            4.98213872951233449420e00,
-            7.58238284132545283818e01,
-            3.66779609360150777800e02,
-            7.10856304998926107277e02,
-            5.97489612400613639965e02,
-            2.11688757100572135698e02,
-            2.52070205858023719784e01,
-        ],
-        dtype=self.dtype,
+      [
+        5.10862594750176621635e-02,
+        4.98213872951233449420e00,
+        7.58238284132545283818e01,
+        3.66779609360150777800e02,
+        7.10856304998926107277e02,
+        5.97489612400613639965e02,
+        2.11688757100572135698e02,
+        2.52070205858023719784e01,
+      ],
+      dtype=self.dtype,
     )
     QQ = jnp.array(
-        [
-            7.42373277035675149943e01,
-            1.05644886038262816351e03,
-            4.98641058337653607651e03,
-            9.56231892404756170795e03,
-            7.99704160447350683650e03,
-            2.82619278517639096600e03,
-            3.36093607810698293419e02,
-        ],
-        dtype=self.dtype,
+      [
+        7.42373277035675149943e01,
+        1.05644886038262816351e03,
+        4.98641058337653607651e03,
+        9.56231892404756170795e03,
+        7.99704160447350683650e03,
+        2.82619278517639096600e03,
+        3.36093607810698293419e02,
+      ],
+      dtype=self.dtype,
     )
 
     factor = 25.0 / (x * x)
@@ -4623,15 +4773,22 @@ def _aten_special_bessel_y1(self):
     qp = op_base.foreach_loop(QP, lambda carry, qp_i: carry * factor + qp_i)
     qq = op_base.foreach_loop(QQ, lambda carry, qq_i: carry * factor + qq_i)
 
-    return ((pp / pq * jnp.sin(x - 2.356194490192344928846982537459627163) +
-             5.0 / x *
-             (qp / qq) * jnp.cos(x - 2.356194490192344928846982537459627163)) *
-            0.797884560802865355879892119868763737 / jnp.sqrt(x))
+    return (
+      (
+        pp / pq * jnp.sin(x - 2.356194490192344928846982537459627163)
+        + 5.0
+        / x
+        * (qp / qq)
+        * jnp.cos(x - 2.356194490192344928846982537459627163)
+      )
+      * 0.797884560802865355879892119868763737
+      / jnp.sqrt(x)
+    )
 
   return jnp.piecewise(
-      self,
-      [self <= 5.0, self < 0., self == 0.],
-      [small, negative, zero, default],
+    self,
+    [self <= 5.0, self < 0.0, self == 0.0],
+    [small, negative, zero, default],
   )
 
 
@@ -4642,13 +4799,13 @@ def _aten_special_chebyshev_polynomial_t(self, n):
 
   @jnp.vectorize
   def vectorized(x, n_i):
-
     def negative_n(x):
       return jnp.zeros_like(x)
 
     def one_x(x):
-      return jnp.where((x > 0) | (n_i % 2 == 0), jnp.ones_like(x),
-                       -jnp.ones_like(x))
+      return jnp.where(
+        (x > 0) | (n_i % 2 == 0), jnp.ones_like(x), -jnp.ones_like(x)
+      )
 
     def large_n_small_x(x):
       return jnp.cos(n_i * jnp.acos(x))
@@ -4660,18 +4817,24 @@ def _aten_special_chebyshev_polynomial_t(self, n):
       return x
 
     def default(x):
-
       def f(_, carry):
         p, q = carry
         return (q, 2 * x * q - p)
 
-      _, r = jax.lax.fori_loop(0, n_i - 1, f, init_val=(1., x))
+      _, r = jax.lax.fori_loop(0, n_i - 1, f, init_val=(1.0, x))
       return r
 
-    return jnp.piecewise(x, [
-        n_i == 1, n_i == 0, (n_i == 6) & (jnp.abs(x) < 1),
-        jnp.abs(x) == 1., n_i < 0
-    ], [one_n, zero_n, large_n_small_x, one_x, negative_n, default])
+    return jnp.piecewise(
+      x,
+      [
+        n_i == 1,
+        n_i == 0,
+        (n_i == 6) & (jnp.abs(x) < 1),
+        jnp.abs(x) == 1.0,
+        n_i < 0,
+      ],
+      [one_n, zero_n, large_n_small_x, one_x, negative_n, default],
+    )
 
   # Explcicitly vectorize since we must vectorizes over both self and n
   return vectorized(self, n.astype(jnp.int64))
@@ -4684,7 +4847,6 @@ def _aten_special_chebyshev_polynomial_u(self, n):
 
   @jnp.vectorize
   def vectorized(x, n_i):
-
     def negative_n(x):
       return jnp.zeros_like(x)
 
@@ -4694,9 +4856,9 @@ def _aten_special_chebyshev_polynomial_u(self, n):
     def large_n_small_x(x):
       sin_acos_x = jnp.sin(jnp.acos(x))
       return jnp.where(
-          sin_acos_x != 0,
-          jnp.sin((n_i + 1) * jnp.acos(x)) / sin_acos_x,
-          (n_i + 1) * jnp.cos((n_i + 1) * jnp.acos(x)) / x,
+        sin_acos_x != 0,
+        jnp.sin((n_i + 1) * jnp.acos(x)) / sin_acos_x,
+        (n_i + 1) * jnp.cos((n_i + 1) * jnp.acos(x)) / x,
       )
 
     def zero_n(x):
@@ -4706,7 +4868,6 @@ def _aten_special_chebyshev_polynomial_u(self, n):
       return 2 * x
 
     def default(x):
-
       def f(_, carry):
         p, q = carry
         return (q, 2 * x * q - p)
@@ -4715,15 +4876,15 @@ def _aten_special_chebyshev_polynomial_u(self, n):
       return r
 
     return jnp.piecewise(
-        x,
-        [
-            n_i == 1,
-            n_i == 0,
-            (n_i > 8) & (jnp.abs(x) < 1),
-            jnp.abs(x) == 1.0,
-            n_i < 0,
-        ],
-        [one_n, zero_n, large_n_small_x, one_x, negative_n, default],
+      x,
+      [
+        n_i == 1,
+        n_i == 0,
+        (n_i > 8) & (jnp.abs(x) < 1),
+        jnp.abs(x) == 1.0,
+        n_i < 0,
+      ],
+      [one_n, zero_n, large_n_small_x, one_x, negative_n, default],
     )
 
   return vectorized(self, n.astype(jnp.int64))
@@ -4748,7 +4909,6 @@ def _aten_special_hermite_polynomial_h(self, n):
 
   @jnp.vectorize
   def vectorized(x, n_i):
-
     def negative_n(x):
       return jnp.zeros_like(x)
 
@@ -4759,7 +4919,6 @@ def _aten_special_hermite_polynomial_h(self, n):
       return 2 * x
 
     def default(x):
-
       def f(k, carry):
         p, q = carry
         return (q, 2 * x * q - 2 * k * p)
@@ -4767,8 +4926,11 @@ def _aten_special_hermite_polynomial_h(self, n):
       _, r = jax.lax.fori_loop(1, n_i, f, init_val=(1.0, 2 * x))
       return r
 
-    return jnp.piecewise(x, [n_i == 1, n_i == 0, n_i < 0],
-                         [one_n, zero_n, negative_n, default])
+    return jnp.piecewise(
+      x,
+      [n_i == 1, n_i == 0, n_i < 0],
+      [one_n, zero_n, negative_n, default],
+    )
 
   return vectorized(self, n.astype(jnp.int64))
 
@@ -4780,7 +4942,6 @@ def _aten_special_hermite_polynomial_he(self, n):
 
   @jnp.vectorize
   def vectorized(x, n_i):
-
     def negative_n(x):
       return jnp.zeros_like(x)
 
@@ -4791,7 +4952,6 @@ def _aten_special_hermite_polynomial_he(self, n):
       return x
 
     def default(x):
-
       def f(k, carry):
         p, q = carry
         return (q, x * q - k * p)
@@ -4799,33 +4959,37 @@ def _aten_special_hermite_polynomial_he(self, n):
       _, r = jax.lax.fori_loop(1, n_i, f, init_val=(1.0, x))
       return r
 
-    return jnp.piecewise(x, [n_i == 1.0, n_i == 0.0, n_i < 0],
-                         [one_n, zero_n, negative_n, default])
+    return jnp.piecewise(
+      x,
+      [n_i == 1.0, n_i == 0.0, n_i < 0],
+      [one_n, zero_n, negative_n, default],
+    )
 
   return vectorized(self, n.astype(jnp.int64))
 
 
 @op(torch.ops.aten.multinomial, needs_env=True)
-def _aten_multinomial(input,
-                      num_samples,
-                      replacement=False,
-                      *,
-                      generator=None,
-                      out=None,
-                      env=None):
-  assert num_samples <= input.shape[
-      -1] or replacement, "cannot take a larger sample than population when replacement=False"
+def _aten_multinomial(
+  input, num_samples, replacement=False, *, generator=None, out=None, env=None
+):
+  assert num_samples <= input.shape[-1] or replacement, (
+    "cannot take a larger sample than population when replacement=False"
+  )
   key = env.get_and_rotate_prng_key(generator)
   if input.ndim == 1:
     return jax.random.choice(
-        key, input.shape[-1], (num_samples,), replace=replacement, p=input)
+      key, input.shape[-1], (num_samples,), replace=replacement, p=input
+    )
   else:
     return jnp.array([
-        jax.random.choice(
-            key,
-            input.shape[-1], (num_samples,),
-            replace=replacement,
-            p=input[i, :]) for i in range(input.shape[0])
+      jax.random.choice(
+        key,
+        input.shape[-1],
+        (num_samples,),
+        replace=replacement,
+        p=input[i, :],
+      )
+      for i in range(input.shape[0])
     ])
 
 
@@ -4853,13 +5017,13 @@ def _aten_flatten(x, start_dim=0, end_dim=-1):
   if end_dim < 0:
     end_dim += len(shape)  # Handle negative indexing
 
-  new_shape = (*shape[:start_dim], -1, *shape[end_dim + 1:])
+  new_shape = (*shape[:start_dim], -1, *shape[end_dim + 1 :])
   return jnp.reshape(x, new_shape)
 
 
 @op(torch.ops.aten.new_empty)
 def _new_empty(self, size, **kwargs):
-  dtype = kwargs.get('dtype')
+  dtype = kwargs.get("dtype")
   if dtype is not None:
     dtype = mappings.t2j_dtype(dtype)
   else:
@@ -4882,8 +5046,12 @@ def _aten_unsafe_index_put(self, indices, values, accumulate=False):
   return _aten_index_put(self, indices, values, accumulate)
 
 
-@op(torch.ops.aten.conj_physical, torch.ops.aten.conj,
-    torch.ops.aten._conj_physical, torch.ops.aten._conj)
+@op(
+  torch.ops.aten.conj_physical,
+  torch.ops.aten.conj,
+  torch.ops.aten._conj_physical,
+  torch.ops.aten._conj,
+)
 def _aten_conj_physical(self):
   return jnp.conjugate(self)
 
@@ -4953,18 +5121,16 @@ def _aten__linalg_solve_ex(a, b):
 
 # torch.linalg.solve_triangular
 @op(torch.ops.aten.linalg_solve_triangular)
-def _aten_linalg_solve_triangular(a,
-                                  b,
-                                  *,
-                                  upper=True,
-                                  left=True,
-                                  unitriangular=False):
+def _aten_linalg_solve_triangular(
+  a, b, *, upper=True, left=True, unitriangular=False
+):
   if left is False:
     a = jnp.matrix_transpose(a)
     b = jnp.matrix_transpose(b)
     upper = not upper
   res = jax.scipy.linalg.solve_triangular(
-      a, b, lower=not upper, unit_diagonal=unitriangular)
+    a, b, lower=not upper, unit_diagonal=unitriangular
+  )
   if left is False:
     res = jnp.matrix_transpose(res)
   return res
@@ -4985,30 +5151,34 @@ def _aten__linalg_check_errors(*args, **kwargs):
 @op(torch.ops.aten.median)
 def _aten_median(self, dim=None, keepdim=False):
   output = _with_reduction_scalar(
-      functools.partial(jnp.quantile, q=0.5, method='lower'),
-      self,
-      dim=dim,
-      keepdim=keepdim).astype(self.dtype)
+    functools.partial(jnp.quantile, q=0.5, method="lower"),
+    self,
+    dim=dim,
+    keepdim=keepdim,
+  ).astype(self.dtype)
   if dim is None:
     return output
   else:
-    index = _with_reduction_scalar(_get_median_index, self, dim,
-                                   keepdim).astype(jnp.int64)
+    index = _with_reduction_scalar(
+      _get_median_index, self, dim, keepdim
+    ).astype(jnp.int64)
     return output, index
 
 
 @op(torch.ops.aten.nanmedian)
 def _aten_nanmedian(input, dim=None, keepdim=False, *, out=None):
   output = _with_reduction_scalar(
-      functools.partial(jnp.nanquantile, q=0.5, method='lower'),
-      input,
-      dim=dim,
-      keepdim=keepdim).astype(input.dtype)
+    functools.partial(jnp.nanquantile, q=0.5, method="lower"),
+    input,
+    dim=dim,
+    keepdim=keepdim,
+  ).astype(input.dtype)
   if dim is None:
     return output
   else:
-    index = _with_reduction_scalar(_get_median_index, input, dim,
-                                   keepdim).astype(jnp.int64)
+    index = _with_reduction_scalar(
+      _get_median_index, input, dim, keepdim
+    ).astype(jnp.int64)
     return output, index
 
 
@@ -5029,18 +5199,20 @@ def _get_median_index(x, axis=None, keepdims=False):
 
 
 @op(torch.ops.aten.triangular_solve)
-def _aten_triangular_solve(b,
-                           a,
-                           upper=True,
-                           transpose=False,
-                           unittriangular=False):
-  return (jax.lax.linalg.triangular_solve(
+def _aten_triangular_solve(
+  b, a, upper=True, transpose=False, unittriangular=False
+):
+  return (
+    jax.lax.linalg.triangular_solve(
       a,
       b,
       left_side=True,
       lower=not upper,
       transpose_a=transpose,
-      unit_diagonal=unittriangular), a)
+      unit_diagonal=unittriangular,
+    ),
+    a,
+  )
 
 
 # func: _fft_c2c(Tensor self, SymInt[] dim, int normalization, bool forward) -> Tensor
@@ -5048,16 +5220,16 @@ def _aten_triangular_solve(b,
 def _aten__fft_c2c(self, dim, normalization, forward):
   if forward:
     norm = [
-        'backward',
-        'ortho',
-        'forward',
+      "backward",
+      "ortho",
+      "forward",
     ][normalization]
     return jnp.fft.fftn(self, axes=dim, norm=norm)
   else:
     norm = [
-        'forward',
-        'ortho',
-        'backward',
+      "forward",
+      "ortho",
+      "backward",
     ][normalization]
     return jnp.fft.ifftn(self, axes=dim, norm=norm)
 
@@ -5065,9 +5237,9 @@ def _aten__fft_c2c(self, dim, normalization, forward):
 @op(torch.ops.aten._fft_r2c)
 def _aten__fft_r2c(self, dim, normalization, onesided):
   norm = [
-      'backward',
-      'ortho',
-      'forward',
+    "backward",
+    "ortho",
+    "forward",
   ][normalization]
   if onesided:
     return jnp.fft.rfftn(self, axes=dim, norm=norm)
@@ -5078,9 +5250,9 @@ def _aten__fft_r2c(self, dim, normalization, onesided):
 @op(torch.ops.aten._fft_c2r)
 def _aten__fft_c2r(self, dim, normalization, last_dim_size):
   norm = [
-      'forward',
-      'ortho',
-      'backward',
+    "forward",
+    "ortho",
+    "backward",
   ][normalization]
   if len(dim) == 1:
     s = [last_dim_size]
@@ -5090,17 +5262,15 @@ def _aten__fft_c2r(self, dim, normalization, last_dim_size):
 
 
 @op(torch.ops.aten._trilinear)
-def _aten_trilinear(i1,
-                    i2,
-                    i3,
-                    expand1,
-                    expand2,
-                    expand3,
-                    sumdim,
-                    unroll_dim=1):
+def _aten_trilinear(
+  i1, i2, i3, expand1, expand2, expand3, sumdim, unroll_dim=1
+):
   return _aten_sum(
-      jnp.expand_dims(i1, expand1) * jnp.expand_dims(i2, expand2) *
-      jnp.expand_dims(i3, expand3), sumdim)
+    jnp.expand_dims(i1, expand1)
+    * jnp.expand_dims(i2, expand2)
+    * jnp.expand_dims(i3, expand3),
+    sumdim,
+  )
 
 
 @op(torch.ops.aten.max_unpool2d)
@@ -5108,7 +5278,8 @@ def _aten_trilinear(i1,
 def _aten_max_unpoolxd(input, indices, output_size, stride=None, padding=0):
   if output_size is None:
     raise ValueError(
-        "output_size value is not set correctly. It cannot be None or empty.")
+      "output_size value is not set correctly. It cannot be None or empty."
+    )
 
   output_size = [input.shape[0], input.shape[1]] + output_size
   output = jnp.zeros(output_size, dtype=input.dtype)
@@ -5123,14 +5294,16 @@ def _aten_max_unpoolxd(input, indices, output_size, stride=None, padding=0):
   return output
 
 
-def _aten_upsample(input,
-                   output_size,
-                   align_corners,
-                   antialias,
-                   method,
-                   scale_factors=None,
-                   scales_h=None,
-                   scales_w=None):
+def _aten_upsample(
+  input,
+  output_size,
+  align_corners,
+  antialias,
+  method,
+  scale_factors=None,
+  scales_h=None,
+  scales_w=None,
+):
   # input: is of type jaxlib.xla_extension.ArrayImpl
   image = input
 
@@ -5178,56 +5351,62 @@ def _aten_upsample(input,
   # https://github.com/jax-ml/jax/issues/11206
   if align_corners:
     scale = jnp.array([
-        (shape[i] - 1.0) / (image.shape[i] - 1.0) for i in spatial_dims
+      (shape[i] - 1.0) / (image.shape[i] - 1.0) for i in spatial_dims
     ])
 
   translation = jnp.array([0 for i in spatial_dims])
 
   return jax_reimplement.scale_and_translate(
-      image,
-      shape,
-      method=method,
-      scale=scale,
-      spatial_dims=spatial_dims,
-      translation=translation,
-      antialias=antialias,
+    image,
+    shape,
+    method=method,
+    scale=scale,
+    spatial_dims=spatial_dims,
+    translation=translation,
+    antialias=antialias,
   )
 
 
 @op(torch.ops.aten._upsample_bilinear2d_aa)
-def _aten_upsample_billinear_aa(input,
-                                output_size,
-                                align_corners,
-                                scale_factors=None,
-                                scales_h=None,
-                                scales_w=None):
+def _aten_upsample_billinear_aa(
+  input,
+  output_size,
+  align_corners,
+  scale_factors=None,
+  scales_h=None,
+  scales_w=None,
+):
   return _aten_upsample(
-      input,
-      output_size,
-      align_corners,
-      True,  # antialias
-      "bilinear",  # method
-      scale_factors,
-      scales_h,
-      scales_w)
+    input,
+    output_size,
+    align_corners,
+    True,  # antialias
+    "bilinear",  # method
+    scale_factors,
+    scales_h,
+    scales_w,
+  )
 
 
 @op(torch.ops.aten._upsample_bicubic2d_aa)
-def _aten_upsample_bicubic2d_aa(input,
-                                output_size,
-                                align_corners,
-                                scale_factors=None,
-                                scales_h=None,
-                                scales_w=None):
+def _aten_upsample_bicubic2d_aa(
+  input,
+  output_size,
+  align_corners,
+  scale_factors=None,
+  scales_h=None,
+  scales_w=None,
+):
   return _aten_upsample(
-      input,
-      output_size,
-      align_corners,
-      True,  # antialias
-      "bicubic",  # method
-      scale_factors,
-      scales_h,
-      scales_w)
+    input,
+    output_size,
+    align_corners,
+    True,  # antialias
+    "bicubic",  # method
+    scale_factors,
+    scales_h,
+    scales_w,
+  )
 
 
 @op(torch.ops.aten.polar)
@@ -5236,10 +5415,9 @@ def _aten_polar(abs, angle, *, out=None):
 
 
 @op(torch.ops.aten.cdist)
-def _aten_cdist(x1,
-                x2,
-                p=2.0,
-                compute_mode='use_mm_for_euclid_dist_if_necessary'):
+def _aten_cdist(
+  x1, x2, p=2.0, compute_mode="use_mm_for_euclid_dist_if_necessary"
+):
   x1 = x1.astype(jnp.float32)
   x2 = x2.astype(jnp.float32)
 
@@ -5248,17 +5426,18 @@ def _aten_cdist(x1,
     return _hamming_distance(x1, x2).astype(jnp.float32)
   elif p == 2.0:
     # Use optimized Euclidean distance calculation
-    if compute_mode == 'use_mm_for_euclid_dist_if_necessary' and (
-        x1.shape[-2] > 25 or x2.shape[-2] > 25):
+    if compute_mode == "use_mm_for_euclid_dist_if_necessary" and (
+      x1.shape[-2] > 25 or x2.shape[-2] > 25
+    ):
       return _euclidean_mm(x1, x2)
-    elif compute_mode == 'use_mm_for_euclid_dist':
+    elif compute_mode == "use_mm_for_euclid_dist":
       return _euclidean_mm(x1, x2)
     else:
       return _euclidean_direct(x1, x2)
   else:
     # General p-norm distance calculation
     diff = jnp.abs(jnp.expand_dims(x1, -2) - jnp.expand_dims(x2, -3))
-    return jnp.sum(jnp.power(diff, p), axis=-1).astype(jnp.float32)**(1 / p)
+    return jnp.sum(jnp.power(diff, p), axis=-1).astype(jnp.float32) ** (1 / p)
 
 
 def _hamming_distance(x1, x2):
@@ -5339,7 +5518,7 @@ def _aten_lu_unpack(LU_data, LU_pivots, unpack_data=True, unpack_pivots=True):
     # Extract lower triangle
     L = jnp.tril(LU_data, k=-1)
 
-    #emulate pytorch behavior: Add ones to the diagonal of L
+    # emulate pytorch behavior: Add ones to the diagonal of L
     eye = jnp.eye(n, m, dtype=LU_data.dtype)
     L = L + eye
 
@@ -5414,7 +5593,11 @@ def _aten_lu_unpack(LU_data, LU_pivots, unpack_data=True, unpack_pivots=True):
       unpackedP = v_lu_unpack_2d(reshapedP, reshapedPivot)
 
       # reshape result back to P's shape
-      newRetshape = (*P.shape[:-2], unpackedP.shape[-2], unpackedP.shape[-1])
+      newRetshape = (
+        *P.shape[:-2],
+        unpackedP.shape[-2],
+        unpackedP.shape[-1],
+      )
       P = unpackedP.reshape(newRetshape)
   else:
     # emulate pytroch behavior: return empty tensors
@@ -5441,10 +5624,14 @@ def kthvalue(input, k, dim=None, keepdim=False, *, out=None):
   while dimension < 0:
     dimension = dimension + input.ndim
   values = jax.lax.index_in_dim(
-      jnp.partition(input, k - 1, dimension), k - 1, dimension, keepdim)
+    jnp.partition(input, k - 1, dimension), k - 1, dimension, keepdim
+  )
   indices = jax.lax.index_in_dim(
-      jnp.argpartition(input, k - 1, dimension).astype('int64'), k - 1,
-      dimension, keepdim)
+    jnp.argpartition(input, k - 1, dimension).astype("int64"),
+    k - 1,
+    dimension,
+    keepdim,
+  )
   return values, indices
 
 
@@ -5455,14 +5642,14 @@ def _aten_take(self, index):
 
 # func: pad(Tensor self, SymInt[] pad, str mode="constant", float? value=None) -> Tensor
 @op(torch.ops.aten.pad)
-def _aten_pad(self, pad, mode='constant', value=None):
+def _aten_pad(self, pad, mode="constant", value=None):
   if not isinstance(pad, (tuple, list)) or len(pad) % 2 != 0:
     raise ValueError("Padding must be a sequence of even length.")
 
   num_dims = self.ndim
   if len(pad) > 2 * num_dims:
     raise ValueError(
-        f"Padding sequence length ({len(pad)}) exceeds 2 * number of dimensions ({2 * num_dims})."
+      f"Padding sequence length ({len(pad)}) exceeds 2 * number of dimensions ({2 * num_dims})."
     )
 
   # JAX's pad function expects padding for each dimension as a tuple of (low, high)
@@ -5486,99 +5673,75 @@ def _aten_pad(self, pad, mode='constant', value=None):
     if value is None:
       value = 0.0
     return jnp.pad(
-        self, pad_width=jax_pad_width, mode="constant", constant_values=value)
+      self,
+      pad_width=jax_pad_width,
+      mode="constant",
+      constant_values=value,
+    )
   elif mode == "reflect":
     return jnp.pad(self, pad_width=jax_pad_width, mode="reflect")
   elif mode == "edge":
     return jnp.pad(self, pad_width=jax_pad_width, mode="edge")
   else:
     raise ValueError(
-        f"Unsupported padding mode: {mode}. Expected 'constant', 'reflect', or 'edge'."
+      f"Unsupported padding mode: {mode}. Expected 'constant', 'reflect', or 'edge'."
     )
 
 
 mutation_ops_to_functional = {
-    torch.ops.aten.add_:
-        op_base.InplaceOp(torch.ops.aten.add),
-    torch.ops.aten.sub_:
-        op_base.InplaceOp(torch.ops.aten.sub),
-    torch.ops.aten.mul_:
-        op_base.InplaceOp(torch.ops.aten.mul),
-    torch.ops.aten.div_:
-        op_base.InplaceOp(torch.ops.aten.div),
-    torch.ops.aten.pow_:
-        op_base.InplaceOp(torch.ops.aten.pow),
-    torch.ops.aten.lt_:
-        op_base.InplaceOp(torch.ops.aten.lt),
-    torch.ops.aten.le_:
-        op_base.InplaceOp(torch.ops.aten.le),
-    torch.ops.aten.gt_:
-        op_base.InplaceOp(torch.ops.aten.gt),
-    torch.ops.aten.ge_:
-        op_base.InplaceOp(torch.ops.aten.ge),
-    torch.ops.aten.eq_:
-        op_base.InplaceOp(torch.ops.aten.eq),
-    torch.ops.aten.ne_:
-        op_base.InplaceOp(torch.ops.aten.ne),
-    torch.ops.aten.bernoulli_:
-        op_base.InplaceOp(torch.ops.aten.bernoulli.p),
-    torch.ops.aten.bernoulli_.float:
-        op_base.InplaceOp(_aten_bernoulli, is_jax_func=True),
-    torch.ops.aten.geometric_:
-        op_base.InplaceOp(torch.ops.aten.geometric),
-    torch.ops.aten.normal_:
-        op_base.InplaceOp(torch.ops.aten.normal),
-    torch.ops.aten.random_:
-        op_base.InplaceOp(torch.ops.aten.uniform),
-    torch.ops.aten.uniform_:
-        op_base.InplaceOp(torch.ops.aten.uniform),
-    torch.ops.aten.relu_:
-        op_base.InplaceOp(torch.ops.aten.relu),
-    # squeeze_ is expected to change tensor's shape. So replace with new value
-    torch.ops.aten.squeeze_:
-        op_base.InplaceOp(torch.ops.aten.squeeze, True),
-    torch.ops.aten.sqrt_:
-        op_base.InplaceOp(torch.ops.aten.sqrt),
-    torch.ops.aten.clamp_:
-        op_base.InplaceOp(torch.ops.aten.clamp),
-    torch.ops.aten.clamp_min_:
-        op_base.InplaceOp(torch.ops.aten.clamp_min),
-    torch.ops.aten.sigmoid_:
-        op_base.InplaceOp(torch.ops.aten.sigmoid),
-    torch.ops.aten.tanh_:
-        op_base.InplaceOp(torch.ops.aten.tanh),
-    torch.ops.aten.ceil_:
-        op_base.InplaceOp(torch.ops.aten.ceil),
-    torch.ops.aten.logical_not_:
-        op_base.InplaceOp(torch.ops.aten.logical_not),
-    torch.ops.aten.unsqueeze_:
-        op_base.InplaceOp(torch.ops.aten.unsqueeze),
-    torch.ops.aten.transpose_:
-        op_base.InplaceOp(torch.ops.aten.transpose),
-    torch.ops.aten.log_normal_:
-        op_base.InplaceOp(torch.ops.aten.log_normal),
-    torch.ops.aten.scatter_add_:
-        op_base.InplaceOp(torch.ops.aten.scatter_add),
-    torch.ops.aten.scatter_reduce_.two:
-        op_base.InplaceOp(torch.ops.aten.scatter_reduce),
-    torch.ops.aten.scatter_:
-        op_base.InplaceOp(torch.ops.aten.scatter),
-    torch.ops.aten.bitwise_or_:
-        op_base.InplaceOp(torch.ops.aten.bitwise_or),
+  torch.ops.aten.add_: op_base.InplaceOp(torch.ops.aten.add),
+  torch.ops.aten.sub_: op_base.InplaceOp(torch.ops.aten.sub),
+  torch.ops.aten.mul_: op_base.InplaceOp(torch.ops.aten.mul),
+  torch.ops.aten.div_: op_base.InplaceOp(torch.ops.aten.div),
+  torch.ops.aten.pow_: op_base.InplaceOp(torch.ops.aten.pow),
+  torch.ops.aten.lt_: op_base.InplaceOp(torch.ops.aten.lt),
+  torch.ops.aten.le_: op_base.InplaceOp(torch.ops.aten.le),
+  torch.ops.aten.gt_: op_base.InplaceOp(torch.ops.aten.gt),
+  torch.ops.aten.ge_: op_base.InplaceOp(torch.ops.aten.ge),
+  torch.ops.aten.eq_: op_base.InplaceOp(torch.ops.aten.eq),
+  torch.ops.aten.ne_: op_base.InplaceOp(torch.ops.aten.ne),
+  torch.ops.aten.bernoulli_: op_base.InplaceOp(torch.ops.aten.bernoulli.p),
+  torch.ops.aten.bernoulli_.float: op_base.InplaceOp(
+    _aten_bernoulli, is_jax_func=True
+  ),
+  torch.ops.aten.geometric_: op_base.InplaceOp(torch.ops.aten.geometric),
+  torch.ops.aten.normal_: op_base.InplaceOp(torch.ops.aten.normal),
+  torch.ops.aten.random_: op_base.InplaceOp(torch.ops.aten.uniform),
+  torch.ops.aten.uniform_: op_base.InplaceOp(torch.ops.aten.uniform),
+  torch.ops.aten.relu_: op_base.InplaceOp(torch.ops.aten.relu),
+  # squeeze_ is expected to change tensor's shape. So replace with new value
+  torch.ops.aten.squeeze_: op_base.InplaceOp(torch.ops.aten.squeeze, True),
+  torch.ops.aten.sqrt_: op_base.InplaceOp(torch.ops.aten.sqrt),
+  torch.ops.aten.clamp_: op_base.InplaceOp(torch.ops.aten.clamp),
+  torch.ops.aten.clamp_min_: op_base.InplaceOp(torch.ops.aten.clamp_min),
+  torch.ops.aten.sigmoid_: op_base.InplaceOp(torch.ops.aten.sigmoid),
+  torch.ops.aten.tanh_: op_base.InplaceOp(torch.ops.aten.tanh),
+  torch.ops.aten.ceil_: op_base.InplaceOp(torch.ops.aten.ceil),
+  torch.ops.aten.logical_not_: op_base.InplaceOp(torch.ops.aten.logical_not),
+  torch.ops.aten.unsqueeze_: op_base.InplaceOp(torch.ops.aten.unsqueeze),
+  torch.ops.aten.transpose_: op_base.InplaceOp(torch.ops.aten.transpose),
+  torch.ops.aten.log_normal_: op_base.InplaceOp(torch.ops.aten.log_normal),
+  torch.ops.aten.scatter_add_: op_base.InplaceOp(torch.ops.aten.scatter_add),
+  torch.ops.aten.scatter_reduce_.two: op_base.InplaceOp(
+    torch.ops.aten.scatter_reduce
+  ),
+  torch.ops.aten.scatter_: op_base.InplaceOp(torch.ops.aten.scatter),
+  torch.ops.aten.bitwise_or_: op_base.InplaceOp(torch.ops.aten.bitwise_or),
 }
 
 # Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
 _jax_version = tuple(int(v) for v in jax.version._version.split("."))
 
 mutation_needs_env = {
-    torch.ops.aten.bernoulli_,
-    torch.ops.aten.bernoulli_.float,
+  torch.ops.aten.bernoulli_,
+  torch.ops.aten.bernoulli_.float,
 }
 
 for operator, mutation in mutation_ops_to_functional.items():
   ops_registry.register_torch_dispatch_op(
-      operator,
-      mutation,
-      is_jax_function=False,
-      is_view_op=True,
-      needs_env=(operator in mutation_needs_env))
+    operator,
+    mutation,
+    is_jax_function=False,
+    is_view_op=True,
+    needs_env=(operator in mutation_needs_env),
+  )

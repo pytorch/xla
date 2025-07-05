@@ -25,7 +25,8 @@ def register_function(torch_func, **kwargs):
 
 @register_function(torch.as_tensor, is_jax_function=False, needs_env=True)
 @op_base.convert_dtype(
-    use_default_dtype=False)  # Attempt to infer type from elements
+  use_default_dtype=False
+)  # Attempt to infer type from elements
 def _as_tensor(data, dtype=None, device=None, env=None):
   if isinstance(data, torch.Tensor):
     return env._to_copy(data, dtype, device)
@@ -38,13 +39,14 @@ def _as_tensor(data, dtype=None, device=None, env=None):
 
 @register_function(torch.tensor)
 @op_base.convert_dtype(
-    use_default_dtype=False)  # Attempt to infer type from elements
+  use_default_dtype=False
+)  # Attempt to infer type from elements
 def _tensor(data, *, dtype=None, **kwargs):
   python_types_to_torch_types = {
-      bool: jnp.bool,
-      int: jnp.int64,
-      float: jnp.float32,
-      complex: jnp.complex64,
+    bool: jnp.bool,
+    int: jnp.int64,
+    float: jnp.float32,
+    complex: jnp.complex64,
   }
   if not dtype:
     leaves = jax.tree_util.tree_leaves(data)
@@ -52,7 +54,8 @@ def _tensor(data, *, dtype=None, **kwargs):
       dtype = python_types_to_torch_types.get(type(leaves[0]))
 
   return jnp.array(
-      data, dtype=dtype or mappings.t2j_dtype(torch.get_default_dtype()))
+    data, dtype=dtype or mappings.t2j_dtype(torch.get_default_dtype())
+  )
 
 
 @register_function(torch.allclose)
@@ -91,7 +94,6 @@ def _diag(input, diagonal=0):
 @register_function(torch.einsum)
 @register_function(torch.ops.aten.einsum)
 def _einsum(equation, *operands):
-
   def get_params(*a):
     inner_list = a[0]
     if not isinstance(inner_list, jax.Array):
@@ -109,22 +111,23 @@ def _einsum(equation, *operands):
 
 
 def _sdpa_reference(
-    query,
-    key,
-    value,
-    attn_mask=None,
-    dropout_p=0.0,
-    is_causal=False,
-    scale=None,
-    enable_gqa=False,
+  query,
+  key,
+  value,
+  attn_mask=None,
+  dropout_p=0.0,
+  is_causal=False,
+  scale=None,
+  enable_gqa=False,
 ) -> torch.Tensor:
   L, S = query.size(-2), key.size(-2)
   scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
   attn_bias = torch.zeros(L, S, dtype=query.dtype, device=query.device)
   if is_causal:
     assert attn_mask is None
-    temp_mask = torch.ones(
-        L, S, dtype=torch.bool, device=query.device).tril(diagonal=0)
+    temp_mask = torch.ones(L, S, dtype=torch.bool, device=query.device).tril(
+      diagonal=0
+    )
     attn_bias.masked_fill_(temp_mask.logical_not(), float("-inf"))
     attn_bias.to(query.dtype)
   if attn_mask is not None:
@@ -152,28 +155,29 @@ def _tpu_flash_attention(query, key, value, env):
 
   def wrap_flash_attention(query, key, value):
     block_sizes = flash_attention.BlockSizes(
-        block_b=min(2, query.shape[0]),
-        block_q=min(512, query.shape[2]),
-        block_k_major=min(512, key.shape[2]),
-        block_k=min(512, key.shape[2]),
-        block_q_major_dkv=min(512, query.shape[2]),
-        block_k_major_dkv=min(512, key.shape[2]),
-        block_k_dkv=min(512, key.shape[2]),
-        block_q_dkv=min(512, query.shape[2]),
-        block_k_major_dq=min(512, key.shape[2]),
-        block_k_dq=min(256, key.shape[2]),
-        block_q_dq=min(1024, query.shape[2]),
+      block_b=min(2, query.shape[0]),
+      block_q=min(512, query.shape[2]),
+      block_k_major=min(512, key.shape[2]),
+      block_k=min(512, key.shape[2]),
+      block_q_major_dkv=min(512, query.shape[2]),
+      block_k_major_dkv=min(512, key.shape[2]),
+      block_k_dkv=min(512, key.shape[2]),
+      block_q_dkv=min(512, query.shape[2]),
+      block_k_major_dq=min(512, key.shape[2]),
+      block_k_dq=min(256, key.shape[2]),
+      block_q_dq=min(1024, query.shape[2]),
     )
     return flash_attention.flash_attention(
-        query, key, value, causal=True, block_sizes=block_sizes)
+      query, key, value, causal=True, block_sizes=block_sizes
+    )
 
   if env.config.shmap_flash_attention:
     wrap_flash_attention = shard_map(
-        wrap_flash_attention,
-        mesh=env._mesh,
-        in_specs=(fsdp_partition, fsdp_partition, fsdp_partition),
-        out_specs=fsdp_partition,
-        check_rep=False,
+      wrap_flash_attention,
+      mesh=env._mesh,
+      in_specs=(fsdp_partition, fsdp_partition, fsdp_partition),
+      out_specs=fsdp_partition,
+      check_rep=False,
     )
   # return flash_attn_mapped(query, key, value)
   return wrap_flash_attention(query, key, value)
@@ -185,8 +189,8 @@ def pad(tensor, pad, mode="constant", value=None):
   # dict provides a Torch-to-NumPy translation. Any string not in this dict will
   # be passed through as-is.
   MODE_NAME_TRANSLATION = {
-      "circular": "wrap",
-      "replicate": "edge",
+    "circular": "wrap",
+    "replicate": "edge",
   }
 
   numpy_mode = MODE_NAME_TRANSLATION.get(mode, mode)
@@ -197,7 +201,7 @@ def pad(tensor, pad, mode="constant", value=None):
   nd_slice = [slice(None)] * num_prefix_dims
 
   for i in range(len(pad) - 2, -1, -2):
-    pad_start, pad_end = pad[i:i + 2]
+    pad_start, pad_end = pad[i : i + 2]
     slice_start, slice_end = None, None
 
     if pad_start < 0:
@@ -230,39 +234,40 @@ def pad(tensor, pad, mode="constant", value=None):
 
 
 @register_function(
-    torch.nn.functional.scaled_dot_product_attention,
-    is_jax_function=False,
-    needs_env=True,
+  torch.nn.functional.scaled_dot_product_attention,
+  is_jax_function=False,
+  needs_env=True,
 )
 @register_function(
-    torch.ops.aten.scaled_dot_product_attention,
-    is_jax_function=False,
-    needs_env=True)
+  torch.ops.aten.scaled_dot_product_attention,
+  is_jax_function=False,
+  needs_env=True,
+)
 def scaled_dot_product_attention(
-    query,
-    key,
-    value,
-    attn_mask=None,
-    dropout_p=0.0,
-    is_causal=False,
-    scale=None,
-    enable_gqa=False,
-    env=None,
+  query,
+  key,
+  value,
+  attn_mask=None,
+  dropout_p=0.0,
+  is_causal=False,
+  scale=None,
+  enable_gqa=False,
+  env=None,
 ) -> torch.Tensor:
-
   if env.config.use_tpu_flash_attention:
     jquery, jkey, jvalue = env.t2j_iso((query, key, value))
     res = _tpu_flash_attention(jquery, jkey, jvalue, env)
     return env.j2t_iso(res)
 
-  return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal,
-                         scale, enable_gqa)
+  return _sdpa_reference(
+    query, key, value, attn_mask, dropout_p, is_causal, scale, enable_gqa
+  )
 
 
 @register_function(
-    torch.Tensor.__getitem__, is_jax_function=False, is_view_op=True)
+  torch.Tensor.__getitem__, is_jax_function=False, is_view_op=True
+)
 def getitem(self, indexes):
-
   if isinstance(indexes, list) and isinstance(indexes[0], int):
     # list of int, i.e. x[[1, 2]] NOT x[1, 2] (the second would be tuple of int)
     indexes = (indexes,)
@@ -271,10 +276,12 @@ def getitem(self, indexes):
 
   def is_narrow_slicing():
     tensor_free = not pytree.tree_any(
-        lambda x: isinstance(x, torch.Tensor) or isinstance(x, jax.Array),
-        indexes)
-    list_free = not isinstance(indexes, tuple) or all(
-        [False if isinstance(x, list) else True for x in indexes])
+      lambda x: isinstance(x, torch.Tensor) or isinstance(x, jax.Array),
+      indexes,
+    )
+    list_free = not isinstance(indexes, tuple) or all([
+      False if isinstance(x, list) else True for x in indexes
+    ])
     return tensor_free and list_free
 
   if is_narrow_slicing():
@@ -343,15 +350,15 @@ def empty(*size: Sequence[int], dtype=None, **kwargs):
 
 @register_function(torch.arange, is_jax_function=False)
 def arange(
-    start,
-    end=None,
-    step=None,
-    out=None,
-    dtype=None,
-    layout=torch.strided,
-    device=None,
-    requires_grad=False,
-    pin_memory=None,
+  start,
+  end=None,
+  step=None,
+  out=None,
+  dtype=None,
+  layout=torch.strided,
+  device=None,
+  requires_grad=False,
+  pin_memory=None,
 ):
   if end is None:
     end = start
@@ -363,14 +370,14 @@ def arange(
 
 @register_function(torch.empty_strided, is_jax_function=False)
 def empty_strided(
-    size,
-    stride,
-    *,
-    dtype=None,
-    layout=None,
-    device=None,
-    requires_grad=False,
-    pin_memory=False,
+  size,
+  stride,
+  *,
+  dtype=None,
+  layout=None,
+  device=None,
+  requires_grad=False,
+  pin_memory=False,
 ):
   return empty(size, dtype=dtype)
 
@@ -389,14 +396,14 @@ def rand(*size, **kwargs):
 
 @register_function(torch.randn, is_jax_function=False)
 def randn(
-    *size,
-    generator=None,
-    out=None,
-    dtype=None,
-    layout=torch.strided,
-    device=None,
-    requires_grad=False,
-    pin_memory=False,
+  *size,
+  generator=None,
+  out=None,
+  dtype=None,
+  layout=torch.strided,
+  device=None,
+  requires_grad=False,
+  pin_memory=False,
 ):
   if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
     size = size[0]
@@ -501,8 +508,8 @@ def linalg_tensorsolve(A, b, dims=None):
   if dims is not None:
     A = jnp.moveaxis(A, dims, len(dims) * (A.ndim - 1,))
     dims = None
-  if A.shape[:b.ndim] != b.shape:
-    b = jnp.reshape(b, A.shape[:b.ndim])
+  if A.shape[: b.ndim] != b.shape:
+    b = jnp.reshape(b, A.shape[: b.ndim])
   return jnp.linalg.tensorsolve(A, b, axes=dims)
 
 
@@ -516,53 +523,54 @@ def functional_linear(self, weights, bias=None):
 
 @register_function(torch.nn.functional.interpolate)
 def functional_interpolate(
-    input,
-    size: Tuple[int, int],
-    scale_factor: Optional[float],
-    mode: str,
-    align_corners: bool,
-    recompute_scale_factor: bool,
-    antialias: bool,
+  input,
+  size: Tuple[int, int],
+  scale_factor: Optional[float],
+  mode: str,
+  align_corners: bool,
+  recompute_scale_factor: bool,
+  antialias: bool,
 ):
   supported_methods = (
-      "nearest",
-      "linear",
-      "bilinear",
-      "trilinear",
-      "cubic",
-      "bicubic",
-      "tricubic",
-      "lanczos3",
-      "lanczos5",
+    "nearest",
+    "linear",
+    "bilinear",
+    "trilinear",
+    "cubic",
+    "bicubic",
+    "tricubic",
+    "lanczos3",
+    "lanczos5",
   )
   is_jax_supported = mode in supported_methods
   if not is_jax_supported:
     raise torchax.tensor.OperatorNotFound(
-        f"JAX does not support interpolation mode: {mode}. Supported modes are: {supported_methods}"
+      f"JAX does not support interpolation mode: {mode}. Supported modes are: {supported_methods}"
     )
   # None check
   antialias = antialias or False
   align_corners = align_corners or False
 
-  if mode in ('cubic', 'bicubic',
-              'tricubic') and not antialias and size is not None:
+  if (
+    mode in ("cubic", "bicubic", "tricubic")
+    and not antialias
+    and size is not None
+  ):
     return jimage.interpolate_bicubic_no_aa(
-        input,
-        size[0],
-        size[1],
-        align_corners,
+      input,
+      size[0],
+      size[1],
+      align_corners,
     )
   else:
     # fallback
     raise torchax.tensor.OperatorNotFound(
-        f"JAX does not support interpolation mode: {mode}. Supported modes are: {supported_methods}"
+      f"JAX does not support interpolation mode: {mode}. Supported modes are: {supported_methods}"
     )
 
 
 @register_function(torch.Tensor.repeat_interleave)
-def torch_Tensor_repeat_interleave(self,
-                                   repeats,
-                                   dim=None,
-                                   *,
-                                   output_size=None):
+def torch_Tensor_repeat_interleave(
+  self, repeats, dim=None, *, output_size=None
+):
   return jnp.repeat(self, repeats, axis=dim, total_repeat_length=output_size)

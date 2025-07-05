@@ -12,12 +12,13 @@ from typing import Callable, Optional, ParamSpec, Concatenate
 
 
 class InplaceOp:
-
-  def __init__(self,
-               functional_op,
-               replace=False,
-               position_to_mutate=0,
-               is_jax_func=False):
+  def __init__(
+    self,
+    functional_op,
+    replace=False,
+    position_to_mutate=0,
+    is_jax_func=False,
+  ):
     self.functional = functional_op
     self.replace = replace
     self.position_to_mutate = position_to_mutate
@@ -51,15 +52,14 @@ class InplaceOp:
 
 
 class OutVariant:
-
   def __call__(self, *args, **kwargs):
-    to_mutate = kwargs['out']
-    del kwargs['out']
+    to_mutate = kwargs["out"]
+    del kwargs["out"]
     to_mutate._elem = self.functional(*args, **kwargs)._elem
     return to_mutate
 
 
-P = ParamSpec('P')
+P = ParamSpec("P")
 
 
 def convert_dtype(use_default_dtype: bool = True):
@@ -73,11 +73,12 @@ def convert_dtype(use_default_dtype: bool = True):
   """
 
   def decorator(func: types.TorchCallable):
-
     @functools.wraps(func)
-    def wrapper(*args: P.args,
-                dtype: Optional[torch.dtype] = None,
-                **kwargs: P.kwargs):
+    def wrapper(
+      *args: P.args,
+      dtype: Optional[torch.dtype] = None,
+      **kwargs: P.kwargs,
+    ):
       if not dtype and use_default_dtype:
         dtype = torch.get_default_dtype()
       if isinstance(dtype, torch.dtype):
@@ -92,8 +93,9 @@ def convert_dtype(use_default_dtype: bool = True):
   return decorator
 
 
-def maybe_convert_constant_dtype(val: Optional[types.JaxValue],
-                                 dtype: Optional[jnp.dtype]):
+def maybe_convert_constant_dtype(
+  val: Optional[types.JaxValue], dtype: Optional[jnp.dtype]
+):
   """Optionally converts scalar constant's dtype using `numpy`
 
   Use in cases where you require a constant and can't handle a traced array.
@@ -120,12 +122,15 @@ def promote_int_input(f: Callable[Concatenate[jax.Array, P], types.JaxValue]):
   return wrapper
 
 
-def foreach_loop(seq: jax.Array,
-                 fn: Callable[[jax.Array, jax.Array], jax.Array],
-                 init_val=0.0):
+def foreach_loop(
+  seq: jax.Array,
+  fn: Callable[[jax.Array, jax.Array], jax.Array],
+  init_val=0.0,
+):
   """Run `fn` for each element of 1D array `seq`.
 
   Similar to `functools.reduce`, but implemented with `jax.lax.fori_loop`."""
   assert len(seq.shape) == 1
-  return jax.lax.fori_loop(0, len(seq), lambda i, carry: fn(carry, seq[i]),
-                           init_val)
+  return jax.lax.fori_loop(
+    0, len(seq), lambda i, carry: fn(carry, seq[i]), init_val
+  )
