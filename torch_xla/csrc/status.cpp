@@ -58,16 +58,21 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
 
   // If `XLA_SHOW_CPP_ERROR_CONTEXT` is set, show the context of this error.
   // In other words, show:
-  //   - The error location
-  //   - The old messages that were replaced by `new_message`.
+  //   1. The error location
+  //   2. The old messages that were replaced by `new_message`.
   //
   // This should give more context for developers. Showing the older error
   // messages alongside their debug information.
-  std::string location = LocationStrWithSpace(file, line);
-  std::string context =
+  //
+  // Note that we also condition showing source location information by (2)
+  // (i.e. `new_message` is not empty) because we don't really wish to show
+  // a stacktrace. Instead, we show only the history of error messages that
+  // has led to the current error.
+  const std::string context =
       (ShouldShowCppErrorContext() && !new_message.empty())
-          ? std::string(absl::StrCat(location, "\nFrom Error: ", old_message))
-          : std::string();
+          ? absl::StrCat(LocationStrWithSpace(file, line),
+                         "\nFrom Error: ", old_message)
+          : "";
 
   return absl::Status(status.code(), absl::StrCat(message, context));
 }
