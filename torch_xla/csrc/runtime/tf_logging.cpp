@@ -1,8 +1,8 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 
-#include "torch_xla/csrc/status.h"
-
 #include <stdexcept>
+
+#include "torch_xla/csrc/status.h"
 
 namespace torch_xla {
 namespace runtime {

@@ -53,7 +53,7 @@ class ErrorGenerator {
 
 #define TF_CHECK(condition)              \
   while (TF_PREDICT_FALSE(!(condition))) \
-  TF_ERROR_STREAM() << "Check failed: " #condition " "
+  TF_ERROR_STREAM() << "Check failed: " #condition ": "
 
 #define TF_CHECK_OP_LOG(name, op, val1, val2)                                  \
   while (::tsl::internal::CheckOpString _result{::tsl::internal::name##Impl(   \
