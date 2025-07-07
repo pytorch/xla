@@ -14,6 +14,12 @@
 
 namespace torch_xla {
 
+// Returns whether we should show C++ error context.
+//
+// More specifically, whether the `XLA_SHOW_CPP_ERROR_CONTEXT` environment
+// variable is set or not.
+bool ShouldShowCppErrorContext();
+
 // If `XLA_SHOW_CPP_ERROR_CONTEXT` is set, creates a new Status instance,
 // appending the current location (e.g. file and line information) to the
 // status message.
