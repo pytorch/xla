@@ -69,7 +69,7 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
     expected = jax.lax.dot_general(
         x_copy, w_copy, dimension_numbers=(((1,), (1,)), ((), ())))
 
-    self.assertEqual(output.dtype, expected.dtype)
+    self.assertEqual(output.dtype, x.dtype)
     self.assertEqual(output.shape, expected.shape)
     self.assertAllClose(output, expected, atol=atol)
 
