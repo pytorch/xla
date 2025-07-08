@@ -564,6 +564,25 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
           torch::lazy::Value(node, 1)};
 }
 
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> collective_permute(
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    std::vector<std::pair<int64_t, int64_t>> source_target_pairs) {
+  std::vector<torch::lazy::Value> input_values;
+  input_values.reserve(inputs.size());
+  for (const auto& input : inputs) {
+    input_values.push_back(input->GetIrValue());
+  }
+  torch::lazy::NodePtr node = torch_xla::MakeNode<CollectivePermute>(
+      input_values, token, std::move(source_target_pairs));
+
+  std::vector<XLATensorPtr> result;
+  result.reserve(inputs.size());
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    result.emplace_back(inputs[i]->CreateFrom(torch::lazy::Value(node, i)));
+  }
+  return {result, torch::lazy::Value(node, inputs.size())};
+}
+
 std::vector<XLATensorPtr> custom_call(
     const std::vector<XLATensorPtr>& inputs, const std::string& target,
     const std::vector<std::vector<int64_t>>& output_shapes,

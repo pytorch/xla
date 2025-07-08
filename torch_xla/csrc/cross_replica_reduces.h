@@ -60,6 +60,11 @@ struct ReduceScatterResultCoalesced {
   xla::XlaOp token;
 };
 
+struct MultiCollectivePermuteResult {
+  std::vector<xla::XlaOp> results;
+  xla::XlaOp token;
+};
+
 std::vector<xla::XlaOp> BuildAllReduce(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> operands,
     xla::XlaOp token, double scale,
@@ -88,6 +93,10 @@ AllGatherResultCoalesced BuildAllGatherCoalesced(
 
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
+    const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs);
+
+MultiCollectivePermuteResult BuildCollectivePermute(
+    absl::Span<const xla::XlaOp> inputs, xla::XlaOp token,
     const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs);
 
 SendResult BuildSendWithToken(xla::XlaOp input, xla::XlaOp token,
