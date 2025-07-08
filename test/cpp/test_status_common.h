@@ -66,11 +66,11 @@ class StatusTest : public testing::TestWithParam<CppErrorContextMode> {
 // Note that this macro assumes that both `torch_xla::StatusTest` and
 // `torch_xla::CppErrorContextMode` are accessible from the context this macro
 // is being called.
-#define INSTANTIATE_WITH_CPP_ERROR_CONTEXT_MODE(suite, test, mode) \
-  INSTANTIATE_TEST_SUITE_P(                                              \
-      suite, test, testing::Values(CppErrorContextMode::mode),           \
-      [](const testing::TestParamInfo<CppErrorContextMode>& info) {      \
-        return ToString(info.param);                                     \
+#define INSTANTIATE_WITH_CPP_ERROR_CONTEXT_MODE(suite, test, mode)  \
+  INSTANTIATE_TEST_SUITE_P(                                         \
+      suite, test, testing::Values(CppErrorContextMode::mode),      \
+      [](const testing::TestParamInfo<CppErrorContextMode>& info) { \
+        return ToString(info.param);                                \
       })
 
 namespace testing {
