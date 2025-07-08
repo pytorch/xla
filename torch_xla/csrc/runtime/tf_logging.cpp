@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "torch_xla/csrc/status.h"
+#include "tsl/platform/stacktrace.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -15,7 +16,8 @@ void ErrorGenerator::operator&(const std::basic_ostream<char>& oss) const {
   ess << sink.str();
 
   if (ShouldShowCppErrorContext()) {
-    ess << " (at " << file_ << ":" << line_ << ")";
+    ess << " (at " << file_ << ":" << line_ << ")\n";
+    ess << tsl::CurrentStackTrace();
   }
 
   TF_VLOG(1) << ess.str();

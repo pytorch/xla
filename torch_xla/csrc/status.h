@@ -18,7 +18,7 @@ namespace torch_xla {
 //
 // More specifically, whether the `XLA_SHOW_CPP_ERROR_CONTEXT` environment
 // variable is set or not.
-bool ShouldShowCppErrorContext();
+[[nodiscard]] bool ShouldShowCppErrorContext();
 
 // If `XLA_SHOW_CPP_ERROR_CONTEXT` is set, creates a new Status instance,
 // appending the current location (e.g. file and line information) to the

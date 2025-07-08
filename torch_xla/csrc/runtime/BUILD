@@ -164,7 +164,6 @@ cc_library(
     hdrs = ["debug_macros.h"],
     deps = [
         ":tf_logging",
-        "@tsl//tsl/platform:stacktrace",
         "@tsl//tsl/platform:statusor",
         "@tsl//tsl/platform:macros",
     ],
@@ -391,6 +390,7 @@ cc_library(
     hdrs = ["tf_logging.h"],
     deps = [
         "//torch_xla/csrc:status",
+        "@tsl//tsl/platform:stacktrace",
         "@tsl//tsl/platform:statusor",
         "@xla//xla/service:platform_util",
         "@com_google_absl//absl/base:log_severity",
