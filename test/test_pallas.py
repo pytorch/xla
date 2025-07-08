@@ -878,10 +878,10 @@ class PallasTest(parameterized.TestCase):
         use_dynamo=False,
     )
 
+  # compute normalized Frobenius error.
   def _compute_rel_error(self, x, q_x):
-    return torch.mean(torch.sqrt(torch.mean(torch.square(q_x - x),
-                                            axis=1))) / torch.sqrt(
-                                                torch.mean(torch.square(x)))
+    abs_error = torch.sqrt(torch.mean(torch.square(q_x - x), axis=1))
+    return torch.mean(abs_error) / torch.sqrt(torch.mean(torch.square(x)))
 
   def _test_quantized_matmul_int8(
       self,
