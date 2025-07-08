@@ -1031,6 +1031,7 @@ class PallasTest(parameterized.TestCase):
     w = torch.randint(-128, 127, (30, 20), device='meta', dtype=torch.int8)
     scalar = torch.randn(30, device='meta', dtype=torch.float32)
     if use_dynamo:
+
       def quantized_matmul_int8_wrapper(x, w_int, scalar, quantize_activation):
         return torch.ops.xla.quantized_matmul_int8(
             x, w_int, scalar, quantize_activation=quantize_activation)
