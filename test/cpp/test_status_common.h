@@ -15,7 +15,6 @@
 // `kHide`, for actually instantiating these tests with the environment variable
 // set to the correct value.
 
-TEST_CPP_TEST_STATUS_COMMON_H_
 #ifndef XLA_TEST_CPP_TEST_STATUS_COMMON_H_
 #define XLA_TEST_CPP_TEST_STATUS_COMMON_H_
 
