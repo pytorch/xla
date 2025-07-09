@@ -123,6 +123,8 @@ function run_torch_op_tests {
   run_test_without_functionalization "$_TEST_DIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
   run_dynamic "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
+  # TODO https://github.com/pytorch/xla/issues/9459: Investigate why this 
+  # doesn't run any tests.
   # run_test "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
   run_test "$_TEST_DIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
   run_test "$_TEST_DIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
