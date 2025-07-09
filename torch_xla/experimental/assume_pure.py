@@ -12,7 +12,7 @@ _XLA_COMPUTATION_CACHE = {}
 
 
 @requires_jax
-def assume_pure(fn):
+def assume_pure(fn, *, add_rng_seed_argument=False):
   """Decorates a pure PyTorch/XLA function to skip expensive re-tracing.
 
   Returns a new function that will only be traced once for each unique
@@ -30,9 +30,48 @@ def assume_pure(fn):
 
   - Other custom PyTorch/XLA operations such as `flash_attention` are not
     supported. This limitation may be lifted in the future.
+
+  Args:
+    fn: Callable, the function that is assumed to be pure.
+      A pure function means, if the inputs are fixed then the output is also fixed
+      ie. a mathematical function. NOTE: functions that does randomness generation
+      are NOT pure by this definition.
+      
+    add_rng_seed_argument: bool, if true, then the returned function will take 
+      an extra 'rng_seed' argument. A function with different rng_seed can produce
+      different result, so the lifted function becomes pure. rng_seed must be int
+
+      
+  Example:
+  
+  ```
+  def add_randn(a):
+    return a + torch.randn_like(a)
+  ```
+  
+  add_randn is not a pure function; but assume_pure(add_randn) assumes it is pure
+  and hardcodes the rng key at tracing time; making add_randn behaves differently 
+  (thus being incorrect).
+  
+  if we do add_randn_p = assume_pure(add_randn, add_rng_seed_argument=True), then
+  we can call add_randn_p(a, rng_seed=0) to get one result and add_randn_p(a, rng_seed=0)
+  to get another result.
   """
   from torchax.interop import jax_view
-  return j2t_autograd(jax_view(fn))
+  import torchax
+  if add_rng_seed_argument:
+
+    def new_fn(*args, **kwargs):
+      env = torchax.default_env()
+      rng_seed = kwargs.get('rng_seed')
+      assert rng_seed is not None, 'Missing keyword argument rng_seed.'
+      env.manual_seed(rng_seed)
+      kwargs.pop('rng_seed')
+      return fn(*args, **kwargs)
+
+    return j2t_autograd(jax_view(new_fn))
+  else:
+    return j2t_autograd(jax_view(fn))
 
 
 @requires_jax

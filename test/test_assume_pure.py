@@ -445,6 +445,27 @@ class TestAssumePure(absltest.TestCase):
     self.assertTrue(MAGIC_STRING in proto_str,
                     f'Expected "{MAGIC_STRING}" trace in: {path}')
 
+  def test_assume_pure_with_rng(self):
+
+    def add_randn(a):
+      return a + torch.rand_like(a)
+
+    add_randn_p = assume_pure(add_randn, add_rng_seed_argument=True)
+
+    a = torch.randn((2, 2), device='xla')
+    with self.assertRaises(AssertionError):
+      # did not pass rng key
+      add_randn_p(a)
+
+    res1 = add_randn_p(a, rng_seed=0)
+    res2 = add_randn_p(a, rng_seed=1)
+    # different keys yield different result
+    self.assertFalse(torch.allclose(res1, res2))
+
+    res1_again = add_randn_p(a, rng_seed=0)
+    # same key yields same result
+    self.assertTrue(torch.allclose(res1, res1_again))
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer(
