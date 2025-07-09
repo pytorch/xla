@@ -267,6 +267,7 @@ class ProcessGroupXla(ProcessGroup):
 
       gathered_tensor = xm.all_gather(
           input_for_all_gather, dim=0, groups=self._mesh, pin_layout=False)
+
       # Syncing is required to keep the heterogeneous copying below at the
       # Python layer, avoiding deadlocks due to mismatched HLO.
       torch_xla.sync()
