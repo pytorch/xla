@@ -31,21 +31,22 @@ def make_train_step(model_fn, loss_fn, optax_optimizer, remat_policy=None):
   env = torchax.default_env()
 
   def loss(weights, buffers, args, label):  # inputs are XLATensor
-    with env, jax.named_scope('compute_loss'):
+    with env, jax.named_scope("compute_loss"):
       res = model_fn(weights, buffers, args)
       l = loss_fn(res, label)
       return l
 
-  loss = interop.gradient_checkpoint(loss, kwargs={'policy': remat_policy})
+  loss = interop.gradient_checkpoint(loss, kwargs={"policy": remat_policy})
   grad_fn = interop.jax_value_and_grad(loss)
 
-  def step(weights, buffers, opt_state, args, label):  #inputs are array
-    with jax.named_scope('compute_gradient'):
+  def step(weights, buffers, opt_state, args, label):  # inputs are array
+    with jax.named_scope("compute_gradient"):
       loss, gradient = grad_fn(weights, buffers, args, label)
 
     with jax.named_scope("optimizer_updates"):
-      updates, opt_state = interop.call_jax(optax_optimizer.update, gradient,
-                                            opt_state, weights)
+      updates, opt_state = interop.call_jax(
+        optax_optimizer.update, gradient, opt_state, weights
+      )
       weights = interop.call_jax(optax.apply_updates, weights, updates)
     return loss, weights, opt_state
 
@@ -58,7 +59,6 @@ class Container:
 
 
 class ScannedModule(torch.nn.Module):
-
   def __init__(self, module_list, checkpoint_policy=None):
     super().__init__()
 
@@ -71,7 +71,7 @@ class ScannedModule(torch.nn.Module):
     weights = self._stack_layer_weights(module_list)
     self.layer_weights_keys = list(self.c.one_mod.state_dict().keys())
     self.params = torch.nn.ParameterDict({
-        self._param_name_new(k): v for k, v in weights.items()
+      self._param_name_new(k): v for k, v in weights.items()
     })
 
   def _stack_layer_weights(self, module_list):
@@ -86,15 +86,15 @@ class ScannedModule(torch.nn.Module):
     return res
 
   def _param_name_new(self, old):
-    return '___'.join(old.split('.'))
+    return "___".join(old.split("."))
 
   def _param_name_old(self, new):
-    return '.'.join(new.split('___'))
+    return ".".join(new.split("___"))
 
   def forward(self, *args, **kwargs):
     assert not kwargs
     weights = {
-        k: self.params[self._param_name_new(k)] for k in self.layer_weights_keys
+      k: self.params[self._param_name_new(k)] for k in self.layer_weights_keys
     }
     scan = interop.torch_view(jax.lax.scan)
 
@@ -106,12 +106,12 @@ class ScannedModule(torch.nn.Module):
       return (newh, *rest), None
 
     _eval_one_layer = interop.gradient_checkpoint(
-        eval_one_layer,
-        kwargs={'policy': self.checkpoint_policy},
+      eval_one_layer,
+      kwargs={"policy": self.checkpoint_policy},
     )
     h, _ = scan(
-        _eval_one_layer,
-        args,
-        weights,
+      _eval_one_layer,
+      args,
+      weights,
     )
     return h[0]

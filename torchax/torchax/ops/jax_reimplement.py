@@ -15,27 +15,40 @@ from typing import Callable
 # JAX Link: https://github.com/jax-ml/jax/blob/18f48bd52abe907ff9818da52f3d195d32910c1b/jax/_src/image/scale.py#L52
 
 
-def compute_weight_mat(input_size: core.DimSize, output_size: core.DimSize,
-                       scale, translation, kernel: Callable, antialias: bool):
+def compute_weight_mat(
+  input_size: core.DimSize,
+  output_size: core.DimSize,
+  scale,
+  translation,
+  kernel: Callable,
+  antialias: bool,
+):
   dtype = jnp.result_type(scale, translation)
-  inv_scale = 1. / scale
+  inv_scale = 1.0 / scale
   # When downsampling the kernel should be scaled since we want to low pass
   # filter and interpolate, but when upsampling it should not be since we only
   # want to interpolate.
-  kernel_scale = jnp.maximum(inv_scale, 1.) if antialias else 1.
-  sample_f = ((jnp.arange(output_size, dtype=dtype) + 0.5) * inv_scale -
-              translation * inv_scale - 0.5)
+  kernel_scale = jnp.maximum(inv_scale, 1.0) if antialias else 1.0
+  sample_f = (
+    (jnp.arange(output_size, dtype=dtype) + 0.5) * inv_scale
+    - translation * inv_scale
+    - 0.5
+  )
   x = (
-      jnp.abs(sample_f[jnp.newaxis, :] -
-              jnp.arange(input_size, dtype=dtype)[:, jnp.newaxis]) /
-      kernel_scale)
+    jnp.abs(
+      sample_f[jnp.newaxis, :]
+      - jnp.arange(input_size, dtype=dtype)[:, jnp.newaxis]
+    )
+    / kernel_scale
+  )
   weights = kernel(x)
 
   total_weight_sum = jnp.sum(weights, axis=0, keepdims=True)
   weights = jnp.where(
-      jnp.abs(total_weight_sum) > 1000. * float(np.finfo(np.float32).eps),
-      jnp.divide(weights, jnp.where(total_weight_sum != 0, total_weight_sum,
-                                    1)), 0)
+    jnp.abs(total_weight_sum) > 1000.0 * float(np.finfo(np.float32).eps),
+    jnp.divide(weights, jnp.where(total_weight_sum != 0, total_weight_sum, 1)),
+    0,
+  )
   # Zero out weights where the sample location is completely outside the input
   # range.
   # Note sample_f has already had the 0.5 removed, hence the weird range below.
@@ -44,17 +57,28 @@ def compute_weight_mat(input_size: core.DimSize, output_size: core.DimSize,
   return weights
   input_size_minus_0_5 = core.dimension_as_value(input_size) - 0.5
   return jnp.where(
-      jnp.logical_and(sample_f >= -0.5, sample_f
-                      <= input_size_minus_0_5)[jnp.newaxis, :], weights, 0)
+    jnp.logical_and(sample_f >= -0.5, sample_f <= input_size_minus_0_5)[
+      jnp.newaxis, :
+    ],
+    weights,
+    0,
+  )
   # (barney-s) -------------- END returning weights without zeroing ---------------------
 
 
 # JAX Link: https://github.com/jax-ml/jax/blob/18f48bd52abe907ff9818da52f3d195d32910c1b/jax/_src/image/scale.py#L86
 
 
-def _scale_and_translate(x, output_shape: core.Shape,
-                         spatial_dims: Sequence[int], scale, translation,
-                         kernel, antialias: bool, precision):
+def _scale_and_translate(
+  x,
+  output_shape: core.Shape,
+  spatial_dims: Sequence[int],
+  scale,
+  translation,
+  kernel,
+  antialias: bool,
+  precision,
+):
   input_shape = x.shape
   assert len(input_shape) == len(output_shape)
   assert len(spatial_dims) == len(scale)
@@ -68,8 +92,9 @@ def _scale_and_translate(x, output_shape: core.Shape,
     d = canonicalize_axis(d, x.ndim)
     m = input_shape[d]
     n = output_shape[d]
-    w = compute_weight_mat(m, n, scale[i], translation[i], kernel,
-                           antialias).astype(x.dtype)
+    w = compute_weight_mat(
+      m, n, scale[i], translation[i], kernel, antialias
+    ).astype(x.dtype)
     contractions.append(w)
     contractions.append([d, len(output_shape) + i])
     out_indices[d] = len(output_shape) + i
@@ -83,15 +108,16 @@ def _scale_and_translate(x, output_shape: core.Shape,
 # scale and translation here are scalar elements of an np.array, what is the
 # correct type annotation?
 def scale_and_translate(
-    image,
-    shape: core.Shape,
-    spatial_dims: Sequence[int],
-    scale,
-    translation,
-    # (barney-s) use string
-    method: str,  #(barney-s) | ResizeMethod,
-    antialias: bool = True,
-    precision=lax.Precision.HIGHEST):
+  image,
+  shape: core.Shape,
+  spatial_dims: Sequence[int],
+  scale,
+  translation,
+  # (barney-s) use string
+  method: str,  # (barney-s) | ResizeMethod,
+  antialias: bool = True,
+  precision=lax.Precision.HIGHEST,
+):
   """Apply a scale and translation to an image.
 
   Generates a new image of shape 'shape' by resampling from the input image
@@ -149,23 +175,35 @@ def scale_and_translate(
   """
   shape = core.canonicalize_shape(shape)
   if len(shape) != image.ndim:
-    msg = ('shape must have length equal to the number of dimensions of x; '
-           f' {shape} vs {image.shape}')
+    msg = (
+      "shape must have length equal to the number of dimensions of x; "
+      f" {shape} vs {image.shape}"
+    )
     raise ValueError(msg)
   if isinstance(method, str):
     method = ResizeMethod.from_string(method)
   if method == ResizeMethod.NEAREST:
     # Nearest neighbor is currently special-cased for straight resize, so skip
     # for now.
-    raise ValueError('Nearest neighbor resampling is not currently supported '
-                     'for scale_and_translate.')
+    raise ValueError(
+      "Nearest neighbor resampling is not currently supported "
+      "for scale_and_translate."
+    )
   assert isinstance(method, ResizeMethod)
 
   kernel = _kernels[method]
-  image, = promote_dtypes_inexact(image)
+  (image,) = promote_dtypes_inexact(image)
   scale, translation = promote_dtypes_inexact(scale, translation)
-  return _scale_and_translate(image, shape, spatial_dims, scale, translation,
-                              kernel, antialias, precision)
+  return _scale_and_translate(
+    image,
+    shape,
+    spatial_dims,
+    scale,
+    translation,
+    kernel,
+    antialias,
+    precision,
+  )
 
 
 # END ----------------- END JAX code copied for testing -----------------------------

@@ -4,7 +4,7 @@ def all_aten_jax_ops():
   import torchax.ops.ops_registry  # type: ignore
 
   return {
-      key: val.func
-      for key, val in torchax.ops.ops_registry.all_aten_ops.items()
-      if val.is_jax_function
+    key: val.func
+    for key, val in torchax.ops.ops_registry.all_aten_ops.items()
+    if val.is_jax_function
   }

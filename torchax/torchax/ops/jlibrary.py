@@ -61,9 +61,7 @@ def register_torch_composite(composite_name, impl, *ops, **jit_args):
 
   @jaten.op(*ops)
   def _composite_impl(*args):
-
     class ImplWrapper(torch.nn.Module):
-
       def __init__(self):
         super().__init__()
 

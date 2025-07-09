@@ -6,13 +6,13 @@ import torchax.interop
 
 
 class FlaxNNModule(torch.nn.Module):
-
   def __init__(self, env, flax_module, sample_args, sample_kwargs=None):
     super().__init__()
     prng = env.prng_key
     sample_kwargs = sample_kwargs or {}
-    parameter_dict = tx.interop.call_jax(flax_module.init, prng, *sample_args,
-                                         **sample_kwargs)
+    parameter_dict = tx.interop.call_jax(
+      flax_module.init, prng, *sample_args, **sample_kwargs
+    )
 
     self._params = self._encode_nested_dict(parameter_dict)
 
@@ -35,5 +35,6 @@ class FlaxNNModule(torch.nn.Module):
 
   def forward(self, *args, **kwargs):
     nested_dict_params = self._decode_nested_dict(self._params)
-    return tx.interop.call_jax(self._flax_module.apply, nested_dict_params,
-                               *args, **kwargs)
+    return tx.interop.call_jax(
+      self._flax_module.apply, nested_dict_params, *args, **kwargs
+    )
