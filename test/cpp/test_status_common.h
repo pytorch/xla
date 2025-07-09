@@ -62,15 +62,15 @@ class StatusTest : public testing::TestWithParam<CppErrorContextMode> {
 
 // Macro to instantiate parameterized status tests with specific mode
 //
-// Note that this macro assumes that both `torch_xla::StatusTest` and
-// `torch_xla::CppErrorContextMode` are accessible from the context this macro
-// is being called.
-#define INSTANTIATE_WITH_CPP_ERROR_CONTEXT_MODE(suite, test, mode)  \
-  INSTANTIATE_TEST_SUITE_P(                                         \
-      suite, test, testing::Values(CppErrorContextMode::mode),      \
-      [](const testing::TestParamInfo<CppErrorContextMode>& info) { \
-        return ToString(info.param);                                \
-      })
+// Note that the `test` parameter of this macro requires that it should be a
+// non-qualified identifier. That's because the underlying
+// `INSTANTIATE_TEST_SUITE_P` GTest macro will concatenate it with other
+// things for creating a unique identifier.
+#define INSTANTIATE_WITH_CPP_ERROR_CONTEXT_MODE(suite, test, mode)            \
+  INSTANTIATE_TEST_SUITE_P(                                                   \
+      suite, test, ::testing::Values(::torch_xla::CppErrorContextMode::mode), \
+      [](const ::testing::TestParamInfo<::torch_xla::CppErrorContextMode>&    \
+             info) { return ToString(info.param); })
 
 namespace testing {
 

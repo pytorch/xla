@@ -1,6 +1,5 @@
 #include "test/cpp/test_status_common.h"
 
-using torch_xla::CppErrorContextMode;
 using torch_xla::StatusTest;
 
 // This file instantiates the parameterized tests defined in
