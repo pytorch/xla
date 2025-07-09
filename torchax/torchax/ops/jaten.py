@@ -375,6 +375,7 @@ def _aten_slice(self, dim=0, start=None, end=None, step=1):
   return self[tuple(dims)]
 
 
+@op(torch.ops.aten.positive)
 @op(torch.ops.aten.detach)
 def _aten_detach(self):
   return self
@@ -5496,6 +5497,40 @@ def _aten_pad(self, pad, mode='constant', value=None):
         f"Unsupported padding mode: {mode}. Expected 'constant', 'reflect', or 'edge'."
     )
 
+@op(torch.ops.aten.is_nonzero)
+def _aten_is_nonzero(a):
+  a = jnp.squeeze(a)
+  if a.shape == (0, ):
+    raise RuntimeError('bool value of Tensor with no values is ambiguous')
+  if a.ndim != 0:
+    raise RuntimeError('bool value of Tensor with more than one value is ambiguous')
+  return a.item() != 0
+
+@op(torch.ops.aten.logit)
+def _aten_logit(self: jax.Array, eps: float | None = None) -> jax.Array:
+  """
+  Computes the logit function of the input tensor.
+
+  logit(p) = log(p / (1 - p))
+
+  Args:
+    self: Input tensor.
+    eps: A small value to clip the input tensor to avoid log(0) or division by zero.
+         If None, no clipping is performed.
+
+  Returns:
+    A tensor with the logit of each element of the input.
+  """
+  if eps is not None:
+    self = jnp.clip(self, eps, 1.0 - eps)
+  return jnp.log(self / (1.0 - self))
+
+
+@op(torch.ops.aten.floor_divide)
+def _aten_floor_divide(x, y):
+  res = jnp.floor_divide(x, y)
+  return res
+
 
 mutation_ops_to_functional = {
     torch.ops.aten.add_:
@@ -5565,6 +5600,8 @@ mutation_ops_to_functional = {
         op_base.InplaceOp(torch.ops.aten.scatter),
     torch.ops.aten.bitwise_or_:
         op_base.InplaceOp(torch.ops.aten.bitwise_or),
+    torch.ops.aten.floor_divide_:
+        op_base.InplaceOp(torch.ops.aten.floor_divide),
 }
 
 # Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
