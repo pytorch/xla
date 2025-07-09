@@ -139,7 +139,8 @@ class QuantizedTest(parameterized.TestCase):
       m_dynamo = torch.compile(m, backend="openxla")
       out_quant_dynamo = m_dynamo(x.to(device))
       self.assertTrue(torch.allclose(out_fp, out_quant, atol=0.02))
-      self.assertTrue(torch.allclose(out_quant_dynamo.cpu(), out_quant, atol=4e-3))
+      self.assertTrue(
+          torch.allclose(out_quant_dynamo.cpu(), out_quant, atol=4e-3))
 
   @parameterized.parameters([False, True])
   def test_q_linear_hlo(self, quantize_activation):

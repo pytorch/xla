@@ -69,7 +69,7 @@ def _quantize_tensor(x: torch.Tensor, n_bits: int = 8, dim: int = -1):
   max_val = torch.amax(torch.abs(x), dim=dim, keepdim=True)
   int_max = 2**(n_bits - 1) - 1
   scale = max_val / int_max
-  x_int = torch.round(x / scale).to(torch.bfloat16).to(torch.int8)
+  x_int = torch.round(x / scale).to(torch.int8)
   return x_int, scale.to(x.dtype)
 
 

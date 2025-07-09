@@ -17,7 +17,7 @@ def _quantize_array(
   # Need to explicitly cast to f32 because Mosaic can't directly jnp.round a
   # bf16 array.
   # It seems x/0 in Pallas generates inf/-inf instead of an exception.
-  x_int = jnp.round((x / scale).astype(jnp.float32)).astype(jnp.bfloat16).astype(jnp.int8)
+  x_int = jnp.round((x / scale).astype(jnp.float32)).astype(jnp.int8)
   return x_int, scale.astype(x.dtype)
 
 
