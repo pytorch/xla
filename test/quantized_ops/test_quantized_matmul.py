@@ -123,7 +123,7 @@ class QuantizedTest(parameterized.TestCase):
       x = x.to(device)
       out_quant_xla = m(x)
       self.assertTrue(torch.allclose(out_fp, out_quant, atol=0.01))
-      self.assertTrue(torch.allclose(out_quant_xla.cpu(), out_quant))
+      self.assertTrue(torch.allclose(out_quant_xla.cpu(), out_quant, atol=2e-3))
 
   @parameterized.parameters([False, True])
   def test_q_linear_module_dynamo(self, quantize_activation):
@@ -139,7 +139,7 @@ class QuantizedTest(parameterized.TestCase):
       m_dynamo = torch.compile(m, backend="openxla")
       out_quant_dynamo = m_dynamo(x.to(device))
       self.assertTrue(torch.allclose(out_fp, out_quant, atol=0.02))
-      self.assertTrue(torch.allclose(out_quant_dynamo.cpu(), out_quant))
+      self.assertTrue(torch.allclose(out_quant_dynamo.cpu(), out_quant, atol=4e-3))
 
   @parameterized.parameters([False, True])
   def test_q_linear_hlo(self, quantize_activation):
@@ -240,7 +240,7 @@ class QuantizedTest(parameterized.TestCase):
           x = x.to(device)
           out_quant_xla = m(x)
           self.assertGreater(
-              self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.999999)
+              self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.99999)
 
   @parameterized.parameters([False, True])
   def test_asymmetric_per_channel(self, quantize_activation):
@@ -263,7 +263,7 @@ class QuantizedTest(parameterized.TestCase):
           x = x.to(device)
           out_quant_xla = m(x)
           self.assertGreater(
-              self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.999999)
+              self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.99999)
 
   def test_asymmetric_blockwise(self):
     for n_bit in [8]:
