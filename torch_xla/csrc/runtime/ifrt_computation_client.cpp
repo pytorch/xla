@@ -383,8 +383,9 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   *instruction->mutable_sharding() = xla::HloSharding::Replicate().ToProto();
 
   xla::XlaComputation computation =
-      ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
-  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+      GetValueOrThrow(builder.Build(/*remove_dynamic_dimensions=*/false));
+  xla::ProgramShape program_shape =
+      GetValueOrThrow(computation.GetProgramShape());
 
   std::string device = GetDefaultDevice();
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
@@ -503,13 +504,13 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
     torch_xla::ConvertHloToStableHlo(instance.computation.mutable_proto(),
                                      &mlir_module);
     std::shared_ptr<xla::ifrt::LoadedExecutable> executable =
-        ConsumeValue(client_->GetDefaultCompiler()->CompileAndLoad(
+        GetValueOrThrow(client_->GetDefaultCompiler()->CompileAndLoad(
             std::make_unique<xla::ifrt::HloProgram>(mlir_module),
             std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options,
                                                            devices_list)));
     StableHloCompileCounter()->AddValue(1);
 
-    const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
+    const auto& hlo_modules = GetValueOrThrow(executable->GetHloModules());
 
     std::shared_ptr<IfrtComputation> ifrt_computation =
         std::make_shared<IfrtComputation>(

@@ -54,6 +54,7 @@ cc_library(
         ":xla_util",
         "//torch_xla/csrc:device",
         "//torch_xla/csrc:dtype",
+        "//torch_xla/csrc:status",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
@@ -473,6 +474,7 @@ ptxla_cc_test(
     deps = [
         ":debug_macros",
         ":xla_util",
+        "//torch_xla/csrc:status",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
         "@xla//xla/tsl/lib/core:status_test_util",

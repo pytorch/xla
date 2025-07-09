@@ -355,9 +355,9 @@ PjRtComputationClient::ReplicateShardedData(
     *instruction->mutable_sharding() = xla::HloSharding::Replicate().ToProto();
 
     xla::XlaComputation computation =
-        ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
+        GetValueOrThrow(builder.Build(/*remove_dynamic_dimensions=*/false));
     xla::ProgramShape program_shape =
-        ConsumeValue(computation.GetProgramShape());
+        GetValueOrThrow(computation.GetProgramShape());
 
     std::string device = GetDefaultDevice();
     std::vector<torch_xla::runtime::ComputationClient::CompileInstance>
@@ -421,7 +421,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
         << "Resharding by UNKNOWN sharding type is not allowed.";
 
     hlo_shardings.push_back(
-        ConsumeValue(xla::HloSharding::FromProto(sharding)));
+        GetValueOrThrow(xla::HloSharding::FromProto(sharding)));
 
     xla::OpSharding fallback_sharding;
     fallback_sharding.set_type(xla::OpSharding::REPLICATED);
@@ -444,9 +444,9 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
     root = xla::Tuple(&builder, param_ops);
   }
 
-  xla::XlaComputation xla_computation = ConsumeValue(builder.Build(root));
+  xla::XlaComputation xla_computation = GetValueOrThrow(builder.Build(root));
   xla::ProgramShape program_shape =
-      ConsumeValue(xla_computation.GetProgramShape());
+      GetValueOrThrow(xla_computation.GetProgramShape());
 
   std::string device = GetDefaultDevice();
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
@@ -651,7 +651,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       TF_VLOG(3) << "memory usage is not availiable";
     }
 
-    const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
+    const auto& hlo_modules = GetValueOrThrow(executable->GetHloModules());
     xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(
@@ -671,7 +671,7 @@ std::string PjRtComputationClient::SerializeComputation(
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(*computation);
 
-  return ConsumeValue(pjrt_computation.executable->SerializeExecutable());
+  return GetValueOrThrow(pjrt_computation.executable->SerializeExecutable());
 }
 
 ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
