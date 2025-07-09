@@ -1022,6 +1022,7 @@ class PallasTest(parameterized.TestCase):
         use_dynamo=use_dynamo,
     )
 
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   @parameterized.product(
       dtype=[torch.bfloat16, torch.float32],
       use_dynamo=[True, False],
