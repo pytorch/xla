@@ -1759,6 +1759,8 @@ def quantized_matmul_int8_xla(
                                out_block_size, in_block_size, vmem_limit_bytes)
 
 
+
+
 @impl(XLA_LIB, "quantized_matmul_int8", "CompositeExplicitAutograd")
 def quantized_matmul_int8_non_xla(
     x: torch.Tensor,
