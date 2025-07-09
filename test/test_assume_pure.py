@@ -1,4 +1,5 @@
 from copy import deepcopy
+import functools
 import glob
 import os
 from absl.testing import absltest
@@ -166,6 +167,36 @@ class TestAssumePure(absltest.TestCase):
     for _ in range(5):
       a = torch.ones((3, 3), device='xla', requires_grad=True)
       o = simple_torch_function(a, a)
+      o.sum().backward()
+      torch_xla.sync()
+
+    # Assert
+    ending_lowerings = xb._jax_to_xla_computation_cache_elements()
+
+    # Check that we only trace once.
+    self.assertEqual(trace_counter, 1)
+
+    # Check that we only lower to HLO twice (once for forward, once for backward).
+    self.assertEqual(ending_lowerings - starting_lowerings, 2)
+
+  def test_assume_pure_avoid_retracing_avoid_rejit_rand(self):
+    """Tests that we avoid retracing and re-jitting when using assume_pure."""
+
+    # Arrange: first clear the cache to prevent contamination from other tests.
+    xb._JAX_TO_XLA_COMPUTATION_CACHE.clear()
+    starting_lowerings = xb._jax_to_xla_computation_cache_elements()
+    trace_counter = 0
+
+    @functools.partial(assume_pure, add_rng_seed_argument=True)
+    def simple_torch_function(a, b):
+      nonlocal trace_counter
+      trace_counter += 1
+      return torch.sin(a @ b)
+
+    # Act: simulate a training loop.
+    for i in range(5):
+      a = torch.ones((3, 3), device='xla', requires_grad=True)
+      o = simple_torch_function(a, a, rng_seed=i)
       o.sum().backward()
       torch_xla.sync()
 
@@ -463,6 +494,27 @@ class TestAssumePure(absltest.TestCase):
     self.assertFalse(torch.allclose(res1, res2))
 
     res1_again = add_randn_p(a, rng_seed=0)
+    # same key yields same result
+    self.assertTrue(torch.allclose(res1, res1_again))
+
+  def test_assume_pure_with_many_random(self):
+
+    def many_rand(a):
+      a = torch.rand_like(a)
+      b = torch.rand_like(a)
+      c = torch.rand_like(a)
+      return c
+
+    randn_p = assume_pure(many_rand, add_rng_seed_argument=True)
+
+    a = torch.randn((2, 2), device='xla')
+
+    res1 = randn_p(a, rng_seed=0)
+    res2 = randn_p(a, rng_seed=1)
+    # different keys yield different result
+    self.assertFalse(torch.allclose(res1, res2))
+
+    res1_again = randn_p(a, rng_seed=0)
     # same key yields same result
     self.assertTrue(torch.allclose(res1, res1_again))
 

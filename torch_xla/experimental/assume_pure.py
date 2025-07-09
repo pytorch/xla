@@ -63,13 +63,24 @@ def assume_pure(fn, *, add_rng_seed_argument=False):
 
     def new_fn(*args, **kwargs):
       env = torchax.default_env()
-      rng_seed = kwargs.get('rng_seed')
-      assert rng_seed is not None, 'Missing keyword argument rng_seed.'
-      env.manual_seed(rng_seed)
-      kwargs.pop('rng_seed')
+      rng_seed = args[0]
+      args = args[1:]
+      env.manual_seed(rng_seed._elem)
       return fn(*args, **kwargs)
 
-    return j2t_autograd(jax_view(new_fn))
+    jitted = j2t_autograd(jax_view(new_fn))
+
+    def func_to_return(*args, **kwargs):
+      rng_seed = kwargs.get('rng_seed')
+      assert rng_seed is not None, 'Missing keyword argument rng_seed.'
+      kwargs.pop('rng_seed')
+      if isinstance(rng_seed, int):
+        rng_seed = torch.tensor(rng_seed, dtype=torch.uint32, device='xla')
+      args = (rng_seed, *args)
+      result = jitted(*args, **kwargs)
+      return result
+
+    return func_to_return
   else:
     return j2t_autograd(jax_view(fn))
 
