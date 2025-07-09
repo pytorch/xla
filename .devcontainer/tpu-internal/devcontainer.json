@@ -1,6 +1,6 @@
 {
   "name": "tpu-internal",
-  "image": "us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.12_tpuvm",
+  "image": "us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu",
   "runArgs": [
     "--privileged",
     "--net=host",
@@ -10,7 +10,7 @@
     "BAZEL_REMOTE_CACHE": "1",
     "SILO_NAME": "cache-silo-${localEnv:USER}-tpuvm-312"
   },
-  "initializeCommand": "docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.12_tpuvm",
+  "initializeCommand": "docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu",
   "customizations": {
     "vscode": {
       "extensions": [
