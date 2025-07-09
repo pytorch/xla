@@ -4946,7 +4946,7 @@ def _aten__linalg_solve_ex(a, b):
   res = jnp.linalg.solve(a, b)
   if batched:
     res = res.squeeze(-1)
-  info_shape = a.shape[0] if len(a.shape) >= 3 else []
+  info_shape = a.shape[:-2]
   info = jnp.zeros(info_shape, dtype=mappings.t2j_dtype(torch.int32))
   return res, info
 
