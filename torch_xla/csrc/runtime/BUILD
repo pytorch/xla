@@ -403,6 +403,7 @@ cc_library(
     hdrs = ["tensor_source.h"],
     deps = [
         ":debug_macros",
+        "//torch_xla/csrc:status",
         "@torch//:headers",
         "@xla//xla:literal",
         "@xla//xla:shape_util",
