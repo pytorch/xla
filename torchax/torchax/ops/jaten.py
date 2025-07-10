@@ -5497,14 +5497,17 @@ def _aten_pad(self, pad, mode='constant', value=None):
         f"Unsupported padding mode: {mode}. Expected 'constant', 'reflect', or 'edge'."
     )
 
+
 @op(torch.ops.aten.is_nonzero)
 def _aten_is_nonzero(a):
   a = jnp.squeeze(a)
-  if a.shape == (0, ):
+  if a.shape == (0,):
     raise RuntimeError('bool value of Tensor with no values is ambiguous')
   if a.ndim != 0:
-    raise RuntimeError('bool value of Tensor with more than one value is ambiguous')
+    raise RuntimeError(
+        'bool value of Tensor with more than one value is ambiguous')
   return a.item() != 0
+
 
 @op(torch.ops.aten.logit)
 def _aten_logit(self: jax.Array, eps: float | None = None) -> jax.Array:
@@ -5530,6 +5533,11 @@ def _aten_logit(self: jax.Array, eps: float | None = None) -> jax.Array:
 def _aten_floor_divide(x, y):
   res = jnp.floor_divide(x, y)
   return res
+
+
+@op(torch.ops.aten._assert_tensor_metadata)
+def _aten__assert_tensor_metadata(*args, **kwargs):
+  pass
 
 
 mutation_ops_to_functional = {
