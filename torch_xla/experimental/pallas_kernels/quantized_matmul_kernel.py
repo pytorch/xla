@@ -150,13 +150,15 @@ def quantized_matmul_int8(
       1] % in_block_size == 0, f"x.shape[1] ({x.shape[1]}) must be a multiple of block size ({in_block_size})"
 
   acc_dtype = jnp.int32 if quantize_activation else x.dtype
-  vmem_used = 2 * (
+  vmem_to_be_transferred = 2 * (
       batch_block_size * in_block_size * x.dtype.itemsize +
       out_block_size * in_block_size * w.dtype.itemsize + out_block_size *
       scalar.dtype.itemsize + batch_block_size * x_abs_max_val.dtype.itemsize +
       batch_block_size * out_block_size * x.dtype.itemsize
   ) + batch_block_size * out_block_size * jnp.dtype(acc_dtype).itemsize
-  vmem_limit_bytes = vmem_used + 10 * 1024 * 1024
+  # Within the kernel, it will use some extra VMEM for computation or vreg spills.
+  vmem_used = vmem_to_be_transferred * 2
+  vmem_limit_bytes = min(vmem_used * 2, 96 * 1024 * 1024)
   kernel = pl.pallas_call(
       functools.partial(
           matmul_kernel,
