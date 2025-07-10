@@ -848,7 +848,7 @@ PjRtComputationClient::ExecuteReplicated(
               argument_handles[d][i] = shard->buffer.get();
             }
             counter.DecrementCount();
-          };
+          }
         });
     counter.Wait();
   }
@@ -973,7 +973,7 @@ int PjRtComputationClient::GetNumProcesses() const {
   }
 
   return max_process_index + 1;
-};
+}
 
 std::string PjRtComputationClient::GetDeviceKind(const std::string& device) {
   return std::string(StringToPjRtDevice(device)->device_kind());
