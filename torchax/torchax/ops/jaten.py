@@ -5526,7 +5526,9 @@ def _aten_logit(self: jax.Array, eps: float | None = None) -> jax.Array:
   """
   if eps is not None:
     self = jnp.clip(self, eps, 1.0 - eps)
-  return jnp.log(self / (1.0 - self))
+  res = jnp.log(self / (1.0 - self))
+  res = res.astype(mappings.t2j_dtype(torch.get_default_dtype()))
+  return res
 
 
 @op(torch.ops.aten.floor_divide)
