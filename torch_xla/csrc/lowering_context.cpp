@@ -19,6 +19,7 @@
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/stack_frame_index_builder.h"
 #include "torch_xla/csrc/status.h"
+#include "torch_xla/csrc/torch_xla_op_sharding.h"
 
 namespace torch_xla {
 
@@ -133,9 +134,9 @@ xla::XlaOp LoweringContext::GetParameter(
     const std::string param_name = absl::StrCat("p", param_index);
     xla::XlaOp param;
     if (data->HasSharding()) {
-      const xla::OpSharding sharding = data->GetSharding();
-      const xla::XlaScopedShardingAssignment scoped_sharding(builder(),
-                                                             sharding);
+      const torch_xla::OpSharding sharding = data->GetSharding();
+      const xla::XlaScopedShardingAssignment scoped_sharding(
+          builder(), sharding.GetXlaOpSharding());
       param = xla::Parameter(builder(), param_index, shape, param_name);
     } else {
       param = xla::Parameter(builder(), param_index, shape, param_name);

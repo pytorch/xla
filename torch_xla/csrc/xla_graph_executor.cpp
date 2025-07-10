@@ -773,7 +773,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     if (output_sharding_hash.find(hash) == output_sharding_hash.end()) {
       TORCH_LAZY_COUNTER("UncachedOutputSharding", 1);
       output_sharding_hash[hash] = ShardingUtil::GetOutputSharding(
-          *output_shapes, cachedComputation->computation);
+          *output_shapes, cachedComputation->computation, &sharding_specs);
     }
     placeholders =
         ShardingUtil::CreateShardedPlaceholder(output_sharding_hash[hash]);
@@ -1440,7 +1440,9 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       {std::move(computation), coll.device.toString(),
        runtime::GetComputationClientOrDie()->GetCompilationDevices(
            coll.device.toString(), devices),
-       &shape, should_wrap_parameter, is_sharded});
+       &shape, should_wrap_parameter, is_sharded,
+       /*allow_spmd_sharding_propagation_to_output=*/true,
+       /*parameters_data=*/po_data->parameters_data});
   instances.front().eager_mode = UseEagerMode();
   if (use_autosharding) {
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
