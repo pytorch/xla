@@ -49,7 +49,8 @@ TEST_F(XLAShardingTest, GetShardShape) {
       {0, 1},
       {2, 3},
   });
-  auto sharding = xla::HloSharding::Tile(mesh).ToProto();
+  auto xla_sharding = xla::HloSharding::Tile(mesh).ToProto();
+  torch_xla::OpSharding sharding(xla_sharding, std::nullopt);
   auto sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
 
@@ -57,7 +58,9 @@ TEST_F(XLAShardingTest, GetShardShape) {
   // For tiled sharding, each dimension should be halved
   EXPECT_EQ(shard_shape, std::vector<int64_t>({4, 4}));
 
-  sharding_spec->sharding = xla::HloSharding::Replicate().ToProto();
+  xla_sharding = xla::HloSharding::Replicate().ToProto();
+  sharding = torch_xla::OpSharding(xla_sharding, std::nullopt);
+  sharding_spec->sharding = sharding;
   shard_shape = ShardingUtil::GetShardShape(sharding_spec);
   // For replicated sharding, each dimension should be preserved
   EXPECT_EQ(shard_shape, std::vector<int64_t>({8, 7}));
@@ -73,7 +76,8 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
       {0, 1},
       {2, 3},
   });
-  auto sharding = xla::HloSharding::Tile(mesh).ToProto();
+  auto xla_sharding = xla::HloSharding::Tile(mesh).ToProto();
+  torch_xla::OpSharding sharding(xla_sharding, std::nullopt);
   auto sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
   auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
@@ -102,7 +106,8 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
       EXPECT_EQ(slice.step(), 1);
     }
   }
-  sharding = xla::HloSharding::Replicate().ToProto();
+  xla_sharding = xla::HloSharding::Replicate().ToProto();
+  sharding = torch_xla::OpSharding(xla_sharding, std::nullopt);
   sharding_spec->sharding = sharding;
   shard_shape = ShardingUtil::GetShardShape(sharding_spec);
   replica_and_indices = ShardingUtil::GetShardReplicaAndIndicesForDevices(
@@ -125,11 +130,12 @@ TEST_F(XLAShardingTest, ShardTensor) {
   at::Tensor tensor = at::ones({8}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
       CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
-  xla::OpSharding sharding =
+  xla::OpSharding xla_sharding =
       xla::HloSharding::Tile1D(
           CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice()),
           devices.size())
           .ToProto();
+  torch_xla::OpSharding sharding(xla_sharding, std::nullopt);
   auto sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
   auto shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
@@ -147,7 +153,8 @@ TEST_F(XLAShardingTest, ShardTensor) {
       {0, 1, 2, 3},
       {4, 5, 6, 7},
   });
-  sharding = xla::HloSharding::Tile(mesh).ToProto();
+  xla_sharding = xla::HloSharding::Tile(mesh).ToProto();
+  sharding = torch_xla::OpSharding(xla_sharding, std::nullopt);
   sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
   shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
@@ -159,7 +166,9 @@ TEST_F(XLAShardingTest, ShardTensor) {
   // 3D tiled, the first dim is replicated and the last halved. The last shard
   // size should be smaller in dim=1 because it's not evenly divisible.
   xla::Array3D<int64_t> cube({{{0, 1}, {2, 3}, {4, 5}, {6, 7}}});
-  sharding_spec->sharding = xla::HloSharding::Tile(cube).ToProto();
+  xla_sharding = xla::HloSharding::Tile(cube).ToProto();
+  sharding = torch_xla::OpSharding(xla_sharding, std::nullopt);
+  sharding_spec->sharding = sharding;
   shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
                                      /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
@@ -167,7 +176,9 @@ TEST_F(XLAShardingTest, ShardTensor) {
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({8, 1, 2}));
 
   // Replicated, all shards should be identical.
-  sharding_spec->sharding = xla::HloSharding::Replicate().ToProto();
+  xla_sharding = xla::HloSharding::Replicate().ToProto();
+  sharding = torch_xla::OpSharding(xla_sharding, std::nullopt);
+  sharding_spec->sharding = sharding;
   shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
                                      /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
@@ -181,7 +192,8 @@ TEST_F(XLAShardingTest, ShardTensor) {
   tensor_shape =
       CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   xla::Array4D<int64_t> tesseract({{{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}});
-  sharding = xla::HloSharding::Tile(tesseract).ToProto();
+  xla_sharding = xla::HloSharding::Tile(tesseract).ToProto();
+  sharding = torch_xla::OpSharding(xla_sharding, std::nullopt);
   sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
   shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
@@ -205,7 +217,8 @@ TEST_F(XLAShardingTest, ShardTensor) {
       CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   xla::Array<int64_t> hypercube(std::vector<int64_t>{1, 1, 2, 2, 2});
   hypercube.FillIota(0);
-  sharding = xla::HloSharding::Tile(hypercube).ToProto();
+  xla_sharding = xla::HloSharding::Tile(hypercube).ToProto();
+  sharding = torch_xla::OpSharding(xla_sharding, std::nullopt);
   sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
   shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
@@ -233,7 +246,8 @@ TEST_F(XLAShardingTest, ShardTensorMultiHost) {
       {4, 5, 0, 1},
       {6, 7, 2, 3},
   });
-  auto sharding = xla::HloSharding::Tile(mesh).ToProto();
+  auto xla_sharding = xla::HloSharding::Tile(mesh).ToProto();
+  torch_xla::OpSharding sharding(xla_sharding, std::nullopt);
   auto sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
   // For devices at the start of the mesh, all shards should have the same
@@ -250,7 +264,9 @@ TEST_F(XLAShardingTest, ShardTensorMultiHost) {
       {0, 1, 4, 5},
       {2, 3, 6, 7},
   });
-  sharding_spec->sharding = xla::HloSharding::Tile(mesh).ToProto();
+  xla_sharding = xla::HloSharding::Tile(mesh).ToProto();
+  sharding = torch_xla::OpSharding(xla_sharding, std::nullopt);
+  sharding_spec->sharding = sharding;
   shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
                                      /*padded=*/false);
   EXPECT_EQ(shards.size(), 4);
@@ -277,7 +293,8 @@ TEST_F(XLAShardingTest, ShardTensorMiniBatch) {
       {{7}},
   });
 
-  auto sharding = xla::HloSharding::Tile(mesh).ToProto();
+  auto xla_sharding = xla::HloSharding::Tile(mesh).ToProto();
+  torch_xla::OpSharding sharding(xla_sharding, std::nullopt);
   auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
       sharding, global_shape, /*minibatch=*/true);
   auto shards = ShardingUtil::ShardTensor(minibatch_tensor, sharding_spec,
@@ -291,17 +308,20 @@ TEST_F(XLAShardingTest, EqualShardingSpecs) {
   auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
       CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
-  XLATensor::ShardingSpec tiled_2d(xla::HloSharding::Tile({
-                                                              {0, 1, 2, 3},
-                                                              {4, 5, 6, 7},
-                                                          })
-                                       .ToProto(),
-                                   tensor_shape);
-  XLATensor::ShardingSpec tiled_3d(
-      xla::HloSharding::Tile({{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}).ToProto(),
-      tensor_shape);
-  XLATensor::ShardingSpec replicated(xla::HloSharding::Replicate().ToProto(),
-                                     tensor_shape);
+  auto xla_sharding = xla::HloSharding::Tile({
+                                                 {0, 1, 2, 3},
+                                                 {4, 5, 6, 7},
+                                             })
+                          .ToProto();
+  torch_xla::OpSharding sharding(xla_sharding, std::nullopt);
+  XLATensor::ShardingSpec tiled_2d(sharding, tensor_shape);
+  xla_sharding =
+      xla::HloSharding::Tile({{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}).ToProto();
+  sharding = torch_xla::OpSharding(xla_sharding, std::nullopt);
+  XLATensor::ShardingSpec tiled_3d(sharding, tensor_shape);
+  xla_sharding = xla::HloSharding::Replicate().ToProto();
+  sharding = torch_xla::OpSharding(xla_sharding, std::nullopt);
+  XLATensor::ShardingSpec replicated(sharding, tensor_shape);
   EXPECT_TRUE(ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_2d));
   EXPECT_FALSE(ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_3d));
   EXPECT_TRUE(ShardingUtil::EqualShardingSpecs(replicated, replicated));
@@ -322,12 +342,17 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
   std::vector<std::string> devices(3);
   std::fill_n(devices.begin(), devices.size(),
               bridge::GetDefaultDevice()->toString());
+  auto replicate_xla_sharding = xla::HloSharding::Replicate().ToProto();
+  auto unknown_xla_sharding = xla::HloSharding::Unknown().ToProto();
+  torch_xla::OpSharding replicate_sharding(replicate_xla_sharding,
+                                           std::nullopt);
+  torch_xla::OpSharding unknown_sharding(unknown_xla_sharding, std::nullopt);
   std::vector<XLATensor::ShardingSpecPtr> shardings = {
       nullptr,
-      std::make_shared<XLATensor::ShardingSpec>(
-          xla::HloSharding::Replicate().ToProto(), tensor_shape),
-      std::make_shared<XLATensor::ShardingSpec>(
-          xla::HloSharding::Unknown().ToProto(), tensor_shape)};
+      std::make_shared<XLATensor::ShardingSpec>(replicate_sharding,
+                                                tensor_shape),
+      std::make_shared<XLATensor::ShardingSpec>(unknown_sharding,
+                                                tensor_shape)};
   std::vector<torch::lazy::BackendDataPtr> tensors_data =
       CreateTensorsData(tensors, shardings, devices);
 
@@ -386,13 +411,21 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
   auto y = xla::Add(x, xla::ConstantR0<float>(&b, 3));
   xla::XlaComputation xla_computation =
       ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
+
+  std::vector<torch::lazy::BackendDataPtr> parameters_data;
+  parameters_data.push_back(
+      torch_xla::runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
+          bridge::GetDefaultDevice()->toString(), std::move(shape)));
+
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(xla_computation),
                        bridge::GetDefaultDevice()->toString(),
                        {bridge::GetDefaultDevice()->toString()},
                        &shape,
                        /*should_wrap_parameter=*/false,
-                       /*is_sharded=*/true});
+                       /*is_sharded=*/true,
+                       /*allow_spmd_sharding_propagation_to_output=*/true,
+                       /*parameters_data=*/parameters_data});
 
   std::vector<
       std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
@@ -416,11 +449,12 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
   if (n_devices > 1) {
     // Tiled sharding requires multiple devices.
     EXPECT_TRUE(xla::protobuf_util::HaveSameSerialization(
-        tiled, sharding_specs[0]->sharding));
+        tiled, sharding_specs[0]->sharding.GetXlaOpSharding()));
   } else {
     // Sincle device execution defaults to replication sharding.
     EXPECT_TRUE(xla::protobuf_util::HaveSameSerialization(
-        xla::HloSharding::Replicate().ToProto(), sharding_specs[0]->sharding));
+        xla::HloSharding::Replicate().ToProto(),
+        sharding_specs[0]->sharding.GetXlaOpSharding()));
   }
 
   // Check if the placeholder is on a SPMD device (sharded) with no real values.
