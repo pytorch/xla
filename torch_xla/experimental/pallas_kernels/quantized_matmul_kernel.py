@@ -90,7 +90,6 @@ def _next_multiple(x, multiple):
         'batch_block_size',
         'out_block_size',
         'in_block_size',
-        'vmem_limit_bytes',
     ])
 def quantized_matmul_int8(
     x: jax.Array,  # [bs, n_input_features]
@@ -104,7 +103,6 @@ def quantized_matmul_int8(
     batch_block_size: int | None = None,
     out_block_size: int | None = None,
     in_block_size: int | None = None,
-    vmem_limit_bytes: int | None = 64 * 1024 * 1024,
 ):
   assert zero_point is None, "Not implemented: zero_point is not supported."
   assert quant_block_size is None, "Not implemented: quant_block_size is not supported."
@@ -152,6 +150,8 @@ def quantized_matmul_int8(
       1] % in_block_size == 0, f"x.shape[1] ({x.shape[1]}) must be a multiple of block size ({in_block_size})"
 
   acc_dtype = jnp.int32 if quantize_activation else x.dtype
+  vmem_used = 2*(batch_block_size * in_block_size * x.dtype.itemsize + out_block_size * in_block_size * w.dtype.itemsize + out_block_size * scalar.dtype.itemsize + batch_block_size * x_abs_max_val.dtype.itemsize + batch_block_size * out_block_size*x.dtype.itemsize) + batch_block_size * out_block_size * jnp.dtype(acc_dtype).itemsize
+  vmem_limit_bytes = vmem_used + 10 * 1024 * 1024
   kernel = pl.pallas_call(
       functools.partial(
           matmul_kernel,
