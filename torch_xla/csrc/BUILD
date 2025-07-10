@@ -125,6 +125,7 @@ ptxla_cc_library(
         ":layout_manager",
         ":shape_builder",
         ":shape_helper",
+        ":status",
         ":version",
         "//torch_xla/csrc:hash_util",
         "//torch_xla/csrc:thread_pool",

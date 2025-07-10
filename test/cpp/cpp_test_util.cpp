@@ -14,6 +14,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -301,9 +302,8 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
 std::vector<at::Tensor> Fetch(
     absl::Span<const torch_xla::runtime::ComputationClient::DataPtr>
         device_data) {
-  std::vector<xla::Literal> literals =
-      torch_xla::runtime::GetComputationClientOrDie()->TransferFromDevice(
-          device_data);
+  std::vector<xla::Literal> literals = GetValueOrThrow(
+      runtime::GetComputationClientOrDie()->TransferFromDevice(device_data));
   std::vector<at::Tensor> tensors;
   for (auto& literal : literals) {
     tensors.push_back(MakeTensorFromXlaLiteral(
