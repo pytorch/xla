@@ -187,3 +187,14 @@ ptxla_cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+ptxla_cc_test(
+    name = "test_debug_macros",
+    srcs = ["test_debug_macros.cpp"],
+    deps = [
+        "//torch_xla/csrc:status",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:env_vars",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

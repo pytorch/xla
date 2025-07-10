@@ -6,11 +6,7 @@
 
 namespace torch_xla {
 
-// Returns whether we should show C++ error context.
-//
-// More specifically, whether the `XLA_SHOW_CPP_ERROR_CONTEXT` environment
-// variable is set or not.
-static bool ShouldShowCppErrorContext() {
+bool ShouldShowCppErrorContext() {
   static const bool show_cpp_error_context = runtime::sys_util::GetEnvBool(
       runtime::env::kEnvShowCppErrorContext, false);
   return show_cpp_error_context;
