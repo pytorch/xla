@@ -62,7 +62,7 @@ locals {
 
     # cuda build for latest release
     [
-    for pair in setproduct(local.tpu_python_versions, local.cuda_versions["r2.7"]) : {
+    for pair in setproduct(local.tpu_python_versions, local.cuda_versions["r2.8"]) : {
       git_tag         = local.release_git_tag
       package_version = local.release_package_version
       pytorch_git_rev = local.release_pytorch_git_rev
