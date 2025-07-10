@@ -12,15 +12,12 @@ def _quantize_array(
     x_abs_max_val: jax.Array,  # [1, bs_block_size]
 ):
   n_bits = 8
-  int_min = -2**(n_bits - 1)
   int_max = 2**(n_bits - 1) - 1
   scale = (x_abs_max_val / int_max).T  # [bs_block_size, 1]
   # Need to explicitly cast to f32 because Mosaic can't directly jnp.round a
   # bf16 array.
   # It seems x/0 in Pallas generates inf/-inf instead of an exception.
-  x_int = jnp.clip(
-      jnp.round((x / scale).astype(jnp.float32)), int_min,
-      int_max).astype(jnp.int8)
+  x_int = jnp.round((x / scale).astype(jnp.float32)).astype(jnp.int8)
   return x_int, scale.astype(x.dtype)
 
 
