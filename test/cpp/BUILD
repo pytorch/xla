@@ -159,12 +159,14 @@ ptxla_cc_test(
     ],
 )
 
-ptxla_cc_test(
-    name = "test_status",
-    srcs = ["test_status.cpp"],
+cc_library(
+    name = "test_status_common",
+    hdrs = ["test_status_common.h"],
     deps = [
         "//torch_xla/csrc:status",
-        "@com_google_googletest//:gtest_main",
+        "//torch_xla/csrc/runtime:env_vars",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest",
     ],
 )
 
@@ -172,8 +174,7 @@ ptxla_cc_test(
     name = "test_status_dont_show_cpp_error_context",
     srcs = ["test_status_dont_show_cpp_error_context.cpp"],
     deps = [
-        "//torch_xla/csrc:status",
-        "//torch_xla/csrc/runtime:env_vars",
+        ":test_status_common",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -182,8 +183,7 @@ ptxla_cc_test(
     name = "test_status_show_cpp_error_context",
     srcs = ["test_status_show_cpp_error_context.cpp"],
     deps = [
-        "//torch_xla/csrc:status",
-        "//torch_xla/csrc/runtime:env_vars",
+        ":test_status_common",
         "@com_google_googletest//:gtest_main",
     ],
 )
