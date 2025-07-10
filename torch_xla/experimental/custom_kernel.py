@@ -1083,7 +1083,7 @@ def quantized_matmul_int8(
   n_out_features, _ = w.shape
   jax_dtype = convert_torch_dtype_to_jax(x.dtype)
   import jax.numpy as jnp
-  # We fetch the tuned block sizes here instead of in the kernel because if we cannot find the block sizes (meaning we haven't tuned the kernel for that case), then we fall back to the XLA quantized matmul kernel, which has better perf than using kernel with a default but crappy block size. 
+  # We fetch the tuned block sizes here instead of in the kernel because if we cannot find the block sizes (meaning we haven't tuned the kernel for that case), then we fall back to the XLA quantized matmul kernel, which has better perf than using kernel with a default but crappy block size.
   batch_block_size, out_block_size, in_block_size = get_tuned_block_sizes(
       TUNED_BLOCK_SIZES, bs, n_out_features, n_in_features,
       jnp.dtype(jax_dtype).name, quantize_activation)
