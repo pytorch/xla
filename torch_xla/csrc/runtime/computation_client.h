@@ -25,6 +25,7 @@
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/status.h"
+#include "torch_xla/csrc/torch_xla_op_sharding.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/literal_util.h"
@@ -79,7 +80,7 @@ class ComputationClient {
 
     virtual bool HasSharding() const = 0;
 
-    virtual xla::OpSharding GetSharding() const = 0;
+    virtual torch_xla::OpSharding GetSharding() const = 0;
 
    private:
     std::string xla_device_;
@@ -227,6 +228,7 @@ class ComputationClient {
         std::vector<std::string> devices, const xla::Shape* output_shape,
         bool parameter_is_tupled_arguments = false, bool is_sharded = false,
         bool allow_spmd_sharding_propagation_to_output = true,
+        std::vector<torch::lazy::BackendDataPtr> parameters_data = {},
         bool use_auto_spmd_partitioning = false,
         std::vector<int64_t> auto_spmd_mesh_shape = {},
         std::vector<int64_t> auto_spmd_mesh_ids = {}, bool eager_mode = false)
@@ -238,6 +240,7 @@ class ComputationClient {
           is_sharded(is_sharded),
           allow_spmd_sharding_propagation_to_output(
               allow_spmd_sharding_propagation_to_output),
+          parameters_data(parameters_data),
           use_auto_spmd_partitioning(use_auto_spmd_partitioning),
           auto_spmd_mesh_shape(auto_spmd_mesh_shape),
           auto_spmd_mesh_ids(auto_spmd_mesh_ids),
@@ -247,6 +250,7 @@ class ComputationClient {
     std::string compilation_device;
     std::vector<std::string> devices;
     const xla::Shape* output_shape = nullptr;
+    std::vector<torch::lazy::BackendDataPtr> parameters_data;
     bool parameter_is_tupled_arguments;
     bool is_sharded;
     bool allow_spmd_sharding_propagation_to_output;
@@ -272,7 +276,7 @@ class ComputationClient {
   // will be populated in an asynchrounous fashion.
   virtual DataPtr CreateDataPlaceholder(
       std::string device, xla::Shape shape,
-      std::optional<xla::OpSharding> sharding = std::nullopt) = 0;
+      std::optional<torch_xla::OpSharding> sharding = std::nullopt) = 0;
 
   // Returns data shards. We expect this to be called on PjRtShardedData to
   // retrieve the shards. If other data type is passed, it returns the input
@@ -285,11 +289,12 @@ class ComputationClient {
   // Returns wrapped data shards as PjRtShardedData.
   virtual DataPtr WrapDataShards(absl::Span<const DataPtr> shards,
                                  std::string device, xla::Shape shape,
-                                 xla::OpSharding sharding) = 0;
+                                 torch_xla::OpSharding sharding) = 0;
 
   // Returns OpSharding attached to PjRtShardedData. The returned optional
   // structure will be empty if there is no sharding, like with PjRtData.
-  virtual std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) = 0;
+  virtual std::optional<torch_xla::OpSharding> GetDataSharding(
+      DataPtr handle) = 0;
 
   virtual std::string PjRtDeviceToString(
       xla::PjRtDevice* const device) const = 0;
@@ -302,13 +307,13 @@ class ComputationClient {
   // input sharding spec is identical to the target `sharding` sharding spec.
   virtual std::vector<DataPtr> ReshardData(
       absl::Span<const DataPtr> handles,
-      absl::Span<const xla::OpSharding> shardings) = 0;
+      absl::Span<const torch_xla::OpSharding> shardings) = 0;
 
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
   virtual DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
-      std::string device, xla::Shape shape, xla::OpSharding sharding) = 0;
+      std::string device, xla::Shape shape, torch_xla::OpSharding sharding) = 0;
 
   // Copies `data->buffer` to `dst` device buffer.
   virtual DataPtr CopyToDevice(DataPtr data, std::string dst) = 0;

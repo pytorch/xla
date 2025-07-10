@@ -194,14 +194,14 @@ void IfrtComputationClient::IfrtData::Assign(
   }
 }
 
-xla::OpSharding IfrtComputationClient::IfrtData::GetSharding() const {
+torch_xla::OpSharding IfrtComputationClient::IfrtData::GetSharding() const {
   XLA_CHECK(HasSharding()) << "Check HasSharding first";
   return *sharding_;
 }
 
 ComputationClient::DataPtr IfrtComputationClient::CreateDataPlaceholder(
     std::string device, xla::Shape shape,
-    std::optional<xla::OpSharding> sharding) {
+    std::optional<torch_xla::OpSharding> sharding) {
   return std::make_shared<IfrtData>(std::move(device), std::move(shape),
                                     tsl::RCReference<xla::ifrt::Array>(),
                                     std::move(sharding));
@@ -240,7 +240,7 @@ ComputationClient::DataPtr IfrtComputationClient::GetDataShard(
 
 ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
     absl::Span<const DataPtr> shards, std::string device, xla::Shape shape,
-    xla::OpSharding sharding) {
+    torch_xla::OpSharding sharding) {
   XLA_CHECK_EQ(shards.size(), client_->addressable_device_count());
   std::vector<tsl::RCReference<xla::ifrt::Array>> arrays;
   std::vector<xla::ifrt::Shape> shard_shapes;
@@ -276,7 +276,7 @@ ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
   return std::make_shared<IfrtData>(device, shape, sharded_array, sharding);
 }
 
-std::optional<xla::OpSharding> IfrtComputationClient::GetDataSharding(
+std::optional<torch_xla::OpSharding> IfrtComputationClient::GetDataSharding(
     DataPtr handle) {
   auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(handle);
   return ifrt_data->sharding_;
@@ -323,7 +323,7 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToDevice(
 
 ComputationClient::DataPtr IfrtComputationClient::TransferShardsToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
-    std::string device, xla::Shape shape, xla::OpSharding sharding) {
+    std::string device, xla::Shape shape, torch_xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
       "IfrtComputationClient::TransferShardsToDevice",
       tsl::profiler::TraceMeLevel::kInfo);
@@ -382,7 +382,7 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   // TODO: handle replicated data
   xla::XlaBuilder builder("ReplicateShardedData");
   xla::Shape shape = handle->shape();
-  builder.SetSharding(handle->GetSharding());
+  builder.SetSharding(handle->GetSharding().GetXlaOpSharding());
 
   // perform a simple identity calculation to reassemble the input as
   // replicated output.
@@ -481,6 +481,17 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
        client_->addressable_devices().end()});
 
   for (auto& instance : instances) {
+    std::vector<int64_t> denormalized_tile_assignment;
+    if (!instance.parameters_data.empty() && instance.parameters_data[0]) {
+      auto sharding_opt = GetDataSharding(
+          std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+              instance.parameters_data[0]));
+      if (sharding_opt.has_value()) {
+        denormalized_tile_assignment =
+            sharding_opt.value().GetDenormalizedTileAssignment();
+      }
+    }
+
     xla::CompileOptions compile_options;
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
@@ -527,7 +538,8 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
     std::shared_ptr<IfrtComputation> ifrt_computation =
         std::make_shared<IfrtComputation>(
             std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
-            instance.devices, std::move(executable));
+            instance.devices, std::move(executable),
+            denormalized_tile_assignment);
 
     computations.push_back(ifrt_computation);
 
@@ -607,11 +619,13 @@ IfrtComputationClient::ExecuteReplicated(
 
   auto outputs = result.outputs;
 
-  const std::vector<xla::OpSharding>& output_shardings =
-      ifrt_computation.output_shardings_
+  const std::vector<torch_xla::OpSharding>& output_shardings =
+      ifrt_computation.output_shardings_.has_value()
           ? *ifrt_computation.output_shardings_
           : std::vector(outputs.size(),
-                        xla::HloSharding::Replicate().ToProto());
+                        torch_xla::OpSharding(
+                            xla::HloSharding::Replicate().ToProto(),
+                            ifrt_computation.denormalized_tile_assignment_));
   XLA_CHECK_EQ(output_shardings.size(), outputs.size());
 
   std::vector<ComputationClient::DataPtr> data_handles(outputs.size());

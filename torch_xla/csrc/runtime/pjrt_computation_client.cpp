@@ -188,7 +188,7 @@ void PjRtComputationClient::PjRtData::Assign(
 
 ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
     std::string device, xla::Shape shape,
-    std::optional<xla::OpSharding> sharding) {
+    std::optional<torch_xla::OpSharding> sharding) {
   if (sharding.has_value()) {
     return std::make_shared<PjRtShardedData>(
         std::move(device), std::move(shape), std::move(*sharding));
@@ -240,7 +240,7 @@ ComputationClient::DataPtr PjRtComputationClient::GetDataShard(
 
 ComputationClient::DataPtr PjRtComputationClient::WrapDataShards(
     absl::Span<const DataPtr> shards, std::string device, xla::Shape shape,
-    xla::OpSharding sharding) {
+    torch_xla::OpSharding sharding) {
   XLA_CHECK_EQ(shards.size(), client_->addressable_devices().size());
   std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
   pjrt_data_shards.reserve(shards.size());
@@ -254,12 +254,12 @@ ComputationClient::DataPtr PjRtComputationClient::WrapDataShards(
                                            sharding);
 }
 
-std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
+std::optional<torch_xla::OpSharding> PjRtComputationClient::GetDataSharding(
     DataPtr handle) {
   if (auto sharded_data = dynamic_cast<PjRtShardedData*>(handle.get())) {
     return sharded_data->GetSharding();
   }
-  return std::optional<xla::OpSharding>();
+  return std::optional<torch_xla::OpSharding>();
 }
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
@@ -299,7 +299,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
 
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
-    std::string device, xla::Shape shape, xla::OpSharding sharding) {
+    std::string device, xla::Shape shape, torch_xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToDevice",
       tsl::profiler::TraceMeLevel::kInfo);
@@ -355,7 +355,7 @@ PjRtComputationClient::ReplicateShardedData(
     }
     xla::XlaBuilder builder("ReplicateShardedData");
     xla::Shape shape = sharded_data->shape();
-    builder.SetSharding(sharded_data->GetSharding());
+    builder.SetSharding(sharded_data->GetSharding().GetXlaOpSharding());
 
     // perform a simple identity calculation to reassemble the input as
     // replicated output.
@@ -404,7 +404,7 @@ PjRtComputationClient::ReplicateShardedData(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
     absl::Span<const ComputationClient::DataPtr> handles,
-    absl::Span<const xla::OpSharding> shardings) {
+    absl::Span<const torch_xla::OpSharding> shardings) {
   tsl::profiler::TraceMe activity("ReshardData",
                                   tsl::profiler::TraceMeLevel::kInfo);
   XLA_COUNTER("ReshardData", 1);
@@ -429,19 +429,20 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
         << "current device: " << handles[i]->device();
     shapes.push_back(sharded_data->shape());
 
-    const xla::OpSharding& sharding = shardings[i];
+    const torch_xla::OpSharding& sharding = shardings[i];
     XLA_CHECK_NE(sharding.type(), xla::OpSharding::UNKNOWN)
         << "Resharding by UNKNOWN sharding type is not allowed.";
 
     hlo_shardings.push_back(
-        GetValueOrThrow(xla::HloSharding::FromProto(sharding)));
+        GetValueOrThrow(xla::HloSharding::FromProto(sharding.GetXlaOpSharding())));
 
     xla::OpSharding fallback_sharding;
     fallback_sharding.set_type(xla::OpSharding::REPLICATED);
     xla::XlaScopedShardingAssignment assign(
-        &builder, sharded_data->GetSharding().type() == xla::OpSharding::UNKNOWN
+        &builder, sharded_data->GetSharding().GetXlaOpSharding().type() ==
+                          xla::OpSharding::UNKNOWN
                       ? fallback_sharding
-                      : sharded_data->GetSharding());
+                      : sharded_data->GetSharding().GetXlaOpSharding());
     param_ops.push_back(
         xla::Parameter(&builder, i, shapes[i], absl::StrCat("p.", i)));
   }
@@ -553,6 +554,16 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       runtime::sys_util::GetEnvBool("ENABLE_COLLECTIVE_MATMUL_IN_MP", false);
 
   for (auto& instance : instances) {
+    std::vector<int64_t> denormalized_tile_assignment;
+    if (!instance.parameters_data.empty() && instance.parameters_data[0]) {
+      auto sharding_opt = GetDataSharding(
+          std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+              instance.parameters_data[0]));
+      if (sharding_opt.has_value()) {
+        denormalized_tile_assignment =
+            sharding_opt.value().GetDenormalizedTileAssignment();
+      }
+    }
     xla::CompileOptions compile_options;
     if (enable_cm_in_mp) {
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
@@ -665,7 +676,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(
             std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
-            instance.devices, std::move(executable));
+            instance.devices, std::move(executable),
+            denormalized_tile_assignment);
 
     computations.push_back(pjrt_computation);
 
@@ -712,7 +724,8 @@ ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
   std::vector<std::string> devices = {UseVirtualDevice() ? spmd_device_str
                                                          : GetDefaultDevice()};
   return std::make_shared<PjRtComputation>(std::move(computation), devices,
-                                           std::move(loaded_executable));
+                                           std::move(loaded_executable),
+                                           std::nullopt);
 }
 
 torch::lazy::hash_t PjRtComputationClient::HashCompilationEnv() {
@@ -899,13 +912,14 @@ PjRtComputationClient::ExecuteReplicated(
                                : std::vector<xla::Shape>({result_shape});
     XLA_CHECK_EQ(output_shapes.size(), num_outputs);
 
-    const std::vector<xla::OpSharding>& output_shardings =
-        pjrt_computation.output_shardings_.has_value() && num_outputs > 0
+    const std::vector<torch_xla::OpSharding>& output_shardings =
+        (pjrt_computation.output_shardings_.has_value() &&
+         !pjrt_computation.output_shardings_.value().empty() && num_outputs > 0)
             ? *pjrt_computation.output_shardings_
             :
             // Without an explicit sharding annotation, the output is implicitly
             // replicated, and we mark explicitly replicated here.
-            std::vector<xla::OpSharding>(num_outputs);
+            std::vector<torch_xla::OpSharding>(num_outputs);
     XLA_CHECK_EQ(output_shardings.size(), num_outputs);
 
     absl::BlockingCounter counter(num_outputs);
