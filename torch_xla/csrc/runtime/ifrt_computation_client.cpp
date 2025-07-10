@@ -663,7 +663,7 @@ int IfrtComputationClient::GetNumProcesses() const {
   }
 
   return max_process_index + 1;
-};
+}
 
 std::string IfrtComputationClient::GetDeviceKind(const std::string& device) {
   return std::string(StringToIfrtDevice(device)->Kind());

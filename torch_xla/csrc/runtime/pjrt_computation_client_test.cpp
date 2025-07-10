@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/status.h"
 #include "xla/hlo/builder/xla_builder.h"
