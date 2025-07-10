@@ -1100,7 +1100,7 @@ def quantized_matmul_int8(
         })
   from torch_xla.experimental.xla_quantized_matmul import quantized_matmul_xla
   return quantized_matmul_xla(
-      x, w, scalar, quantize_activation=quantize_activation)
+      x, w, scalar, quantize_activation=quantize_activation).to(x.dtype)
 
 
 def _multi_queries_paged_attention_nonkernel(
@@ -1778,4 +1778,4 @@ def quantized_matmul_int8_non_xla(
     warnings.warn(
         f'XLA quantized_matmul_int8 should only be applied to tensors on XLA device'
     )
-  return torch.empty(x.shape[0], w.shape[0], device=x.device)
+  return torch.empty(x.shape[0], w.shape[0], device=x.device, dtype=x.dtype)
