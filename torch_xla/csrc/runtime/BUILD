@@ -164,7 +164,6 @@ cc_library(
     hdrs = ["debug_macros.h"],
     deps = [
         ":tf_logging",
-        "@tsl//tsl/platform:stacktrace",
         "@tsl//tsl/platform:statusor",
         "@tsl//tsl/platform:macros",
     ],
@@ -211,6 +210,7 @@ cc_library(
         ":xla_coordinator",
         "//torch_xla/csrc:status",
         "@torch//:headers",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:initialize",
         "@xla//xla/pjrt:pjrt_c_api_client",
         "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
@@ -390,6 +390,8 @@ cc_library(
     srcs = ["tf_logging.cpp"],
     hdrs = ["tf_logging.h"],
     deps = [
+        "//torch_xla/csrc:status",
+        "@tsl//tsl/platform:stacktrace",
         "@tsl//tsl/platform:statusor",
         "@xla//xla/service:platform_util",
         "@com_google_absl//absl/base:log_severity",
@@ -401,6 +403,7 @@ cc_library(
     hdrs = ["tensor_source.h"],
     deps = [
         ":debug_macros",
+        "//torch_xla/csrc:status",
         "@torch//:headers",
         "@xla//xla:literal",
         "@xla//xla:shape_util",

@@ -375,6 +375,7 @@ def _aten_slice(self, dim=0, start=None, end=None, step=1):
   return self[tuple(dims)]
 
 
+@op(torch.ops.aten.positive)
 @op(torch.ops.aten.detach)
 def _aten_detach(self):
   return self
@@ -2951,12 +2952,14 @@ def _aten_log2(x):
 
 # aten.logical_and
 @op(torch.ops.aten.logical_and)
+@op(torch.ops.aten.__and__)
 def _aten_logical_and(self, other):
   return jnp.logical_and(self, other)
 
 
 # aten.logical_or
 @op(torch.ops.aten.logical_or)
+@op(torch.ops.aten.__or__)
 def _aten_logical_or(self, other):
   return jnp.logical_or(self, other)
 
@@ -2998,6 +3001,7 @@ def _aten_logcumsumexp(self, dim=None):
 # aten.max_pool3d_backward
 # aten.logical_xor
 @op(torch.ops.aten.logical_xor)
+@op(torch.ops.aten.__xor__)
 def _aten_logical_xor(self, other):
   return jnp.logical_xor(self, other)
 
@@ -4946,7 +4950,7 @@ def _aten__linalg_solve_ex(a, b):
   res = jnp.linalg.solve(a, b)
   if batched:
     res = res.squeeze(-1)
-  info_shape = a.shape[0] if len(a.shape) >= 3 else []
+  info_shape = a.shape[:-2]
   info = jnp.zeros(info_shape, dtype=mappings.t2j_dtype(torch.int32))
   return res, info
 
@@ -5497,6 +5501,50 @@ def _aten_pad(self, pad, mode='constant', value=None):
     )
 
 
+@op(torch.ops.aten.is_nonzero)
+def _aten_is_nonzero(a):
+  a = jnp.squeeze(a)
+  if a.shape == (0,):
+    raise RuntimeError('bool value of Tensor with no values is ambiguous')
+  if a.ndim != 0:
+    raise RuntimeError(
+        'bool value of Tensor with more than one value is ambiguous')
+  return a.item() != 0
+
+
+@op(torch.ops.aten.logit)
+def _aten_logit(self: jax.Array, eps: float | None = None) -> jax.Array:
+  """
+  Computes the logit function of the input tensor.
+
+  logit(p) = log(p / (1 - p))
+
+  Args:
+    self: Input tensor.
+    eps: A small value to clip the input tensor to avoid log(0) or division by zero.
+         If None, no clipping is performed.
+
+  Returns:
+    A tensor with the logit of each element of the input.
+  """
+  if eps is not None:
+    self = jnp.clip(self, eps, 1.0 - eps)
+  res = jnp.log(self / (1.0 - self))
+  res = res.astype(mappings.t2j_dtype(torch.get_default_dtype()))
+  return res
+
+
+@op(torch.ops.aten.floor_divide)
+def _aten_floor_divide(x, y):
+  res = jnp.floor_divide(x, y)
+  return res
+
+
+@op(torch.ops.aten._assert_tensor_metadata)
+def _aten__assert_tensor_metadata(*args, **kwargs):
+  pass
+
+
 mutation_ops_to_functional = {
     torch.ops.aten.add_:
         op_base.InplaceOp(torch.ops.aten.add),
@@ -5565,6 +5613,10 @@ mutation_ops_to_functional = {
         op_base.InplaceOp(torch.ops.aten.scatter),
     torch.ops.aten.bitwise_or_:
         op_base.InplaceOp(torch.ops.aten.bitwise_or),
+    torch.ops.aten.floor_divide_:
+        op_base.InplaceOp(torch.ops.aten.floor_divide),
+    torch.ops.aten.remainder_:
+        op_base.InplaceOp(torch.ops.aten.remainder),
 }
 
 # Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.

@@ -99,7 +99,7 @@ class GRU(nn.GRU):
     super().__init__(*args, **kwargs)
 
   def forward(self, input, hx=None):
-    """
+    r"""
     Args:
         input: Tensor of shape (seq_len, batch, input_size)
         hx: Optional initial hidden state of shape (num_layers, batch, hidden_size).

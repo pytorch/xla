@@ -26,6 +26,13 @@ def quantize_array(x, n_bits: int = 8, dim: int = -1):
   return x_int, scale.astype(x.dtype)
 
 
+# compute normalized Frobenius error.
+@jax.jit
+def _compute_rel_error(x, q_x):
+  abs_error = jnp.sqrt(jnp.mean(jnp.square(q_x - x), axis=1))
+  return jnp.mean(abs_error) / jnp.sqrt(jnp.mean(jnp.square(x)))
+
+
 @jtu.with_config(jax_numpy_dtype_promotion="standard")
 class QuantizedMatmulKernelTest(jtu.JaxTestCase):
 
@@ -69,7 +76,10 @@ class QuantizedMatmulKernelTest(jtu.JaxTestCase):
     expected = jax.lax.dot_general(
         x_copy, w_copy, dimension_numbers=(((1,), (1,)), ((), ())))
 
-    self.assertEqual(output.dtype, expected.dtype)
+    rel_error = _compute_rel_error(expected, output)
+    self.assertTrue(rel_error < 2e-2)
+
+    self.assertEqual(output.dtype, x.dtype)
     self.assertEqual(output.shape, expected.shape)
     self.assertAllClose(output, expected, atol=atol)
 

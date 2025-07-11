@@ -1073,7 +1073,6 @@ def quantized_matmul_int8(
     batch_block_size: int | None = None,
     out_block_size: int | None = None,
     in_block_size: int | None = None,
-    vmem_limit_bytes: int | None = 64 * 1024 * 1024,
 ) -> torch.Tensor:
   from torch_xla.experimental.pallas_kernels.quantized_matmul_kernel import (
       quantized_matmul_int8,
@@ -1084,6 +1083,7 @@ def quantized_matmul_int8(
   n_out_features, _ = w.shape
   jax_dtype = convert_torch_dtype_to_jax(x.dtype)
   import jax.numpy as jnp
+  # We fetch the tuned block sizes here instead of in the kernel because if we cannot find the block sizes (meaning we haven't tuned the kernel for that case), then we fall back to the XLA quantized matmul kernel, which has better perf than using kernel with a default but crappy block size.
   batch_block_size, out_block_size, in_block_size = get_tuned_block_sizes(
       TUNED_BLOCK_SIZES, bs, n_out_features, n_in_features,
       jnp.dtype(jax_dtype).name, quantize_activation)
@@ -1096,11 +1096,10 @@ def quantized_matmul_int8(
             "batch_block_size": batch_block_size,
             "out_block_size": out_block_size,
             "in_block_size": in_block_size,
-            "vmem_limit_bytes": vmem_limit_bytes
         })
   from torch_xla.experimental.xla_quantized_matmul import quantized_matmul_xla
   return quantized_matmul_xla(
-      x, w, scalar, quantize_activation=quantize_activation)
+      x, w, scalar, quantize_activation=quantize_activation).to(x.dtype)
 
 
 def _multi_queries_paged_attention_nonkernel(
@@ -1737,7 +1736,7 @@ def gmm_non_xla(lhs: torch.Tensor,
 
 
 XLA_LIB.define(
-    "quantized_matmul_int8(Tensor x, Tensor w, Tensor scalar, Tensor? zero_point=None, Tensor? quant_block_size=None, bool quantize_activation=False, int? batch_block_size=None, int? out_block_size=None, int? in_block_size=None, int? vmem_limit_bytes=None) -> Tensor",
+    "quantized_matmul_int8(Tensor x, Tensor w, Tensor scalar, Tensor? zero_point=None, Tensor? quant_block_size=None, bool quantize_activation=False, int? batch_block_size=None, int? out_block_size=None, int? in_block_size=None) -> Tensor",
 )
 
 
@@ -1752,11 +1751,10 @@ def quantized_matmul_int8_xla(
     batch_block_size: int | None = None,
     out_block_size: int | None = None,
     in_block_size: int | None = None,
-    vmem_limit_bytes: int | None = 64 * 1024 * 1024,
 ) -> torch.Tensor:
   return quantized_matmul_int8(x, w, scalar, zero_point, quant_block_size,
                                quantize_activation, batch_block_size,
-                               out_block_size, in_block_size, vmem_limit_bytes)
+                               out_block_size, in_block_size)
 
 
 @impl(XLA_LIB, "quantized_matmul_int8", "CompositeExplicitAutograd")
@@ -1770,7 +1768,6 @@ def quantized_matmul_int8_non_xla(
     batch_block_size: int | None = None,
     out_block_size: int | None = None,
     in_block_size: int | None = None,
-    vmem_limit_bytes: int | None = 64 * 1024 * 1024,
 ) -> torch.Tensor:
   # This will be called when dynamo use fake tensor to construct the fake output.
   # We need to make sure output tensor's shape is correct.
@@ -1778,4 +1775,4 @@ def quantized_matmul_int8_non_xla(
     warnings.warn(
         f'XLA quantized_matmul_int8 should only be applied to tensors on XLA device'
     )
-  return torch.empty(x.shape[0], w.shape[0], device=x.device)
+  return torch.empty(x.shape[0], w.shape[0], device=x.device, dtype=x.dtype)

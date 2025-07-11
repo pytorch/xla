@@ -12,15 +12,12 @@ def _quantize_array(
     x_abs_max_val: jax.Array,  # [1, bs_block_size]
 ):
   n_bits = 8
-  int_min = -2**(n_bits - 1)
   int_max = 2**(n_bits - 1) - 1
   scale = (x_abs_max_val / int_max).T  # [bs_block_size, 1]
   # Need to explicitly cast to f32 because Mosaic can't directly jnp.round a
   # bf16 array.
   # It seems x/0 in Pallas generates inf/-inf instead of an exception.
-  x_int = jnp.clip(
-      jnp.round((x / scale).astype(jnp.float32)), int_min,
-      int_max).astype(jnp.int8)
+  x_int = jnp.round((x / scale).astype(jnp.float32)).astype(jnp.int8)
   return x_int, scale.astype(x.dtype)
 
 
@@ -93,7 +90,6 @@ def _next_multiple(x, multiple):
         'batch_block_size',
         'out_block_size',
         'in_block_size',
-        'vmem_limit_bytes',
     ])
 def quantized_matmul_int8(
     x: jax.Array,  # [bs, n_input_features]
@@ -107,7 +103,6 @@ def quantized_matmul_int8(
     batch_block_size: int | None = None,
     out_block_size: int | None = None,
     in_block_size: int | None = None,
-    vmem_limit_bytes: int | None = 64 * 1024 * 1024,
 ):
   assert zero_point is None, "Not implemented: zero_point is not supported."
   assert quant_block_size is None, "Not implemented: quant_block_size is not supported."
@@ -155,6 +150,15 @@ def quantized_matmul_int8(
       1] % in_block_size == 0, f"x.shape[1] ({x.shape[1]}) must be a multiple of block size ({in_block_size})"
 
   acc_dtype = jnp.int32 if quantize_activation else x.dtype
+  vmem_to_be_transferred = 2 * (
+      batch_block_size * in_block_size * x.dtype.itemsize +
+      out_block_size * in_block_size * w.dtype.itemsize + out_block_size *
+      scalar.dtype.itemsize + batch_block_size * x_abs_max_val.dtype.itemsize +
+      batch_block_size * out_block_size * x.dtype.itemsize
+  ) + batch_block_size * out_block_size * jnp.dtype(acc_dtype).itemsize
+  # Within the kernel, it will use some extra VMEM for computation or vreg spills.
+  vmem_used = vmem_to_be_transferred * 2
+  vmem_limit_bytes = min(vmem_used * 2, 96 * 1024 * 1024)
   kernel = pl.pallas_call(
       functools.partial(
           matmul_kernel,

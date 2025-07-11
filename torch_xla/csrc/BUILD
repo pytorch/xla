@@ -132,6 +132,7 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:stablehlo_helper",
         "//torch_xla/csrc/runtime:xla_util",
         "@com_google_absl//absl/hash",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
