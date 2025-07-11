@@ -54,7 +54,7 @@ We suggest the following steps:
 
 At this point, your PyTorch is built with debugging symbols and ready to debug
 with GDB. However, we recommend debugging with VSCode. For more information, see
-{ref}`Debug with VSCode`.
+[](#debug-with-vscode)
 
 ### Verify your file is built
 

@@ -45,7 +45,7 @@ you can test with the placeholder `LIBRARY` device type. For example:
     [device(type='xla', index=0), device(type='xla', index=1), device(type='xla', index=2), device(type='xla', index=3)]
 
 To register your device type automatically for users as well as to
-handle extra setup for e.g. multiprocessing, you may implement the
+handle extra setup, for example, multiprocessing, you may implement the
 `DevicePlugin` Python API. PyTorch/XLA plugin packages contain two key
 components:
 
@@ -65,9 +65,6 @@ class CpuPlugin(plugins.DevicePlugin):
     that identifies your `DevicePlugin`. For exmaple, to register the
     `EXAMPLE` device type in a `pyproject.toml`:
 
-```{=html}
-<!-- -->
-```
     [project.entry-points."torch_xla.plugins"]
     example = "torch_xla_cpu_plugin:CpuPlugin"
 

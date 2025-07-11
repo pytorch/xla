@@ -3,7 +3,7 @@
 This guide covers advanced topics with SPMD. Please read the
 [SPMD user guide](https://github.com/pytorch/xla/blob/master/docs/spmd_basic.md) as a prerequisite.
 
-### Sharding-Aware Host-to-Device Data Loading
+## Sharding-Aware Host-to-Device Data Loading
 
 SPMD takes a single-device program, shards it, and executes it in parallel.
 
@@ -38,7 +38,7 @@ train_loader = pl.MpDeviceLoader(
 )
 ```
 
-### Virtual device optimization
+## Virtual device optimization
 
 PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because SPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.
 
