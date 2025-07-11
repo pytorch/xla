@@ -2952,12 +2952,14 @@ def _aten_log2(x):
 
 # aten.logical_and
 @op(torch.ops.aten.logical_and)
+@op(torch.ops.aten.__and__)
 def _aten_logical_and(self, other):
   return jnp.logical_and(self, other)
 
 
 # aten.logical_or
 @op(torch.ops.aten.logical_or)
+@op(torch.ops.aten.__or__)
 def _aten_logical_or(self, other):
   return jnp.logical_or(self, other)
 
@@ -2999,6 +3001,7 @@ def _aten_logcumsumexp(self, dim=None):
 # aten.max_pool3d_backward
 # aten.logical_xor
 @op(torch.ops.aten.logical_xor)
+@op(torch.ops.aten.__xor__)
 def _aten_logical_xor(self, other):
   return jnp.logical_xor(self, other)
 
@@ -5612,6 +5615,8 @@ mutation_ops_to_functional = {
         op_base.InplaceOp(torch.ops.aten.bitwise_or),
     torch.ops.aten.floor_divide_:
         op_base.InplaceOp(torch.ops.aten.floor_divide),
+    torch.ops.aten.remainder_:
+        op_base.InplaceOp(torch.ops.aten.remainder),
 }
 
 # Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
