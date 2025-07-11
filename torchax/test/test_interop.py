@@ -132,6 +132,16 @@ class InteropTest(unittest.TestCase):
   def test_to_jax_device(self):
     a = torch.ones(3, 3)
 
+    if is_tpu_available():
+      # by default if tpu is available, to jax will be to tpu
+      e = a.to("jax")
+      self.assertEqual(e.jax_device.platform, "tpu")
+      self.assertEqual(e.device.type, "jax")
+    else:
+      e = a.to("jax")
+      self.assertEqual(e.jax_device.platform, "cpu")
+      self.assertEqual(e.device.type, "jax")
+
     with jax_device("cpu"):
       # move torch.tensor to torchax.tensor CPU
       b = a.to("jax")

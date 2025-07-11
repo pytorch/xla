@@ -878,10 +878,10 @@ class PallasTest(parameterized.TestCase):
         use_dynamo=False,
     )
 
+  # compute normalized Frobenius error.
   def _compute_rel_error(self, x, q_x):
-    return torch.mean(torch.sqrt(torch.mean(torch.square(q_x - x),
-                                            axis=1))) / torch.sqrt(
-                                                torch.mean(torch.square(x)))
+    abs_error = torch.sqrt(torch.mean(torch.square(q_x - x), axis=1))
+    return torch.mean(abs_error) / torch.sqrt(torch.mean(torch.square(x)))
 
   def _test_quantized_matmul_int8(
       self,
@@ -909,7 +909,9 @@ class PallasTest(parameterized.TestCase):
         qscheme=torch.per_channel_symmetric)
     w_int = torch.ops.quantized_decomposed.quantize_per_channel(
         w, scalar, zero_point, 0, int_min, int_max, torch.int8)
-    scalar = scalar.to(w.dtype)
+    # In the actual workload such as vLLM, the scalar is obtained
+    # offline and is usually in float32.
+    scalar = scalar.to(torch.float32)
 
     x_copy = x.clone()
     w_copy = w.clone()
@@ -942,7 +944,7 @@ class PallasTest(parameterized.TestCase):
     rel_error = self._compute_rel_error(expected, actual)
 
     self.assertEqual(actual.shape, expected.shape)
-    self.assertEqual(actual.dtype, expected.dtype)
+    self.assertEqual(actual.dtype, x.dtype)
     self.assertTrue(rel_error < 3e-2)
 
   @parameterized.product(
@@ -1019,6 +1021,28 @@ class PallasTest(parameterized.TestCase):
         quantize_activation,
         use_dynamo=use_dynamo,
     )
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  @parameterized.product(
+      dtype=[torch.bfloat16, torch.float32],
+      use_dynamo=[True, False],
+  )
+  def test_quantized_matmul_int8_wrapper_fallback(self, dtype, use_dynamo):
+    x = torch.randn(10, 20, device='meta', dtype=dtype)
+    w = torch.randint(-128, 127, (30, 20), device='meta', dtype=torch.int8)
+    scalar = torch.randn(30, device='meta', dtype=torch.float32)
+    if use_dynamo:
+
+      def quantized_matmul_int8_wrapper(x, w_int, scalar, quantize_activation):
+        return torch.ops.xla.quantized_matmul_int8(
+            x, w_int, scalar, quantize_activation=quantize_activation)
+
+      quantized_matmul_int8 = torch.compile(
+          quantized_matmul_int8_wrapper, backend="openxla")
+    else:
+      quantized_matmul_int8 = torch.ops.xla.quantized_matmul_int8
+    res = quantized_matmul_int8(x, w, scalar, quantize_activation=True)
+    self.assertEqual(res.dtype, x.dtype)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
