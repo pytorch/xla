@@ -359,6 +359,36 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
                          expected.sort().values),
           f"Got {val}, expected {expected}")
 
+  @staticmethod
+  def _all_to_all():
+    dist.init_process_group("xla", init_method='xla://')
+    device = torch_xla.device()
+    world_size = xr.world_size()
+    rank = xr.global_ordinal()
+
+    input_tensors = list(
+        torch.full([world_size * 2],
+                   fill_value=rank,
+                   dtype=torch.float,
+                   device=device).chunk(world_size))
+    output_tensors = list(
+        torch.empty([world_size * 2], dtype=torch.float,
+                    device=device).chunk(world_size))
+    dist.all_to_all(output_tensors, input_tensors)
+
+    return [t.cpu() for t in output_tensors]
+
+  def test_all_to_all(self):
+    # Input on device i is ([i, i], [i, i], ...). After all_to_all,
+    # output on every device is ([0, 0], [1, 1], ...).
+    results = pjrt.run_multiprocess(self._all_to_all)
+    expected = [
+        torch.tensor([i, i], dtype=torch.float)
+        for i in range(tpu.num_expected_global_devices())
+    ]
+    for _, value in results.items():
+      torch.testing.assert_close(value, expected)
+
 
 if __name__ == '__main__':
   absltest.main()
