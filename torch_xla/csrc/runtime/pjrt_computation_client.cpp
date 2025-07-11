@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
@@ -18,6 +17,7 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
+#include "torch_xla/csrc/status.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
@@ -117,7 +117,8 @@ std::vector<std::string> PjRtComputationClient::PjRtDevicesToString(
 
 PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
-  std::tie(client_, coordinator_) = InitializePjRt(device_type);
+  std::tie(client_, coordinator_) =
+      GetValueOrThrow(InitializePjRt(device_type));
 
   // PjRtDevice IDs are not guaranteed to be dense, so we need to track
   // a device's global ordinal separately from its device ID. Order the
@@ -155,8 +156,8 @@ void PjRtComputationClient::InitializeCoordinator(int global_rank,
                                                   std::string port) {
   XLA_CHECK(coordinator_ == nullptr)
       << "Can only initialize the XlaCoordinator once.";
-  coordinator_ = std::make_unique<XlaCoordinator>(global_rank, world_size,
-                                                  master_addr, port);
+  coordinator_ = GetValueOrThrow(
+      XlaCoordinator::Create(global_rank, world_size, master_addr, port));
 }
 
 XlaCoordinator& PjRtComputationClient::GetCoordinator() {

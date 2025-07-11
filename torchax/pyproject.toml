@@ -12,7 +12,7 @@ authors = [
     {name = "Han Qi", email = "qihan.dev@gmail.com"},
     {name = "Pytorch/XLA team", email = "pytorchxla-dev@google.com"},
 ]
-description = "torchax is a library for running PyTorch on TPU"
+description = "torchax is a library for running Jax and PyTorch together"
 readme = "README.md"
 classifiers = [
     "Development Status :: 3 - Alpha",

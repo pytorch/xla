@@ -752,6 +752,29 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_output.sum().backward()
     self.assertEqual(a.grad, xla_a.grad.cpu())
 
+  def test_embedding_module(self):
+    num_embeddings = 16
+    embed_dim = 4
+    input_shape = (2, 3)
+
+    xla_device = torch_xla.device()
+
+    idx = torch.randint(0, num_embeddings, input_shape, dtype=torch.long)
+    xla_idx = idx.to(xla_device)
+
+    m = nn.Embedding(num_embeddings, embed_dim)
+    xla_m = nn.Embedding(num_embeddings, embed_dim).to(xla_device)
+    # keep parameters in sync
+    xla_m.weight.data.copy_(m.weight.data)
+
+    output = m(idx)
+    xla_output = xla_m(xla_idx)
+    self.assertEqual(output, xla_output.cpu())
+
+    output.sum().backward()
+    xla_output.sum().backward()
+    self.assertEqual(m.weight.grad, xla_m.weight.grad.cpu())
+
   def test_max_broadcast(self):
     xla_device = torch_xla.device()
     a = torch.rand(3, 1, 2)

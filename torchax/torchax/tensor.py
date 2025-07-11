@@ -330,7 +330,7 @@ class Environment(contextlib.ContextDecorator):
     self._prng_key = mutable_array(
         jax.random.key(torch.initial_seed() % (1 << 63)))
     self.autocast_dtype = None
-    self._target_device = "cpu"
+    self._target_device = jax.local_devices()[0].platform
 
   @property
   def target_device(self):

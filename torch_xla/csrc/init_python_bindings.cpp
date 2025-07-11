@@ -36,6 +36,7 @@
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"
+#include "status.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_fallback.h"
@@ -64,6 +65,7 @@
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -171,18 +173,6 @@ class PythonScope : public Scope {
     }
   };
 };
-
-static void ConsumeAndMaybeThrow(absl::Status status) {
-  if (!status.ok()) {
-    throw std::runtime_error(std::string(status.message()));
-  }
-}
-
-template <class T>
-static T ConsumeAndMaybeThrow(absl::StatusOr<T> status) {
-  ConsumeAndMaybeThrow(status.status());
-  return std::move(status.value());
-}
 
 struct NoGilSection {
   NoGilSection() : state(PyEval_SaveThread()) {}
@@ -1694,7 +1684,7 @@ void InitXlaModuleBindings(py::module m) {
            })
       .def("_init_computation_client",
            []() {
-             ConsumeAndMaybeThrow(runtime::GetComputationClient());
+             GetValueOrThrow(runtime::GetComputationClient());
            })
       .def("_xla_get_device_hw_type",
            [](const at::Tensor& tensor) {
@@ -2278,7 +2268,6 @@ void InitXlaModuleBindings(py::module m) {
            [](const std::vector<at::Tensor>& tensors, const std::string& device,
               const std::vector<std::string>& devices,
               bool emit_bytecode) -> py::bytes {
-            NoGilSection nogil;
             EmitMode mode = emit_bytecode ? EmitMode::kStableHloBytecode
                                           : EmitMode::kStableHloReadable;
             std::vector<XLATensorPtr> xtensors;

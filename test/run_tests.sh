@@ -62,6 +62,23 @@ function run_test_without_functionalization {
   XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$@"
 }
 
+function run_test_multi_devices {
+  if ! test_is_selected "$1"; then
+    return
+  fi
+  echo "Running in PjRt runtime: $@"
+  # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
+  PJRT_DEVICE=CPU CPU_NUM_DEVICES=4 run_coverage "$@"
+}
+
+function run_test_multi_devices_without_func {
+  if ! test_is_selected "$1"; then
+    return
+  fi
+  echo "Running with XLA_DISABLE_FUNCTIONALIZATION: $@"
+  XLA_DISABLE_FUNCTIONALIZATION=1 run_test_multi_devices "$@"
+}
+
 function run_use_bf16 {
   if ! test_is_selected "$1"; then
     return
@@ -123,7 +140,9 @@ function run_torch_op_tests {
   run_test_without_functionalization "$_TEST_DIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
   run_dynamic "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
-  run_test "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
+  # TODO https://github.com/pytorch/xla/issues/9459: Investigate why this 
+  # doesn't run any tests.
+  # run_test "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
   run_test "$_TEST_DIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
   run_test "$_TEST_DIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
   # run_dynamic "$_TEST_DIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
@@ -233,6 +252,7 @@ function run_xla_op_tests3 {
   run_test "$_TEST_DIR/spmd/test_xla_spmd_python_api_interaction.py"
   run_test "$_TEST_DIR/spmd/test_dtensor_integration.py"
   run_test "$_TEST_DIR/spmd/test_dtensor_integration2.py"
+  run_test_multi_devices_without_func "$_TEST_DIR/spmd/test_dtensor_integration3.py"
   run_test "$_TEST_DIR/spmd/test_xla_auto_sharding.py"
   run_test "$_TEST_DIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$_TEST_DIR/spmd/test_mp_input_sharding.py"
