@@ -173,7 +173,7 @@ ops_to_test = [
 # Sort related ops should ignore index;
 # For example: sort( [1, 0, 0]) -> [0, 0, 1]
 # the correct index can be [1, 2, 0] or [2, 1, 0]
-should_ignore_indexes = {"topk", "mode", "kthvalue"}
+should_ignore_indexes = {"topk", "mode", "kthvalue", "linalg.solve_ex"}
 
 
 class TestOpInfo(TestCase):

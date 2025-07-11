@@ -60,7 +60,7 @@ class Tensor(torch.Tensor):
         cls,
         shape,
         dtype=dtype,
-        device="meta",
+        device="privateuseone:0",
         requires_grad=False,
     )
 
@@ -135,9 +135,9 @@ class Tensor(torch.Tensor):
   def dim(self):
     return self.ndim
 
-  @property
-  def device(self):
-    return torch.device("jax:0")
+  # @property
+  # def device(self):
+  #   return torch.device("jax:0")
 
   @property
   def jax_device(self):
@@ -379,7 +379,7 @@ class Environment(contextlib.ContextDecorator):
     return None  # fallback to torch
 
   def load_ops(self):
-    from torchax.ops import jaten, jtorch, jc10d, jtorchvision_nms
+    from torchax.ops import jaten, jtorch, jc10d, jtorchvision_nms, autocast_policy
 
     for k, v in itertools.chain(ops_registry.all_aten_ops.items(),
                                 ops_registry.all_torch_functions.items()):
