@@ -6,6 +6,7 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/torch_xla_op_sharding.h"
 
 namespace torch_xla {
 
@@ -16,7 +17,7 @@ DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
               /*num_outputs=*/1,
               /*hash_seed=*/(uint32_t)101),
       data_(std::move(data)) {
-  std::optional<xla::OpSharding> op_sharding =
+  std::optional<torch_xla::OpSharding> op_sharding =
       torch_xla::runtime::GetComputationClientOrDie()->GetDataSharding(
           std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data_));
   if (op_sharding.has_value()) {
