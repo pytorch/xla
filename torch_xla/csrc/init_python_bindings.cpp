@@ -36,7 +36,6 @@
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"
-#include "status.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_fallback.h"
@@ -892,7 +891,8 @@ std::vector<at::Tensor> XlaUserComputation(
 
 runtime::ComputationClient::ComputationPtr CreateComputation(
     const std::string& name, xla::XlaOp root) {
-  xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
+  xla::XlaComputation computation =
+      GetValueOrThrow(root.builder()->Build(root));
   return std::make_shared<runtime::ComputationClient::Computation>(
       name, std::move(computation));
 }
@@ -1152,7 +1152,7 @@ class PyLoweringContext {
 
     ShardingUtil::SetHloSharding(&lowering_ctx);
 
-    computation = ConsumeValue(lowering_ctx.BuildXla());
+    computation = GetValueOrThrow(lowering_ctx.BuildXla());
   }
 
   // Builds a HLO graph given a set of output tensors, and add unused parameters
@@ -1196,7 +1196,7 @@ class PyLoweringContext {
 
     ShardingUtil::SetHloSharding(&lowering_ctx);
 
-    computation = ConsumeValue(lowering_ctx.BuildXla());
+    computation = GetValueOrThrow(lowering_ctx.BuildXla());
 
     // wrap inputs of cond/body_computation
     if ((GetNameString() == "condctx") || (GetNameString() == "bodyctx")) {
@@ -1207,12 +1207,12 @@ class PyLoweringContext {
         param_shardings = XlaHelpers::ExtractInputShardings(computation);
       }
       xla::ProgramShape program_shape =
-          ConsumeValue(computation.GetProgramShape());
+          GetValueOrThrow(computation.GetProgramShape());
       // TODO(@manfei): please confirm whether we check for more than two or use
       // default value true
       bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
       if (should_wrap_parameter) {
-        computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+        computation = GetValueOrThrow(XlaHelpers::WrapXlaComputation(
             computation, program_shape.parameters(), param_shardings,
             /* buffer_donor_indices */ {}));
       }
@@ -1309,7 +1309,7 @@ class PyLoweringContext {
   // Create a serialized HloModule protobuf from a lowered graph
   py::bytes GetHlo() {
     const xla::HloModuleProto& proto = computation.proto();
-    return ConsumeValue(
+    return GetValueOrThrow(
         runtime::util::GetDeterministicSerializedModuleProto(proto));
   }
 
@@ -2398,7 +2398,7 @@ void InitXlaModuleBindings(py::module m) {
       .def("_xla_set_mat_mul_precision",
            [](const std::string& mat_mul_precision) {
             xla::PrecisionConfig::Precision precision =
-                ConsumeValue(xla::StringToPrecision(mat_mul_precision));
+                GetValueOrThrow(xla::StringToPrecision(mat_mul_precision));
             XlaHelpers::set_mat_mul_precision(precision);
            })
       .def("_xla_get_mat_mul_precision", []() {
@@ -2447,7 +2447,7 @@ void InitXlaModuleBindings(py::module m) {
             std::string hlo_text;
             {
               NoGilSection nogil;
-              hlo_text = ConsumeValue(runtime::util::GetComputationHloText(
+              hlo_text = GetValueOrThrow(runtime::util::GetComputationHloText(
                   computation->computation()));
             }
             return hlo_text;

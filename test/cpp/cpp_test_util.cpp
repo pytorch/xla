@@ -14,6 +14,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -275,8 +276,9 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
     lowering_ctx.AddResult(root);
   }
 
-  xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
-  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  xla::XlaComputation computation = GetValueOrThrow(lowering_ctx.BuildXla());
+  xla::ProgramShape program_shape =
+      GetValueOrThrow(computation.GetProgramShape());
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
 

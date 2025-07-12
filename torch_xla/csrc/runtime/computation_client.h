@@ -24,6 +24,7 @@
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/status.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/literal_util.h"
@@ -114,9 +115,9 @@ class ComputationClient {
         : name_(name),
           computation_(std::move(computation)),
           devices_(std::move(devices)) {
-      program_shape_ = ConsumeValue(computation_.GetProgramShape());
+      program_shape_ = GetValueOrThrow(computation_.GetProgramShape());
       const xla::HloModuleProto& proto = computation_.proto();
-      hash_ = ConsumeValue(ComputeHash(proto, name));
+      hash_ = GetValueOrThrow(ComputeHash(proto, name));
     }
 
     Computation(std::string name, xla::XlaComputation computation,
@@ -189,7 +190,7 @@ class ComputationClient {
 
     const std::string to_string() const override {
       xla::HloModuleConfig hlo_config(program_shape());
-      std::unique_ptr<xla::HloModule> module = ConsumeValue(
+      std::unique_ptr<xla::HloModule> module = GetValueOrThrow(
           xla::HloModule::CreateFromProto(computation().proto(), hlo_config));
       return module->ToString();
     }
