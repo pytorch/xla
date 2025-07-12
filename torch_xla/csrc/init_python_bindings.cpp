@@ -2316,7 +2316,6 @@ void InitXlaModuleBindings(py::module m) {
            [](const std::vector<at::Tensor>& tensors, const std::string& device,
               const std::vector<std::string>& devices,
               bool emit_bytecode) -> py::bytes {
-            NoGilSection nogil;
             EmitMode mode = emit_bytecode ? EmitMode::kStableHloBytecode
                                           : EmitMode::kStableHloReadable;
             std::vector<XLATensorPtr> xtensors;
