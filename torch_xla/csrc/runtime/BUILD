@@ -498,7 +498,7 @@ ptxla_cc_test(
         ":pjrt_computation_client",
         ":operation_manager",
         ":tensor_source",
-        "@com_google_absl//absl/status",
+        "//torch_xla/csrc:status",
         "@tsl//tsl/platform:test_main",
         "@xla//xla:literal",
         "@xla//xla:literal_util",
