@@ -287,7 +287,8 @@ class IfrtComputationClient : public ComputationClient {
               denormalized_tile_assignment.value_or(std::vector<int64_t>{}))) {
       xla_output_shardings_ = this->executable->GetOutputShardings();
       if (xla_output_shardings_.has_value()) {
-        output_shardings_->reserve(xla_output_shardings_->size());
+        output_shardings_ = std::vector<torch_xla::OpSharding>{};
+        output_shardings_->reserve(xla_output_shardings_.value().size());
         for (const auto& sharding : xla_output_shardings_.value()) {
           // convert each into torch_xla::OpSharding object
           torch_xla::OpSharding torch_xla_op_sharding(

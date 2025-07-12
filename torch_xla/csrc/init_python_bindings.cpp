@@ -2632,12 +2632,12 @@ void InitXlaModuleBindings(py::module m) {
             return GetXLAShardingSpec(xtensor);
            })
       .def("_get_xla_op_sharding",
-           [](const at::Tensor& input) -> std::optional<xla::OpSharding> {
+           [](const at::Tensor& input) -> std::optional<torch_xla::OpSharding> {
             XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(input));
             XLATensor::ShardingSpecPtr sharding_spec =
                 xtensor ? xtensor->sharding_spec() : nullptr;
             if (sharding_spec != nullptr) {
-              return sharding_spec->sharding.GetXlaOpSharding();
+              return sharding_spec->sharding;
             }
             return std::nullopt;
            })
