@@ -359,10 +359,10 @@ class Environment(contextlib.ContextDecorator):
       return jax.devices("cpu")[0]
 
     if self.config.treat_cuda_as_jax_device and device.startswith("cuda"):
-      return jax.local_devices()[0]
+      return self.default_device_or_sharding
 
-    if device.startswith("xla"):
-      return jax.local_devices()[0]
+    if device.startswith("jax") or device.startswith("xla"):
+      return self.default_device_or_sharding
 
     # TODO (wen): jax is NOT a device type,
     # once we can register more than one backend, revisit
@@ -461,6 +461,7 @@ class Environment(contextlib.ContextDecorator):
         return the_tensor
 
       jax_device = self.get_as_jax_device(new_device)
+
       if jax_device:
         arr = self.t2j_copy(the_tensor)
         arr = jax.device_put(arr, jax_device)
@@ -488,15 +489,16 @@ class Environment(contextlib.ContextDecorator):
       # let torch handle it
       with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
         return func(*args, **kwargs)
-    with jax.default_device(jax_device):
-      requires_grad = kwargs.get("requires_grad", False)
-      op = self._get_op_or_decomp(func)
-      res = op.func(*args, **kwargs)
-      if isinstance(res, jax.Array):
-        res = Tensor(res, self)
-      if requires_grad:
-        res.requires_grad = True
-      return res
+
+    requires_grad = kwargs.get("requires_grad", False)
+    op = self._get_op_or_decomp(func)
+    res = op.func(*args, **kwargs)
+    if isinstance(res, jax.Array):
+      res = jax.device_put(res, jax_device)
+      res = Tensor(res, self)
+    if requires_grad:
+      res.requires_grad = True
+    return res
 
   def _torch_Tensor_to(self, args, kwargs):
     the_tensor = args[0]
@@ -593,6 +595,10 @@ class Environment(contextlib.ContextDecorator):
 
       if self.config.debug_accuracy_for_each_op:
         debug_accuracy(func, old_args, old_kwargs, res)
+
+      for r in torch_pytree.tree_flatten(res)[0]:
+        if isinstance(r, Tensor) and r.dtype != super(torch.Tensor, r).dtype:
+          breakpoint()
       return res
 
   def enable_torch_modes(self):
@@ -642,6 +648,9 @@ class Environment(contextlib.ContextDecorator):
       if isinstance(
           x, torch.distributed._functional_collectives.AsyncCollectiveTensor):
         x = x.wait()
+      if self.config.allow_mixed_tensor_for_scalar_tensor and not isinstance(x, Tensor):
+        if x.squeeze().ndim == 0:
+          return x.item()
       assert isinstance(x, Tensor) or isinstance(x, View), (
           f"Expect a Tensor or a View but got {type(x)}; usually this means there is a mixed math between XLATensor and torch.Tensor"
       )
