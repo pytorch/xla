@@ -10,6 +10,8 @@
 #ifndef XLA_TORCH_XLA_CSRC_STATUS_H_
 #define XLA_TORCH_XLA_CSRC_STATUS_H_
 
+#include <utility>
+
 #include "absl/status/statusor.h"
 
 namespace torch_xla {
@@ -45,20 +47,29 @@ namespace torch_xla {
 // Unique identifier for the status variable for the current line.
 #define XLA_STATUS_VAR_ XLA_CONCAT_(status_, __LINE__)
 
+// Fake wrapper to `status`.
+//
+// This is used in place of `XLA_ERROR_WITH_LOCATION`, whenever we don't
+// want to append source code location information to the error message,
+// e.g. `XLA_RETURN_IF_ERROR` and `XLA_ASSIGN_OR_RETURN`.
+#define XLA_NO_WRAP_(status) status
+
 // Provides a flexible way to handle error checking with optional message
 // modification. It evaluates `expr`, checks if it's OK, and either:
 // 1. Returns early with an error status (potentially modified by the provided
 //    additional messages)
 // 2. Proceeds with the given `then` block if successful
-#define XLA_RETURN_IF_ERROR_IMPL_(expr, var, then, ...)                  \
-  auto var = (expr);                                                     \
-  if (!var.ok()) {                                                       \
-    return ::torch_xla::MaybeWithNewMessage(                             \
-        ::torch_xla::GetStatus(var), __FILE__, __LINE__, ##__VA_ARGS__); \
-  }                                                                      \
+#define XLA_RETURN_IF_ERROR_IMPL_(expr, var, wrapper, then, ...)          \
+  auto var = (expr);                                                      \
+  if (!var.ok()) {                                                        \
+    return wrapper(::torch_xla::MaybeWithNewMessage(                      \
+        ::torch_xla::GetStatus(var), __FILE__, __LINE__, ##__VA_ARGS__)); \
+  }                                                                       \
   then
 
 // Propagates `rexpr`, in case it's a non-ok status.
+//
+// This macro should be used for propagating status internally.
 //
 // Example:
 //
@@ -75,13 +86,36 @@ namespace torch_xla {
 //     Previous error message. (at <cpp-source-file>:<line>)
 //     ...
 //
-#define XLA_RETURN_IF_ERROR(rexpr, ...)                                  \
-  do {                                                                   \
-    XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_, {}, ##__VA_ARGS__) \
+#define XLA_RETURN_IF_ERROR(rexpr, ...)                                 \
+  do {                                                                  \
+    XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_, XLA_NO_WRAP_, {}, \
+                              ##__VA_ARGS__)                            \
+  } while (false)
+
+// Propagates `rexpr`, in case it's a non-ok status, appending the source code
+// location to it.
+//
+// Note that while the macro above will append the source code location only if
+// a new message is given, this macro will append the source code location if
+// `XLA_SHOW_CPP_ERROR_CONTEXT` is set.
+//
+// This macro should be used whenever we are propagating some status that came
+// from some external library.
+//
+// Example:
+//
+//     XLA_RETURN_IF_ERROR_WITH_LOCATION(FnThatReturnsStatus());
+//
+#define XLA_RETURN_IF_ERROR_WITH_LOCATION(rexpr)                               \
+  do {                                                                         \
+    XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_, XLA_ERROR_WITH_LOCATION, \
+                              {})                                              \
   } while (false)
 
 // Propagates `rexpr`, in case it's a non-ok status. Otherwise, assign
 // its result to `lhs`.
+//
+// This macro should be used for propagating status internally.
 //
 // Note 1: `lhs` might be a variable declarate, e.g:
 //
@@ -106,9 +140,30 @@ namespace torch_xla {
 //     ...
 //
 #define XLA_ASSIGN_OR_RETURN(lhs, rexpr, ...)                         \
-  XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_,                   \
+  XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_, XLA_NO_WRAP_,     \
                             lhs = std::move(XLA_STATUS_VAR_).value(), \
                             ##__VA_ARGS__)
+
+// Propagates `rexpr`, in case it's a non-ok status. Otherwise, assign
+// its result to `lhs`.
+//
+// Note that while the macro above will append the source code location only if
+// a new message is given, this macro will append the source code location if
+// `XLA_SHOW_CPP_ERROR_CONTEXT` is set.
+//
+// This macro should be used whenever we are propagating some status that came
+// from some external library.
+//
+// Example:
+//
+//     XLA_ASSIGN_OR_RETURN_WITH_LOCATION(
+//         int result,
+//         FnThatReturnsStatus(),
+//     );
+//
+#define XLA_ASSIGN_OR_RETURN_WITH_LOCATION(lhs, rexpr)                       \
+  XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_, XLA_ERROR_WITH_LOCATION, \
+                            lhs = std::move(XLA_STATUS_VAR_).value())
 
 // Maybe shows location information in the status message.
 //
