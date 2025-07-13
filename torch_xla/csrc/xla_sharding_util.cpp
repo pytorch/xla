@@ -286,11 +286,21 @@ torch_xla::OpSharding ShardingUtil::CreateOpSharding(
     }
   }
 
-  // create a copy of the original_tile_assignment_devices from xla::OpSharding
-  // object
-  std::vector<int64_t> denormalized_tile_assignment(
-      sharding.tile_assignment_devices().begin(),
-      sharding.tile_assignment_devices().end());
+  // Create denormalized_tile_assignment. If sharding.tile_assignment_devices()
+  // is empty (which happens for REPLICATED, MANUAL, UNKNOWN sharding types),
+  // use the original tile_assignment arg that was passed to this function.
+  std::vector<int64_t> denormalized_tile_assignment;
+  if (sharding.tile_assignment_devices().empty() && !tile_assignment.empty()) {
+    // Convert the Python list tile_assignment to a flattened vector for
+    // denormalized assignment
+    xla::Array<int64_t> tile_array = TileListToArray(tile_assignment);
+    denormalized_tile_assignment.assign(tile_array.begin(), tile_array.end());
+  } else {
+    // Use the tile_assignment_devices from the XLA OpSharding object
+    denormalized_tile_assignment.assign(
+        sharding.tile_assignment_devices().begin(),
+        sharding.tile_assignment_devices().end());
+  }
 
   // Use the xla::OpSharding object in the wrapper torch_xla::OpSharding along
   // with denormalized_tile_assignment (original tile_assignment) for extended
