@@ -9,6 +9,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 #include "xla/hlo/builder/lib/arithmetic.h"
@@ -48,7 +49,7 @@ xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
   xla::XlaOp y = xla::Parameter(&reduction_builder, 1,
                                 xla::ShapeUtil::MakeShape(type, {}), "y");
   xla::Ge(x, y);
-  return ConsumeValue(reduction_builder.Build());
+  return GetValueOrThrow(reduction_builder.Build());
 }
 
 xla::TensorFormat MakeNCHWFormat(int64_t spatial_dim_count) {
@@ -366,7 +367,7 @@ xla::XlaOp ComputeMaxPoolIndices(
     return results;
   };
 
-  std::vector<xla::XlaOp> results = ConsumeValue(
+  std::vector<xla::XlaOp> results = GetValueOrThrow(
       xla::WhileLoopHelper(cond_fn, body_fn, initial_values.values,
                            "ComputeMaxPoolIndices", padded_input.builder()));
 

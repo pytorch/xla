@@ -12,6 +12,7 @@
 #include "torch_xla/csrc/ops/einsum_utilities.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "xla/hlo/builder/lib/arithmetic.h"
 #include "xla/hlo/builder/lib/constants.h"
@@ -59,7 +60,7 @@ xla::XlaComputation CreateAllComputation(xla::PrimitiveType type) {
   xla::XlaOp zero = xla::Zero(&builder, type);
   xla::XlaOp one = xla::One(&builder, type);
   xla::Select(xla::And(xla::Ne(x, zero), xla::Ne(y, zero)), one, zero);
-  return ConsumeValue(builder.Build());
+  return GetValueOrThrow(builder.Build());
 }
 
 xla::XlaComputation CreateAnyComputation(xla::PrimitiveType type) {
@@ -71,7 +72,7 @@ xla::XlaComputation CreateAnyComputation(xla::PrimitiveType type) {
   xla::XlaOp zero = xla::Zero(&builder, type);
   xla::XlaOp one = xla::One(&builder, type);
   xla::Select(xla::Or(xla::Ne(x, zero), xla::Ne(y, zero)), one, zero);
-  return ConsumeValue(builder.Build());
+  return GetValueOrThrow(builder.Build());
 }
 
 xla::XlaOp GetScaleValue(xla::XlaOp input, xla::XlaOp count,

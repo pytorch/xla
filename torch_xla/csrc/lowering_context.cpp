@@ -18,6 +18,7 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/stack_frame_index_builder.h"
+#include "torch_xla/csrc/status.h"
 
 namespace torch_xla {
 
@@ -324,7 +325,7 @@ void LoweringContext::AddParameter(const torch::lazy::Output& output,
 }
 
 torch::lazy::ComputationPtr LoweringContext::Build() {
-  xla::XlaComputation xla_computation = ConsumeValue(BuildXla());
+  xla::XlaComputation xla_computation = GetValueOrThrow(BuildXla());
   return std::make_shared<runtime::ComputationClient::Computation>(
       builder_.name(), std::move(xla_computation), device_);
 }

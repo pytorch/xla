@@ -7,6 +7,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "xla/hlo/builder/lib/logdet.h"
 #include "xla/hlo/builder/lib/math.h"
@@ -690,7 +691,7 @@ xla::XlaOp Convert(const BuilderPtr& builder,
                    const std::vector<OpPtr>& operands, py::dict args) {
   std::string type = args["to_type"].cast<std::string>();
   xla::PrimitiveType xla_type =
-      ConsumeValue(xla::primitive_util::StringToPrimitiveType(type));
+      GetValueOrThrow(xla::primitive_util::StringToPrimitiveType(type));
   return MaybeConvertTo(operands.at(0)->op, xla_type);
 }
 
@@ -717,7 +718,7 @@ xla::XlaOp BitcastConvert(const BuilderPtr& builder,
                           const std::vector<OpPtr>& operands, py::dict args) {
   std::string type = args["to_type"].cast<std::string>();
   xla::PrimitiveType xla_type =
-      ConsumeValue(xla::primitive_util::StringToPrimitiveType(type));
+      GetValueOrThrow(xla::primitive_util::StringToPrimitiveType(type));
   return xla::BitcastConvertType(operands.at(0)->op, xla_type);
 }
 
@@ -873,7 +874,7 @@ xla::Shape PyShapeToShape(py::object shape) {
   std::vector<int64_t> dimensions =
       GetTupleVector<int64_t>(py_shape["sizes"].cast<py::tuple>());
   xla::PrimitiveType xla_type =
-      ConsumeValue(xla::primitive_util::StringToPrimitiveType(type));
+      GetValueOrThrow(xla::primitive_util::StringToPrimitiveType(type));
   if (py_shape.contains("dynamic_dimensions")) {
     std::vector<bool> dynamic_dimensions =
         GetTupleVector<bool>(py_shape["dynamic_dimensions"]);
