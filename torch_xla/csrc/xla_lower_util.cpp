@@ -17,6 +17,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "xla/hlo/builder/lib/arithmetic.h"
 #include "xla/hlo/builder/lib/comparators.h"
@@ -149,7 +150,7 @@ xla::XlaComputation MakeScatterComputation(
   if (combiner != nullptr) {
     result = combiner(p0, result);
   }
-  return ConsumeValue(cb.Build(result));
+  return GetValueOrThrow(cb.Build(result));
 }
 
 xla::XlaOp CreateIndexAlongDim(
@@ -1364,7 +1365,7 @@ std::vector<xla::XlaOp> BuildBoxSelectionLoop(int64_t num_boxes,
   // 3. The actual IoU threshold matrix.
   init_values[2] = iou_threshold_mask;
 
-  return ConsumeValue(xla::WhileLoopHelper(
+  return GetValueOrThrow(xla::WhileLoopHelper(
       [=](absl::Span<const xla::XlaOp> values, xla::XlaBuilder* builder) {
         xla::XlaOp box_index = values[0];
         // Check: current loop counter is within bounds, i.e. has a

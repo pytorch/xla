@@ -13,6 +13,7 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "xla/hlo/builder/lib/constants.h"
 #include "xla/primitive_util.h"
@@ -40,7 +41,7 @@ xla::XlaComputation CreateComputation(
       xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
   xla::XlaOp y =
       xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
-  return ConsumeValue(builder.Build(op(x, y)));
+  return GetValueOrThrow(builder.Build(op(x, y)));
 }
 
 xla::XlaComputation CreateMinMaxComputation(const std::string& name,
@@ -65,7 +66,7 @@ xla::XlaComputation CreateMinMaxComputation(const std::string& name,
   xla::XlaOp tie_id = xla::Min(lhs_index, rhs_index);
   arg_max = xla::Select(eq, tie_id, arg_max);
   xla::Tuple(&builder, {max, arg_max});
-  return ConsumeValue(builder.Build());
+  return GetValueOrThrow(builder.Build());
 }
 
 }  // namespace

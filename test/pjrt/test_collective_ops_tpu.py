@@ -412,6 +412,25 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       else:
         assert value is None
 
+  def _reduce():
+    dist.init_process_group("xla", init_method='xla://')
+    device = torch_xla.device()
+    input = torch.tensor([xr.global_ordinal()],
+                         dtype=torch.float,
+                         device=device)
+    dist.reduce(input, dst=0, op=dist.ReduceOp.SUM)
+
+    return input.cpu()
+
+  def test_reduce(self):
+    results = pjrt.run_multiprocess(self._reduce)
+    for ordinal, value in results.items():
+      if ordinal == 0:
+        expected = sum(range(tpu.num_expected_global_devices()))
+      else:
+        expected = ordinal
+      np.testing.assert_array_equal(value, [expected])
+
 
 if __name__ == '__main__':
   absltest.main()

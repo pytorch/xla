@@ -20,6 +20,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
@@ -450,7 +451,7 @@ void DebugUtil::post_compilation_analysis(
   // Note that for UserComputation computations, the protobuf is factored in
   // the graph hash.
   std::string serialized_computation =
-      ConsumeValue(runtime::util::GetDeterministicSerializedModuleProto(
+      GetValueOrThrow(runtime::util::GetDeterministicSerializedModuleProto(
           computation->computation().proto()));
   ss << "\n"
      << "Computation hash: "

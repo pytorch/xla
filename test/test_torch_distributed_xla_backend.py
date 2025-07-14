@@ -356,7 +356,6 @@ class XlaBackendTest(parameterized.TestCase):
     dist.barrier()
 
   @parameterized.parameters(
-      'reduce',
       'allreduce_coalesced',
       'alltoall',
       'recv_anysource',

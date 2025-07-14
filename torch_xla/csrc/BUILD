@@ -125,6 +125,7 @@ ptxla_cc_library(
         ":layout_manager",
         ":shape_builder",
         ":shape_helper",
+        ":status",
         ":version",
         "//torch_xla/csrc:hash_util",
         "//torch_xla/csrc:thread_pool",
@@ -310,6 +311,7 @@ ptxla_cc_library(
     deps = [
         ":device",
         ":shape_helper",
+        ":status",
         ":unwrap_data",
         "//torch_xla/csrc/runtime:cache",
         "//torch_xla/csrc/runtime:computation_client",
@@ -324,6 +326,7 @@ cc_library(
     srcs = ["shape_helper.cpp"],
     hdrs = ["shape_helper.h"],
     deps = [
+        ":status",
         "//torch_xla/csrc/runtime:debug_macros",
         "@xla//xla/hlo/builder:xla_builder",
     ],
