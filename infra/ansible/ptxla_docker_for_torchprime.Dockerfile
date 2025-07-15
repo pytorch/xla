@@ -23,7 +23,7 @@
 #
 # (Googlers only) Refer to go/ptxla-torchprime-trigger for information on retention policy of
 # the docker images.
-ARG python_version=3.10
+ARG python_version=3.12
 ARG debian_version=bullseye
 
 FROM python:${python_version}-${debian_version} AS build
@@ -45,7 +45,6 @@ FROM python:${python_version}-${debian_version}
 # - torchvision-0.22.0a0+966da7e-cp310-cp310-linux_x86_64.whl
 # The precise names will depend on the git commit hash used at build time.
 WORKDIR /tmp/wheels
-RUN ls -la
 COPY ./*.whl ./
 
 RUN echo "Installing the following wheels" && ls *.whl
