@@ -26,7 +26,7 @@
 ARG python_version=3.10
 ARG debian_version=bullseye
 
-FROM python:${python_version}-${debian_version} AS release
+FROM python:${python_version}-${debian_version}
 
 # Install PyTorch wheels. We expect to install three wheels. Example:
 # - torch-2.8.0-cp310-cp310-linux_x86_64.whl
@@ -45,7 +45,7 @@ RUN pip install ansible
 COPY --from=ansible . /ansible
 
 ARG ansible_vars
-RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "install_deps"
+RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}" --tags "install_deps"
 
 WORKDIR /
 
