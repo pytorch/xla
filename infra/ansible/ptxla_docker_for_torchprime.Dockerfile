@@ -26,6 +26,11 @@
 ARG python_version=3.10
 ARG debian_version=bullseye
 
+# Build PyTorch and PyTorch/XLA wheels.
+ARG ansible_vars
+RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}"
+RUN ansible-playbook -vvv playbook.yaml -e "stage=build_plugin" -e "${ansible_vars}" --skip-tags=fetch_srcs,install_deps
+
 FROM python:${python_version}-${debian_version}
 
 # Install PyTorch wheels. We expect to install three wheels. Example:
