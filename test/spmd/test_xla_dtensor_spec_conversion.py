@@ -1,0 +1,149 @@
+import os
+import sys
+
+import torch
+from torch.distributed.tensor import DeviceMesh, Shard, distribute_tensor
+
+import torch_xla
+import torch_xla.runtime as xr
+
+import unittest
+import test_xla_sharding_base
+
+
+class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
+
+  @classmethod
+  def setUpClass(cls):
+    super().setUpClass()
+
+  def test_sample_test_case(self):
+    world_size = xr.global_runtime_device_count()
+    mesh = DeviceMesh("xla", torch.arange(world_size))
+    big_tensor = torch.randn(100000, 88)
+    my_dtensor = distribute_tensor(big_tensor, mesh, [Shard(0)])
+
+    assert my_dtensor._spec.mesh.device_type == mesh.device_type
+    assert my_dtensor._spec.placements == (Shard(0),)
+
+  def test_xla_to_dtensor_spec_conversion(self):
+    device_count = xr.global_runtime_device_count()
+    mesh = DeviceMesh("xla", list(range(device_count)))
+
+    # Test different sharding patterns
+    from torch.distributed.tensor.placement_types import Replicate
+    test_cases = [
+        (torch.randn(100, 50), [Shard(0)]),
+        (torch.randn(100, 50), [Shard(1)]),
+        (torch.randn(100, 50, 25), [Shard(0)]),
+        (torch.randn(100, 50), [Replicate()]),
+    ]
+
+    for tensor, placements in test_cases:
+      xla_tensor = distribute_tensor(tensor, mesh, placements)
+      spec = xla_tensor._spec
+
+      assert spec is not None
+      assert spec.mesh.device_type == "xla"
+      assert spec.tensor_meta.shape == tensor.shape
+      assert spec.tensor_meta.dtype == tensor.dtype
+      assert len(spec.placements) >= 1
+      assert spec.placements == tuple(placements)
+
+  def test_mesh_conversion(self):
+    device_count = xr.global_runtime_device_count()
+    original_mesh = DeviceMesh("xla", list(range(device_count)))
+    tensor = torch.randn(50, 50)
+    xla_tensor = distribute_tensor(tensor, original_mesh, [Shard(0)])
+
+    converted_spec = xla_tensor._spec
+
+    assert converted_spec.mesh.device_type == "xla"
+    assert converted_spec.mesh.size() == device_count
+    # assert on mesh dimensions
+    assert converted_spec.mesh.shape == original_mesh.shape
+
+  def test_spec_caching(self):
+    """Test that _spec property caches results for better performance"""
+    import time
+    device_count = xr.global_runtime_device_count()
+    mesh = DeviceMesh("xla", list(range(device_count)))
+    tensor = torch.randn(1000,
+                         1000)  # Large tensor to make spec creation noticeable
+    xla_tensor = distribute_tensor(tensor, mesh, [Shard(0)])
+
+    # first access should create and cache the spec
+    start_time = time.time()
+    spec1 = xla_tensor._spec
+    first_access_time = time.time() - start_time
+
+    # should be much faster due to caching
+    start_time = time.time()
+    spec2 = xla_tensor._spec
+    second_access_time = time.time() - start_time
+
+    assert spec1 is spec2
+    print(
+        f"First access: {first_access_time:.6f}s, Second access: {second_access_time:.6f}s"
+    )
+    assert second_access_time * 10 < first_access_time, \
+        f"Cached access should be much faster: {first_access_time:.6f}s vs {second_access_time:.6f}s"
+
+  def _create_test_tensor_and_mesh(self, tensor_shape, mesh_shape, placements):
+    """Helper to create tensor and mesh for testing"""
+    device_count = xr.global_runtime_device_count()
+    if device_count < max(mesh_shape):
+      self.skipTest(
+          f"Need at least {max(mesh_shape)} devices, got {device_count}")
+
+    mesh = DeviceMesh("xla", torch.arange(device_count).reshape(mesh_shape))
+    tensor = torch.randn(*tensor_shape)
+    return distribute_tensor(tensor, mesh, placements), mesh
+
+  def test_multi_dim_sharding_spec(self):
+    """Test _spec for multi-dimensional sharding"""
+    device_count = xr.global_runtime_device_count()
+    if device_count < 4:
+      self.skipTest("Need at least 4 devices for 2D mesh")
+
+    mesh_shape = (2, device_count // 2)
+    xla_tensor, mesh = self._create_test_tensor_and_mesh(
+        (100, 50), mesh_shape, [Shard(0), Shard(1)])
+    spec = xla_tensor._spec
+
+    assert len(spec.placements) == 2
+    assert spec.mesh.ndim == 2
+
+  def test_tensor_operations_preserve_spec(self):
+    """Test that tensor operations preserve sharding metadata"""
+    xla_tensor, mesh = self._create_test_tensor_and_mesh((100, 50), (-1,),
+                                                         [Shard(0)])
+
+    result_add = xla_tensor + 1
+    result_mul = xla_tensor * 2
+    result_relu = torch.relu(xla_tensor)
+
+    for result in [result_add, result_mul, result_relu]:
+      assert hasattr(result, '_spec')
+      assert result._spec.mesh.device_type == "xla"
+
+  def test_mixed_placement_spec(self):
+    """Test _spec for tensors with mixed shard/replicate placements"""
+    from torch.distributed.tensor.placement_types import Replicate
+    device_count = xr.global_runtime_device_count()
+    if device_count < 4:
+      self.skipTest("Need at least 4 devices for 2D mesh")
+
+    mesh_shape = (2, device_count // 2)
+    xla_tensor, mesh = self._create_test_tensor_and_mesh(
+        (100, 50), mesh_shape, [Shard(0), Replicate()])
+    spec = xla_tensor._spec
+
+    assert len(spec.placements) == 2
+    assert isinstance(spec.placements[0], Shard)
+    assert isinstance(spec.placements[1], Replicate)
+
+
+if __name__ == '__main__':
+  test = unittest.main()
+  sys.exit(0 if test.result.wasSuccessful() else 1)
