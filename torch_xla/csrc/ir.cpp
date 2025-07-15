@@ -208,9 +208,10 @@ void XlaNode::UpdateShardingHash() {
   for (size_t i = 0; i < output_shardings_.size(); i++) {
     // keep the index as part of the hash
     sharding_hash_ = torch::lazy::HashCombine(sharding_hash_, (uint32_t)i);
-    std::shared_ptr<xla::OpSharding> sharding =
-        std::make_shared<xla::OpSharding>(
-            output_shardings_[i]->GetXlaOpSharding());
+    std::shared_ptr<torch_xla::OpSharding> sharding =
+        std::make_shared<torch_xla::OpSharding>(
+            output_shardings_[i]->GetXlaOpSharding(),
+            output_shardings_[i]->GetDenormalizedTileAssignment());
     // skip the hash compute for empty sharding
     if (!sharding) {
       continue;

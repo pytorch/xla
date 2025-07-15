@@ -555,14 +555,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
   for (auto& instance : instances) {
     std::vector<int64_t> denormalized_tile_assignment;
-    if (!instance.parameters_data.empty() && instance.parameters_data[0]) {
-      auto sharding_opt = GetDataSharding(
-          std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-              instance.parameters_data[0]));
-      if (sharding_opt.has_value()) {
-        denormalized_tile_assignment =
-            sharding_opt.value().GetDenormalizedTileAssignment();
-      }
+    if (!instance.denormalized_tile_assignments.empty()) {
+      denormalized_tile_assignment = instance.denormalized_tile_assignments[0];
     }
     xla::CompileOptions compile_options;
     if (enable_cm_in_mp) {
