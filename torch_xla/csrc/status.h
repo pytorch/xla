@@ -16,11 +16,11 @@ namespace torch_xla {
 
 // Returns whether we should show C++ error context.
 //
-// More specifically, whether the `XLA_SHOW_CPP_ERROR_CONTEXT` environment
+// More specifically, whether the `TORCH_SHOW_CPP_STACKTRACES` environment
 // variable is set or not.
 [[nodiscard]] bool ShouldShowCppErrorContext();
 
-// If `XLA_SHOW_CPP_ERROR_CONTEXT` is set, creates a new Status instance,
+// If `TORCH_SHOW_CPP_STACKTRACES` is set, creates a new Status instance,
 // appending the current location (e.g. file and line information) to the
 // status message.
 //
@@ -32,7 +32,7 @@ namespace torch_xla {
 //         absl::InvalidArgumentError("Error message.")
 //     );
 //
-// If `XLA_SHOW_CPP_ERROR_CONTEXT` is set, the error shown will be:
+// If `TORCH_SHOW_CPP_STACKTRACES` is set, the error shown will be:
 //
 //     Error message. (at <cpp-source-file>:<line>)
 //
@@ -68,7 +68,7 @@ namespace torch_xla {
 //     );
 //
 // If the function call results in an ok status, execution continues. Otherwise,
-// we early return a non-ok status. Then, if `XLA_SHOW_CPP_ERROR_CONTEXT` is
+// we early return a non-ok status. Then, if `TORCH_SHOW_CPP_STACKTRACES` is
 // set, the error shown will be:
 //
 //     New error message. (at <cpp-source-file>:<line>)
@@ -99,7 +99,7 @@ namespace torch_xla {
 // If the function call results in an ok status, execution continues with
 // `result` set to `ret.value()`, where `ret` is the returned value of the
 // function. Otherwise, we early return a non-ok status. Then, if
-// `XLA_SHOW_CPP_ERROR_CONTEXT` is set, the error shown will be:
+// `TORCH_SHOW_CPP_STACKTRACES` is set, the error shown will be:
 //
 //     New error message. (at <cpp-source-file>:<line>)
 //     Previous error message. (at <cpp-source-file>:<line>)
@@ -114,7 +114,7 @@ namespace torch_xla {
 //
 // This function assumes that `status` is a non-ok status.
 //
-// If `XLA_SHOW_CPP_ERROR_CONTEXT` is set, appends the current source
+// If `TORCH_SHOW_CPP_STACKTRACES` is set, appends the current source
 // location information to the status message. Otherwise, it simply returns
 // `status`.
 absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
@@ -144,7 +144,7 @@ const absl::Status& GetStatus(const absl::StatusOr<T>& status) {
 // to construct better error messages to the user.
 //
 // This function also appends file location information to the error message, if
-// `XLA_SHOW_CPP_ERROR_CONTEXT` is set.
+// `TORCH_SHOW_CPP_STACKTRACES` is set.
 absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
                                  int32_t line,
                                  std::string_view new_message = "");

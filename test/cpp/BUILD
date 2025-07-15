@@ -175,8 +175,8 @@ cc_library(
 )
 
 ptxla_cc_test(
-    name = "test_status_dont_show_cpp_error_context",
-    srcs = ["test_status_dont_show_cpp_error_context.cpp"],
+    name = "test_status_dont_show_cpp_stacktraces",
+    srcs = ["test_status_dont_show_cpp_stacktraces.cpp"],
     deps = [
         ":test_status_common",
         "@com_google_googletest//:gtest_main",
@@ -184,8 +184,8 @@ ptxla_cc_test(
 )
 
 ptxla_cc_test(
-    name = "test_status_show_cpp_error_context",
-    srcs = ["test_status_show_cpp_error_context.cpp"],
+    name = "test_status_show_cpp_stacktraces",
+    srcs = ["test_status_show_cpp_stacktraces.cpp"],
     deps = [
         ":test_status_common",
         "@com_google_googletest//:gtest_main",
