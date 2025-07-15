@@ -56,7 +56,7 @@ TEST_XLA_CHECK_GREATER(GT, <, 5, 8)
 }  // namespace torch_xla
 
 static void SetUp() {
-  setenv(torch_xla::runtime::env::kEnvShowCppErrorContext, /* value= */ "true",
+  setenv(torch_xla::runtime::env::kEnvShowCppStacktraces, /* value= */ "true",
          /* replace= */ 1);
 }
 
