@@ -15,7 +15,7 @@ void ErrorGenerator::operator&(const std::basic_ostream<char>& oss) const {
   std::stringstream ess;
   ess << sink.str();
 
-  if (ShouldShowCppErrorContext()) {
+  if (ShouldShowCppStacktraces()) {
     ess << " (at " << file_ << ":" << line_ << ")\n";
     ess << tsl::CurrentStackTrace();
   }

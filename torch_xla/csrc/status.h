@@ -18,7 +18,7 @@ namespace torch_xla {
 //
 // More specifically, whether the `TORCH_SHOW_CPP_STACKTRACES` environment
 // variable is set or not.
-[[nodiscard]] bool ShouldShowCppErrorContext();
+[[nodiscard]] bool ShouldShowCppStacktraces();
 
 // If `TORCH_SHOW_CPP_STACKTRACES` is set, creates a new Status instance,
 // appending the current location (e.g. file and line information) to the
