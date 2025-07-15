@@ -26,6 +26,8 @@
 ARG python_version=3.12
 ARG debian_version=bullseye
 
+FROM python:${python_version}-${debian_version} AS release
+
 # Install PyTorch wheels. We expect to install three wheels. Example:
 # - torch-2.8.0-cp310-cp310-linux_x86_64.whl
 # - torch_xla-2.8.0+gitd4b0a48-cp310-cp310-linux_x86_64.whl
