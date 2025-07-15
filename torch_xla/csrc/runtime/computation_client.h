@@ -229,7 +229,7 @@ class ComputationClient {
         std::vector<std::string> devices, const xla::Shape* output_shape,
         bool parameter_is_tupled_arguments = false, bool is_sharded = false,
         bool allow_spmd_sharding_propagation_to_output = true,
-        std::vector<torch::lazy::BackendDataPtr> parameters_data = {},
+        std::vector<std::vector<int64_t>> denormalized_tile_assignments = {},
         bool use_auto_spmd_partitioning = false,
         std::vector<int64_t> auto_spmd_mesh_shape = {},
         std::vector<int64_t> auto_spmd_mesh_ids = {}, bool eager_mode = false)
@@ -241,7 +241,7 @@ class ComputationClient {
           is_sharded(is_sharded),
           allow_spmd_sharding_propagation_to_output(
               allow_spmd_sharding_propagation_to_output),
-          parameters_data(parameters_data),
+          denormalized_tile_assignments(denormalized_tile_assignments),
           use_auto_spmd_partitioning(use_auto_spmd_partitioning),
           auto_spmd_mesh_shape(auto_spmd_mesh_shape),
           auto_spmd_mesh_ids(auto_spmd_mesh_ids),
@@ -251,7 +251,7 @@ class ComputationClient {
     std::string compilation_device;
     std::vector<std::string> devices;
     const xla::Shape* output_shape = nullptr;
-    std::vector<torch::lazy::BackendDataPtr> parameters_data;
+    std::vector<std::vector<int64_t>> denormalized_tile_assignments;
     bool parameter_is_tupled_arguments;
     bool is_sharded;
     bool allow_spmd_sharding_propagation_to_output;

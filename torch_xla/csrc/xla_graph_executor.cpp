@@ -1443,6 +1443,16 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
+  std::vector<std::vector<int64_t>> denormalized_tile_assignments;
+  for (auto tensor : tensors) {
+    auto sharding_spec = tensor->sharding_spec();
+    if (sharding_spec) {
+      denormalized_tile_assignments.push_back(
+          sharding_spec->sharding.GetDenormalizedTileAssignment());
+    } else {
+      TF_VLOG(5) << "no sharding spec for tensor - " << tensor;
+    }
+  }
   std::vector<runtime::ComputationClient::CompileInstance> instances;
   instances.push_back(
       {std::move(computation), coll.device.toString(),
@@ -1450,7 +1460,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
            coll.device.toString(), devices),
        &shape, should_wrap_parameter, is_sharded,
        /*allow_spmd_sharding_propagation_to_output=*/true,
-       /*parameters_data=*/po_data->parameters_data});
+       /*denormalized_tile_assignments=*/denormalized_tile_assignments});
   instances.front().eager_mode = UseEagerMode();
   if (use_autosharding) {
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";

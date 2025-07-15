@@ -99,6 +99,11 @@ OpSharding::iota_transpose_perm() const {
   return op_sharding_->iota_transpose_perm();
 }
 
+const ::google::protobuf::RepeatedField<int32_t>& OpSharding::last_tile_dims()
+    const {
+  return op_sharding_->last_tile_dims();
+}
+
 const xla::ShapeProto& OpSharding::tile_shape() const {
   return op_sharding_->tile_shape();
 }
