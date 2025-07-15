@@ -66,7 +66,7 @@ docker build -t "${DOCKER_URL}" \
     "${DEFAULT_CONTEXT_PATH}" \
     -f "${DOCKERFILE_PATH}" \
     --build-arg ansible_vars="${ANSIBLE_VARS_COMPACT}" \
-    --build-arg python_version=3.10 \
+    --build-arg python_version=3.12 \
     --build-arg debian_version=bullseye
 docker push "${DOCKER_URL}"
 

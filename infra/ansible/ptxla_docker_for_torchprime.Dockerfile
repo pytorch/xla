@@ -26,17 +26,6 @@
 ARG python_version=3.12
 ARG debian_version=bullseye
 
-FROM python:${python_version}-${debian_version}
-
-WORKDIR /ansible
-RUN pip install ansible
-COPY . /ansible
-
-# Build PyTorch and PyTorch/XLA wheels.
-ARG ansible_vars
-RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}"
-RUN ansible-playbook -vvv playbook.yaml -e "stage=build_plugin" -e "${ansible_vars}" --skip-tags=fetch_srcs,install_deps
-
 # Install PyTorch wheels. We expect to install three wheels. Example:
 # - torch-2.8.0-cp310-cp310-linux_x86_64.whl
 # - torch_xla-2.8.0+gitd4b0a48-cp310-cp310-linux_x86_64.whl
@@ -54,7 +43,7 @@ RUN pip install ansible
 COPY --from=ansible . /ansible
 
 ARG ansible_vars
-RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}" --tags "install_deps"
+RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "install_deps"
 
 WORKDIR /
 
