@@ -253,6 +253,7 @@ function run_xla_op_tests3 {
   run_test "$_TEST_DIR/spmd/test_dtensor_integration.py"
   run_test "$_TEST_DIR/spmd/test_dtensor_integration2.py"
   run_test_multi_devices_without_func "$_TEST_DIR/spmd/test_dtensor_integration3.py"
+  run_test_multi_devices "$_TEST_DIR/spmd/test_dtensor_convert_mesh.py"
   run_test "$_TEST_DIR/spmd/test_xla_auto_sharding.py"
   run_test "$_TEST_DIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$_TEST_DIR/spmd/test_mp_input_sharding.py"
