@@ -26,6 +26,10 @@
 ARG python_version=3.10
 ARG debian_version=bullseye
 
+WORKDIR /ansible
+RUN pip install ansible
+COPY . /ansible
+
 # Build PyTorch and PyTorch/XLA wheels.
 ARG ansible_vars
 RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}"
@@ -39,6 +43,7 @@ FROM python:${python_version}-${debian_version}
 # - torchvision-0.22.0a0+966da7e-cp310-cp310-linux_x86_64.whl
 # The precise names will depend on the git commit hash used at build time.
 WORKDIR /tmp/wheels
+RUN ls -la
 COPY ./*.whl ./
 
 RUN echo "Installing the following wheels" && ls *.whl
