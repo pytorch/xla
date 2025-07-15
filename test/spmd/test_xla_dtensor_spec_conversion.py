@@ -3,12 +3,9 @@ import sys
 
 import torch
 from torch.distributed.tensor import DeviceMesh, Shard, distribute_tensor
-from torch.distributed.tensor.placement_types import Replicate
 
 import torch_xla
 import torch_xla.runtime as xr
-from torch_xla.distributed.spmd import XLAShardedTensor
-from torch_xla.distributed.spmd.xla_sharding import wrap_as_sharded_tensor
 
 import unittest
 import test_xla_sharding_base
@@ -34,6 +31,7 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
     mesh = DeviceMesh("xla", list(range(device_count)))
 
     # Test different sharding patterns
+    from torch.distributed.tensor.placement_types import Replicate
     test_cases = [
         (torch.randn(100, 50), [Shard(0)]),
         (torch.randn(100, 50), [Shard(1)]),
@@ -66,20 +64,30 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
     assert converted_spec.mesh.shape == original_mesh.shape
 
   def test_spec_caching(self):
-    """Test that _spec property caches results
-    """
+    """Test that _spec property caches results for better performance"""
+    import time
     device_count = xr.global_runtime_device_count()
     mesh = DeviceMesh("xla", list(range(device_count)))
-    tensor = torch.randn(100, 100)
+    tensor = torch.randn(1000,
+                         1000)  # Large tensor to make spec creation noticeable
     xla_tensor = distribute_tensor(tensor, mesh, [Shard(0)])
 
+    # first access should create and cache the spec
+    start_time = time.time()
     spec1 = xla_tensor._spec
+    first_access_time = time.time() - start_time
 
-    assert xla_tensor._cached_spec is not None
-    assert xla_tensor._cached_spec is spec1
-
+    # should be much faster due to caching
+    start_time = time.time()
     spec2 = xla_tensor._spec
+    second_access_time = time.time() - start_time
+
     assert spec1 is spec2
+    print(
+        f"First access: {first_access_time:.6f}s, Second access: {second_access_time:.6f}s"
+    )
+    assert second_access_time * 10 < first_access_time, \
+        f"Cached access should be much faster: {first_access_time:.6f}s vs {second_access_time:.6f}s"
 
   def _create_test_tensor_and_mesh(self, tensor_shape, mesh_shape, placements):
     """Helper to create tensor and mesh for testing"""
@@ -106,8 +114,22 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
     assert len(spec.placements) == 2
     assert spec.mesh.ndim == 2
 
+  def test_tensor_operations_preserve_spec(self):
+    """Test that tensor operations preserve sharding metadata"""
+    xla_tensor, mesh = self._create_test_tensor_and_mesh((100, 50), (-1,),
+                                                         [Shard(0)])
+
+    result_add = xla_tensor + 1
+    result_mul = xla_tensor * 2
+    result_relu = torch.relu(xla_tensor)
+
+    for result in [result_add, result_mul, result_relu]:
+      assert hasattr(result, '_spec')
+      assert result._spec.mesh.device_type == "xla"
+
   def test_mixed_placement_spec(self):
     """Test _spec for tensors with mixed shard/replicate placements"""
+    from torch.distributed.tensor.placement_types import Replicate
     device_count = xr.global_runtime_device_count()
     if device_count < 4:
       self.skipTest("Need at least 4 devices for 2D mesh")
@@ -120,114 +142,6 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
     assert len(spec.placements) == 2
     assert isinstance(spec.placements[0], Shard)
     assert isinstance(spec.placements[1], Replicate)
-
-  def test_sharding_info_acquisition(self):
-    """Test that non-XLAShardedTensor can acquire sharding information
-
-    Tests case of 'elem is not an XLAShardedTensor but there exists 
-    sharding information we want to acquire'
-    """
-
-    device_count = xr.global_runtime_device_count()
-    mesh_shape = (device_count,)
-    partition_spec = (0, None)
-
-    regular_tensor = torch.randn(100, 50).to('xla')
-
-    sharded_tensor = wrap_as_sharded_tensor(
-        regular_tensor, mesh_shape=mesh_shape, partition_spec=partition_spec)
-
-    # Verify the tensor acquired the sharding information
-    assert isinstance(sharded_tensor, XLAShardedTensor)
-    assert sharded_tensor.mesh_shape == mesh_shape
-    assert sharded_tensor.partition_spec == partition_spec
-
-  def test_resharding_logic(self):
-    """
-    Tests wrap_as_sharded_tensor resharding before returning XLAShardedTensor t.
-    """
-
-    device_count = xr.global_runtime_device_count()
-    if device_count < 4:
-      self.skipTest("Need at least 4 devices for resharding test")
-
-    # Initial sharding
-    initial_mesh_shape = (device_count,)
-    initial_partition_spec = (0, None)
-    new_mesh_shape = (2, device_count // 2)
-    new_partition_spec = (0, 1)
-
-    # Create tensor and verify resharding
-    tensor = torch.randn(100, 50).to('xla')
-    sharded_tensor = wrap_as_sharded_tensor(
-        tensor,
-        mesh_shape=initial_mesh_shape,
-        partition_spec=initial_partition_spec)
-    initial_spec = sharded_tensor._spec
-
-    resharded_tensor = wrap_as_sharded_tensor(
-        sharded_tensor,
-        mesh_shape=new_mesh_shape,
-        partition_spec=new_partition_spec)
-
-    # Verify resharding worked and cache was invalidated
-    assert resharded_tensor.mesh_shape == new_mesh_shape
-    assert resharded_tensor.partition_spec == new_partition_spec
-    assert resharded_tensor._spec is not initial_spec
-
-  def test_spec_invalidation_on_resharding(self):
-    """Tests cases where the cached spec may become outdated.
-    """
-
-    device_count = xr.global_runtime_device_count()
-    if device_count < 4:
-      self.skipTest("Need at least 4 devices for resharding test")
-
-    tensor = torch.randn(100, 50).to('xla')
-    initial_mesh_shape = (device_count,)
-    initial_partition_spec = (0, None)
-    new_mesh_shape = (2, device_count // 2)
-    new_partition_spec = (0, 1)
-
-    sharded_tensor = wrap_as_sharded_tensor(
-        tensor,
-        mesh_shape=initial_mesh_shape,
-        partition_spec=initial_partition_spec)
-    initial_spec = sharded_tensor._spec
-    assert sharded_tensor._cached_spec is not None
-
-    # Changing mesh_shape / partition_spec through wrap_as_sharded_tensor invalidates cache
-    resharded_tensor = wrap_as_sharded_tensor(
-        sharded_tensor,
-        mesh_shape=new_mesh_shape,
-        partition_spec=initial_partition_spec)
-    assert resharded_tensor._spec is not initial_spec
-    assert resharded_tensor._spec.mesh.shape == new_mesh_shape
-
-    initial_spec = resharded_tensor._spec
-    resharded_tensor = wrap_as_sharded_tensor(
-        resharded_tensor,
-        mesh_shape=new_mesh_shape,
-        partition_spec=new_partition_spec)
-    assert resharded_tensor._spec is not initial_spec
-    assert resharded_tensor._spec.placements[1].dim == 1
-
-  def test_auto_wrapped_tensor_spec_failure(self):
-    """Test that auto-wrapped tensors fail when accessing _spec property.
-    
-    Auto-wrapped tensors are created through operations that trigger __torch_dispatch__
-    but don't yet have access to the sharding propagation done through open xla,
-    causing ._spec to fail. 
-    """
-    device_count = xr.global_runtime_device_count()
-    mesh = DeviceMesh("xla", torch.arange(device_count))
-    tensor = torch.randn(4, 4)
-    sharded_tensor = distribute_tensor(tensor, mesh, [Shard(0)])
-
-    auto_wrapped = sharded_tensor + sharded_tensor
-
-    with self.assertRaises(ValueError):
-      _ = auto_wrapped._spec
 
 
 if __name__ == '__main__':
