@@ -58,6 +58,7 @@ class OpSharding {
   const ::google::protobuf::RepeatedField<int64_t>& tile_assignment_devices()
       const;
   const ::google::protobuf::RepeatedField<int32_t>& iota_transpose_perm() const;
+  const ::google::protobuf::RepeatedField<int32_t>& last_tile_dims() const;
   const xla::ShapeProto& tile_shape() const;
 
   // Access to underlying xla::OpSharding

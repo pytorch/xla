@@ -413,20 +413,28 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
   xla::XlaComputation xla_computation =
       GetValueOrThrow(b.Build(/*remove_dynamic_dimensions=*/false));
 
-  std::vector<torch::lazy::BackendDataPtr> parameters_data;
-  parameters_data.push_back(
+  std::vector<XLATensorPtr> tensors{XLATensor::Create(
       torch_xla::runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
-          bridge::GetDefaultDevice()->toString(), std::move(shape)));
+          bridge::GetDefaultDevice()->toString(), std::move(shape)))};
+  std::vector<std::vector<int64_t>> denormalized_tile_assignments;
+  for (auto tensor : tensors) {
+    auto sharding_spec = tensor->sharding_spec();
+    if (sharding_spec) {
+      denormalized_tile_assignments.push_back(
+          sharding_spec->sharding.GetDenormalizedTileAssignment());
+    }
+  }
 
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
-  instances.push_back({std::move(xla_computation),
-                       bridge::GetDefaultDevice()->toString(),
-                       {bridge::GetDefaultDevice()->toString()},
-                       &shape,
-                       /*should_wrap_parameter=*/false,
-                       /*is_sharded=*/true,
-                       /*allow_spmd_sharding_propagation_to_output=*/true,
-                       /*parameters_data=*/parameters_data});
+  instances.push_back(
+      {std::move(xla_computation),
+       bridge::GetDefaultDevice()->toString(),
+       {bridge::GetDefaultDevice()->toString()},
+       &shape,
+       /*should_wrap_parameter=*/false,
+       /*is_sharded=*/true,
+       /*allow_spmd_sharding_propagation_to_output=*/true,
+       /*denormalized_tile_assignments=*/denormalized_tile_assignments});
 
   std::vector<
       std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
@@ -437,9 +445,6 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
           "add", std::move(computations[0]->move_computation()));
 
   // Prepare output sharding propagation, expect a sharded output placeholder.
-  std::vector<XLATensorPtr> tensors{XLATensor::Create(
-      torch_xla::runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
-          bridge::GetDefaultDevice()->toString(), std::move(shape)))};
   std::vector<torch::lazy::BackendDataPtr> data_placeholders;
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs;
   ShardingUtil::PrepareOutputShardingPropagation(
