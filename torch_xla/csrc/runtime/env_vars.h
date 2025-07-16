@@ -41,7 +41,8 @@ inline constexpr char kEnvDistSvcShutdownTimeoutInMin[] =
 // When set to true, this enables showing C++ error context in backtraces,
 // which can be helpful for debugging but may clutter logs when not needed.
 //
-// Ref: https://docs.pytorch.org/docs/stable/debugging_environment_variables.html
+// Ref:
+// https://docs.pytorch.org/docs/stable/debugging_environment_variables.html
 inline constexpr char kEnvShowCppStacktraces[] = "TORCH_SHOW_CPP_STACKTRACES";
 
 }  // namespace env
