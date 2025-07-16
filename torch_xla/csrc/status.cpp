@@ -3,7 +3,6 @@
 #include <torch/csrc/utils/cpp_stacktraces.h>
 
 #include "absl/log/absl_check.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
 
 namespace torch_xla {
 
