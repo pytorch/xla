@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+git4b3d34d )
+                  master (2.9.0+gitd7c9e50 )
                 </div>
               
             
@@ -603,7 +603,7 @@ disable execution analysis by <code class="docutils literal notranslate"><span c
 PyTorch/XLA efficiently, we expect the same models code to be run for
 every step and compilation only happen once for every graph. If you keep
 seeing <code class="docutils literal notranslate"><span class="pre">Compilation</span> <span class="pre">Cause</span></code>, you should try to dump the IR/HLO following
-<a class="reference internal" href="#common-debugging-environment-variables-combinations"><span class="std std-ref">Common Debugging Environment Variables Combinations</span></a> and
+<a class="reference internal" href="#common-debugging-environment-variables-combinations"><span class="std std-doc">Common Debugging Environment Variables Combinations</span></a> and
 compare the graphs for each step and understand the source of the
 differences.</p>
 <p>Following section will explain how to get and understand a more detail
@@ -739,7 +739,7 @@ Don’t use it unless it’s necessary.</p></li>
 <p><em>Solution</em>:</p>
 <ul>
 <li><p>For most ops we can lower them to XLA to fix it. Checkout
-<a class="reference internal" href="#get-a-metrics-report"><span class="std std-ref">Get A Metrics Report</span></a> to find out the
+<a class="reference internal" href="#get-a-metrics-report"><span class="std std-doc">Get A Metrics Report</span></a> to find out the
 missing ops and open a feature request on
 <a class="reference external" href="https://github.com/pytorch/xla/issues">GitHub</a>.</p></li>
 <li><p>Even when a PyTorch tensor is known as a scalar, avoid using

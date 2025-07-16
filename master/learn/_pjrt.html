@@ -289,7 +289,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+git4b3d34d )
+                  master (2.9.0+gitd7c9e50 )
                 </div>
               
             
@@ -489,8 +489,8 @@ variable to <code class="docutils literal notranslate"><span class="pre">CPU</sp
 <li><p>In XRT, all distributed workloads are multiprocess, with one process
 per device. On TPU v2 and v3 in PJRT, workloads are multiprocess and
 multithreaded (4 processes with 2 threads each), so your workload
-should be thread-safe. See <span class="xref myst">Multithreading on TPU
-v2/v3</span> and the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing">Multiprocessing section
+should be thread-safe. See <a class="reference internal" href="#multithreading-on-tpu-v2v3"><span class="std std-ref">Multithreading on TPU
+v2/v3</span></a> and the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing">Multiprocessing section
 of the API
 guide</a>
 for more information. Key differences to keep in mind:</p>
@@ -726,7 +726,7 @@ for more information about TPU architecture.</p>
 from .</p></li>
 <li><p>Under XRT, the server process is the only process that interacts
 with the TPU devices, and client processes don’t have direct access
-to the TPU devices. When profiling a single-host TPU (e.g. v3-8 or
+to the TPU devices. When profiling a single-host TPU (e.g. v3-8 or
 v4-8), you would normally see 8 device traces (one for each TPU
 core). With PJRT, each process has one chip, and a profile from that
 process will show only 2 TPU cores.</p>
@@ -744,13 +744,13 @@ is not required to run TPU Pod workloads. Instead, copy your code to
 each TPU host
 (<code class="docutils literal notranslate"><span class="pre">[gcloud</span> <span class="pre">compute</span> <span class="pre">tpus</span> <span class="pre">tpu-vm</span>&#160;&#160; <span class="pre">scp](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/scp)</span></code>)
 and run the code on each host in parallel
-(e.g. <code class="docutils literal notranslate"><span class="pre">[gcloud</span> <span class="pre">compute</span> <span class="pre">tpus</span> <span class="pre">tpu-vm</span>&#160;&#160; <span class="pre">ssh</span> <span class="pre">--workers=all</span> <span class="pre">--command=&quot;PJRT_DEVICE=TPU</span> <span class="pre">python</span>&#160;&#160; <span class="pre">run.py&quot;](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/ssh)</span></code>)</p></li>
+(e.g. <code class="docutils literal notranslate"><span class="pre">[gcloud</span> <span class="pre">compute</span> <span class="pre">tpus</span> <span class="pre">tpu-vm</span>&#160;&#160; <span class="pre">ssh</span> <span class="pre">--workers=all</span> <span class="pre">--command=&quot;PJRT_DEVICE=TPU</span> <span class="pre">python</span>&#160;&#160; <span class="pre">run.py&quot;](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/ssh)</span></code>)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> has been reimplemented using XLA-native collective
 communication to enhance stability on large TPU pods. See below for
 more details.</p></li>
 </ul>
 <section id="multithreading-on-tpu-v2-v3">
-<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#multithreading-on-tpu-v2-v3" title="Permalink to this heading">¶</a></h3>
+<span id="multithreading-on-tpu-v2v3"></span><h3>Multithreading on TPU v2/v3<a class="headerlink" href="#multithreading-on-tpu-v2-v3" title="Permalink to this heading">¶</a></h3>
 <p>On TPU v2 and v3, <strong>distributed workloads always run multithreaded</strong>,
 since each TPU core exposes two TPU cores as devices and only one
 process may open a TPU chip at a time. In its default configuration,
@@ -790,7 +790,7 @@ compilation.</p></li>
 <li><p>Because XLA does not permit collective operations to run on a subset
 of workers, all workers must participate in the <code class="docutils literal notranslate"><span class="pre">rendezvous</span></code>.</p></li>
 </ul>
-<p>If you require the old behavior of <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> (i.e. communicating
+<p>If you require the old behavior of <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> (i.e. communicating
 data without altering the XLA graph and/or synchronizing a subset of
 workers), consider using <code class="docutils literal notranslate"><span class="pre">`torch.distributed.barrier</span></code>
 &lt;<a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier">https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier</a>&gt;[__
@@ -816,7 +816,7 @@ chips, so expect this alternative to be less reliable than using
 <h3>PJRT and torch.distributed<a class="headerlink" href="#pjrt-and-torch-distributed" title="Permalink to this heading">¶</a></h3>
 <p><em>New in PyTorch/XLA r2.0</em></p>
 <p>When using PJRT with <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> and
-<code class="docutils literal notranslate"><span class="pre">[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/ddp.md)</span></code>
+<code class="docutils literal notranslate"><span class="pre">[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/source/perf/ddp.md)</span></code>
 we strongly recommend using the new <code class="docutils literal notranslate"><span class="pre">xla://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code>, which
 automatically finds the replica IDs, world size, and master IP by
 querying the runtime. For example:</p>
@@ -852,9 +852,9 @@ init_method finds this IP automatically.</p>
 <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt_backend</span></code>, as TPU v2/v3 support in
 <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> is still experimental.</p>
 <p>For more information about using <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code> on
-PyTorch/XLA, see <span class="xref myst">ddp.md</span> on TPU V4. For an example that uses
-DDP and PJRT together, run the following <span class="xref myst">example
-script</span> on a TPU:</p>
+PyTorch/XLA, see <a class="reference internal" href="../perf/ddp.html"><span class="doc std std-doc">ddp.md</span></a> on TPU V4. For an example that uses
+DDP and PJRT together, run the following <a class="reference download internal" download="" href="../_downloads/503dd009ac67ab7539ed660463784351/test_train_mp_imagenet.py"><span class="xref download myst">example
+script</span></a> on a TPU:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>TPU<span class="w"> </span>python<span class="w"> </span>xla/test/test_train_mp_mnist.py<span class="w"> </span>--ddp<span class="w"> </span>--pjrt_distributed<span class="w"> </span>--fake_data<span class="w"> </span>--num_epochs<span class="w"> </span><span class="m">1</span>
 </pre></div>
 </div>

@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+git4b3d34d )
+                  master (2.9.0+gitd7c9e50 )
                 </div>
               
             
@@ -494,7 +494,7 @@ you can test with the placeholder <code class="docutils literal notranslate"><sp
 </pre></div>
 </div>
 <p>To register your device type automatically for users as well as to
-handle extra setup for e.g. multiprocessing, you may implement the
+handle extra setup, for example, multiprocessing, you may implement the
 <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code> Python API. PyTorch/XLA plugin packages contain two key
 components:</p>
 <ol class="arabic simple">
@@ -508,16 +508,15 @@ provides the path to your plugin binary. For example:</p></li>
         <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;lib&#39;</span><span class="p">,</span> <span class="s1">&#39;pjrt_c_api_cpu_plugin.so&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<ol class="arabic simple" start="2">
+<ol class="arabic" start="2">
 <li><p>A <code class="docutils literal notranslate"><span class="pre">torch_xla.plugins</span></code> <a class="reference external" href="https://setuptools.pypa.io/en/latest/userguide/entry_point.html">entry
 point</a>
 that identifies your <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code>. For exmaple, to register the
-<code class="docutils literal notranslate"><span class="pre">EXAMPLE</span></code> device type in a <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>:</p></li>
+<code class="docutils literal notranslate"><span class="pre">EXAMPLE</span></code> device type in a <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>:</p>
+<p>[project.entry-points.”torch_xla.plugins”]
+example = “torch_xla_cpu_plugin:CpuPlugin”</p>
+</li>
 </ol>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[project.entry-points.&quot;torch_xla.plugins&quot;]
-example = &quot;torch_xla_cpu_plugin:CpuPlugin&quot;
-</pre></div>
-</div>
 <p>With your package installed, you may then use your <code class="docutils literal notranslate"><span class="pre">EXAMPLE</span></code> device
 directly:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ PJRT_DEVICE=EXAMPLE python
