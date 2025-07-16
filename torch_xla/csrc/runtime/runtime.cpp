@@ -7,6 +7,7 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/ifrt_computation_client.h"
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
+#include "torch_xla/csrc/status.h"
 #include "tsl/platform/stacktrace_handler.h"
 
 namespace torch_xla::runtime {
@@ -32,13 +33,18 @@ InitializeComputationClient() {
   // static bool use_ifrt = sys_util::GetEnvBool("XLA_USE_IFRT", false);
   const bool use_ifrt = false;
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") == "") {
-    return absl::FailedPreconditionError("$PJRT_DEVICE is not set.");
+    return XLA_ERROR_WITH_LOCATION(
+        absl::FailedPreconditionError("$PJRT_DEVICE is not set."));
   }
 
+  std::unique_ptr<ComputationClient> client;
   if (use_ifrt) {
-    return new IfrtComputationClient();
+    XLA_ASSIGN_OR_RETURN(client, IfrtComputationClient::Create());
+  } else {
+    XLA_ASSIGN_OR_RETURN(client, PjRtComputationClient::Create());
   }
-  return new PjRtComputationClient();
+
+  return client.release();
 }
 
 const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient() {
