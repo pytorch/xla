@@ -304,7 +304,7 @@ class XlaHelpers {
 
   // Given the two shape 'shape1' and 'shape2', infers the broadcasted shape.
   static absl::StatusOr<xla::Shape> GetPromotedShape(const xla::Shape& shape1,
-                                                      const xla::Shape& shape2);
+                                                     const xla::Shape& shape2);
 
   static xla::Shape GetPromotedDynamicShape(const xla::Shape& shape1,
                                             const xla::Shape& shape2);

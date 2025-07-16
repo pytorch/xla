@@ -33,8 +33,8 @@ std::pair<xla::Shape, xla::Shape> InferTriangularSolveShape(
     return std::pair<xla::Shape, xla::Shape>(rhs_batch_shape, lhs_batch_shape);
   }
   // Obtain the promoted shapes and add back the trailing dimension.
-  xla::Shape rhs_batch_promoted_shape =
-      GetValueOrThrow(XlaHelpers::GetPromotedShape(rhs_batch_shape, lhs_batch_shape));
+  xla::Shape rhs_batch_promoted_shape = GetValueOrThrow(
+      XlaHelpers::GetPromotedShape(rhs_batch_shape, lhs_batch_shape));
   xla::Shape lhs_batch_promoted_shape(rhs_batch_promoted_shape);
   rhs_batch_promoted_shape.add_dimensions(nrhs);
   lhs_batch_promoted_shape.add_dimensions(n);
