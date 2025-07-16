@@ -2445,6 +2445,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t = t.to(torch.float16)
     self._test_no_fallback(torch.isneginf, (t,))
 
+  def test_add_broadcast_error(self):
+    a = torch.rand(2, 2, 4, 4, device="xla")
+    b = torch.rand(2, 2, device="xla")
+
+    expected_regex = (
+        "Shapes are not compatible for broadcasting: f32\[2,2,4,4\] vs. f32\[2,2\]. "
+        "Expected dimension 2 of shape f32\[2,2,4,4\] \(4\) to match dimension "
+        "0 of shape f32\[2,2\] \(2\). .*")
+
+    with self.assertRaisesRegex(RuntimeError, expected_regex):
+      torch.add(a, b)
+      torch_xla.sync()
+
 
 class MNISTComparator(nn.Module):
 
@@ -2980,9 +2993,11 @@ class TestDLPack(parameterized.TestCase):
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
-  @parameterized.parameters(
-      *all_types_and_complex_and(torch.half, torch.bfloat16, torch.bool,
-                                 torch.uint16, torch.uint32, torch.uint64))
+  @parameterized.parameters(*all_types_and_complex_and(torch.half,
+                                                       torch.bfloat16,
+                                                       torch.bool, torch.uint16,
+                                                       torch.uint32,
+                                                       torch.uint64))
   def test_dlpack_roundtrip_scalar(self, dtype):
     xla_device = torch_xla.device()
     xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)
