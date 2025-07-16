@@ -3,6 +3,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/layout_util.h"
 
@@ -33,7 +34,7 @@ std::pair<xla::Shape, xla::Shape> InferTriangularSolveShape(
   }
   // Obtain the promoted shapes and add back the trailing dimension.
   xla::Shape rhs_batch_promoted_shape =
-      XlaHelpers::GetPromotedShape(rhs_batch_shape, lhs_batch_shape);
+      GetValueOrThrow(XlaHelpers::GetPromotedShape(rhs_batch_shape, lhs_batch_shape));
   xla::Shape lhs_batch_promoted_shape(rhs_batch_promoted_shape);
   rhs_batch_promoted_shape.add_dimensions(nrhs);
   lhs_batch_promoted_shape.add_dimensions(n);
