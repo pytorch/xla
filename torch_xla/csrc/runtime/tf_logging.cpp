@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 
 #include <stdexcept>
+#include <torch/csrc/utils/cpp_stacktraces.h>
 
 #include "torch_xla/csrc/status.h"
 #include "tsl/platform/stacktrace.h"
@@ -15,7 +16,7 @@ void ErrorGenerator::operator&(const std::basic_ostream<char>& oss) const {
   std::stringstream ess;
   ess << sink.str();
 
-  if (ShouldShowCppStacktraces()) {
+  if (torch::get_cpp_stacktraces_enabled()) {
     ess << " (at " << file_ << ":" << line_ << ")\n";
     ess << tsl::CurrentStackTrace();
   }

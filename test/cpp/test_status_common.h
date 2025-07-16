@@ -51,7 +51,7 @@ class StatusTest : public testing::TestWithParam<CppStacktracesMode> {
  public:
   StatusTest() {
     const char* const value = IsShowCppStacktracesMode() ? "true" : "false";
-    setenv(runtime::env::kEnvShowCppStacktraces, value, /* replace= */ 1);
+    setenv("TORCH_SHOW_CPP_STACKTRACES", value, /* replace= */ 1);
   }
 
  protected:

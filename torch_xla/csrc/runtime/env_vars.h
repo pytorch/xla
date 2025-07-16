@@ -38,13 +38,6 @@ inline constexpr char kEnvDistSvcMaxMissingHeartbeats[] =
 inline constexpr char kEnvDistSvcShutdownTimeoutInMin[] =
     "DIST_SERVICE_SHUTDOWN_TIMEOUT_IN_MIN";
 
-// When set to true, this enables showing C++ error context in backtraces,
-// which can be helpful for debugging but may clutter logs when not needed.
-//
-// Ref:
-// https://docs.pytorch.org/docs/stable/debugging_environment_variables.html
-inline constexpr char kEnvShowCppStacktraces[] = "TORCH_SHOW_CPP_STACKTRACES";
-
 }  // namespace env
 }  // namespace runtime
 }  // namespace torch_xla

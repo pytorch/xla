@@ -14,12 +14,6 @@
 
 namespace torch_xla {
 
-// Returns whether we should show C++ error context.
-//
-// More specifically, whether the `TORCH_SHOW_CPP_STACKTRACES` environment
-// variable is set or not.
-[[nodiscard]] bool ShouldShowCppStacktraces();
-
 // If `TORCH_SHOW_CPP_STACKTRACES` is set, creates a new Status instance,
 // appending the current location (e.g. file and line information) to the
 // status message.

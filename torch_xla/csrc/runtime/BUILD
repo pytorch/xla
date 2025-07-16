@@ -165,6 +165,7 @@ cc_library(
     hdrs = ["debug_macros.h"],
     deps = [
         ":tf_logging",
+        "@torch:runtime_headers",
         "@tsl//tsl/platform:statusor",
         "@tsl//tsl/platform:macros",
     ],
