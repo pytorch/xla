@@ -101,8 +101,8 @@ if [[ "$RUN_CPP_TESTS" == "cpp_tests" ]]; then
               #"test_xla_backend_intf"
               "test_xla_sharding"
               "test_runtime"
-              "test_status_dont_show_cpp_error_context"
-              "test_status_show_cpp_error_context"
+              "test_status_dont_show_cpp_stacktraces"
+              "test_status_show_cpp_stacktraces"
               "test_debug_macros")
 fi
 for name in "${test_names[@]}"; do

@@ -40,9 +40,9 @@ enum class CppStacktracesMode {
 inline const char* const ToString(CppStacktracesMode mode) {
   switch (mode) {
     case CppStacktracesMode::kShow:
-      return "ShowCppErrorContext";
+      return "ShowCppStacktraces";
     case CppStacktracesMode::kHide:
-      return "DontShowCppErrorContext";
+      return "DontShowCppStacktraces";
   }
 }
 
