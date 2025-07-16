@@ -756,16 +756,17 @@ void ShardingUtil::ReshardParameters(
   std::vector<runtime::ComputationClient::DataPtr> data_to_reshard;
   std::vector<torch_xla::OpSharding> shardings_to_reshard;
 
+  std::vector<int64_t> denormalized_tile_assignment;
+  auto sharding_spec = (*tensors)[0]->sharding_spec();
+  if (sharding_spec) {
+    denormalized_tile_assignment = sharding_spec->sharding.GetDenormalizedTileAssignment();
+  }
   for (const auto& sharding : xla_input_shardings) {
-    for (const auto& data : *parameters) {
-      runtime::ComputationClient::DataPtr handle =
-          std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data);
-      auto computation_client_ptr = runtime::GetComputationClient();
-      torch_xla::OpSharding torch_xla_opsharding =
-          (*computation_client_ptr)->GetDataSharding(handle).value();
-      std::vector<int64_t> denormalized_tile_assignment =
-          torch_xla_opsharding.GetDenormalizedTileAssignment();
+    if (denormalized_tile_assignment.size() > 0){
       input_shardings.emplace_back(sharding, denormalized_tile_assignment);
+    }
+    else{
+      input_shardings.emplace_back(sharding);
     }
   }
 
