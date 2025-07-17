@@ -6,7 +6,7 @@ import torch_xla.runtime as xr
 from torch_xla._internal import rendezvous
 import logging
 import os
-from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions, ReduceOptions
+from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions, AllToAllOptions, ReduceOptions
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
@@ -247,8 +247,24 @@ class ProcessGroupXla(ProcessGroup):
   def allreduce_coalesced(self, *args):
     raise NotImplementedError
 
-  def alltoall(self, *args):
-    raise NotImplementedError
+  # Called by torch.distributed.all_to_all. Call site example:
+  # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L4577
+  # The difference between this and all_to_all_single is that this works
+  #  on a list of tensors while all_to_all_single works on a single tensor
+  #  and splits/concats along dimension 0.
+  def alltoall(self, output_tensor_list: list[torch.Tensor],
+               input_tensor_list: list[torch.Tensor], opts: AllToAllOptions):
+    stacked_inputs = torch.stack(input_tensor_list, dim=0)
+    split_count = len(input_tensor_list)
+    stacked_results = xm.all_to_all(
+        stacked_inputs,
+        split_dimension=0,
+        concat_dimension=0,
+        split_count=split_count)
+    results = torch.chunk(stacked_results, split_count, dim=0)
+    for result, output_tensor in zip(results, output_tensor_list):
+      output_tensor.copy_(result.squeeze(dim=0))
+    return _ret_work(output_tensor_list)
 
   # handle the nondynamo path when call torch.distributed.all_to_all_single
   # call from https://github.com/pytorch/pytorch/blob/758d78790164bfb041555daed380de96e06f78a3/torch/distributed/distributed_c10d.py#L3996
