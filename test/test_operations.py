@@ -2462,7 +2462,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     a = torch.rand(1024, 1024, 1024, 1024, 1024, device=torch_xla.device())
 
     # OOM is raised when we try to bring data from the device.
-    with self.assertRaisesRegex(RuntimeError, r"Out of memory allocating \d* bytes"):
+    with self.assertRaisesRegex(RuntimeError,
+                                r"Out of memory allocating \d* bytes"):
       b = a.sum()
       b.cpu()
 
