@@ -608,16 +608,19 @@ absl::StatusOr<xla::Shape> XlaHelpers::GetPromotedShape(
   for (size_t i = 0; i < min_size; i++) {
     int64_t dim_index1 = shape1.dimensions().size() - min_size + i;
     int64_t dim_index2 = shape2.dimensions().size() - min_size + i;
-
     int64_t dim1 = shape1.dimensions()[dim_index1];
     int64_t dim2 = shape2.dimensions()[dim_index2];
 
-    int64_t dynamic_dim1 = shape1.dynamic_dimensions()[dim_index1];
-    int64_t dynamic_dim2 = shape1.dynamic_dimensions()[dim_index2];
+    int64_t dynamic_dim1 =
+        shape1.dynamic_dimensions()[shape1.dynamic_dimensions().size() -
+                                    min_size + i];
+    int64_t dynamic_dim2 =
+        shape2.dynamic_dimensions()[shape2.dynamic_dimensions().size() -
+                                    min_size + i];
 
-    if (!(dim1 == dim2 || dim1 == 1 || dim2 == 1 ||
-          dim1 == xla::Shape::kUnboundedSize ||
-          dim2 == xla::Shape::kUnboundedSize)) {
+    if (dim1 != dim2 && dim1 != 1 && dim2 != 1 &&
+        dim1 != xla::Shape::kUnboundedSize &&
+        dim2 != xla::Shape::kUnboundedSize) {
       auto shape_str1 = shape1.ToString();
       auto shape_str2 = shape2.ToString();
       auto message = absl::StrCat(
