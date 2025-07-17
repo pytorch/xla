@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -302,8 +303,8 @@ class XlaHelpers {
                                                          xla::XlaOp op2);
 
   // Given the two shape 'shape1' and 'shape2', infers the broadcasted shape.
-  static xla::Shape GetPromotedShape(const xla::Shape& shape1,
-                                     const xla::Shape& shape2);
+  static absl::StatusOr<xla::Shape> GetPromotedShape(const xla::Shape& shape1,
+                                                     const xla::Shape& shape2);
 
   static xla::Shape GetPromotedDynamicShape(const xla::Shape& shape1,
                                             const xla::Shape& shape2);
