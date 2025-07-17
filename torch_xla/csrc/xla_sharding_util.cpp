@@ -815,25 +815,41 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
       }
     }
 
-    // If the at::Tensor data is not present, we need to re-download the
-    // tensor from the physical device to CPU. In that case, the value
-    // must be present on the backend device.
-    XLA_CHECK((xtensor->CurrentDataHandle() &&
-               xtensor->CurrentDataHandle()->HasValue()) ||
-              device_data_node != nullptr)
-        << "Cannot shard tensor. Data does not present on any device.";
-    std::vector<XLATensorPtr> xla_tensors{xtensor};
-    auto tensors = XLAGraphExecutor::Get()->GetTensors(&xla_tensors);
-    XLA_CHECK_EQ(tensors.size(), 1);
-    cpu_tensor = tensors[0];
+    if (xtensor->CurrentDataHandle() &&
+        !xtensor->CurrentDataHandle()->HasValue()) {
+      // For placeholder tensors, we skip the data transfer entirely and
+      // directly create sharded placeholder data without materializing any CPU
+      // tensor. This preserves the placeholder nature - it will still fail if
+      // accessed.
+      auto xla_data =
+          runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
+              GetVirtualDevice().toString(),
+              MakeShapeWithDeviceLayout(
+                  xtensor->shape(),
+                  static_cast<XlaDeviceType>(xtensor->GetDevice().type())),
+              sharding);
+      xtensor->SetXlaData(WrapXlaData({xla_data})[0]);
+    } else {
+      // If the at::Tensor data is not present, we need to re-download the
+      // tensor from the physical device to CPU. In that case, the value
+      // must be present on the backend device.
+      XLA_CHECK((xtensor->CurrentDataHandle() &&
+                 xtensor->CurrentDataHandle()->HasValue()) ||
+                device_data_node != nullptr)
+          << "Cannot shard tensor. Data does not present on any device.";
+      std::vector<XLATensorPtr> xla_tensors{xtensor};
+      auto tensors = XLAGraphExecutor::Get()->GetTensors(&xla_tensors);
+      XLA_CHECK_EQ(tensors.size(), 1);
+      cpu_tensor = tensors[0];
+      auto xla_data = CreateTensorsData(
+          std::vector<at::Tensor>{cpu_tensor},
+          std::vector<XLATensor::ShardingSpecPtr>{new_sharding_spec},
+          std::vector<std::string>{GetVirtualDevice().toString()})[0];
+      xtensor->SetXlaData(xla_data);
+    }
   }
-  auto xla_data = CreateTensorsData(
-      std::vector<at::Tensor>{cpu_tensor},
-      std::vector<XLATensor::ShardingSpecPtr>{new_sharding_spec},
-      std::vector<std::string>{GetVirtualDevice().toString()})[0];
-  xtensor->SetXlaData(xla_data);
-  xtensor->SetShardingSpec(*new_sharding_spec);
 
+  xtensor->SetShardingSpec(*new_sharding_spec);
   // Register sharded tensor data.
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
 }

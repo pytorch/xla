@@ -2878,7 +2878,7 @@ void InitXlaModuleBindings(py::module m) {
             auto& coordinator = comp_client->GetCoordinator();
             return coordinator.ReachedSyncPoint(step);
           })
-      .def("_is_placecholder",
+      .def("_is_placeholder",
            [](at::Tensor& input) {
             XLATensorPtr xtensor = bridge::GetXlaTensor(input);
             return xtensor->CurrentDataHandle() &&
