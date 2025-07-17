@@ -50,7 +50,7 @@ inline const char* const ToString(CppStacktracesMode mode) {
 class StatusTest : public testing::TestWithParam<CppStacktracesMode> {
  public:
   StatusTest() {
-    const char* const value = IsShowCppStacktracesMode() ? "true" : "false";
+    const char* const value = IsShowCppStacktracesMode() ? "1" : "0";
     setenv("TORCH_SHOW_CPP_STACKTRACES", value, /* replace= */ 1);
   }
 
