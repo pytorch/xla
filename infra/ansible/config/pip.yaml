@@ -21,7 +21,7 @@ pip:
       - oauth2client
       - pyyaml
       - requests
-      - setuptools
+      - setuptools>=80.0.0
       - six
       - tensorboard
       - tensorboardX
