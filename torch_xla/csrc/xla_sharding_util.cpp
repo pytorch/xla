@@ -759,13 +759,13 @@ void ShardingUtil::ReshardParameters(
   std::vector<int64_t> denormalized_tile_assignment;
   auto sharding_spec = (*tensors)[0]->sharding_spec();
   if (sharding_spec) {
-    denormalized_tile_assignment = sharding_spec->sharding.GetDenormalizedTileAssignment();
+    denormalized_tile_assignment =
+        sharding_spec->sharding.GetDenormalizedTileAssignment();
   }
   for (const auto& sharding : xla_input_shardings) {
-    if (denormalized_tile_assignment.size() > 0){
+    if (denormalized_tile_assignment.size() > 0) {
       input_shardings.emplace_back(sharding, denormalized_tile_assignment);
-    }
-    else{
+    } else {
       input_shardings.emplace_back(sharding);
     }
   }
