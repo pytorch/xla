@@ -6,11 +6,7 @@ import torch_xla.runtime as xr
 from torch_xla._internal import rendezvous
 import logging
 import os
-<<<<<<< HEAD
-from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions, AllToAllOptions
-=======
-from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions, ReduceOptions
->>>>>>> 8b95c5d6a4d3e38569a768d5203a9933c37af7fb
+from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions, AllToAllOptions, ReduceOptions
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
