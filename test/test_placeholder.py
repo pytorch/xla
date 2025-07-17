@@ -22,7 +22,7 @@ class TestPlaceholder(absltest.TestCase):
       assert p.device == torch_xla.device()
       self.assertEqual(p.dtype, dtype)
       self.assertEqual(p.shape, shape)
-      self.assertTrue(torch_xla._XLAC._is_placecholder(p))
+      self.assertTrue(torch_xla._XLAC._is_placeholder(p))
 
   def test_read_value_crashes(self):
     p = create_placeholder_tensor((1,), torch.bfloat16)
@@ -64,7 +64,7 @@ class TestPlaceholder(absltest.TestCase):
     _ = t0 + t1
     torch_xla.sync(wait=True)
 
-    self.assertTrue(torch_xla._XLAC._is_placecholder(t0))
+    self.assertTrue(torch_xla._XLAC._is_placeholder(t0))
     with self.assertRaises(RuntimeError, msg='is deleted'):
       torch_xla._XLAC._get_tensors_handle([t0])
 

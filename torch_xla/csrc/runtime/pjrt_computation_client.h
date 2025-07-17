@@ -278,7 +278,12 @@ class PjRtComputationClient : public ComputationClient {
           sharding(sharding) {}
 
     Handle GetHandle() override {
-      // Always returns `Handle` of the first shard.
+      // If the data is a placeholder (no shards), use the address of this
+      // object as the handle.
+      if (shards.empty()) {
+        return reinterpret_cast<std::uintptr_t>(this);
+      }
+      // Always returns `Handle` of the first shard, which is unique.
       return shards[0]->GetHandle();
     }
 
