@@ -82,12 +82,12 @@ def _maybe_select_default_device():
 
 
 def device_type() -> Optional[str]:
-  """Returns the current PjRt device type.
+  """Returns the current PJRT device type.
 
   Selects a default device if none has been configured
 
   Returns:
-    A string representation of the device.
+    A string representation of the PJRT device: "CPU", "TPU", etc.
   """
   pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
   return pjrt_device.split('_')[0] if pjrt_device else pjrt_device
