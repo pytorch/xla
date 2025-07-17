@@ -366,6 +366,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     for _, value in results.items():
       torch.testing.assert_close(value, expected)
 
+  @staticmethod
   def _scatter():
     dist.init_process_group("xla", init_method='xla://')
     device = torch_xla.device()
