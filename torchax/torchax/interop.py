@@ -90,7 +90,7 @@ class JittableModule(torch.nn.Module):
   def __call__(self, *args, **kwargs):
     return self.forward(*args, **kwargs)
 
-  def functional_call(self, method_name, params, buffers, *args, **kwargs):
+  def functional_call(self, method_or_name, params, buffers, *args, **kwargs):
     kwargs = kwargs or {}
     params_copy = copy.copy(params)
     params_copy.update(buffers)
@@ -98,8 +98,18 @@ class JittableModule(torch.nn.Module):
     for k, v in self._extra_dumped_weights.items():
       for new_key in v:
         params_copy[new_key] = params_copy[k]
+
+    if isinstance(method_or_name, str):
+      method = getattr(self._model, method_or_name)
+    else:
+      if not callable(method_or_name):
+        raise TypeError(
+            f"method_or_name should be a callable or a string, got {type(method_or_name)}"
+        )
+      method = method_or_name
+      args = (self._model,) + args
     with torch_stateless._reparametrize_module(self._model, params_copy):
-      res = getattr(self._model, method_name)(*args, **kwargs)
+      res = method(*args, **kwargs)
     return res
 
   def jittable_call(self, method_name: str, *args, **kwargs):
