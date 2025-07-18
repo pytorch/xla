@@ -441,8 +441,6 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
         torch.testing.assert_close(value, expected)
       else:
         assert value is None
-
-  @staticmethod
   def _reduce():
     dist.init_process_group("xla", init_method='xla://')
     device = torch_xla.device()
