@@ -8,10 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
+#include "torch_xla/csrc/status.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
@@ -26,7 +25,7 @@ class PjRtComputationClientTest : public ::testing::Test {
   PjRtComputationClientTest() {
     // Get a CPU client.
     tsl::setenv("PJRT_DEVICE", "CPU", true);
-    client_ = std::make_unique<PjRtComputationClient>();
+    client_ = GetValueOrThrow(PjRtComputationClient::Create());
     device_ = client_->GetDefaultDevice();
   }
 

@@ -357,8 +357,6 @@ class XlaBackendTest(parameterized.TestCase):
 
   @parameterized.parameters(
       'allreduce_coalesced',
-      'alltoall',
-      'gather',
       'recv_anysource',
       'monitored_barrier',
   )

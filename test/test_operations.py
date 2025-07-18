@@ -2445,6 +2445,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t = t.to(torch.float16)
     self._test_no_fallback(torch.isneginf, (t,))
 
+  def test_add_broadcast_error(self):
+    a = torch.rand(2, 2, 4, 4, device="xla")
+    b = torch.rand(2, 2, device="xla")
+
+    expected_regex = (
+        r"Shapes are not compatible for broadcasting: f32\[2,2,4,4\] vs. f32\[2,2\]. "
+        r"Expected dimension 2 of shape f32\[2,2,4,4\] \(4\) to match dimension "
+        r"0 of shape f32\[2,2\] \(2\). .*")
+
+    with self.assertRaisesRegex(RuntimeError, expected_regex):
+      torch.add(a, b)
+      torch_xla.sync()
+
 
 class MNISTComparator(nn.Module):
 

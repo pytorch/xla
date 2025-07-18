@@ -1,16 +1,10 @@
 #include "torch_xla/csrc/status.h"
 
+#include <torch/csrc/utils/cpp_stacktraces.h>
+
 #include "absl/log/absl_check.h"
-#include "torch_xla/csrc/runtime/env_vars.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
 
 namespace torch_xla {
-
-bool ShouldShowCppErrorContext() {
-  static const bool show_cpp_error_context = runtime::sys_util::GetEnvBool(
-      runtime::env::kEnvShowCppErrorContext, false);
-  return show_cpp_error_context;
-}
 
 // Common function for generating file location information with a space in the
 // beginning.
@@ -23,7 +17,7 @@ absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
   ABSL_CHECK(!status.ok());
 
   // Return the same status if we don't need to add the C++ source location.
-  if (!ShouldShowCppErrorContext()) {
+  if (!torch::get_cpp_stacktraces_enabled()) {
     return status;
   }
 
@@ -40,7 +34,7 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
   // Return the same status if:
   //   1. we don't need to add the C++ source location.
   //   2. there's no new message to replace the old one.
-  if (!ShouldShowCppErrorContext() && new_message.empty()) {
+  if (!torch::get_cpp_stacktraces_enabled() && new_message.empty()) {
     return status;
   }
 
@@ -52,7 +46,7 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
   // context to give a better error message to the user.
   std::string_view message = new_message.empty() ? old_message : new_message;
 
-  // If `XLA_SHOW_CPP_ERROR_CONTEXT` is set, show the context of this error.
+  // If `TORCH_SHOW_CPP_STACKTRACES` is set, show the context of this error.
   // In other words, show:
   //   1. The error location
   //   2. The old messages that were replaced by `new_message`.
@@ -65,7 +59,7 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
   // a stacktrace. Instead, we show only the history of error messages that
   // has led to the current error.
   const std::string context =
-      (ShouldShowCppErrorContext() && !new_message.empty())
+      (torch::get_cpp_stacktraces_enabled() && !new_message.empty())
           ? absl::StrCat(LocationStrWithSpace(file, line),
                          "\nFrom Error: ", old_message)
           : "";
