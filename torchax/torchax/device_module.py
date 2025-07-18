@@ -1,3 +1,6 @@
+import torch
+
+
 def _is_in_bad_fork():
   return False
 
@@ -24,3 +27,7 @@ def is_available():
 
 def current_device():
   return 0
+
+
+def get_amp_supported_dtype():
+  return [torch.float16, torch.bfloat16]
