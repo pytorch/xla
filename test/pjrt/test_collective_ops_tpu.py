@@ -390,6 +390,59 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       np.testing.assert_array_equal(value, [ordinal])
 
   @staticmethod
+  def _gather(scalar: bool = False):
+    dist.init_process_group("xla", init_method='xla://')
+    device = torch_xla.device()
+    world_size = xr.world_size()
+
+    # If scalar, tensors are tensor(i). Otherwise they are tensor([i]).
+    # The two cases follow different and should be tested separately.
+    if scalar:
+      item = xr.global_ordinal()
+      dummy = -1.0
+    else:
+      item = [xr.global_ordinal()]
+      dummy = [-1.0]
+
+    tensor = torch.tensor(item, device=device, dtype=torch.float)
+
+    # Instantiate tensors on device 0 to receive the results
+    output_tensors = None
+    if xr.global_ordinal() == 0:
+      output_tensors = [
+          torch.tensor(dummy, device=device, dtype=torch.float)
+          for _ in range(world_size)
+      ]
+
+    dist.gather(tensor, output_tensors, dst=0)
+    if not output_tensors:
+      return None
+    else:
+      return [t.cpu() for t in output_tensors]
+
+  @parameterized.named_parameters(('scalar', True), ('tensor', False))
+  def test_gather(self, scalar):
+    # self._gather instantiates tensor i or [i], depending on the value of
+    # `scalar`, on device i. The results are gathered on device 0.
+    # All other devices get None.
+    results = pjrt.run_multiprocess(self._gather, scalar)
+    if scalar:
+      expected = [
+          torch.tensor(i, dtype=torch.float)
+          for i in range(tpu.num_expected_global_devices())
+      ]
+    else:
+      expected = [
+          torch.tensor([i], dtype=torch.float)
+          for i in range(tpu.num_expected_global_devices())
+      ]
+    for ordinal, value in results.items():
+      if ordinal == 0:
+        torch.testing.assert_close(value, expected)
+      else:
+        assert value is None
+
+  @staticmethod
   def _reduce():
     dist.init_process_group("xla", init_method='xla://')
     device = torch_xla.device()
