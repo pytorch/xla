@@ -52,6 +52,7 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -908,7 +909,8 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
 
   // Get program output shape.
   // TODO(lsy323): Get shape info from MLIR Module.
-  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  xla::ProgramShape program_shape =
+      GetValueOrThrow(computation.GetProgramShape());
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
 
@@ -1406,8 +1408,9 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   SetBufferDonors(&lowering_ctx, buffer_donor_indices);
 
-  xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
-  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  xla::XlaComputation computation = GetValueOrThrow(lowering_ctx.BuildXla());
+  xla::ProgramShape program_shape =
+      GetValueOrThrow(computation.GetProgramShape());
 
   // TODO(yeounoh) enable wrapping with auto-sharding.
   bool should_wrap_parameter =
@@ -1424,10 +1427,10 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       param_shardings = XlaHelpers::ExtractInputShardings(computation);
     }
 
-    computation = ConsumeValue(
+    computation = GetValueOrThrow(
         XlaHelpers::WrapXlaComputation(computation, program_shape.parameters(),
                                        param_shardings, buffer_donor_indices));
-    program_shape = ConsumeValue(computation.GetProgramShape());
+    program_shape = GetValueOrThrow(computation.GetProgramShape());
   }
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));

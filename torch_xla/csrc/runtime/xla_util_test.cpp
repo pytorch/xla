@@ -122,7 +122,7 @@ TEST(XlaUtilTest, XlaToHlo) {
 TEST(XlaUtilTest, TestDeterministicModuleProtoSerializationEmptyProto) {
   xla::HloModuleProto empty_proto;
   auto result =
-      ::ConsumeValue(GetDeterministicSerializedModuleProto(empty_proto));
+      GetValueOrThrow(GetDeterministicSerializedModuleProto(empty_proto));
   // Verify that the result is an empty string
   EXPECT_TRUE(result.empty());
 }
@@ -250,8 +250,8 @@ TEST(XlaUtilTest, TestDeterministicModuleProtoSerialization) {
         }
       }
     }
-    std::string serialized_proto =
-        ::ConsumeValue(GetDeterministicSerializedModuleProto(hlo_module_proto));
+    std::string serialized_proto = GetValueOrThrow(
+        GetDeterministicSerializedModuleProto(hlo_module_proto));
     return torch::lazy::Hash(serialized_proto);
   };
 

@@ -27,8 +27,17 @@ namespace torch_xla {
 namespace runtime {
 
 class IfrtComputationClient : public ComputationClient {
+ private:
+  // Private struct for making the constructor private, but still callable
+  // as: `std::make_unique<IfrtComputationClient>(PrivateUse())`.
+  struct PrivateUse {
+    // Constructor needs to be explicit for disallowing implicit construction
+    // from `{}`.
+    explicit PrivateUse() = default;
+  };
+
  public:
-  IfrtComputationClient();
+  IfrtComputationClient(PrivateUse);
   ~IfrtComputationClient();
 
   DataPtr CreateDataPlaceholder(
@@ -165,7 +174,15 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
+  // Creates a new instance of IfrtComputationClient and initializes it.
+  static absl::StatusOr<absl_nonnull std::unique_ptr<IfrtComputationClient>>
+  Create();
+
  private:
+  // Convenience function called by `Create()` that initializes the current
+  // IfrtComputationClient.
+  absl::Status Initialize();
+
   std::shared_ptr<xla::ifrt::PjRtClient> client_;
   std::unique_ptr<XlaCoordinator> coordinator_;
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's

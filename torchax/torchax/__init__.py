@@ -9,7 +9,7 @@ from torchax import tensor
 from torchax import distributed  # noqa: F401
 from contextlib import contextmanager
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 VERSION = __version__
 
 __all__ = [

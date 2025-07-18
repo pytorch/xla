@@ -120,11 +120,13 @@ std::vector<std::string> IfrtComputationClient::IfrtDevicesToString(
   return strs;
 }
 
-IfrtComputationClient::IfrtComputationClient() {
+IfrtComputationClient::IfrtComputationClient(PrivateUse) {}
+
+absl::Status IfrtComputationClient::Initialize() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   std::unique_ptr<xla::PjRtClient> pjrt_client;
-  std::tie(pjrt_client, coordinator_) =
-      GetValueOrThrow(InitializePjRt(device_type));
+  XLA_ASSIGN_OR_RETURN(std::tie(pjrt_client, coordinator_),
+                       InitializePjRt(device_type));
 
   client_ = xla::ifrt::PjRtClient::Create(std::move(pjrt_client));
 
@@ -146,6 +148,15 @@ IfrtComputationClient::IfrtComputationClient() {
   auto tracked_devices = GetLocalDevices();
   tracked_devices.emplace_back(spmd_device_str);
   operation_manager_ = std::move(OperationManager(std::move(tracked_devices)));
+
+  return absl::OkStatus();
+}
+
+absl::StatusOr<absl_nonnull std::unique_ptr<IfrtComputationClient>>
+IfrtComputationClient::Create() {
+  auto ifrt_client = std::make_unique<IfrtComputationClient>(PrivateUse());
+  XLA_RETURN_IF_ERROR(ifrt_client->Initialize());
+  return std::move(ifrt_client);
 }
 
 IfrtComputationClient::~IfrtComputationClient() {
@@ -384,8 +395,9 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   *instruction->mutable_sharding() = xla::HloSharding::Replicate().ToProto();
 
   xla::XlaComputation computation =
-      ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
-  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+      GetValueOrThrow(builder.Build(/*remove_dynamic_dimensions=*/false));
+  xla::ProgramShape program_shape =
+      GetValueOrThrow(computation.GetProgramShape());
 
   std::string device = GetDefaultDevice();
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
@@ -504,13 +516,13 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
     torch_xla::ConvertHloToStableHlo(instance.computation.mutable_proto(),
                                      &mlir_module);
     std::shared_ptr<xla::ifrt::LoadedExecutable> executable =
-        ConsumeValue(client_->GetDefaultCompiler()->CompileAndLoad(
+        GetValueOrThrow(client_->GetDefaultCompiler()->CompileAndLoad(
             std::make_unique<xla::ifrt::HloProgram>(mlir_module),
             std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options,
                                                            devices_list)));
     StableHloCompileCounter()->AddValue(1);
 
-    const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
+    const auto& hlo_modules = GetValueOrThrow(executable->GetHloModules());
 
     std::shared_ptr<IfrtComputation> ifrt_computation =
         std::make_shared<IfrtComputation>(
@@ -651,7 +663,7 @@ int IfrtComputationClient::GetNumProcesses() const {
   }
 
   return max_process_index + 1;
-};
+}
 
 std::string IfrtComputationClient::GetDeviceKind(const std::string& device) {
   return std::string(StringToIfrtDevice(device)->Kind());

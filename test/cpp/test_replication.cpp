@@ -10,6 +10,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -24,7 +25,7 @@ xla::XlaComputation CreateCrsComputation(const xla::Shape& shape) {
   xla::XlaBuilder builder("CrsComputation");
   xla::XlaOp x = xla::Parameter(&builder, 0, shape, "x");
   xla::CrossReplicaSum(x);
-  return ConsumeValue(builder.Build());
+  return GetValueOrThrow(builder.Build());
 }
 
 void TestSingleReplication(

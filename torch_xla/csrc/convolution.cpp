@@ -3,6 +3,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 #include "xla/hlo/builder/lib/constants.h"
 
@@ -217,9 +218,9 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed = xla::Transpose(
       kernel, FilterTransposePermutation(input_shape.dimensions_size()));
-  return ConsumeValue(MakeXlaBackpropInputConvOp("conv_backward_input",
-                                                 input_shape, kernel_transposed,
-                                                 grad_output, conv_op_attrs));
+  return GetValueOrThrow(MakeXlaBackpropInputConvOp(
+      "conv_backward_input", input_shape, kernel_transposed, grad_output,
+      conv_op_attrs));
 }
 
 // Computes the kernel gradient for a convolution.
@@ -237,7 +238,7 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
       xla::InversePermutation(transpose_permutation);
   xla::Shape transposed_weight_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permutation, kernel_shape);
-  xla::XlaOp conv = ConsumeValue(MakeXlaBackpropFilterConvOp(
+  xla::XlaOp conv = GetValueOrThrow(MakeXlaBackpropFilterConvOp(
       "conv_backward_weight", input, transposed_weight_shape, grad_output,
       conv_op_attrs));
 

@@ -4,11 +4,11 @@
 // in a parameterized way, so as to avoid duplicating tests for both
 // configurations:
 //
-//   1. `XLA_SHOW_CPP_ERROR_CONTEXT=true`: instantiated in
-//      test_status_show_cpp_error_context.cpp
+//   1. `TORCH_SHOW_CPP_STACKTRACES=true`: instantiated in
+//      test_status_show_cpp_stacktraces.cpp
 //
-//   2. `XLA_SHOW_CPP_ERROR_CONTEXT=false`: instantiated in
-//      test_status_dont_show_cpp_error_context.cpp
+//   2. `TORCH_SHOW_CPP_STACKTRACES=false`: instantiated in
+//      test_status_dont_show_cpp_stacktraces.cpp
 //
 // In order to easily instantiate the tests, this file also defines the macro
 // `INSTANTIATE_TEST_SUITE_WITH_MODE(mode)`, where `mode` is either `kShow` or
@@ -31,32 +31,32 @@
 namespace torch_xla {
 
 // Enum to control whether C++ error context is shown in status messages
-enum class CppErrorContextMode {
+enum class CppStacktracesMode {
   kShow,
   kHide,
 };
 
-// Converts CppErrorContextMode enum to string for test parameter naming
-inline const char* const ToString(CppErrorContextMode mode) {
+// Converts CppStacktracesMode enum to string for test parameter naming
+inline const char* const ToString(CppStacktracesMode mode) {
   switch (mode) {
-    case CppErrorContextMode::kShow:
-      return "ShowCppErrorContext";
-    case CppErrorContextMode::kHide:
-      return "DontShowCppErrorContext";
+    case CppStacktracesMode::kShow:
+      return "ShowCppStacktraces";
+    case CppStacktracesMode::kHide:
+      return "DontShowCppStacktraces";
   }
 }
 
 // Base test class for parameterized status tests with C++ error context control
-class StatusTest : public testing::TestWithParam<CppErrorContextMode> {
+class StatusTest : public testing::TestWithParam<CppStacktracesMode> {
  public:
   StatusTest() {
-    const char* const value = IsShowCppErrorContextMode() ? "true" : "false";
-    setenv(runtime::env::kEnvShowCppErrorContext, value, /* replace= */ 1);
+    const char* const value = IsShowCppStacktracesMode() ? "1" : "0";
+    setenv("TORCH_SHOW_CPP_STACKTRACES", value, /* replace= */ 1);
   }
 
  protected:
-  bool IsShowCppErrorContextMode() {
-    return GetParam() == CppErrorContextMode::kShow;
+  bool IsShowCppStacktracesMode() {
+    return GetParam() == CppStacktracesMode::kShow;
   }
 };
 
@@ -66,10 +66,10 @@ class StatusTest : public testing::TestWithParam<CppErrorContextMode> {
 // non-qualified identifier. That's because the underlying
 // `INSTANTIATE_TEST_SUITE_P` GTest macro will concatenate it with other
 // things for creating a unique identifier.
-#define INSTANTIATE_WITH_CPP_ERROR_CONTEXT_MODE(suite, test, mode)            \
-  INSTANTIATE_TEST_SUITE_P(                                                   \
-      suite, test, ::testing::Values(::torch_xla::CppErrorContextMode::mode), \
-      [](const ::testing::TestParamInfo<::torch_xla::CppErrorContextMode>&    \
+#define INSTANTIATE_WITH_CPP_STACKTRACES_MODE(suite, test, mode)             \
+  INSTANTIATE_TEST_SUITE_P(                                                  \
+      suite, test, ::testing::Values(::torch_xla::CppStacktracesMode::mode), \
+      [](const ::testing::TestParamInfo<::torch_xla::CppStacktracesMode>&    \
              info) { return ToString(info.param); })
 
 namespace testing {
@@ -104,7 +104,7 @@ TEST_P(StatusTest, GetValueOrThrowWithErrorStatusOr) {
 TEST_P(StatusTest, MaybeWithLocationPropagatesErrorStatus) {
   absl::Status error_status = absl::InvalidArgumentError(message);
   absl::Status result = MaybeWithLocation(error_status, test_file, line);
-  if (IsShowCppErrorContextMode()) {
+  if (IsShowCppStacktracesMode()) {
     ASSERT_NE(result, error_status);
     EXPECT_FALSE(result.ok());
     EXPECT_EQ(result.code(), error_status.code());
@@ -129,7 +129,7 @@ TEST_P(StatusTest, MaybeWithNewMessageNonEmptyNewMessage) {
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.code(), error_status.code());
 
-  if (IsShowCppErrorContextMode()) {
+  if (IsShowCppStacktracesMode()) {
     EXPECT_EQ(result.message(),
               absl::StrCat("New test error message (at test_file.cpp:42)\n"
                            "From Error: Test error message"));
@@ -186,7 +186,7 @@ TEST_P(StatusTest, MacroReturnIfErrorWithNestedError) {
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.code(), absl::StatusCode::kInvalidArgument);
 
-  if (IsShowCppErrorContextMode()) {
+  if (IsShowCppStacktracesMode()) {
     EXPECT_EQ(result.message(), absl::StrCat("Test error message (at ",
                                              __FILE__, ":", errline, ")"));
   } else {
@@ -207,7 +207,7 @@ TEST_P(StatusTest, MacroReturnIfErrorWithErrorWithNewMessage) {
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.code(), absl::StatusCode::kInvalidArgument);
 
-  if (IsShowCppErrorContextMode()) {
+  if (IsShowCppStacktracesMode()) {
     EXPECT_EQ(result.message(),
               absl::StrCat("New test error message (at ", __FILE__, ":",
                            errline, ")\nFrom Error: Test error message"));
@@ -258,7 +258,7 @@ TEST_P(StatusTest, MacroAssignOrReturnWithErrorWithNewMessage) {
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.status().code(), absl::StatusCode::kInvalidArgument);
 
-  if (IsShowCppErrorContextMode()) {
+  if (IsShowCppStacktracesMode()) {
     EXPECT_EQ(result.status().message(),
               absl::StrCat("New test error message (at ", __FILE__, ":",
                            errline, ")\nFrom Error: Test error message"));
@@ -273,7 +273,7 @@ TEST_P(StatusTest, MacroErrorWithLocation) {
   absl::Status result = XLA_ERROR_WITH_LOCATION(error_status);
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.code(), absl::StatusCode::kInvalidArgument);
-  if (IsShowCppErrorContextMode()) {
+  if (IsShowCppStacktracesMode()) {
     EXPECT_EQ(result.message(), absl::StrCat("Test error message (at ",
                                              __FILE__, ":", errline, ")"));
   } else {
