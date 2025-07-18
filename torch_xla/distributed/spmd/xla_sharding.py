@@ -1,6 +1,7 @@
 import collections
 from collections.abc import Generator, MutableMapping
 import math
+import os
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass, field
 import torch
@@ -118,9 +119,18 @@ class Mesh:
       return None
     return self.axis_names.index(name)
 
+  def _validate_translated_partition_spec(self, partition_spec: tuple):
+    flat_specs = np.hstack([d for d in partition_spec])
+    specs = [d for d in flat_specs if d is not None]
+    assert all(d >= 0 and d < len(self.mesh_shape) for d in specs), \
+      f"partition_spec ({partition_spec}) contains out of bound index into mesh_shape."
+    assert len(specs) == len(np.unique(specs)), \
+    f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
+
   @functools.lru_cache(maxsize=None)
   def _get_op_sharding_args(self, partition_spec: PartitionSpec):
     partition_spec = _translate_named_partition_spec(self, partition_spec)
+    self._validate_translated_partition_spec(partition_spec)
     flat_specs = np.hstack([d for d in partition_spec])
     specs = [d for d in flat_specs if d is not None]
     assert all(d >= 0 and d < len(self.mesh_shape) for d in specs), \
@@ -143,6 +153,57 @@ class Mesh:
     return tile_assignment, group_assignment, replication_groups, sharding_type
 
   @functools.lru_cache(maxsize=None)
+  def _get_op_sharding_args_v2(self, partition_spec: PartitionSpec):
+    """
+    Returns the appropriate dims, reshape_dims, and transpose_perm for the given partition spec.
+    """
+    partition_spec = _translate_named_partition_spec(self, partition_spec)
+    self._validate_translated_partition_spec(partition_spec)
+
+    dims = []
+    used_axes = OrderedDict()
+    for axis in partition_spec:
+      if isinstance(axis, tuple):
+        dim_size = 1
+        for i in axis:
+          assert i is not None, "None not allowed within tuple"
+          dim_size *= self.mesh_shape[i]
+          used_axes[i] = True
+        dims.append(dim_size)
+      elif axis is not None:
+        assert isinstance(axis, int), "Axis must be an int or a tuple of ints"
+        dims.append(self.mesh_shape[axis])
+        used_axes[axis] = True
+      else:
+        # Replicated mesh axis
+        dims.append(1)
+
+    transpose_perm = [k for k in used_axes.keys()]
+    for i in range(len(self.mesh_shape)):
+      if i not in used_axes:
+        dims.append(self.mesh_shape[i])
+        transpose_perm.append(i)
+    reshape_dims = list(self.mesh_shape)
+
+    return dims, reshape_dims, transpose_perm
+
+  @functools.lru_cache(maxsize=None)
+  def get_op_sharding_v2(
+      self, partition_spec: PartitionSpec) -> torch_xla._XLAC.OpSharding:
+    """
+    Return the OpSharding for the given partition spec using V2 annotations.
+    """
+    if len(partition_spec) == 0:
+      return torch_xla._XLAC.OpSharding([], [], [], ShardingType.REPLICATED)
+    sharding_type = _get_sharding_type(partition_spec, self.size())
+    if sharding_type not in (ShardingType.TILED, ShardingType.PARTIAL):
+      return torch_xla._XLAC.OpSharding([], [], [0], sharding_type)
+
+    dims, reshape_dims, transpose_perm = self._get_op_sharding_args_v2(
+        partition_spec)
+    return torch_xla._XLAC.OpSharding(dims, reshape_dims, transpose_perm)
+
+  @functools.lru_cache(maxsize=None)
   def get_op_sharding(
       self, partition_spec: PartitionSpec) -> torch_xla._XLAC.OpSharding:
     """
@@ -157,6 +218,7 @@ class Mesh:
 
     tile_assignment, group_assignment, replication_groups, sharding_type = self._get_op_sharding_args(
         partition_spec)
+
     return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
                                       replication_groups, sharding_type)
 
@@ -654,7 +716,10 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     t.shard_(NamedSharding(jmesh, P(*partition_spec)))
     return t
 
-  op_sharding = mesh.get_op_sharding(partition_spec)
+  if os.environ.get('CONVERT_SHLO_TO_SHARDY', False):
+    op_sharding = mesh.get_op_sharding_v2(partition_spec)
+  else:
+    op_sharding = mesh.get_op_sharding(partition_spec)
   annotate_func = torch_xla._XLAC._xla_mark_sharding
   annotate_func(unwrap_sharded_tensor(t), op_sharding)
   # Pass mesh and partition spec information for DTensor compatibility
