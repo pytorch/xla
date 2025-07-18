@@ -34,7 +34,8 @@ Note: Builds are available for Python 3.8 to 3.11; please use one of the support
 
 pip install torch==2.7.0 'torch_xla[tpu]==2.7.0'
 ```
-
+**As of 07/16/2025 and starting from Pytorch/XLA 2.8 release, PyTorch/XLA will 
+provide nightly and release wheels for Python 3.11 to 3.13**
 To install PyTorch/XLA nightly build in a new TPU VM:
 
 ```sh
