@@ -171,6 +171,18 @@ class InteropTest(unittest.TestCase):
         self.assertEqual(d.jax_device.platform, "cpu")
         self.assertEqual(d.device.type, "jax")
 
+  def test_torch_jax_view_dtype(self):
+    dtype = torch.float32
+    self.assertEqual(interop.jax_view(dtype), jnp.float32.dtype)
+    self.assertEqual(interop.torch_view(interop.jax_view(dtype)), dtype)
+    dtype = torch.bfloat16
+    self.assertEqual(interop.jax_view(dtype), jnp.float32.dtype)
+    self.assertEqual(interop.torch_view(interop.jax_view(dtype)), dtype)
+    dtype = torch.int32
+    self.assertEqual(interop.jax_view(dtype), jnp.float32.dtype)
+    self.assertEqual(interop.torch_view(interop.jax_view(dtype)), dtype)
+
+
 
 if __name__ == '__main__':
   unittest.main()
