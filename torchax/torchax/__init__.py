@@ -6,7 +6,6 @@ import os
 import torch
 from torch.utils import _pytree as pytree
 from torchax import tensor
-from torchax import distributed  # noqa: F401
 from contextlib import contextmanager
 
 __version__ = "0.0.5"
