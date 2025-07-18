@@ -176,7 +176,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
       print('catch')
     # it is hard to catch the C++ runtime error in python, instead we can check if
     # after printing that dynamo_res is still a placeholder then it means C++ crashed.
-    self.assertTrue(torch_xla._XLAC._is_placecholder(dynamo_res))
+    self.assertTrue(torch_xla._XLAC._is_placeholder(dynamo_res))
     if saved_var != None:
       os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD'] = saved_var
     else:

@@ -70,6 +70,7 @@ run_test "$_TEST_DIR/test_grad_checkpoint.py" "$@" --test_autocast
 run_test "$_TEST_DIR/dynamo/test_dynamo.py"
 run_test "$_TEST_DIR/dynamo/test_dynamo_dynamic_shape.py"
 run_test "$_TEST_DIR/spmd/test_spmd_debugging.py"
+run_test "$_TEST_DIR/spmd/test_spmd_placeholder.py"
 XLA_PARAMETER_WRAPPING_THREADSHOLD=1 run_test "$_TEST_DIR/spmd/test_spmd_parameter_wrapping.py"
 run_test "$_TEST_DIR/pjrt/test_dtypes.py"
 run_test "$_TEST_DIR/pjrt/test_dynamic_plugin_tpu.py"
