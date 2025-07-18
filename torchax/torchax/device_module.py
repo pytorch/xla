@@ -24,3 +24,8 @@ def is_available():
 
 def current_device():
   return 0
+
+  
+import torch
+def get_amp_supported_dtype():
+  return [torch.float16, torch.bfloat16]

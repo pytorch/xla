@@ -5451,6 +5451,25 @@ def kthvalue(input, k, dim=None, keepdim=False, *, out=None):
       dimension, keepdim)
   return values, indices
 
+# @op(torch.ops.aten.logit)
+# def _aten_logit(self: jax.Array, eps: float | None = None) -> jax.Array:
+#   """
+#   Computes the logit function of the input tensor.
+
+#   logit(p) = log(p / (1 - p))
+
+#   Args:
+#     self: Input tensor.
+#     eps: A small value to clip the input tensor to avoid log(0) or division by zero.
+#          If None, no clipping is performed.
+
+#   Returns:
+#     A tensor with the logit of each element of the input.
+#   """
+#   if eps is not None:
+#     self = jnp.clip(self, eps, 1.0 - eps)
+#   return jnp.log(self / (1.0 - self))
+
 
 @op(torch.ops.aten.take)
 def _aten_take(self, index):
