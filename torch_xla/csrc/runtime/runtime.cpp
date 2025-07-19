@@ -59,7 +59,7 @@ const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient() {
 }
 
 ComputationClient* absl_nonnull GetComputationClientOrDie() {
-  return GetComputationClient().value();
+  return GetValueOrThrow(GetComputationClient());
 }
 
 ComputationClient* GetComputationClientIfInitialized() {
