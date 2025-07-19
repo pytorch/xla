@@ -2459,12 +2459,12 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       torch_xla.sync()
 
   def test_construct_large_tensor_raises_error(self):
-    a = torch.rand(1024, 1024, 1024, 1024, 1024, device=torch_xla.device())
-
-    # OOM is raised when we try to bring data from the device.
     with self.assertRaisesRegex(RuntimeError,
                                 r"Out of memory allocating \d* bytes"):
+      # When eager-mode is enabled, OOM is triggered here.
+      a = torch.rand(1024, 1024, 1024, 1024, 1024, device=torch_xla.device())
       b = a.sum()
+      # OOM is raised when we try to bring data from the device.
       b.cpu()
 
 
