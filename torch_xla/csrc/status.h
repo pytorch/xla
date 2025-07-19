@@ -14,6 +14,8 @@
 
 namespace torch_xla {
 
+constexpr char kStacktraceKey[] = "stacktrace";
+
 // If `TORCH_SHOW_CPP_STACKTRACES` is set, creates a new Status instance,
 // appending the current location (e.g. file and line information) to the
 // status message.
@@ -28,10 +30,11 @@ namespace torch_xla {
 //
 // If `TORCH_SHOW_CPP_STACKTRACES` is set, the error shown will be:
 //
-//     Error message. (at <cpp-source-file>:<line>)
+//     RuntimeError: Error message.
+//       From: <cpp-source-file>:<line> (error: Error message.)
 //
 #define XLA_ERROR_WITH_LOCATION(status) \
-  ::torch_xla::MaybeWithLocation(status, __FILE__, __LINE__)
+  ::torch_xla::status_internal::MaybeWithLocation(status, __FILE__, __LINE__)
 
 #define XLA_CONCAT_(a, b) XLA_CONCAT_IMPL_(a, b)
 #define XLA_CONCAT_IMPL_(a, b) a##b
@@ -41,15 +44,15 @@ namespace torch_xla {
 
 // Provides a flexible way to handle error checking with optional message
 // modification. It evaluates `expr`, checks if it's OK, and either:
-// 1. Returns early with an error status (potentially modified by the provided
-//    additional messages)
-// 2. Proceeds with the given `then` block if successful
-#define XLA_RETURN_IF_ERROR_IMPL_(expr, var, then, ...)                  \
-  auto var = (expr);                                                     \
-  if (!var.ok()) {                                                       \
-    return ::torch_xla::MaybeWithNewMessage(                             \
-        ::torch_xla::GetStatus(var), __FILE__, __LINE__, ##__VA_ARGS__); \
-  }                                                                      \
+//   1. Returns early with an error status
+//   2. Proceeds with the given `then` block if successful
+#define XLA_RETURN_IF_ERROR_IMPL_(expr, var, then, ...)                   \
+  auto var = (expr);                                                      \
+  if (!var.ok()) {                                                        \
+    return ::torch_xla::status_internal::MaybeWithNewMessage(             \
+        ::torch_xla::status_internal::GetStatus(var), __FILE__, __LINE__, \
+        ##__VA_ARGS__);                                                   \
+  }                                                                       \
   then
 
 // Propagates `rexpr`, in case it's a non-ok status.
@@ -65,9 +68,13 @@ namespace torch_xla {
 // we early return a non-ok status. Then, if `TORCH_SHOW_CPP_STACKTRACES` is
 // set, the error shown will be:
 //
-//     New error message. (at <cpp-source-file>:<line>)
-//     Previous error message. (at <cpp-source-file>:<line>)
-//     ...
+//     RuntimeError: New error message.
+//
+//     Status Propagation Stacktrace:
+//       ...
+//       From: <cpp-source-file>:<line> (error: Previous error message.)
+//       ...
+//       From: <cpp-source-file>:<line> (error: New error message.)
 //
 #define XLA_RETURN_IF_ERROR(rexpr, ...)                                  \
   do {                                                                   \
@@ -93,24 +100,20 @@ namespace torch_xla {
 // If the function call results in an ok status, execution continues with
 // `result` set to `ret.value()`, where `ret` is the returned value of the
 // function. Otherwise, we early return a non-ok status. Then, if
-// `TORCH_SHOW_CPP_STACKTRACES` is set, the error shown will be:
-//
-//     New error message. (at <cpp-source-file>:<line>)
-//     Previous error message. (at <cpp-source-file>:<line>)
-//     ...
+// `TORCH_SHOW_CPP_STACKTRACES` is set, the error shown will be similar to
+// the one above.
 //
 #define XLA_ASSIGN_OR_RETURN(lhs, rexpr, ...)                         \
   XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_,                   \
                             lhs = std::move(XLA_STATUS_VAR_).value(), \
                             ##__VA_ARGS__)
 
-// Maybe shows location information in the status message.
+namespace status_internal {
+
+// Adds source location information to the status stacktrace if
+// `TORCH_SHOW_CPP_STACKTRACES` is set.
 //
 // This function assumes that `status` is a non-ok status.
-//
-// If `TORCH_SHOW_CPP_STACKTRACES` is set, appends the current source
-// location information to the status message. Otherwise, it simply returns
-// `status`.
 absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
                                int32_t line);
 
@@ -142,6 +145,8 @@ const absl::Status& GetStatus(const absl::StatusOr<T>& status) {
 absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
                                  int32_t line,
                                  std::string_view new_message = "");
+
+}  // namespace status_internal
 
 // Maybe throws an exception if `status` has a non-ok code.
 //
