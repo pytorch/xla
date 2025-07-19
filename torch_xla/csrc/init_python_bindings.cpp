@@ -600,9 +600,8 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> AllToAll(
   std::tie(result, new_token) = tensor_methods::all_to_all(
       bridge::GetXlaTensor(input), *token, split_dimension, concat_dimension,
       split_count, replica_groups, pin_layout);
-  return std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>>(
-      bridge::AtenFromXlaTensor(std::move(result)),
-      std::make_shared<torch::lazy::Value>(new_token));
+  return {bridge::AtenFromXlaTensor(std::move(result)),
+          std::make_shared<torch::lazy::Value>(new_token)};
 }
 
 std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> CollectivePermute(
@@ -615,6 +614,24 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> CollectivePermute(
   return std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>>(
       bridge::AtenFromXlaTensor(std::move(result)),
       std::make_shared<torch::lazy::Value>(new_token));
+}
+
+std::pair<std::vector<at::Tensor>, std::shared_ptr<torch::lazy::Value>>
+CollectivePermute(
+    const std::vector<at::Tensor>& tensors,
+    const std::shared_ptr<torch::lazy::Value>& token,
+    const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs) {
+  std::vector<XLATensorPtr> xtensors =
+      GetXlaTensors(tensors, /*want_all=*/true);
+  std::vector<XLATensorPtr> results;
+  torch::lazy::Value new_token;
+  std::tie(results, new_token) =
+      tensor_methods::collective_permute(xtensors, *token, source_target_pairs);
+  std::vector<at::Tensor> aten_results;
+  for (auto& xt : results) {
+    aten_results.emplace_back(bridge::AtenFromXlaTensor(std::move(xt)));
+  }
+  return {aten_results, std::make_shared<torch::lazy::Value>(new_token)};
 }
 
 void OptimizationBarrier_(std::vector<at::Tensor>& tensors) {
@@ -1990,6 +2007,27 @@ void InitXlaModuleBindings(py::module m) {
             result_tuple[1] = new_token;
             return result_tuple;
            })
+      .def("_xla_collective_permute",
+           [](const std::vector<at::Tensor>& inputs,
+              const std::shared_ptr<torch::lazy::Value>& token,
+              const py::list& pairs) {
+            std::vector<std::pair<int64_t, int64_t>> source_target_pairs =
+                CreateSourceTargetPairs(pairs);
+            std::vector<at::Tensor> results;
+            std::shared_ptr<torch::lazy::Value> new_token;
+            {
+              NoGilSection nogil;
+              std::tie(results, new_token) =
+                  CollectivePermute(inputs, token, source_target_pairs);
+            }
+            auto result_list = py::list(results.size() + 1);
+            for (int i = 0; i < results.size(); ++i) {
+              result_list[i] = torch::autograd::make_variable(
+                  results[i], /*requires_grad=*/results[i].requires_grad());
+            }
+            result_list[results.size()] = new_token;
+            return result_list;
+          })
       .def("_xla_send",
            [](const at::Tensor& input,
               const std::shared_ptr<torch::lazy::Value>& token,

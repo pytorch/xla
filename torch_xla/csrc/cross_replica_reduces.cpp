@@ -378,6 +378,24 @@ CollectivePermuteResult BuildCollectivePermute(
   return {result, token_handler.GetNewToken(result)};
 }
 
+MultiCollectivePermuteResult BuildCollectivePermute(
+    absl::Span<const xla::XlaOp> inputs, xla::XlaOp token,
+    const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs) {
+  TokenHandler token_handler(token);
+  std::vector<xla::XlaOp> result(inputs.size());
+  std::vector<xla::XlaOp> input_ops;
+  for (const auto& input : inputs) {
+    const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+    input_ops.push_back(token_handler.GetInput(input, &input_shape));
+  }
+  xla::XlaOp collective_result =
+      xla::MultiCollectivePermute(input_ops, source_target_pairs);
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    result[i] = xla::GetTupleElement(collective_result, i);
+  }
+  return {result, token_handler.GetNewToken(result[0])};
+}
+
 SendResult BuildSendWithToken(xla::XlaOp input, xla::XlaOp token,
                               int64_t channel_id) {
   xla::ChannelHandle channel_handle;
