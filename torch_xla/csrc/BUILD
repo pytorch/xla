@@ -377,6 +377,7 @@ cc_library(
     hdrs = ["status.h"],
     deps = [
         "@torch//:headers",
+        "@tsl//tsl/platform:stacktrace",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/status:statusor",
     ],
