@@ -527,12 +527,8 @@ PjRtComputationClient::TransferFromDevice(absl::Span<const DataPtr> handles) {
     ABSL_CHECK(pjrt_data->buffer != nullptr)
         << "PjRt buffer is null in " << __FUNCTION__;
 
-    // Constructing a literal too large will make the whole program crash.
-    // Instead, we pass allocate_arrays=False, which makes this kind of
-    // error possible to be handled in the `Await()` call below.
     xla::Literal& literal = literals.emplace_back(
-        xla::Literal(host_output_shape(pjrt_data->buffer.get()),
-                     /* allocate_arrays= */ false));
+        xla::Literal(host_output_shape(pjrt_data->buffer.get())));
     futures.push_back(pjrt_data->buffer->ToLiteral(&literal));
 
     total_size += literal.size_bytes();
