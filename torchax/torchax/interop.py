@@ -184,8 +184,8 @@ def _torch_view(t: JaxValue) -> TorchValue:
   if isinstance(t, jax.Array):
     # TODO
     return tensor.Tensor(t, torchax.default_env())
-  if isinstance(t, type(jnp.int32)):
-    return mappings.t2j_type(t)
+  if isinstance(t, jnp.dtype):
+    return mappings.j2t_dtype(t)
   if callable(t):  # t is a JaxCallable
     return functools.partial(call_jax, t)
   # regular types are not changed
