@@ -5,6 +5,7 @@ import torchax
 from torchax import interop, jax_device
 import torchax
 import jax
+import jax.numpy as jnp
 
 
 def is_tpu_available():
@@ -170,6 +171,17 @@ class InteropTest(unittest.TestCase):
         d = c.to("jax")
         self.assertEqual(d.jax_device.platform, "cpu")
         self.assertEqual(d.device.type, "jax")
+
+  def test_torch_jax_view_dtype(self):
+    dtype = torch.float32
+    self.assertEqual(interop.jax_view(dtype), jnp.float32.dtype)
+    self.assertEqual(interop.torch_view(interop.jax_view(dtype)), dtype)
+    dtype = torch.bfloat16
+    self.assertEqual(interop.jax_view(dtype), jnp.bfloat16.dtype)
+    self.assertEqual(interop.torch_view(interop.jax_view(dtype)), dtype)
+    dtype = torch.int32
+    self.assertEqual(interop.jax_view(dtype), jnp.int32.dtype)
+    self.assertEqual(interop.torch_view(interop.jax_view(dtype)), dtype)
 
 
 if __name__ == '__main__':

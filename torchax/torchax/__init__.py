@@ -49,10 +49,11 @@ def extract_jax(mod: torch.nn.Module, env=None):
   states = env.t2j_copy(states)
 
   #@jax.jit
-  def jax_func(states, inputs):
-    (states, inputs) = env.j2t_iso((states, inputs))
+  def jax_func(states, args, kwargs=None):
+    (states, args, kwargs) = env.j2t_iso((states, args, kwargs))
     with env:
-      res = torch.func.functional_call(mod, states, inputs, tie_weights=False)
+      res = torch.func.functional_call(
+          mod, states, args, kwargs, tie_weights=False)
     return env.t2j_iso(res)
 
   return states, jax_func

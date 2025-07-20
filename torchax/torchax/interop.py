@@ -11,6 +11,7 @@ from jax import tree_util as pytree
 from jax.experimental.shard_map import shard_map
 from torchax import tensor
 from torchax import util
+from torchax.ops import mappings
 import torchax
 
 from torchax.types import JaxValue, TorchValue, JaxCallable, TorchCallable
@@ -183,8 +184,8 @@ def _torch_view(t: JaxValue) -> TorchValue:
   if isinstance(t, jax.Array):
     # TODO
     return tensor.Tensor(t, torchax.default_env())
-  if isinstance(t, type(jnp.int32)):
-    return tensor.t2j_type(t)
+  if isinstance(t, jnp.dtype):
+    return mappings.j2t_dtype(t)
   if callable(t):  # t is a JaxCallable
     return functools.partial(call_jax, t)
   # regular types are not changed
@@ -201,7 +202,7 @@ def _jax_view(t: TorchValue) -> JaxValue:
     assert isinstance(t, tensor.Tensor) or isinstance(t, tensor.View), type(t)
     return t.jax()
   if isinstance(t, type(torch.int32)):
-    return tensor.t2j_dtype(t)
+    return mappings.t2j_dtype(t)
 
   # torch.nn.Module needs special handling
   if not isinstance(t, torch.nn.Module) and callable(t):  # t is a TorchCallable
