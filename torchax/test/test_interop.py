@@ -184,6 +184,5 @@ class InteropTest(unittest.TestCase):
     self.assertEqual(interop.torch_view(interop.jax_view(dtype)), dtype)
 
 
-
 if __name__ == '__main__':
   unittest.main()
