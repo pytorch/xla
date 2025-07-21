@@ -68,8 +68,9 @@ class TpuInfoCliTest(parameterized.TestCase):
         self.assertEqual(u.duty_cycle_pct, 0.0)
         one_gb = 1 << 30
         self.assertLess(u.memory_usage, one_gb)
-      # TODO: check output
-      cli.print_chip_info()
+      # TODO(https://github.com/pytorch/xla/issues/9462): Uncomment after
+      # libtpu is fixed for python 3.12
+      # cli.print_chip_info()
 
   @contextlib.contextmanager
   def _torch_xla_spawn(self):
@@ -104,8 +105,9 @@ class TpuInfoCliTest(parameterized.TestCase):
         self.assertEqual(u.duty_cycle_pct, 0.0)
         one_gb = 1 << 30
         self.assertLess(u.memory_usage, one_gb)
-      # TODO: check output
-      cli.print_chip_info()
+      # TODO(https://github.com/pytorch/xla/issues/9462): Uncomment after
+      # libtpu is fixed for python 3.12
+      # cli.print_chip_info()
 
 
 if __name__ == "__main__":
