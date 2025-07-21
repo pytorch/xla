@@ -61,10 +61,21 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   return allocator_config;
 }
 
-std::shared_ptr<const PjRtPlugin> GetPjRtPlugin(
+absl::StatusOr<std::shared_ptr<const PjRtPlugin>> GetPjRtPlugin(
     const std::string& device_type) {
-  auto plugin_path = pjrt_plugins_.find(device_type);
-  return plugin_path != pjrt_plugins_.end() ? plugin_path->second : nullptr;
+  auto entry = pjrt_plugins_.find(device_type);
+  if (entry == pjrt_plugins_.end()) {
+    std::string message = absl::StrCat(
+        "No PjRtPlugin registered for: ", device_type,
+        ". Make sure the environment variable ", env::kEnvPjRtDevice,
+        " is set to a correct device name. See "
+        "https://github.com/pytorch/xla/blob/master/docs/source/"
+        "contribute/plugins.md for more information on "
+        "implementing and registering a new "
+        "plugin.");
+    return XLA_ERROR_WITH_LOCATION(absl::FailedPreconditionError(message));
+  }
+  return entry->second;
 }
 
 }  // namespace
@@ -83,10 +94,10 @@ InitializePjRt(const std::string& device_type) {
 
   if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false) &&
       device_type != "CPU") {
-    std::shared_ptr<const PjRtPlugin> plugin = GetPjRtPlugin(device_type);
+    TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
+    XLA_ASSIGN_OR_RETURN(std::shared_ptr<const PjRtPlugin> plugin,
+                         GetPjRtPlugin(device_type));
     if (plugin) {
-      TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
-
       // Init the absl logging to avoid the log spam.
       absl::InitializeLog();
 
