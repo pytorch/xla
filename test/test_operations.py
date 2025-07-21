@@ -2460,7 +2460,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_construct_large_tensor_raises_error(self):
     with self.assertRaisesRegex(RuntimeError,
-                                r"Out of memory allocating \d* bytes"):
+                                r"Out of memory allocating \d+ bytes"):
       # When eager-mode is enabled, OOM is triggered here.
       a = torch.rand(1024, 1024, 1024, 1024, 1024, device=torch_xla.device())
       b = a.sum()
