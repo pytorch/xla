@@ -639,6 +639,10 @@ class Environment(contextlib.ContextDecorator):
     """
 
     def to_jax(x):
+      if self.config.allow_mixed_math_with_scalar_tensor and not isinstance(
+          x, Tensor):
+        if x.squeeze().ndim == 0:
+          return x.item()
       if isinstance(
           x, torch.distributed._functional_collectives.AsyncCollectiveTensor):
         x = x.wait()

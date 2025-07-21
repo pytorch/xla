@@ -11,6 +11,7 @@ from jax import tree_util as pytree
 from jax.experimental.shard_map import shard_map
 from torchax import tensor
 from torchax import util
+from torchax.ops import mappings
 import torchax
 
 from torchax.types import JaxValue, TorchValue, JaxCallable, TorchCallable
@@ -90,7 +91,7 @@ class JittableModule(torch.nn.Module):
   def __call__(self, *args, **kwargs):
     return self.forward(*args, **kwargs)
 
-  def functional_call(self, method_name, params, buffers, *args, **kwargs):
+  def functional_call(self, method_or_name, params, buffers, *args, **kwargs):
     kwargs = kwargs or {}
     params_copy = copy.copy(params)
     params_copy.update(buffers)
@@ -98,8 +99,18 @@ class JittableModule(torch.nn.Module):
     for k, v in self._extra_dumped_weights.items():
       for new_key in v:
         params_copy[new_key] = params_copy[k]
+
+    if isinstance(method_or_name, str):
+      method = getattr(self._model, method_or_name)
+    else:
+      if not callable(method_or_name):
+        raise TypeError(
+            f"method_or_name should be a callable or a string, got {type(method_or_name)}"
+        )
+      method = method_or_name
+      args = (self._model,) + args
     with torch_stateless._reparametrize_module(self._model, params_copy):
-      res = getattr(self._model, method_name)(*args, **kwargs)
+      res = method(*args, **kwargs)
     return res
 
   def jittable_call(self, method_name: str, *args, **kwargs):
@@ -173,8 +184,8 @@ def _torch_view(t: JaxValue) -> TorchValue:
   if isinstance(t, jax.Array):
     # TODO
     return tensor.Tensor(t, torchax.default_env())
-  if isinstance(t, type(jnp.int32)):
-    return tensor.t2j_type(t)
+  if isinstance(t, jnp.dtype):
+    return mappings.j2t_dtype(t)
   if callable(t):  # t is a JaxCallable
     return functools.partial(call_jax, t)
   # regular types are not changed
@@ -191,7 +202,7 @@ def _jax_view(t: TorchValue) -> JaxValue:
     assert isinstance(t, tensor.Tensor) or isinstance(t, tensor.View), type(t)
     return t.jax()
   if isinstance(t, type(torch.int32)):
-    return tensor.t2j_dtype(t)
+    return mappings.t2j_dtype(t)
 
   # torch.nn.Module needs special handling
   if not isinstance(t, torch.nn.Module) and callable(t):  # t is a TorchCallable

@@ -186,7 +186,7 @@ class TestOpInfo(TestCase):
     self.env = torchax.default_env()
     torchax.enable_accuracy_mode()
     #self.env.config.debug_accuracy_for_each_op = True
-    self.env.config.debug_print_each_op = True
+    self.env.config.debug_print_each_op = False
     torch.manual_seed(0)
     self.old_var = self.env.config.use_torch_native_for_cpu_tensor
     self.env.config.use_torch_native_for_cpu_tensor = False
