@@ -1473,7 +1473,7 @@ def get_tuned_block_sizes(
       max_num_batched_tokens,
       pages_per_seq,
   )
-  key = simplify_key(key)
+  simplified_key = simplify_key(key)
   device_name = get_device_name()
 
   # Default block sizes.
@@ -1501,11 +1501,11 @@ def get_tuned_block_sizes(
     # OOM in vmem
     bkv, bq = (32, 32)
   elif device_name in TUNED_BLOCK_SIZES:
-    if key in TUNED_BLOCK_SIZES[device_name]:
-      bkv, bq = TUNED_BLOCK_SIZES[device_name][key]
+    if simplified_key in TUNED_BLOCK_SIZES[device_name]:
+      bkv, bq = TUNED_BLOCK_SIZES[device_name][simplified_key]
     else:
       logging.warning(
-          f"key({key}) is not in ragged attention kernel's tuning table!")
+          f"simplified_key({simplified_key}) is not in ragged attention kernel's tuning table!, the old key is {key}")
   return (min(pages_per_seq, bkv), min(max_num_batched_tokens, bq))
 
 
