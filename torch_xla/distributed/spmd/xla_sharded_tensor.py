@@ -200,7 +200,6 @@ class XLAShardedTensor(torch.Tensor):
 
     # use existing mesh_shape
     if self.mesh_shape is not None:
-      import torch_xla.runtime as xr
       device_count = xr.global_runtime_device_count()
       device_list = list(range(device_count))
       mesh = DeviceMesh("xla",
