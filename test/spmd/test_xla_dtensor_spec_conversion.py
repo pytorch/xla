@@ -67,24 +67,17 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_spec_caching(self):
     """Test that _spec property caches results
-    
-    Addresses PR comment: "These sorts of tests that rely on the wall clock often lead to 
-    annoying flakes in my experience. I think it's sufficient to just test that 
-    self._cached_spec has a permanent value after the first call."
     """
     device_count = xr.global_runtime_device_count()
     mesh = DeviceMesh("xla", list(range(device_count)))
     tensor = torch.randn(100, 100)
     xla_tensor = distribute_tensor(tensor, mesh, [Shard(0)])
 
-    # First access should create and cache the spec
     spec1 = xla_tensor._spec
 
-    # Verify the spec is cached
     assert xla_tensor._cached_spec is not None
     assert xla_tensor._cached_spec is spec1
 
-    # Second access should return the cached spec
     spec2 = xla_tensor._spec
     assert spec1 is spec2
 
