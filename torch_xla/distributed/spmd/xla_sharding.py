@@ -767,14 +767,27 @@ def wrap_as_sharded_tensor(t: Union[torch.Tensor, XLAShardedTensor],
                            partition_spec=None) -> XLAShardedTensor:
   # pass along mesh and partition spec information
   if not isinstance(t, XLAShardedTensor):
+    # Create a new XLAShardedTensor
     return XLAShardedTensor(
         t, mesh_shape=mesh_shape, partition_spec=partition_spec)
-  else:
-    if mesh_shape is not None:
-      t.mesh_shape = mesh_shape
-    if partition_spec is not None:
-      t.partition_spec = partition_spec
-    return t
+
+  # Update existing XLAShardedTensor if needed
+  needs_invalidate = False
+
+  # Always set mesh_shape and partition_spec if provided
+  if mesh_shape is not None:
+    t.mesh_shape = mesh_shape
+    needs_invalidate = True
+
+  if partition_spec is not None:
+    t.partition_spec = partition_spec
+    needs_invalidate = True
+
+  # Invalidate cached spec if resharding occurred
+  if needs_invalidate:
+    t.invalidate_spec_cache()
+
+  return t
 
 
 def unwrap_sharded_tensor(
