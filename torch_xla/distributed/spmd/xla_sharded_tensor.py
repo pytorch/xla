@@ -205,7 +205,11 @@ class XLAShardedTensor(torch.Tensor):
       mesh = DeviceMesh("xla",
                         torch.tensor(device_list).reshape(self.mesh_shape))
     else:
-      raise ValueError("mesh_shape must be specified to create DTensorSpec")
+      raise ValueError(
+          "mesh_shape must be specified to create DTensorSpec. "
+          "If this tensor was created through torch operations, it may be auto-wrapped. "
+          "Use wrap_as_sharded_tensor() to set mesh_shape before accessing _spec. "
+      )
 
     # use existing partition_spec
     if self.partition_spec is not None:
@@ -220,7 +224,11 @@ class XLAShardedTensor(torch.Tensor):
         placements.append(
             Shard(tensor_dim) if tensor_dim is not None else Replicate())
     else:
-      raise ValueError("partition_spec must be specified to create DTensorSpec")
+      raise ValueError(
+          "partition_spec must be specified to create DTensorSpec. "
+          "If this tensor was created through torch operations, it may be auto-wrapped. "
+          "Use wrap_as_sharded_tensor() to set partition_spec before accessing _spec. "
+      )
 
     # tensor metadata
     tensor_meta = TensorMeta(
