@@ -1504,7 +1504,8 @@ def get_tuned_block_sizes(
     if key in TUNED_BLOCK_SIZES[device_name]:
       bkv, bq = TUNED_BLOCK_SIZES[device_name][key]
     else:
-      logging.warning(f"key({key}) is not in ragged attention kernel's tuning table!")
+      logging.warning(
+          f"key({key}) is not in ragged attention kernel's tuning table!")
   return (min(pages_per_seq, bkv), min(max_num_batched_tokens, bq))
 
 
