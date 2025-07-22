@@ -212,6 +212,23 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
     assert resharded_tensor._spec is not initial_spec
     assert resharded_tensor._spec.placements[1].dim == 1
 
+  def test_auto_wrapped_tensor_spec_failure(self):
+    """Test that auto-wrapped tensors fail when accessing _spec property.
+    
+    Auto-wrapped tensors are created through operations that trigger __torch_dispatch__
+    but don't yet have access to the sharding propagation done through open xla,
+    causing ._spec to fail. 
+    """
+    device_count = xr.global_runtime_device_count()
+    mesh = DeviceMesh("xla", torch.arange(device_count))
+    tensor = torch.randn(4, 4)
+    sharded_tensor = distribute_tensor(tensor, mesh, [Shard(0)])
+
+    auto_wrapped = sharded_tensor + sharded_tensor
+
+    with self.assertRaises(ValueError):
+      _ = auto_wrapped._spec
+
 
 if __name__ == '__main__':
   test = unittest.main()
