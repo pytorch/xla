@@ -10,6 +10,7 @@ import torch_xla.runtime as xr
 from torch.distributed.tensor._dtensor_spec import DTensorSpec, TensorMeta
 from torch.distributed.device_mesh import DeviceMesh
 from torch.distributed.tensor.placement_types import Shard, Replicate
+from torch.utils._pytree import tree_map_only
 
 
 @dataclass
@@ -115,11 +116,13 @@ class XLAShardedTensor(torch.Tensor):
         device=elem.device,
         requires_grad=kwargs.get("requires_grad", False))
     r.global_tensor = elem.detach() if r.requires_grad else elem
-    # Store mesh and partition information for DTensor compatibility
-    if mesh_shape is not None:
-      r.mesh_shape = mesh_shape
-    if partition_spec is not None:
-      r.partition_spec = partition_spec
+
+    # Initialize mesh, partition, and spec information
+    r.mesh_shape = mesh_shape or (elem.mesh_shape if isinstance(
+        elem, XLAShardedTensor) else None)
+    r.partition_spec = partition_spec or (elem.partition_spec if isinstance(
+        elem, XLAShardedTensor) else None)
+    r._cached_spec = None
     return r
 
   # Shards on the devices are materialized/available after the lazy
@@ -143,6 +146,9 @@ class XLAShardedTensor(torch.Tensor):
     data = [s.data for s in shards]
     devices = [s.shard_device for s in shards]
     torch_xla._XLAC._load_local_shards(self.global_tensor, data, devices)
+
+    # Invalidate cached spec since the global_tensor data has changed
+    self.invalidate_spec_cache()
 
   @property
   def sharding_spec(self):
@@ -173,27 +179,7 @@ class XLAShardedTensor(torch.Tensor):
       return elem.global_tensor if isinstance(elem, XLAShardedTensor) else elem
 
     def wrap(elem):
-      if isinstance(elem,
-                    torch.Tensor) and not isinstance(elem, XLAShardedTensor):
-        # Try to get mesh/partition info from any XLAShardedTensor in args
-        mesh_shape = None
-        partition_spec = None
-
-        def find_sharded_info(x):
-          nonlocal mesh_shape, partition_spec
-          if isinstance(x, XLAShardedTensor):
-            if hasattr(x, 'mesh_shape') and x.mesh_shape:
-              mesh_shape = x.mesh_shape
-            if hasattr(x, 'partition_spec') and x.partition_spec:
-              partition_spec = x.partition_spec
-
-        tree_map(find_sharded_info, args)
-        if kwargs:
-          tree_map(find_sharded_info, kwargs)
-
-        return XLAShardedTensor(
-            elem, mesh_shape=mesh_shape, partition_spec=partition_spec)
-      return elem
+      return XLAShardedTensor(elem) if isinstance(elem, torch.Tensor) else elem
 
     # no_dispatch is only needed if you use enable_python_mode.
     # It prevents infinite recursion.
@@ -209,11 +195,11 @@ class XLAShardedTensor(torch.Tensor):
     Convert XLA sharding information to DTensorSpec for DTensor interface compatibility.
     """
     # Return cached spec if available
-    if hasattr(self, '_cached_spec'):
+    if self._cached_spec is not None:
       return self._cached_spec
 
     # use existing mesh_shape
-    if hasattr(self, 'mesh_shape') and self.mesh_shape:
+    if self.mesh_shape is not None:
       import torch_xla.runtime as xr
       device_count = xr.global_runtime_device_count()
       device_list = list(range(device_count))
@@ -223,11 +209,9 @@ class XLAShardedTensor(torch.Tensor):
       raise ValueError("mesh_shape must be specified to create DTensorSpec")
 
     # use existing partition_spec
-    if hasattr(self, 'partition_spec') and self.partition_spec:
+    if self.partition_spec is not None:
       placements = []
-      for mesh_dim in range(
-          len(self.mesh_shape
-             ) if hasattr(self, 'mesh_shape') and self.mesh_shape else 1):
+      for mesh_dim in range(len(self.mesh_shape)):
         # find tensor dimension sharded on this mesh dimension
         tensor_dim = None
         for t_dim, m_dim in enumerate(self.partition_spec):
@@ -249,6 +233,10 @@ class XLAShardedTensor(torch.Tensor):
     self._cached_spec = DTensorSpec(
         mesh=mesh, placements=tuple(placements), tensor_meta=tensor_meta)
     return self._cached_spec
+
+  def invalidate_spec_cache(self):
+    """Invalidate the cached DTensorSpec."""
+    self._cached_spec = None
 
   @classmethod
   def __torch_function__(cls, func, types, args=(), kwargs=None):
