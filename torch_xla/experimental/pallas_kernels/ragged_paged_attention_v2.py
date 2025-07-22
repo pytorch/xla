@@ -1505,7 +1505,7 @@ def get_tuned_block_sizes(
       bkv, bq = TUNED_BLOCK_SIZES[device_name][simplified_key]
     else:
       logging.warning(
-          f"simplified_key({simplified_key}) is not in ragged attention kernel's tuning table!, the old key is {key}"
+          f"simplified_key({simplified_key}) is not in ragged attention kernel's tuning table!, the key before simpilification is {key}"
       )
   return (min(pages_per_seq, bkv), min(max_num_batched_tokens, bq))
 
