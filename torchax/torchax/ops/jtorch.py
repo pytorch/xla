@@ -341,7 +341,7 @@ def empty(*size: Sequence[int], dtype=None, **kwargs):
   return jnp.empty(size, dtype=dtype)
 
 
-@register_function(torch.arange, is_jax_function=False)
+@register_function(torch.arange, is_jax_function=True)
 def arange(
     start,
     end=None,
@@ -358,10 +358,10 @@ def arange(
     start = 0
   if step is None:
     step = 1
-  return torch.ops.aten.arange(start, end, step, dtype=dtype)
+  return jaten._aten_arange(start, end, step, dtype=dtype)
 
 
-@register_function(torch.empty_strided, is_jax_function=False)
+@register_function(torch.empty_strided, is_jax_function=True)
 def empty_strided(
     size,
     stride,
@@ -372,7 +372,7 @@ def empty_strided(
     requires_grad=False,
     pin_memory=False,
 ):
-  return empty(size, dtype=dtype)
+  return empty(size, dtype=dtype, requires_grad=requires_grad)
 
 
 @register_function(torch.unravel_index)
@@ -380,14 +380,14 @@ def unravel_index(indices, shape):
   return jnp.unravel_index(indices, shape)
 
 
-@register_function(torch.rand, is_jax_function=False)
+@register_function(torch.rand, is_jax_function=True, needs_env=True)
 def rand(*size, **kwargs):
   if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
     size = size[0]
-  return torch.ops.aten.rand(size, **kwargs)
+  return jaten._rand(size, **kwargs)
 
 
-@register_function(torch.randn, is_jax_function=False)
+@register_function(torch.randn, is_jax_function=True, needs_env=True)
 def randn(
     *size,
     generator=None,
@@ -397,15 +397,16 @@ def randn(
     device=None,
     requires_grad=False,
     pin_memory=False,
+    env=None,
 ):
   if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
     size = size[0]
-  return torch.ops.aten.randn(size, generator=generator, dtype=dtype)
+  return jaten._aten_randn(size, generator=generator, dtype=dtype, env=env)
 
 
-@register_function(torch.randint, is_jax_function=False)
+@register_function(torch.randint, is_jax_function=False, needs_env=True)
 def randint(*args, **kwargs):
-  return torch.ops.aten.randint(*args, **kwargs)
+  return jaten._aten_randint(*args, **kwargs)
 
 
 @register_function(torch.logdet)

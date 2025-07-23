@@ -296,7 +296,6 @@ TENSOR_CONSTRUCTORS = {
 SUPPORTED_JAX_PLATFROM = ["cpu", "tpu"]
 
 
-
 class RuntimeProperty:
   mesh: Any
   prng: Any
@@ -315,7 +314,7 @@ class RuntimeProperty:
     new_prng_key, next_key = jax.random.split(old_key)
     self.prng = new_prng_key
     return next_key
-  
+
 
 class OverrideProperty(RuntimeProperty):
 
@@ -362,11 +361,10 @@ class Environment(contextlib.ContextDecorator):
 
     _prng_key = jax.random.key(torch.initial_seed() % (1 << 63))
     self._property = threading.local()
-    self._property.content = [RuntimeProperty(
-      mesh=_mesh,
-      prng=_prng_key,
-      autocast_dtype=autocast_dtype
-    )]
+    self._property.content = [
+        RuntimeProperty(
+            mesh=_mesh, prng=_prng_key, autocast_dtype=autocast_dtype)
+    ]
 
   @property
   def param(self):
@@ -393,11 +391,11 @@ class Environment(contextlib.ContextDecorator):
       device = torch.get_default_device()
     if isinstance(device, torch.device):
       device = device.type
-    
+
     match device:
       case 'cpu':
         return False
-      case 'cuda': 
+      case 'cuda':
         return self.config.treat_cuda_as_jax_device
       case 'jax':
         return True
@@ -478,7 +476,7 @@ class Environment(contextlib.ContextDecorator):
       else:
         arr = self.t2j_copy(the_tensor)
         res = Tensor(arr, self, the_tensor.requires_grad)
-    
+
     if new_dtype is not None and new_dtype != the_tensor.dtype:
       if isinstance(the_tensor, Tensor):
         res = res.apply_jax(jnp.astype, mappings.t2j_dtype(new_dtype))
@@ -493,11 +491,12 @@ class Environment(contextlib.ContextDecorator):
 
   def _handle_tensor_constructor(self, func, args, kwargs):
     device = kwargs.get("device")
-
     if self._should_use_torchax_tensor(device):
       # don't set default device, let caller set it
       requires_grad = kwargs.get("requires_grad", True)
       op = self._get_op_or_decomp(func)
+      if op.needs_env:
+        kwargs['env'] = self
       res = op.func(*args, **kwargs)
       if isinstance(res, jax.Array):
         res = Tensor(res, self, requires_grad)
@@ -505,7 +504,6 @@ class Environment(contextlib.ContextDecorator):
     else:
       with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
         return func(*args, **kwargs)
-
 
   def _torch_Tensor_to(self, args, kwargs):
     the_tensor = args[0]

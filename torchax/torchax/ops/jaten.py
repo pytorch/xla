@@ -3532,7 +3532,7 @@ def _aten_tensor_split(ary, indices_or_sections, axis=0):
 
 @op(torch.ops.aten.randn, needs_env=True)
 @op_base.convert_dtype()
-def _randn(
+def _aten_randn(
     *size,
     generator=None,
     out=None,
