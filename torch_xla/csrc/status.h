@@ -48,8 +48,9 @@ constexpr char kStatusPropagationTraceKey[] = "status-propagation-trace";
 //     RuntimeError: Error message.
 //       From: <cpp-source-file>:<line> (error: Error message.)
 //
-#define XLA_ERROR_WITH_LOCATION(status) \
-  ::torch_xla::status_internal::MaybeWithLocation(status, __FILE__, __LINE__)
+#define XLA_ERROR_WITH_LOCATION(status)                                       \
+  ::torch_xla::status_internal::MaybeWithLocation(status, __FILE__, __LINE__, \
+                                                  __FUNCTION__)
 
 #define XLA_CONCAT_(a, b) XLA_CONCAT_IMPL_(a, b)
 #define XLA_CONCAT_IMPL_(a, b) a##b
@@ -66,7 +67,7 @@ constexpr char kStatusPropagationTraceKey[] = "status-propagation-trace";
   if (!var.ok()) {                                                        \
     return ::torch_xla::status_internal::MaybeWithNewMessage(             \
         ::torch_xla::status_internal::GetStatus(var), __FILE__, __LINE__, \
-        ##__VA_ARGS__);                                                   \
+        __FUNCTION__, ##__VA_ARGS__);                                     \
   }                                                                       \
   then
 
@@ -137,7 +138,7 @@ namespace status_internal {
 // whole program.
 //
 absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
-                               int32_t line);
+                               int32_t line, const char* function);
 
 // Returns an `absl::Status` from an `absl::Status`.
 // In this case, this function is a no-op. It simply returns the argument.
@@ -167,7 +168,7 @@ const absl::Status& GetStatus(const absl::StatusOr<T>& status) {
 // propagation trace payload (creates a new one if needed), if
 // `TORCH_SHOW_CPP_STACKTRACES` is set.
 absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
-                                 int32_t line,
+                                 int32_t line, const char* function,
                                  std::string_view new_message = "");
 
 }  // namespace status_internal

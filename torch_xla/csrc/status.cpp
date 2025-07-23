@@ -21,13 +21,15 @@ constexpr char kFramePrefix[] = "\n    ";
 // trace of the status currently being processed.
 //
 // Example:
-//   \n    From: <file>:<line> [(error: <message>)]
+//   \n    From: <function> at <file>:<line> [(error: <message>)]
 //
 static std::string GetStackFrame(const char* file, const int32_t line,
+                                 const char* function,
                                  const std::string_view new_message) {
   auto error_suffix =
       new_message.empty() ? "" : absl::StrCat(" (error: ", new_message, ")");
-  return absl::StrCat(kEntryPrefix, "From: ", file, ":", line, error_suffix);
+  return absl::StrCat(kFramePrefix, "From: ", function, " at ", file, ":", line,
+                      error_suffix);
 }
 
 // Convenient function that retrieves the status propagation trace payload
@@ -39,7 +41,8 @@ static absl::Cord GetStatusPropagationTraceOrEmpty(const absl::Status& status) {
 
 absl::Status status_internal::MaybeWithLocation(const absl::Status& status,
                                                 const char* file,
-                                                const int32_t line) {
+                                                const int32_t line,
+                                                const char* function) {
   ABSL_CHECK(!status.ok());
 
   // Return the same status if we don't need to add the C++ source location.
@@ -54,12 +57,12 @@ absl::Status status_internal::MaybeWithLocation(const absl::Status& status,
   // the status message:
   //   1. An stack frame will be added to the status propagation trace
   //   2. The status' message will be the same
-  return MaybeWithNewMessage(status, file, line, status.message());
+  return MaybeWithNewMessage(status, file, line, function, status.message());
 }
 
 absl::Status status_internal::MaybeWithNewMessage(
     const absl::Status& status, const char* file, const int32_t line,
-    const std::string_view new_message) {
+    const char* function, const std::string_view new_message) {
   ABSL_CHECK(!status.ok());
 
   // Return the same status if:
@@ -84,7 +87,7 @@ absl::Status status_internal::MaybeWithNewMessage(
   //     2. append the new error message, if not empty
   if (torch::get_cpp_stacktraces_enabled()) {
     auto status_propagation_trace = GetStatusPropagationTraceOrEmpty(status);
-    status_propagation_trace.Append(GetStackFrame(file, line, new_message));
+    status_propagation_trace.Append(GetStackFrame(file, line, function, new_message));
     new_status.SetPayload(kStatusPropagationTraceKey, status_propagation_trace);
   }
 

@@ -79,6 +79,7 @@ namespace testing {
 constexpr inline char kNewMessage[] = "New test error message";
 constexpr inline char kMessage[] = "Test error message";
 constexpr inline char kFile[] = "test_file.cpp";
+constexpr inline char kFunction[] = "foo";
 constexpr inline char kEntryPrefix[] = "\n    ";
 constexpr inline int32_t kLine = 42;
 
@@ -128,7 +129,7 @@ TEST_P(StatusTest, GetValueOrThrowWithErrorStatusOr) {
 TEST_P(StatusTest, MaybeWithLocationPropagatesErrorStatus) {
   absl::Status error_status = absl::InvalidArgumentError(kMessage);
   absl::Status result =
-      status_internal::MaybeWithLocation(error_status, kFile, kLine);
+      status_internal::MaybeWithLocation(error_status, kFile, kLine, kFunction);
 
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.code(), error_status.code());
@@ -137,8 +138,8 @@ TEST_P(StatusTest, MaybeWithLocationPropagatesErrorStatus) {
   if (IsShowCppStacktracesMode()) {
     EXPECT_NE(result, error_status);
     EXPECT_EQ(GetStatusPropagationTrace(result),
-              absl::StrCat(kEntryPrefix, "From: ", kFile, ":", kLine,
-                           " (error: ", kMessage, ")"));
+              absl::StrCat(kEntryPrefix, "From: ", kFunction, " at ", kFile,
+                           ":", kLine, " (error: ", kMessage, ")"));
   } else {
     EXPECT_EQ(result, error_status);
   }
@@ -146,8 +147,8 @@ TEST_P(StatusTest, MaybeWithLocationPropagatesErrorStatus) {
 
 TEST_P(StatusTest, MaybeWithNewMessageEmptyNewMessage) {
   absl::Status error_status = absl::InvalidArgumentError(kMessage);
-  absl::Status result =
-      status_internal::MaybeWithNewMessage(error_status, kFile, kLine);
+  absl::Status result = status_internal::MaybeWithNewMessage(
+      error_status, kFile, kLine, kFunction);
 
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.code(), error_status.code());
@@ -156,7 +157,8 @@ TEST_P(StatusTest, MaybeWithNewMessageEmptyNewMessage) {
   if (IsShowCppStacktracesMode()) {
     EXPECT_NE(result, error_status);
     EXPECT_EQ(GetStatusPropagationTrace(result),
-              absl::StrCat(kEntryPrefix, "From: ", kFile, ":", kLine));
+              absl::StrCat(kEntryPrefix, "From: ", kFunction, " at ", kFile,
+                           ":", kLine));
   } else {
     EXPECT_EQ(result, error_status);
   }
@@ -165,7 +167,7 @@ TEST_P(StatusTest, MaybeWithNewMessageEmptyNewMessage) {
 TEST_P(StatusTest, MaybeWithNewMessageNonEmptyNewMessage) {
   absl::Status error_status = absl::InvalidArgumentError(kMessage);
   absl::Status result = status_internal::MaybeWithNewMessage(
-      error_status, kFile, kLine, kNewMessage);
+      error_status, kFile, kLine, kFunction, kNewMessage);
 
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.code(), error_status.code());
@@ -174,8 +176,8 @@ TEST_P(StatusTest, MaybeWithNewMessageNonEmptyNewMessage) {
 
   if (IsShowCppStacktracesMode()) {
     EXPECT_EQ(GetStatusPropagationTrace(result),
-              absl::StrCat(kEntryPrefix, "From: ", kFile, ":", kLine,
-                           " (error: ", kNewMessage, ")"));
+              absl::StrCat(kEntryPrefix, "From: ", kFunction, " at ", kFile,
+                           ":", kLine, " (error: ", kNewMessage, ")"));
   }
 }
 
@@ -230,10 +232,12 @@ TEST_P(StatusTest, MacroReturnIfErrorWithNestedError) {
   EXPECT_EQ(result.message(), std::string_view(kMessage));
 
   if (IsShowCppStacktracesMode()) {
-    auto frame0 = absl::StrCat(kEntryPrefix, "From: ", __FILE__, ":", errline0,
-                               " (error: ", kMessage, ")");
-    auto frame1 = absl::StrCat(kEntryPrefix, "From: ", __FILE__, ":", errline1);
-    auto frame2 = absl::StrCat(kEntryPrefix, "From: ", __FILE__, ":", errline2);
+    auto frame0 = absl::StrCat(kEntryPrefix, "From: operator() at ", __FILE__,
+                               ":", errline0, " (error: ", kMessage, ")");
+    auto frame1 = absl::StrCat(kEntryPrefix, "From: operator() at ", __FILE__,
+                               ":", errline1);
+    auto frame2 = absl::StrCat(kEntryPrefix, "From: operator() at ", __FILE__,
+                               ":", errline2);
     EXPECT_EQ(GetStatusPropagationTrace(result),
               absl::StrCat(frame0, frame1, frame2));
   }
@@ -254,8 +258,8 @@ TEST_P(StatusTest, MacroReturnIfErrorWithErrorWithNewMessage) {
 
   if (IsShowCppStacktracesMode()) {
     EXPECT_EQ(GetStatusPropagationTrace(result),
-              absl::StrCat(kEntryPrefix, "From: ", __FILE__, ":", errline,
-                           " (error: ", kNewMessage, ")"));
+              absl::StrCat(kEntryPrefix, "From: operator() at ", __FILE__, ":",
+                           errline, " (error: ", kNewMessage, ")"));
   }
 }
 
@@ -302,8 +306,8 @@ TEST_P(StatusTest, MacroAssignOrReturnWithErrorWithNewMessage) {
 
   if (IsShowCppStacktracesMode()) {
     EXPECT_EQ(GetStatusPropagationTrace(result.status()),
-              absl::StrCat(kEntryPrefix, "From: ", __FILE__, ":", errline,
-                           " (error: ", kNewMessage, ")"));
+              absl::StrCat(kEntryPrefix, "From: operator() at ", __FILE__, ":",
+                           errline, " (error: ", kNewMessage, ")"));
   }
 }
 
@@ -316,8 +320,8 @@ TEST_P(StatusTest, MacroErrorWithLocation) {
   EXPECT_EQ(result.message(), std::string_view(kMessage));
   if (IsShowCppStacktracesMode()) {
     EXPECT_EQ(GetStatusPropagationTrace(result),
-              absl::StrCat(kEntryPrefix, "From: ", __FILE__, ":", errline,
-                           " (error: ", kMessage, ")"));
+              absl::StrCat(kEntryPrefix, "From: ", __FUNCTION__, " at ",
+                           __FILE__, ":", errline, " (error: ", kMessage, ")"));
   }
 }
 
@@ -356,10 +360,10 @@ TEST_P(StatusTest, MaybeThrowWithErrorPropagationWithNewMessage) {
     //
     std::string expected_prefix = absl::StrCat(
         kNewMessage, "\n\nStatus Propagation Trace:", kEntryPrefix,
-        "From: ", __FILE__, ":", errline0, " (error: ", kMessage, ")",
-        kEntryPrefix, "From: ", __FILE__, ":", errline1,
-        " (error: ", kNewMessage, ")", kEntryPrefix, "From: ", __FILE__, ":",
-        errline2, "\n\nC++ Stacktrace:\n");
+        "From: operator() at ", __FILE__, ":", errline0, " (error: ", kMessage,
+        ")", kEntryPrefix, "From: operator() at ", __FILE__, ":", errline1,
+        " (error: ", kNewMessage, ")", kEntryPrefix, "From: operator() at ",
+        __FILE__, ":", errline2, "\n\nC++ Stacktrace:\n");
 
     EXPECT_THAT(throw_exception, ::testing::ThrowsMessage<std::runtime_error>(
                                      ::testing::StartsWith(expected_prefix)));
