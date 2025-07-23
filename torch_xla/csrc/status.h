@@ -14,7 +14,22 @@
 
 namespace torch_xla {
 
-constexpr char kStacktraceKey[] = "stacktrace";
+// `type_url` for retrieving the status propagation trace payload of a given
+// status.
+//
+// The payload is composed of multiple lines, where each line represents a stack
+// frame in the status propagation trace. Each line is in the following format:
+//
+//     \n    From: <file>:<line>[ErrorSuffix]
+//     | ----                     |
+//     |  |                       |_ error message produced in that source
+//     |  |                          location (it might be overwritten later).
+//     |  |
+//     |  |_ leading 4 spaces for improved readability.
+//     |
+//     |_ start with a line break.
+//
+constexpr char kStatusPropagationTraceKey[] = "status-propagation-trace";
 
 // If `TORCH_SHOW_CPP_STACKTRACES` is set, creates a new Status instance,
 // appending the current location (e.g. file and line information) to the
@@ -110,10 +125,17 @@ constexpr char kStacktraceKey[] = "stacktrace";
 
 namespace status_internal {
 
-// Adds source location information to the status stacktrace if
+// Adds source location information to the status propagation trace if
 // `TORCH_SHOW_CPP_STACKTRACES` is set.
 //
-// This function assumes that `status` is a non-ok status.
+// This function assumes that:
+//
+//   1. `status` is a non-ok status.
+//   2. `status` doesn't have a status propagation trace payload 
+//
+// If any of the above assumptions is false, this function crashes the
+// whole program.
+//
 absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
                                int32_t line);
 
@@ -129,7 +151,8 @@ const absl::Status& GetStatus(const absl::StatusOr<T>& status) {
   return status.status();
 }
 
-// Maybe replace the current `status` message with `new_message`.
+// Maybe replace the current `status` message with `new_message`, and also
+// add source location information if enabled.
 //
 // This function assumes that `status` is a non-ok status.
 //
@@ -140,7 +163,8 @@ const absl::Status& GetStatus(const absl::StatusOr<T>& status) {
 // Rationale: if given, `new_message` has more context, which makes it possible
 // to construct better error messages to the user.
 //
-// This function also appends file location information to the error message, if
+// This function also appends the source location information to the status
+// propagation trace payload (creates a new one if needed), if
 // `TORCH_SHOW_CPP_STACKTRACES` is set.
 absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
                                  int32_t line,
