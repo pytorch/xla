@@ -1,3 +1,4 @@
+import threading
 import logging
 import sys
 import contextlib
@@ -16,21 +17,12 @@ from torchax.view import View
 from torchax import config
 from torchax.ops import mappings, ops_registry
 from torchax import amp
-from jax.experimental import mutable_array
 
 logger = logging.getLogger(__name__)
 
 
 class OperatorNotFound(Exception):
   pass
-
-
-def wrap(jaxarray):
-  return torch_pytree.tree_map_only(jnp.ndarray, Tensor, jaxarray)
-
-
-def unwrap(torchtensors):
-  return torch_pytree.tree_map_only(Tensor, lambda x: x._elem, torchtensors)
 
 
 @contextlib.contextmanager
@@ -48,7 +40,7 @@ log_nested.level = 0
 class Tensor(torch.Tensor):
 
   @staticmethod
-  def __new__(cls, elem, env):
+  def __new__(cls, elem, env, requires_grad=False):
     dtype = mappings.j2t_dtype(elem.dtype)
     shape = list(elem.shape)
     for i, s in enumerate(shape):
@@ -56,15 +48,19 @@ class Tensor(torch.Tensor):
         shape[i] = 1
     if dtype is None:
       dtype = torch.float32
+    #dispatch_keys = torch.DispatchKeySet(torch._C.DispatchKey.PrivateUse1).add(torch._C.DispatchKey.AutogradPrivateUse1)
+    if not (dtype.is_floating_point or dtype.is_complex):
+      requires_grad = False
+
     return torch.Tensor._make_wrapper_subclass(
         cls,
         shape,
         dtype=dtype,
-        device="meta",
-        requires_grad=False,
+        device='meta',
+        requires_grad=requires_grad,
     )
 
-  def __init__(self, elem: jax.Array, env: "Environment"):
+  def __init__(self, elem: jax.Array, env: "Environment", requires_grad=False):
     super().__init__()
     self._elem = elem
     self._env = env
@@ -109,6 +105,8 @@ class Tensor(torch.Tensor):
     # TODO(hanq): figure out why is dispatch mode not sufficient
     if func == torch.ops._c10d_functional.wait_tensor.default:
       return args[0]._env.dispatch(func, types, args, kwargs)
+    if func == torch.ops.prim.device.default:
+      return torch.device('privateuseone', 0)
     raise AssertionError(
         'torchax Tensors can only do math within the torchax environment.'
         'Please wrap your code with `with torchax.default_env()` or '
@@ -298,6 +296,39 @@ TENSOR_CONSTRUCTORS = {
 SUPPORTED_JAX_PLATFROM = ["cpu", "tpu"]
 
 
+
+class RuntimeProperty:
+  mesh: Any
+  prng: Any
+  autocast_dtype: Any
+
+  def __init__(self, mesh, prng, autocast_dtype):
+    self.mesh = mesh
+    self.prng = prng
+    self.autocast_dtype = autocast_dtype
+
+  def override(self, **kwargs):
+    return OverrideProperty(self, kwargs)
+
+  def get_and_rotate_prng_key(self):
+    old_key = self.prng
+    new_prng_key, next_key = jax.random.split(old_key)
+    self.prng = new_prng_key
+    return next_key
+  
+
+class OverrideProperty(RuntimeProperty):
+
+  def __init__(self, parent, override):
+    self.parent = parent
+    self._override = dict(override)
+
+  def __getattr__(self, name):
+    if name in self._override:
+      return self._override[name]
+    return getattr(self.parent, name)
+
+
 class Environment(contextlib.ContextDecorator):
   """This class holds a set of configurations and "globals" needed
 
@@ -321,16 +352,25 @@ class Environment(contextlib.ContextDecorator):
 
     self.load_ops()
 
-    self._mesh = None
+    _mesh = None
     self.config = configuration or config.Configuration()
 
-    self._manually_entered = False
     self.enabled = False
 
-    self._prng_key = mutable_array(
-        jax.random.key(torch.initial_seed() % (1 << 63)))
-    self.autocast_dtype = None
+    autocast_dtype = None
     self._target_device = jax.local_devices()[0].platform
+
+    _prng_key = jax.random.key(torch.initial_seed() % (1 << 63))
+    self._property = threading.local()
+    self._property.content = [RuntimeProperty(
+      mesh=_mesh,
+      prng=_prng_key,
+      autocast_dtype=autocast_dtype
+    )]
+
+  @property
+  def param(self):
+    return self._property.content[-1]
 
   @property
   def target_device(self):
@@ -341,42 +381,31 @@ class Environment(contextlib.ContextDecorator):
     self._target_device = device.lower()
 
   def manual_seed(self, key):
-    self._prng_key = mutable_array(jax.random.key(key))
+    new_prop = self.param.override(prng=key)
+    self._property.content.append(new_prop)
 
   @property
   def prng_key(self):
-    return self._prng_key[...]
+    return self.param.prng_ley
 
-  def get_as_jax_device(self, device: Any):
+  def _should_use_torchax_tensor(self, device):
     if device is None:
       device = torch.get_default_device()
-
     if isinstance(device, torch.device):
-      device = str(device)
-
-    if not self.config.use_torch_native_for_cpu_tensor and device.startswith(
-        "cpu"):
-      return jax.devices("cpu")[0]
-
-    if self.config.treat_cuda_as_jax_device and device.startswith("cuda"):
-      return jax.local_devices()[0]
-
-    if device.startswith("xla"):
-      return jax.local_devices()[0]
-
-    # TODO (wen): jax is NOT a device type,
-    # once we can register more than one backend, revisit
-    if device.startswith("jax"):
-      match self.target_device:
-        case "cpu":
-          return jax.devices("cpu")[0]
-        case "tpu":
-          return jax.devices("tpu")[0]
-        case _:
-          raise AttributeError(
-              f"Cannot handle env.target_device {self.target_device}")
-
-    return None  # fallback to torch
+      device = device.type
+    
+    match device:
+      case 'cpu':
+        return False
+      case 'cuda': 
+        return self.config.treat_cuda_as_jax_device
+      case 'jax':
+        return True
+      case 'privateuseone':
+        return True
+      case 'meta':
+        return self.enabled
+    return False
 
   def load_ops(self):
     from torchax.ops import jaten, jtorch, jc10d, jtorchvision_nms
@@ -426,77 +455,57 @@ class Environment(contextlib.ContextDecorator):
   def _to_copy(self, the_tensor, new_dtype, new_device):
     if isinstance(the_tensor, View):
       the_tensor = the_tensor.torch()
+    if isinstance(new_device, torch.device):
+      new_device = new_device.type
 
-    if isinstance(the_tensor, Tensor):
+    def is_same_device(the_tensor, new_device):
+      if new_device is None:
+        return True
+      if new_device == 'meta' and the_tensor.device.type == 'jax':
+        return True
+      if the_tensor.device.type != new_device:
+        if the_tensor.device.type == 'cuda':
+          return self.config.treat_cuda_as_jax_device
+        return False
+      return True
 
-      arr = the_tensor.jax()
-
-      if new_dtype is not None and new_dtype != arr.dtype:
-        arr = arr.astype(mappings.t2j_dtype(new_dtype))
-
-      if new_device is not None:
-        match str(new_device).lower():
-          case "cpu":
-            # converting to a non-jax device: let torch native handle it
-            torch_tensor = self.j2t_copy(arr) if isinstance(the_tensor,
-                                                            Tensor) else arr
-            with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-              return torch_tensor.to(new_device)
-          case "jax":
-            # move torchax.tensor / jax tensor between devices
-            # I don't know ifgit  this will work after the model is jitted
-            if self.target_device != the_tensor.jax_device.platform:
-              arr = jax.device_put(the_tensor.jax(),
-                                   jax.devices(self.target_device)[0])
-              return Tensor(arr, self)
-          case _:
-            logging.error(f"torchax.Tenosr cannot handle device {new_device}")
-
-    else:
-      if new_dtype is not None and new_dtype != the_tensor.dtype:
+    res = the_tensor
+    if not is_same_device(the_tensor, new_device):
+      if isinstance(the_tensor, Tensor):
+        torch_tensor = self.j2t_copy(the_tensor._elem)
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-          the_tensor = the_tensor.to(new_dtype)
-
-      if new_device is None:  ## device is None means don't change device
-        return the_tensor
-
-      jax_device = self.get_as_jax_device(new_device)
-      if jax_device:
+          return torch_tensor.to(device=new_device, dtype=new_dtype)
+      else:
         arr = self.t2j_copy(the_tensor)
-        arr = jax.device_put(arr, jax_device)
+        res = Tensor(arr, self, the_tensor.requires_grad)
+    
+    if new_dtype is not None and new_dtype != the_tensor.dtype:
+      if isinstance(the_tensor, Tensor):
+        res = res.apply_jax(jnp.astype, mappings.t2j_dtype(new_dtype))
       else:
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-          return the_tensor.to(new_device)
-
-    return Tensor(arr, self)
+          return the_tensor.to(device=new_device, dtype=new_dtype)
+    return res
 
   def get_and_rotate_prng_key(self,
                               generator: Optional[torch.Generator] = None):
-    if generator is not None:
-      with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-        self._prng_key[...] = jax.random.key(generator.initial_seed() % (2**63))
-    old_key = self._prng_key[...]
-    new_prng_key, next_key = jax.random.split(old_key)
-    self._prng_key[...] = new_prng_key
-    return next_key
+    return self.param.get_and_rotate_prng_key()
 
   def _handle_tensor_constructor(self, func, args, kwargs):
     device = kwargs.get("device")
-    jax_device = self.get_as_jax_device(device)
-    # TODO(qihqi) figure out better ways for device propagation
-    if not self._manually_entered and jax_device is None:
-      # let torch handle it
-      with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-        return func(*args, **kwargs)
-    with jax.default_device(jax_device):
-      requires_grad = kwargs.get("requires_grad", False)
+
+    if self._should_use_torchax_tensor(device):
+      # don't set default device, let caller set it
+      requires_grad = kwargs.get("requires_grad", True)
       op = self._get_op_or_decomp(func)
       res = op.func(*args, **kwargs)
       if isinstance(res, jax.Array):
-        res = Tensor(res, self)
-      if requires_grad:
-        res.requires_grad = True
+        res = Tensor(res, self, requires_grad)
       return res
+    else:
+      with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+        return func(*args, **kwargs)
+
 
   def _torch_Tensor_to(self, args, kwargs):
     the_tensor = args[0]
@@ -560,11 +569,11 @@ class Environment(contextlib.ContextDecorator):
           args, kwargs = self.v2t_iso((args, kwargs))
 
         with self:
-          if self.autocast_dtype is not None:
+          if self.param.autocast_dtype is not None:
             autocast_policy = amp.autocast_policy.get(func)
             if autocast_policy is not None:
               args, kwargs = amp.execute_policy(autocast_policy, args, kwargs,
-                                                self.autocast_dtype)
+                                                self.param.autocast_dtype)
 
         if op.is_jax_function:
           args, kwargs = self.t2j_iso((args, kwargs))
@@ -609,11 +618,9 @@ class Environment(contextlib.ContextDecorator):
 
   def __enter__(self):
     self.enable_torch_modes()
-    self._manually_entered = True
     return self
 
   def __exit__(self, *exc):
-    self._manually_entered = False
     self.disable_torch_modes(*exc)
 
   def _move_one_value(self, val):
@@ -701,3 +708,10 @@ class Environment(contextlib.ContextDecorator):
         is_user_defined=True,
         needs_env=False,
     )
+
+  @contextlib.contextmanager
+  def override_property(self, **kwargs):
+    new_prop = self.param.override(**kwargs)
+    self._property.content.append(new_prop)
+    yield
+    self._property.content.pop()

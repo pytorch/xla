@@ -81,11 +81,6 @@ def disable_temporarily():
 
 torch.utils.rename_privateuse1_backend('jax')
 unsupported_dtype = [torch.quint8]
-torch.utils.generate_methods_for_privateuse1_backend(
-    for_tensor=True,
-    for_module=True,
-    for_storage=True,
-    unsupported_dtype=unsupported_dtype)
 
 import jax
 import torchax.device_module
