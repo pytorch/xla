@@ -87,7 +87,8 @@ absl::Status status_internal::MaybeWithNewMessage(
   //     2. append the new error message, if not empty
   if (torch::get_cpp_stacktraces_enabled()) {
     auto status_propagation_trace = GetStatusPropagationTraceOrEmpty(status);
-    status_propagation_trace.Append(GetStackFrame(file, line, function, new_message));
+    status_propagation_trace.Append(
+        GetStackFrame(file, line, function, new_message));
     new_status.SetPayload(kStatusPropagationTraceKey, status_propagation_trace);
   }
 

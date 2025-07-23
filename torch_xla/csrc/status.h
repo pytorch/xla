@@ -132,7 +132,7 @@ namespace status_internal {
 // This function assumes that:
 //
 //   1. `status` is a non-ok status.
-//   2. `status` doesn't have a status propagation trace payload 
+//   2. `status` doesn't have a status propagation trace payload
 //
 // If any of the above assumptions is false, this function crashes the
 // whole program.
