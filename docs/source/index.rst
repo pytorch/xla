@@ -46,8 +46,8 @@ Tutorials
    :caption: Distributed Training on TPU
 
    accelerators/tpu
+   learn/migration-to-xla-on-tpus
    tutorials/precision_tutorial
-   learn/gpu-to-tpu-migration
    perf/spmd_basic
    perf/spmd_advanced
    perf/spmd_distributed_checkpoint

@@ -12,12 +12,10 @@ Understanding these differences will help you adapt your code effectively:
 * **TPUs (PyTorch/XLA)**: Default to a *lazy execution* model. Operations build a computation graph, which is then compiled by XLA and executed. For more information about lazy tensors, read about how [XLA Tensors are Lazy](./pytorch-on-xla-devices.md#xla-tensors-are-lazy).
 This compilation step occurs when a graph is first encountered or if the graph structure/input shapes change. Subsequent runs with the same graph are much faster.
 
-
 **Device Abstraction:**
 
 * **GPUs**: Accessed via `torch.device("cuda:0")` or similar.
 * **TPUs**: Accessed via `xm.xla_device()`.
-
 
 **Distributed Training:**
 
@@ -91,8 +89,6 @@ print(loss.item())
 # the tensor to CPU first if needed outside the main loop:
 print(loss.cpu().item()) # This will also trigger a sync if not done already
 ```
-
-<!-- Refer to [Lazy Execution & sync](TODO) for more details. -->
 
 ## Performance and Scalability Optimizations
 

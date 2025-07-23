@@ -6,7 +6,7 @@ This guide will walk you through training a basic PyTorch model on an XLA device
 
 Before you start, please ensure you have:
 
-1. Successfully completed the [Installation Guide](TODO) and have PyTorch/XLA installed and configured for your target XLA device (e.g., TPU or GPU).
+1. Successfully completed the [Installation steps](../index.rst) and have PyTorch/XLA installed and configured for your target XLA device (e.g., TPU or GPU).
 2. Basic familiarity with PyTorch concepts (tensors, `nn.Module`, `DataLoader`, optimizers).
 
 ## The MNIST Training Script
@@ -160,6 +160,5 @@ Let's break down the PyTorch/XLA specific lines:
 
 Congratulations! You've run your first PyTorch model on an XLA device.
 
-* To learn how to scale this to multiple XLA devices, explore our guides on [Distributed Training](TODO).
-* If you're coming from a GPU background, check out our [Migrating from GPUs to TPUs](./gpu-to-tpu-migration.html) guide for more detailed advice.
-* To understand the "why" behind PyTorch/XLA's behavior, dive into [Learn Core Concepts](TODO).
+* If you're coming from a GPU background, check out our [Migrating from GPUs to TPUs](./migration-to-xla-on-tpus.md) guide for more detailed advice.
+* To learn how to scale this to multiple XLA devices, explore the guides in the _Distributed Training on TPU_ section.
