@@ -11,28 +11,29 @@
 
 namespace torch_xla {
 
-// Indent the stacktrace so that it's easier to see.
-constexpr char kEntryPrefix[] = "\n    ";
+// Indent the stack frame representation so that it's easier to see.
+constexpr char kFramePrefix[] = "\n    ";
 
-// Creates an error propagation stacktrace entry.
+// Creates the stack frame representation for the status propagation trace
+// entry.
 //
-// The resulting entry will be appended to the existing stacktrace of the status
-// currently being processed.
+// The resulting string will be appended to the existing status propagation
+// trace of the status currently being processed.
 //
 // Example:
-//   From: <file>:<line> [(error: <message>)]
+//   \n    From: <file>:<line> [(error: <message>)]
 //
-static std::string GetStacktraceEntry(const char* file, const int32_t line,
-                                      const std::string_view new_message) {
+static std::string GetStackFrame(const char* file, const int32_t line,
+                                 const std::string_view new_message) {
   auto error_suffix =
       new_message.empty() ? "" : absl::StrCat(" (error: ", new_message, ")");
   return absl::StrCat(kEntryPrefix, "From: ", file, ":", line, error_suffix);
 }
 
-// Convenient function that retrieves the stacktrace payload if it exists.
-// Otherwise, returns an empty absl::Cord.
-static absl::Cord GetStacktraceOrEmptyCord(const absl::Status& status) {
-  auto opt = status.GetPayload(kStacktraceKey);
+// Convenient function that retrieves the status propagation trace payload
+// if it exists. Otherwise, returns an empty absl::Cord.
+static absl::Cord GetStatusPropagationTraceOrEmpty(const absl::Status& status) {
+  auto opt = status.GetPayload(kStatusPropagationTraceKey);
   return opt.has_value() ? *opt : absl::Cord();
 }
 
@@ -47,11 +48,11 @@ absl::Status status_internal::MaybeWithLocation(const absl::Status& status,
   }
 
   // Make sure this is only called on fresh `status` instances.
-  ABSL_CHECK(GetStacktraceOrEmptyCord(status).empty());
+  ABSL_CHECK(GetStatusPropagationTraceOrEmpty(status).empty());
 
   // Adding source location to `status` has the same semantics as overwriting
   // the status message:
-  //   1. An stacktrace entry will be added
+  //   1. An stack frame will be added to the status propagation trace
   //   2. The status' message will be the same
   return MaybeWithNewMessage(status, file, line, status.message());
 }
@@ -76,12 +77,15 @@ absl::Status status_internal::MaybeWithNewMessage(
       status.code(), new_message.empty() ? status.message() : new_message);
 
   // If `TORCH_SHOW_CPP_STACKTRACES` is set:
-  //     1. append the current source location to the stacktrace payload
+  //
+  //     1. append the current stack frame to the status propagation trace
+  //        payload
+  //
   //     2. append the new error message, if not empty
   if (torch::get_cpp_stacktraces_enabled()) {
-    auto new_stacktrace = GetStacktraceOrEmptyCord(status);
-    new_stacktrace.Append(GetStacktraceEntry(file, line, new_message));
-    new_status.SetPayload(kStacktraceKey, new_stacktrace);
+    auto status_propagation_trace = GetStatusPropagationTraceOrEmpty(status);
+    status_propagation_trace.Append(GetStackFrame(file, line, new_message));
+    new_status.SetPayload(kStatusPropagationTraceKey, status_propagation_trace);
   }
 
   return new_status;
@@ -89,18 +93,18 @@ absl::Status status_internal::MaybeWithNewMessage(
 
 void MaybeThrow(const absl::Status& status) {
   if (!status.ok()) {
-    auto status_stacktrace = GetStacktraceOrEmptyCord(status);
-    auto status_stacktrace_str =
-        status_stacktrace.empty()
+    auto status_propagation_trace = GetStatusPropagationTraceOrEmpty(status);
+    auto status_propagation_trace_str =
+        status_propagation_trace.empty()
             ? ""
-            : absl::StrCat("\n\nStatus Propagation Stacktrace:",
-                           status_stacktrace.Flatten());
+            : absl::StrCat("\n\nStatus Propagation Trace:",
+                           status_propagation_trace.Flatten());
     auto cpp_stacktrace_str =
         torch::get_cpp_stacktraces_enabled()
             ? absl::StrCat("\n\nC++ Stacktrace:\n", tsl::CurrentStackTrace())
             : "";
     throw std::runtime_error(absl::StrCat(
-        status.message(), status_stacktrace_str, cpp_stacktrace_str));
+        status.message(), status_propagation_trace_str, cpp_stacktrace_str));
   }
 }
 
