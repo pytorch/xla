@@ -773,7 +773,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     if (output_sharding_hash.find(hash) == output_sharding_hash.end()) {
       TORCH_LAZY_COUNTER("UncachedOutputSharding", 1);
       output_sharding_hash[hash] = ShardingUtil::GetOutputSharding(
-          *output_shapes, cachedComputation->computation);
+          *output_shapes, cachedComputation->computation, &sharding_specs);
     }
     placeholders =
         ShardingUtil::CreateShardedPlaceholder(output_sharding_hash[hash]);
@@ -1435,12 +1435,24 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
+  std::vector<std::vector<int64_t>> denormalized_tile_assignments;
+  for (auto tensor : tensors) {
+    auto sharding_spec = tensor->sharding_spec();
+    if (sharding_spec) {
+      denormalized_tile_assignments.push_back(
+          sharding_spec->sharding.GetDenormalizedTileAssignment());
+    } else {
+      TF_VLOG(5) << "no sharding spec for tensor - " << tensor;
+    }
+  }
   std::vector<runtime::ComputationClient::CompileInstance> instances;
   instances.push_back(
       {std::move(computation), coll.device.toString(),
        runtime::GetComputationClientOrDie()->GetCompilationDevices(
            coll.device.toString(), devices),
-       &shape, should_wrap_parameter, is_sharded});
+       &shape, should_wrap_parameter, is_sharded,
+       /*allow_spmd_sharding_propagation_to_output=*/true,
+       /*denormalized_tile_assignments=*/denormalized_tile_assignments});
   instances.front().eager_mode = UseEagerMode();
   if (use_autosharding) {
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
