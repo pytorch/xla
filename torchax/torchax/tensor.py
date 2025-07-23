@@ -379,7 +379,8 @@ class Environment(contextlib.ContextDecorator):
     self._target_device = device.lower()
 
   def manual_seed(self, key):
-    new_prop = self.param.override(prng=key)
+    jax_key = jax.random.PRNGKey(key)
+    new_prop = self.param.override(prng=jax_key)
     self._property.content.append(new_prop)
 
   @property
@@ -389,8 +390,12 @@ class Environment(contextlib.ContextDecorator):
   def _should_use_torchax_tensor(self, device):
     if device is None:
       device = torch.get_default_device()
+
     if isinstance(device, torch.device):
       device = device.type
+    
+    if ':' in device:
+      device = device.split(':')[0]
 
     match device:
       case 'cpu':
