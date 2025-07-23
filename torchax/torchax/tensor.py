@@ -384,7 +384,7 @@ class Environment(contextlib.ContextDecorator):
 
     if isinstance(device, torch.device):
       device = device.type
-    
+
     if ':' in device:
       device = device.split(':')[0]
 
