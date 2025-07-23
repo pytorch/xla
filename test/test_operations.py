@@ -92,6 +92,7 @@ def onlyOnCPU(fn):
   accelerator = os.environ.get("PJRT_DEVICE").lower()
   return unittest.skipIf(accelerator != "cpu", "PJRT_DEVICE=CUDA required")(fn)
 
+
 def onlyOnCUDA(fn):
   accelerator = os.environ.get("PJRT_DEVICE").lower()
   return unittest.skipIf(accelerator != "cuda", "PJRT_DEVICE=CUDA required")(fn)
