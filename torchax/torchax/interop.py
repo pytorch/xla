@@ -274,8 +274,8 @@ def j2t_autograd(fn, call_jax=call_jax):
         # The subsequent gradients correspond to flat_inputs.
         # We need to put a None for inputs that did not require gradients.
         final_grads = [None]
-        for needs_grad, grad in zip(ctx.needs_input_grad[1:],
-                                    input_grads_structured, strict=True):
+        for needs_grad, grad in zip(
+            ctx.needs_input_grad[1:], input_grads_structured, strict=True):
           final_grads.append(grad if needs_grad else None)
 
         return tuple(final_grads)
