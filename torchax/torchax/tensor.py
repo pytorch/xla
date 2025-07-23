@@ -357,7 +357,6 @@ class Environment(contextlib.ContextDecorator):
     self.enabled = False
 
     autocast_dtype = None
-    self._target_device = jax.local_devices()[0].platform
 
     _prng_key = jax.random.key(torch.initial_seed() % (1 << 63))
     self._property = threading.local()
@@ -370,14 +369,6 @@ class Environment(contextlib.ContextDecorator):
   def param(self):
     return self._property.content[-1]
 
-  @property
-  def target_device(self):
-    return self._target_device
-
-  @target_device.setter
-  def target_device(self, device: str):
-    self._target_device = device.lower()
-
   def manual_seed(self, key):
     jax_key = jax.random.PRNGKey(key)
     new_prop = self.param.override(prng=jax_key)
@@ -385,7 +376,7 @@ class Environment(contextlib.ContextDecorator):
 
   @property
   def prng_key(self):
-    return self.param.prng_ley
+    return self.param.prng
 
   def _should_use_torchax_tensor(self, device):
     if device is None:

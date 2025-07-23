@@ -81,7 +81,7 @@ class FlaxTest(unittest.TestCase):
         return res
 
     with env:
-      nn_module = Parent()
+      nn_module = Parent().to('jax')
 
       @jax_jit
       def jitted(weights, args):
