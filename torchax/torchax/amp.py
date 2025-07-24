@@ -61,9 +61,8 @@ def autocast(device, dtype=torch.bfloat16, env=None):
   if env is None:
     import torchax
     env = torchax.default_env()
-  env.autocast_dtype, old = dtype, env.autocast_dtype
-  yield
-  env.autocast_dtype = old
+  with env.override_property(autocast_dtype=dtype):
+    yield
 
 
 # https://github.com/pytorch/pytorch/blob/05faba40287cf7d8734da96cb2e904f39710bf29/aten/src/ATen/autocast_mode.cpp#L327
