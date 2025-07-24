@@ -5541,6 +5541,7 @@ def _aten_floor_divide(x, y):
 
 
 @op(torch.ops.aten._assert_tensor_metadata)
+@op(torch.ops.aten._assert_scalar)
 def _aten__assert_tensor_metadata(*args, **kwargs):
   pass
 

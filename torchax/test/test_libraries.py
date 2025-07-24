@@ -54,7 +54,6 @@ class LibraryTest(unittest.TestCase):
 
   def setUp(self):
     torch.manual_seed(0)
-    torchax.default_env().config.use_torch_native_for_cpu_tensor = False
 
   def test_basic_sdpa_library(self):
 

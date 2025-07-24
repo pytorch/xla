@@ -53,12 +53,7 @@ def wrap_func_as_nn_module(f):
 class UnboundedDynamismExportTest(unittest.TestCase):
 
   def setUp(self):
-    self.env = torchax.default_env()
-    self.env.config.use_torch_native_for_cpu_tensor = False
     torchax.enable_accuracy_mode()
-
-  def tearDown(self):
-    self.env.config.use_torch_native_for_cpu_tensor = True
 
   def test_add(self):
     args = (torch.rand((10, 197, 768)), torch.rand((10, 197, 768)))
