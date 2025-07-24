@@ -436,8 +436,8 @@ std::shared_ptr<xla::PjRtBuffer> IfrtComputationClient::GetPjRtBuffer(
   XLA_ERROR() << __FUNCTION__ << " not implemented";
 }
 
-std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
-    absl::Span<const DataPtr> handles) {
+absl::StatusOr<std::vector<xla::Literal>>
+IfrtComputationClient::TransferFromDevice(absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromDeviceMetric());
   tsl::profiler::TraceMe activity("IfrtComputationClient::TransferFromDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);
@@ -455,9 +455,9 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
     auto& literal = literals.emplace_back(
         xla::ShapeUtil::DeviceShapeToHostShape(ifrt_data->shape()));
     std::vector<int64_t> byte_strides(literal.shape().dimensions_size());
-    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(literal.shape(),
-                                             absl::MakeSpan(byte_strides)));
-    XLA_CHECK_OK(
+    XLA_RETURN_IF_ERROR(xla::ShapeUtil::ByteStrides(
+        literal.shape(), absl::MakeSpan(byte_strides)));
+    XLA_RETURN_IF_ERROR(
         replicated_array
             ->CopyToHostBuffer(literal.untyped_data(), byte_strides,
                                xla::ifrt::ArrayCopySemantics::kAlwaysCopy)
