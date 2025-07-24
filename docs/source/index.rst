@@ -38,6 +38,7 @@ Tutorials
 
    learn/pytorch-on-xla-devices
    learn/xla-overview
+   learn/xla-multi-host-tpu
 
 .. toctree::
    :glob:
@@ -46,7 +47,7 @@ Tutorials
 
    accelerators/tpu
    tutorials/precision_tutorial
-   perf/spmd_basic      
+   perf/spmd_basic
    perf/spmd_advanced
    perf/spmd_distributed_checkpoint
    features/torch_distributed
