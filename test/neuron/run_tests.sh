@@ -257,7 +257,7 @@ function run_xla_op_tests3 {
   run_test_multi_device "$_TEST_DIR/spmd/test_dtensor_convert_mesh.py"
   run_test_multi_device "$_TEST_DIR/spmd/test_xla_dtensor_spec_conv.py"
   run_test_multi_device "$_TEST_DIR/spmd/test_dtensor_redistribute.py"
-  run_test_multi_device "$_TEST_DIR/spmd/test_xla_dtensor_from_local.py"
+  run_test_multi_device "$_TEST_DIR/spmd/test_xla_dtensor_to_local.py"
   run_test_multi_device "$_TEST_DIR/spmd/test_xla_sharded_tensor.py"
   run_test "$_TEST_DIR/spmd/test_xla_auto_sharding.py"
   #run_test "$_TEST_DIR/spmd/test_spmd_parameter_wrapping.py"
