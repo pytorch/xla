@@ -270,6 +270,7 @@ function run_xla_op_tests3 {
   run_test "$_TEST_DIR/test_persistent_cache.py"
   run_test "$_TEST_DIR/test_devices.py"
   run_xla_ir_hlo_debug run_test "$_TEST_DIR/test_user_computation_debug_cache.py"
+  run_test_multi_device "$_TEST_DIR/spmd/test_xla_dtensor_placements.py"
 
   #python3 examples/data_parallel/train_resnet_xla_ddp.py # compiler error
   #python3 examples/fsdp/train_resnet_fsdp_auto_wrap.py

@@ -269,6 +269,7 @@ function run_xla_op_tests3 {
   run_test "$_TEST_DIR/test_persistent_cache.py"
   run_test "$_TEST_DIR/test_devices.py"
   run_test "$_TEST_DIR/test_manual_xla_registration.py"
+  run_test_multi_devices "$_TEST_DIR/spmd/test_xla_dtensor_placements.py"
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$_TEST_DIR/test_core_aten_ops.py"
   run_test "$_TEST_DIR/test_pallas.py"
