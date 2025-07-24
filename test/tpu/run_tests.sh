@@ -62,6 +62,7 @@ run_test "$_TEST_DIR/spmd/test_xla_auto_sharding.py"
 run_test "$_TEST_DIR/spmd/test_fsdp_v2.py"
 run_test "$_TEST_DIR/spmd/test_dtensor_convert_mesh.py"
 run_test "$_TEST_DIR/spmd/test_xla_dtensor_spec_conversion.py"
+run_test "$_TEST_DIR/spmd/test_dtensor_redistribute.py"
 run_test "$_TEST_DIR/test_gradient_accumulation.py"
 XLA_EXPERIMENTAL=nonzero:masked_select:nms run_test "$_TEST_DIR/ds/test_dynamic_shape_models.py" -v
 run_test "$_TEST_DIR/test_autocast.py"
