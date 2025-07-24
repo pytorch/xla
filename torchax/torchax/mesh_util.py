@@ -199,7 +199,7 @@ class Mesh:
     }
 
     def model_initializer():
-      with torchax.default_env():
+      with torchax.default_env(), torch.device('meta'):
         model = model_class(*init_args, **init_kwargs)
       return dict(model.state_dict())
 
