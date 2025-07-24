@@ -250,4 +250,4 @@ gcloud compute tpus tpu-vm ssh ${TPU_NAME} \
 ## Reference implementations
 
 The [AI-Hypercomputer/tpu-recipes](https://github.com/AI-Hypercomputer/tpu-recipes)
-repo. contains examples for training and serving many LLM and diffusion models.
+repo contains examples for training and serving many LLM and diffusion models.
