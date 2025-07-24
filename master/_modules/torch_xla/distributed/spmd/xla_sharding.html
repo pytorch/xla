@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+git299a16b )
+                  master (2.9.0+gitca47198 )
                 </div>
               
             
@@ -990,7 +990,8 @@
   <span class="n">mesh</span> <span class="o">=</span> <span class="n">get_global_mesh</span><span class="p">()</span> <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">mesh</span>
   <span class="n">t</span> <span class="o">=</span> <span class="n">mark_sharding</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
   <span class="n">t</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_spmd_full_to_shard_shape</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
-  <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span>
+      <span class="n">t</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="n">mesh</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">,</span> <span class="n">partition_spec</span><span class="o">=</span><span class="n">partition_spec</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">disable_manual_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span>
@@ -1007,7 +1008,8 @@
   <span class="n">t</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_spmd_shard_to_full_shape</span><span class="p">(</span>
       <span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_op_sharding</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span>
       <span class="n">full_shape</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span>
+      <span class="n">t</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="n">mesh</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">,</span> <span class="n">partition_spec</span><span class="o">=</span><span class="n">partition_spec</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">annotate_custom_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
@@ -1041,7 +1043,8 @@
   <span class="n">op_sharding</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_op_sharding</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span>
   <span class="n">annotate_func</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_annotate_custom_sharding</span>
   <span class="n">annotate_func</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">op_sharding</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span>
+      <span class="n">t</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="n">mesh</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">,</span> <span class="n">partition_spec</span><span class="o">=</span><span class="n">partition_spec</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="mark_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.mark_sharding">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
@@ -1098,7 +1101,9 @@
   <span class="n">op_sharding</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_op_sharding</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span>
   <span class="n">annotate_func</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_mark_sharding</span>
   <span class="n">annotate_func</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">op_sharding</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span></div>
+  <span class="c1"># Pass mesh and partition spec information for DTensor compatibility</span>
+  <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span>
+      <span class="n">t</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="n">mesh</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">,</span> <span class="n">partition_spec</span><span class="o">=</span><span class="n">partition_spec</span><span class="p">)</span></div>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">mark_sharding_with_gradients</span><span class="p">(</span>
@@ -1202,10 +1207,31 @@
   <span class="k">return</span> <span class="n">t</span></div>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">wrap_as_sharded_tensor</span><span class="p">(</span>
-    <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span>
+                           <span class="n">mesh_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                           <span class="n">partition_spec</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
+  <span class="c1"># pass along mesh and partition spec information</span>
   <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">XLAShardedTensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="c1"># Create a new XLAShardedTensor</span>
+    <span class="k">return</span> <span class="n">XLAShardedTensor</span><span class="p">(</span>
+        <span class="n">t</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="n">mesh_shape</span><span class="p">,</span> <span class="n">partition_spec</span><span class="o">=</span><span class="n">partition_spec</span><span class="p">)</span>
+
+  <span class="c1"># Update existing XLAShardedTensor if needed</span>
+  <span class="n">needs_invalidate</span> <span class="o">=</span> <span class="kc">False</span>
+
+  <span class="c1"># Always set mesh_shape and partition_spec if provided</span>
+  <span class="k">if</span> <span class="n">mesh_shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">mesh_shape</span> <span class="o">=</span> <span class="n">mesh_shape</span>
+    <span class="n">needs_invalidate</span> <span class="o">=</span> <span class="kc">True</span>
+
+  <span class="k">if</span> <span class="n">partition_spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">partition_spec</span> <span class="o">=</span> <span class="n">partition_spec</span>
+    <span class="n">needs_invalidate</span> <span class="o">=</span> <span class="kc">True</span>
+
+  <span class="c1"># Invalidate cached spec if resharding occurred</span>
+  <span class="k">if</span> <span class="n">needs_invalidate</span><span class="p">:</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">invalidate_spec_cache</span><span class="p">()</span>
+
   <span class="k">return</span> <span class="n">t</span>
 
 
