@@ -446,25 +446,24 @@ class Environment(contextlib.ContextDecorator):
 
     return op
 
+  def _is_same_device(self, the_tensor, new_device):
+    if new_device is None:
+      return True
+    if new_device == 'meta' and the_tensor.device.type == 'jax':
+      return True
+    if the_tensor.device.type != new_device:
+      if the_tensor.device.type == 'cuda':
+        return self.config.treat_cuda_as_jax_device
+      return False
+    return True
+
   def _to_copy(self, the_tensor, new_dtype, new_device):
     if isinstance(the_tensor, View):
       the_tensor = the_tensor.torch()
     if isinstance(new_device, torch.device):
       new_device = new_device.type
-
-    def is_same_device(the_tensor, new_device):
-      if new_device is None:
-        return True
-      if new_device == 'meta' and the_tensor.device.type == 'jax':
-        return True
-      if the_tensor.device.type != new_device:
-        if the_tensor.device.type == 'cuda':
-          return self.config.treat_cuda_as_jax_device
-        return False
-      return True
-
     res = the_tensor
-    if not is_same_device(the_tensor, new_device):
+    if not self._is_same_device(the_tensor, new_device):
       if isinstance(the_tensor, Tensor):
         torch_tensor = self.j2t_copy(the_tensor._elem)
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
@@ -491,7 +490,7 @@ class Environment(contextlib.ContextDecorator):
     device = kwargs.get("device")
     if self._should_use_torchax_tensor(device):
       # don't set default device, let caller set it
-      requires_grad = kwargs.get("requires_grad", True)
+      requires_grad = kwargs.get("requires_grad", False)
       op = self._get_op_or_decomp(func)
       if op.needs_env:
         kwargs['env'] = self

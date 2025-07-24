@@ -3652,7 +3652,7 @@ def _aten_native_batch_norm(input,
 @op(torch.ops.aten.normal, needs_env=True)
 def _aten_normal(self, mean=0, std=1, generator=None, env=None):
   shape = self.shape
-  res = _randn(*shape, generator=generator, env=env)
+  res = _aten_randn(*shape, generator=generator, env=env)
   return res * std + mean
 
 
