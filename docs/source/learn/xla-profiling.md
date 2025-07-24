@@ -1,22 +1,21 @@
 # Profiling and performance analysis
 
-To further investigate the performance of the model, we can profile it
-using the profiling
+To investigate model performance, you can profile it using the profiling
 [guide](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm).
 As a rule of thumb, the profiling script should be run with the maximum
 batch size that fits into the memory for [optimal memory
 usage](https://cloud.google.com/tpu/docs/performance-guide). It also
 helps to overlap tracing of the code with device execution which leads
-to more optimal device usage. The duration of profiling should be long
+to optimal device usage. The profile duration should be long
 enough to capture at least one step. Good performance of the model on
 TPUs means that device-host communication is minimized and the device is
-constantly running processes with no idle time.
+constantly running processes with minimal idle time.
 
 Starting a server in the `inference_tpu_*.py` file and running
 `capture_profile.py` script as described in the guide will give us
 information on processes that run on the devices. Currently, only one
 XLA device is profiled. To better understand the TPU idle time (gaps in
-the profile), profiling traces (`xp.Trace()`) should be added to the
+the profile), add profiling traces (`xp.Trace()`) to the
 code. The `xp.Trace()` measures the time it takes to trace the python
 code on the host machine wrapped with the trace. For this example,
 `xp.Trace()` traces were added inside the

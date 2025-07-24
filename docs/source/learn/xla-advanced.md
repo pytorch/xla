@@ -8,7 +8,7 @@ XLA to be reused later if/when needed. The compilation of the graph is
 done on the host (CPU), which is the machine that runs the Python code.
 If there are multiple XLA devices, the host compiles the code for each
 of the devices separately except when using SPMD (single-program,
-multiple-data). For example, v4-8 has one host machine and [four
+multiple-data) parallelization. For example, v4-8 has one host machine and [four
 devices](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#tpu_v4).
 In this case the host compiles the code for each of the four devices
 separately. In case of pod slices, when there are multiple hosts, each
@@ -50,7 +50,7 @@ for x, y in tensors_on_device:
     z += x + y
 ```
 
-Without a barrier, the Python tracing will result in a single graph that
+Without a barrier, the PyTorch tracing will result in a single graph that
 wraps the addition of tensors `len(tensors_on_device)` times. This is
 because the `for` loop is not captured by the tracing, so each iteration
 of the loop will create a new subgraph corresponding to the computation
@@ -87,13 +87,12 @@ bottleneck.
 
 The XLA graphs can be reused when the same computation happens on the
 same shapes of tensors. If the shapes of the inputs or intermediate
-tensors change, then the XLA compiler will recompile a new graph with
-the new tensor shapes. This means that if you have dynamic shapes or if
-your code does not reuse tensor graphs, running your model on XLA will
-not be suitable for that use case. Padding the input into a fixed shape
-can be an option to help avoid dynamic shapes. Otherwise, a significant
-amount of time will be spent by the compiler on optimizing and fusing
-operations which will not be used again.
+tensors change, the XLA compiler will recompile a new graph with
+the new tensor shapes. If you have dynamic shapes or if
+your code does not reuse tensor graphs, the XLA compiler will spend a
+significant amount of time optimizing and fusing operations which will not be
+used again. You can pad the inputs into a fixed shape to help avoid dynamic
+shapes.
 
 The trade-off between graph size and compilation time is also important
 to consider. If there is one large IR graph, the XLA compiler can spend
@@ -108,21 +107,18 @@ otherwise could be done by the XLA compiler.
 
 ## Data Loading
 
-Another important point to consider is
+You can use
 [MPDeviceLoader](https://github.com/pytorch/xla/blob/a1f822e2627a5639464273241821852677401026/torch_xla/distributed/parallel_loader.py#L186).
-Once your code is running on an XLA device, consider wrapping the torch
-dataloader with XLA `MPDeviceLoader` which preloads data to the device
-to improve performance and includes `torch_xla.sync()` in it. The latter
-automatically breaks the iterations over batches of data and sends them
-for execution. Note, if you are not using MPDeviceLoader, you might need
-to set `barrier=True` in the `optimizer_step()` to enable
-`torch_xla.sync()` if running a training job or explicitly adding
+to preload data onto your XLA device to improve performance. `MPDeviceLoader`
+uses `torch_xla.sync()` to automatically break the iterations over batches of
+data and send them for execution. Note that if you are not using
+`MPDeviceLoader`, you might need to set `barrier=True` in the `optimizer_step()`
+to enable `torch_xla.sync()` if running a training job or explicitly adding
 `torch_xla.sync()`.
 
 **Note:**
 
 0 and 1 are magic numbers in XLA and treated as constants in the
-HLO. So if there is a random number generator in the code that can
-generate these values, the code will compile for each value
-separately. This can be disabled with `XLA_NO_SPECIAL_SCALARS=1`
-environment variable.
+HLO. If your code uses a random number generator that can generate these values,
+the XLA compiler will compile the code that uses each value separately. This can
+be disabled with `XLA_NO_SPECIAL_SCALARS=1` environment variable.
