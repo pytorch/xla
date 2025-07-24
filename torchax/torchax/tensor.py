@@ -484,7 +484,7 @@ class Environment(contextlib.ContextDecorator):
   def get_and_rotate_prng_key(self,
                               generator: Optional[torch.Generator] = None):
     if generator is not None:
-      return jax.random.PRNGKey(generator.initial_seed() % (2**63) )
+      return jax.random.PRNGKey(generator.initial_seed() % (2**63))
     return self.param.get_and_rotate_prng_key()
 
   def _handle_tensor_constructor(self, func, args, kwargs):

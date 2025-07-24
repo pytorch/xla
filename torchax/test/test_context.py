@@ -73,8 +73,10 @@ class TestContext(unittest.TestCase):
 
   def test_generator_seed(self):
     with xla_env:
-      x = torch.randn(2, 3, generator=torch.Generator().manual_seed(0), device='jax')
-      y = torch.randn(2, 3, generator=torch.Generator().manual_seed(0), device='jax')
+      x = torch.randn(
+          2, 3, generator=torch.Generator().manual_seed(0), device='jax')
+      y = torch.randn(
+          2, 3, generator=torch.Generator().manual_seed(0), device='jax')
 
       # Values will be the same given the same seed.
       torch.testing.assert_close(x, y)
