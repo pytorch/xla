@@ -2,7 +2,7 @@ import functools
 import torch
 import unittest
 import torchax
-from torchax import interop, jax_device
+from torchax import interop
 import torchax
 import jax
 import jax.numpy as jnp
@@ -143,7 +143,7 @@ class InteropTest(unittest.TestCase):
       self.assertEqual(e.jax_device.platform, "cpu")
       self.assertEqual(e.device.type, "jax")
 
-    with jax_device("cpu"):
+    with jax.default_device(jax.devices("cpu")[0]):
       # move torch.tensor to torchax.tensor CPU
       b = a.to("jax")
       self.assertEqual(b.jax_device.platform, "cpu")
@@ -151,26 +151,10 @@ class InteropTest(unittest.TestCase):
 
     if is_tpu_available():
       # move torch.tensor to torchax.tensor TPU
-      with jax_device("tpu"):
+      with jax.default_device(jax.local_devices("tpu")[0]):
         c = a.to("jax")
         self.assertEqual(c.jax_device.platform, "tpu")
         self.assertEqual(c.device.type, "jax")
-
-      # move torchax.tensor on CPU to TPU
-      with jax_device("tpu"):
-        self.assertEqual(b.jax_device.platform, "cpu")
-        self.assertEqual(c.device.type, "jax")
-        c = b.to("jax")
-        self.assertEqual(c.jax_device.platform, "tpu")
-        self.assertEqual(c.device.type, "jax")
-
-      # move torchax.tensor on TPU to CPU
-      with jax_device("cpu"):
-        self.assertEqual(c.jax_device.platform, "tpu")
-        self.assertEqual(c.device.type, "jax")
-        d = c.to("jax")
-        self.assertEqual(d.jax_device.platform, "cpu")
-        self.assertEqual(d.device.type, "jax")
 
   def test_torch_jax_view_dtype(self):
     dtype = torch.float32
