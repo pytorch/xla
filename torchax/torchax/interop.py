@@ -18,24 +18,14 @@ from torchax.types import JaxValue, TorchValue, JaxCallable, TorchCallable
 
 
 def extract_all_buffers(m: torch.nn.Module):
-  buffers = {}
   params = {}
+  buffers = {}
 
-  def extract_one(module, prefix):
-    for k in dir(module):
-      try:
-        v = getattr(module, k)
-      except:
-        continue
-      qual_name = prefix + k
-      if isinstance(v, torch.nn.parameter.Parameter) and v.requires_grad:
-        params[qual_name] = v
-      elif isinstance(v, torch.Tensor):
-        buffers[qual_name] = v
-    for name, child in module.named_children():
-      extract_one(child, prefix + name + '.')
+  for name, param in m.named_parameters(recurse=True):
+    params[name] = param
+  for name, buf in m.named_buffers(recurse=True):
+    buffers[name] = buf
 
-  extract_one(m, '')
   return params, buffers
 
 
