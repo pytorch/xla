@@ -2400,8 +2400,10 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm(
     }
   } else {
     at::Tensor at_input = bridge::AtenFromXlaTensor(input);
-    mean = bridge::GetXlaTensor(at::empty({0}, at_input.options()));
-    variance_inverse = bridge::GetXlaTensor(at::empty({0}, at_input.options()));
+    mean = GetValueOrThrow(
+        bridge::GetXlaTensor(at::empty({0}, at_input.options())));
+    variance_inverse = GetValueOrThrow(
+        bridge::GetXlaTensor(at::empty({0}, at_input.options())));
   }
 
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();

@@ -37,8 +37,8 @@ at::Tensor nms_kernel(const at::Tensor& boxes, const at::Tensor& scores,
   XLA_CHECK_EQ(boxes.size(0), scores.size(0))
       << "nms(): boxes and scores should have the same size for dimension 0.";
 
-  XLATensorPtr xla_boxes = bridge::GetXlaTensor(boxes);
-  XLATensorPtr xla_scores = bridge::GetXlaTensor(scores);
+  XLATensorPtr xla_boxes = GetValueOrThrow(bridge::GetXlaTensor(boxes));
+  XLATensorPtr xla_scores = GetValueOrThrow(bridge::GetXlaTensor(scores));
   return bridge::AtenFromXlaTensor(
       tensor_methods::nms(xla_boxes, xla_scores, iou_threshold),
       /*skip_functionalization=*/true);

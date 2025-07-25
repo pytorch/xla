@@ -246,17 +246,17 @@ void WithAllDevices(
 }
 
 std::string GetTensorTextGraph(at::Tensor tensor) {
-  XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+  XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(tensor));
   return DumpUtil::ToText({xtensor->GetIrValue().node.get()});
 }
 
 std::string GetTensorDotGraph(at::Tensor tensor) {
-  XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+  XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(tensor));
   return DumpUtil::ToDot({xtensor->GetIrValue().node.get()});
 }
 
 std::string GetTensorHloGraph(at::Tensor tensor) {
-  XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+  XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(tensor));
   return DumpUtil::ToHlo({xtensor->GetIrValue()}, xtensor->GetDevice());
 }
 

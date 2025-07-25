@@ -804,15 +804,17 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     // setup the arguments
     for (auto& ivalue : graph_inputs) {
       torch::lazy::BackendDataPtr dataptr;
-      if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
+      auto xla_tensor_status = bridge::GetXlaTensor(ivalue.toTensor());
+      if (xla_tensor_status.ok()) {
+        auto xla_tensor = std::move(xla_tensor_status).value();
         bool is_non_data_ir =
-            xla_tensor_ptr->CurrentIrValue().node != nullptr &&
+            xla_tensor->CurrentIrValue().node != nullptr &&
             (torch_xla::DeviceData::Cast(
-                 xla_tensor_ptr->CurrentIrValue().node.get()) == nullptr);
+                 xla_tensor->CurrentIrValue().node.get()) == nullptr);
         XLA_CHECK(!is_non_data_ir)
             << "input data to dynamo graph can not be a pending ir, please set "
                "`torch_xla._dynamo.config.skip_input_data_check` to False";
-        dataptr = xla_tensor_ptr->GetXlaData();
+        dataptr = xla_tensor->GetXlaData();
       } else {
         XLA_CHECK(device.type() != (int8_t)XlaDeviceType::SPMD)
             << "SPMD device data should already be on the XLA backend "
@@ -932,8 +934,9 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
     // setup the arguments
     for (auto& ivalue : graph_inputs) {
       torch::lazy::BackendDataPtr dataptr;
-      if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
-        dataptr = xla_tensor_ptr->GetXlaData();
+      auto xla_tensor_status = bridge::GetXlaTensor(ivalue.toTensor());
+      if (xla_tensor_status.ok()) {
+        dataptr = xla_tensor_status.value()->GetXlaData();
       } else {
         dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
       }
