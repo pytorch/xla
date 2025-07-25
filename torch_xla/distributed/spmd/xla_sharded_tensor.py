@@ -254,13 +254,13 @@ class XLAShardedTensor(torch.Tensor):
     """
     if self._cached_spec is not None:
       return self._cached_spec.placements
-    
+
     try:
       return self._spec.placements
     except:
       raise ValueError(
-        "Placements not available: XLAShardedTensor requires mesh_shape and "
-        "partition_spec to be set. Use mark_sharding() to properly initialize sharding information."
+          "Placements not available: XLAShardedTensor requires mesh_shape and "
+          "partition_spec to be set. Use mark_sharding() to properly initialize sharding information."
       )
 
   def invalidate_spec_cache(self):
