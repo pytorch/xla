@@ -5,7 +5,6 @@
 #include <ATen/native/CPUFallback.h>
 #include <c10/core/impl/PythonDispatcherTLS.h>
 
-#include "status.h"
 #include "torch_xla/csrc/aten_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
