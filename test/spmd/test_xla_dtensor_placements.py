@@ -31,10 +31,15 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
     my_dtensor = distribute_tensor(big_tensor, mesh, [Shard(0)])
     
     # Test that placements property works on XLAShardedTensor
-    assert hasattr(my_dtensor, 'placements'), "XLAShardedTensor should have placements property"
-    assert my_dtensor.placements == (Shard(0),), f"Expected (Shard(0),), got {my_dtensor.placements}"
+    assert hasattr(
+        my_dtensor,
+        'placements'), "XLAShardedTensor should have placements property"
+    assert my_dtensor.placements == (
+        Shard(0),), f"Expected (Shard(0),), got {my_dtensor.placements}"
     
-    print("Placements property works correctly for properly initialized XLAShardedTensor")
+    print(
+      "Placements property works correctly for properly initialized XLAShardedTensor"
+    )
 
   def test_placements_property_failure(self):
     """Test that placements property fails with proper error when XLAShardedTensor lacks sharding info."""
@@ -50,14 +55,17 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
     
     # Verify the error message is appropriate
     error_message = str(context.exception)
-    self.assertIn("placements", error_message.lower(), 
-                  f"Error message should mention 'placements': {error_message}")
+    self.assertIn(
+      "placements", error_message.lower(), 
+      f"Error message should mention 'placements': {error_message}")
     
     # Check for specific error indicators
     expected_keywords = ["mesh_shape", "partition_spec", "sharding"]
-    has_expected_keyword = any(keyword in error_message.lower() for keyword in expected_keywords)
-    self.assertTrue(has_expected_keyword, 
-                    f"Error message should mention sharding concepts: {error_message}")
+    has_expected_keyword = any(
+        keyword in error_message.lower() for keyword in expected_keywords)
+    self.assertTrue(
+        has_expected_keyword, 
+        f"Error message should mention sharding concepts: {error_message}")
     
     print(f"Placements property correctly fails with error: {error_message}")
 
@@ -72,12 +80,15 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
     
     # First access should create the cache
     placements1 = my_dtensor.placements
-    self.assertIsNotNone(my_dtensor._cached_spec, "Cache should be created after first access")
+    self.assertIsNotNone(my_dtensor._cached_spec, 
+                         "Cache should be created after first access")
     
     # Second access should use cache
     placements2 = my_dtensor.placements
-    self.assertEqual(placements1, placements2, "Cached placements should be identical")
-    self.assertEqual(placements1, (Replicate(),), f"Expected (Replicate(),), got {placements1}")
+    self.assertEqual(placements1, placements2, 
+                     "Cached placements should be identical")
+    self.assertEqual(placements1, (Replicate(),), 
+                     f"Expected (Replicate(),), got {placements1}")
     
     print("Placements property caching works correctly")
 

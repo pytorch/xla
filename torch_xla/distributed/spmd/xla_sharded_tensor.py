@@ -258,8 +258,10 @@ class XLAShardedTensor(torch.Tensor):
     try:
       return self._spec.placements
     except:
-      raise ValueError("Placements not available: XLAShardedTensor requires mesh_shape and "
-                       "partition_spec to be set. Use mark_sharding() to properly initialize sharding information.")
+      raise ValueError(
+        "Placements not available: XLAShardedTensor requires mesh_shape and "
+        "partition_spec to be set. Use mark_sharding() to properly initialize sharding information."
+      )
 
   def invalidate_spec_cache(self):
     """Invalidate the cached DTensorSpec."""
