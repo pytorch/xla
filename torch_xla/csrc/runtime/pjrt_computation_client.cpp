@@ -769,7 +769,7 @@ PjRtComputationClient::ExecuteComputation(
              << " Done";
 
   std::optional<xla::PjRtFuture<>> returned_future;
-  XLA_ASSIGN_OR_RETURN_WITH_LOCATION(
+  XLA_ASSIGN_OR_RETURN(
       std::vector<std::unique_ptr<xla::PjRtBuffer>> results,
       pjrt_computation.executable->ExecuteSharded(
           buffers, pjrt_device, execute_options, returned_future));
@@ -874,7 +874,7 @@ PjRtComputationClient::ExecuteReplicated(
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_execute",
         tsl::profiler::TraceMeLevel::kInfo);
-    XLA_ASSIGN_OR_RETURN_WITH_LOCATION(
+    XLA_ASSIGN_OR_RETURN(
         results,
         pjrt_computation.executable->Execute(
             std::move(argument_handles), execute_options, returned_futures));
