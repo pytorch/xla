@@ -592,7 +592,7 @@ IfrtComputationClient::ExecuteReplicated(
   TF_VLOG(5) << "ExecuteReplicated acquiring IFRT device lock for "
              << spmd_device_str << " Done";
 
-  XLA_ASSIGN_OR_RETURN_WITH_LOCATION(
+  XLA_ASSIGN_OR_RETURN(
       xla::ifrt::LoadedExecutable::ExecuteResult result,
       ifrt_computation.executable->Execute(absl::MakeSpan(argument_handles),
                                            execute_options, std::nullopt));
