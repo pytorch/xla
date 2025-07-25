@@ -1583,7 +1583,7 @@ at::Tensor XLANativeFunctions::einsum(std::string_view equation,
   std::vector<XLATensorPtr> xla_tensors;
   std::transform(tensors.begin(), tensors.end(),
                  std::back_inserter(xla_tensors), [](const at::Tensor& tensor) {
-                   return bridge::GetXlaTensor(tensor).value_or(XLATensorPtr());
+                   return bridge::GetXlaTensor(tensor).value_or(XLATensorPtr{});
                  });
   bool all_xla_tensors_are_valid = std::all_of(
       xla_tensors.begin(), xla_tensors.end(),

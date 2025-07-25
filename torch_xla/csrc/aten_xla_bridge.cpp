@@ -89,7 +89,7 @@ static absl::StatusOr<XLATensorImpl * absl_nonnull> GetXlaTensorImpl(
 }  // namespace
 
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor) {
-  return GetXlaTensor(tensor).value_or(XLATensorPtr());
+  return GetXlaTensor(tensor).value_or(XLATensorPtr{});
 }
 
 absl::StatusOr<XLATensorPtr> GetXlaTensor(const at::Tensor& tensor) {

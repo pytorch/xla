@@ -3319,15 +3319,13 @@ void InitXlaModuleBindings(py::module m) {
             std::vector<XLATensorPtr> xtensors;
             xtensors.reserve(tensors.size());
             for (const at::Tensor& tensor : tensors) {
-              auto xtensor_status = bridge::GetXlaTensor(tensor);
-              if (xtensor_status.ok()) {
-                xtensors.push_back(xtensor_status.value());
-              }
+              xtensors.push_back(
+                  bridge::GetXlaTensor(tensor).value_or(XLATensorPtr{}));
             }
             return check_materialization_helper(xtensors);
           })
       .def(
-          // Return true if value of the any tensor in this devicerequires a
+          // Return true if value of the any tensor in this device requires a
           // computation.
           "_check_device_tensor_need_materialization",
           [](const std::string& device_str) -> std::vector<bool> {
