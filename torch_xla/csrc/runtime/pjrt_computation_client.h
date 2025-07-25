@@ -85,12 +85,12 @@ class PjRtComputationClient : public ComputationClient {
 
   ComputationPtr DeserializeComputation(const std::string& serialized) override;
 
-  std::vector<DataPtr> ExecuteComputation(
+  absl::StatusOr<std::vector<DataPtr>> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
       const std::string& device,
       const ExecuteComputationOptions& options) override;
 
-  std::vector<DataPtr> ExecuteReplicated(
+  absl::StatusOr<std::vector<DataPtr>> ExecuteReplicated(
       const Computation& computation, absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
