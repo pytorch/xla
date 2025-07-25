@@ -252,9 +252,6 @@ class XLAShardedTensor(torch.Tensor):
     Raises:
         ValueError: If _spec cannot be created due to missing mesh_shape or partition_spec.
     """
-    if self._cached_spec is not None:
-      return self._cached_spec.placements
-
     try:
       return self._spec.placements
     except:
