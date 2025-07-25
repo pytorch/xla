@@ -959,6 +959,10 @@ std::vector<std::string> PjRtComputationClient::GetAllDevices() const {
   return PjRtDevicesToString(client_->devices());
 }
 
+std::string_view PjRtComputationClient::GetPlatformVersion() const {
+  return client_->platform_version();
+}
+
 int PjRtComputationClient::GetNumProcesses() const {
   int max_process_index = client_->process_index();
   for (auto* device : client_->devices()) {

@@ -133,6 +133,8 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<std::string> GetAllDevices() const override;
 
+  std::string_view GetPlatformVersion() const override;
+
   torch::lazy::hash_t HashCompilationEnv() override;
 
   int GetProcessIndex() const override { return client_->process_index(); };
