@@ -2712,7 +2712,7 @@ void InitXlaModuleBindings(py::module m) {
             }
 
             std::vector<at::Tensor> cpu_shards =
-                XlaDataToTensors(WrapXlaData(handles), element_types);
+                GetValueOrThrow(XlaDataToTensors(WrapXlaData(handles), element_types));
             // Populate the resulting vector of shards and device strings
             std::vector<std::vector<std::pair<at::Tensor, std::string>>> result;
             int shards_per_tensor =

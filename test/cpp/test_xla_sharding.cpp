@@ -29,7 +29,7 @@ bool XlaDataValuesEqual(torch::lazy::BackendDataPtr a,
                         torch::lazy::BackendDataPtr b,
                         at::ScalarType element_type) {
   std::vector<at::Tensor> tensors =
-      XlaDataToTensors({a, b}, {element_type, element_type});
+      GetValueOrThrow(XlaDataToTensors({a, b}, {element_type, element_type}));
   return TensorCompare(tensors[0], tensors[1]);
 }
 }  // namespace
