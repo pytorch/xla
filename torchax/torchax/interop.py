@@ -21,9 +21,9 @@ def extract_all_buffers(m: torch.nn.Module):
   params = {}
   buffers = {}
 
-  for name, param in m.named_parameters(recurse=True):
+  for name, param in m.named_parameters(recurse=True, remove_duplicate=False):
     params[name] = param
-  for name, buf in m.named_buffers(recurse=True):
+  for name, buf in m.named_buffers(recurse=True, remove_duplicate=False):
     buffers[name] = buf
 
   return params, buffers

@@ -43,13 +43,14 @@ class InteropTest(unittest.TestCase):
         self.register_buffer('c', c)
         self.register_buffer('c2', c, persistent=False)
         self.d = torch.ones(10, 10)
+        self.e = self.b
         self.m1 = Child()
 
     m = ModuleWithUnregisteredTensor()
     # [name for name, _ in m.named_buffers()] only returns ['c']
     params, buffers = interop.extract_all_buffers(m)
-    self.assertEqual(set(params.keys()), {'a.weight', 'a.bias', 'b'})
-    self.assertEqual(set(buffers.keys()), {'c'})
+    self.assertEqual(set(params.keys()), {'a.weight', 'a.bias', 'b', 'e'})
+    self.assertEqual(set(buffers.keys()), {'c', 'c2'})
 
     interop.set_all_buffers(m, {'a.weight': torch.tensor([0.0])},
                             {'m1.x': torch.tensor([0.0])})
