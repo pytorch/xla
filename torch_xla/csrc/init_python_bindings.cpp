@@ -1706,6 +1706,10 @@ void InitXlaModuleBindings(py::module m) {
               return runtime::GetComputationClientOrDie()->GetLocalDevices();
             }
            })
+      .def("_xla_get_platform_version",
+           []() {
+              return runtime::GetComputationClientOrDie()->GetPlatformVersion();
+           })
       .def("_get_stream_for_cuda_device",
            [](const int device_id) {
             return runtime::GetComputationClientOrDie()->GetCudaStreamForDevice(
