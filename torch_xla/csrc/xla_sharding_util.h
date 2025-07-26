@@ -46,6 +46,10 @@ class ShardingUtil {
   static bool EqualOpShardings(const torch_xla::OpSharding& a,
                                const torch_xla::OpSharding& b);
 
+  // Returns tile_assignment after normalizing
+  static std::vector<int64_t> NormalizeTileAssignment(
+      const std::vector<int64_t>& tile_assignment);
+
   // Creates an torch_xla::OpSharding. `tile_assignmnent` is required for TILED
   // `sharding_type` and `replication_groups` for `PARTIAL`.
   static torch_xla::OpSharding CreateOpSharding(
@@ -95,7 +99,8 @@ class ShardingUtil {
   static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
       const std::vector<xla::Shape>& output_shapes,
       runtime::ComputationClient::ComputationPtr computation,
-      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
+      std::optional<std::vector<int64_t>> denormalized_tile_assignment =
+          std::nullopt);
 
   // Create sharded data placeholders, each corresponding to the individual
   // sharding spec from the input list
@@ -112,7 +117,9 @@ class ShardingUtil {
       std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
       runtime::ComputationClient::ComputationPtr computation,
       std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
-      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
+      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs,
+      std::optional<std::vector<int64_t>> denormalized_tile_assignment =
+          std::nullopt);
 
   // Transfers the individual shards to the devices and returns a DataPtr for
   // the PjRtShardedData wrapping the shards.

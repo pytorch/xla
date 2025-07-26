@@ -373,13 +373,19 @@ PjRtComputationClient::ReplicateShardedData(
         GetValueOrThrow(computation.GetProgramShape());
 
     std::string device = GetDefaultDevice();
+    std::vector<int64_t> denormalized_tile_assignment =
+        sharded_data->GetSharding().GetDenormalizedTileAssignment();
+    std::vector<std::vector<int64_t>> denormalized_tile_assignments = {
+        denormalized_tile_assignment};
     std::vector<torch_xla::runtime::ComputationClient::CompileInstance>
         instances;
-    instances.push_back({std::move(computation), device,
-                         GetCompilationDevices(device, {}), &shape,
-                         /*should_wrap_parameter=*/false,
-                         /*is_sharded=*/true,
-                         /*allow_spmd_sharding_propagation_to_output=*/false});
+    instances.push_back(
+        {std::move(computation), device, GetCompilationDevices(device, {}),
+         &shape,
+         /*should_wrap_parameter=*/false,
+         /*is_sharded=*/true,
+         /*allow_spmd_sharding_propagation_to_output=*/false,
+         /*denormalized_tile_assignments=*/denormalized_tile_assignments});
     std::vector<
         std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
         computations = Compile(std::move(instances));
@@ -421,9 +427,9 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
   hlo_shardings.reserve(handles.size());
   std::vector<xla::XlaOp> param_ops;
   param_ops.reserve(handles.size());
+  PjRtShardedData* sharded_data;
   for (int i = 0; i < handles.size(); ++i) {
-    PjRtShardedData* sharded_data =
-        dynamic_cast<PjRtShardedData*>(handles[i].get());
+    sharded_data = dynamic_cast<PjRtShardedData*>(handles[i].get());
     XLA_CHECK_NE(sharded_data, nullptr)
         << "Resharding requires PjRtShardedData on SPMD virtual device, "
         << "current device: " << handles[i]->device();
@@ -463,13 +469,18 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
       GetValueOrThrow(xla_computation.GetProgramShape());
 
   std::string device = GetDefaultDevice();
+  std::vector<int64_t> denormalized_tile_assignment =
+      sharded_data->GetSharding().GetDenormalizedTileAssignment();
+  std::vector<std::vector<int64_t>> denormalized_tile_assignments = {
+      denormalized_tile_assignment};
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
-  instances.push_back({std::move(xla_computation), device,
-                       GetCompilationDevices(device, {}),
-                       &program_shape.result(),
-                       /*should_wrap_parameter=*/false,
-                       /*is_sharded=*/true,
-                       /*allow_spmd_sharding_propagation_to_output=*/false});
+  instances.push_back(
+      {std::move(xla_computation), device, GetCompilationDevices(device, {}),
+       &program_shape.result(),
+       /*should_wrap_parameter=*/false,
+       /*is_sharded=*/true,
+       /*allow_spmd_sharding_propagation_to_output=*/false,
+       /*denormalized_tile_assignments=*/denormalized_tile_assignments});
   std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>
       computation = Compile(std::move(instances)).front();
 
@@ -553,10 +564,53 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
   static bool enable_cm_in_mp =
       runtime::sys_util::GetEnvBool("ENABLE_COLLECTIVE_MATMUL_IN_MP", false);
 
+  std::vector<std::string> addressable_devices_str = GetLocalDevices();
+  std::set<int64_t> addressable_devices;
+  for (auto& device : addressable_devices_str) {
+    std::vector<std::string> device_spec_parts = absl::StrSplit(device, ':');
+    XLA_CHECK_EQ(device_spec_parts.size(), 2)
+        << "Invalid device specification: " << device;
+    addressable_devices.insert(std::stoi(device_spec_parts[1]));
+  }
   for (auto& instance : instances) {
     std::vector<int64_t> denormalized_tile_assignment;
+    std::vector<int64_t> sorted_denormalized_tile_assignment;
     if (!instance.denormalized_tile_assignments.empty()) {
       denormalized_tile_assignment = instance.denormalized_tile_assignments[0];
+      sorted_denormalized_tile_assignment = denormalized_tile_assignment;
+      std::sort(sorted_denormalized_tile_assignment.begin(),
+                sorted_denormalized_tile_assignment.end());
+    }
+    // Validate that all instances.denormalized_tile_assignments have the same
+    // tile assignment
+    if (!sorted_denormalized_tile_assignment.empty()) {
+      for (auto& to_check_tile_assignment :
+           instance.denormalized_tile_assignments) {
+        std::sort(to_check_tile_assignment.begin(),
+                  to_check_tile_assignment.end());
+        if ((!to_check_tile_assignment.empty()) &&
+            (to_check_tile_assignment != sorted_denormalized_tile_assignment)) {
+          XLA_ERROR() << "the tile assignments - " << to_check_tile_assignment
+                      << " - i.e. mesh are not same for all tensors (it should "
+                         "be this - "
+                      << sorted_denormalized_tile_assignment << " )";
+        }
+      }
+    }
+    // Validate that tile assignment devices are addressable
+    if (!denormalized_tile_assignment.empty()) {
+      bool is_subset = std::all_of(denormalized_tile_assignment.begin(),
+                                   denormalized_tile_assignment.end(),
+                                   [&addressable_devices](int64_t num) {
+                                     return addressable_devices.find(num) !=
+                                            addressable_devices.end();
+                                   });
+      if (!is_subset) {
+        XLA_ERROR()
+            << "tile_assignment - " << denormalized_tile_assignment
+            << " has device_ids not included in the addressable devices - "
+            << addressable_devices;
+      }
     }
     xla::CompileOptions compile_options;
     if (enable_cm_in_mp) {
@@ -577,7 +631,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           .set_allow_spmd_sharding_propagation_to_output(
               {instance.allow_spmd_sharding_propagation_to_output});
 
-      int num_partitions = client_->device_count();
+      // Use denormalized_tile_assignment size if available, otherwise fall back
+      // to device_count
+      int num_partitions = denormalized_tile_assignment.size() > 0
+                               ? denormalized_tile_assignment.size()
+                               : client_->device_count();
       compile_options.executable_build_options.set_num_partitions(
           num_partitions);
       compile_options.executable_build_options.set_num_replicas(1);
@@ -607,12 +665,21 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       }
 
       // TODO(244391366) verify this is correct for the collectives ops
-      xla::DeviceAssignment device_assignment(1, client_->device_count());
-      // DeviceAssignment values must be the PjRtDevice ID, so we need to
-      // unwind the global ordinal mapping.
-      for (const auto& [device_id, global_ordinal] : global_ordinals_) {
-        device_assignment(0, global_ordinal) = device_id;
+      xla::DeviceAssignment device_assignment(1, num_partitions);
+      if (!denormalized_tile_assignment.empty()) {
+        // Use the denormalized_tile_assignment to assign the devices for
+        // computation
+        for (int i = denormalized_tile_assignment.size() - 1; i >= 0; --i) {
+          device_assignment(0, i) = denormalized_tile_assignment[i];
+        }
+      } else {
+        TF_VLOG(5) << "Fall back to original logic since "
+                      "denormalized_tile_assignment is empty";
+        for (const auto& [device_id, global_ordinal] : global_ordinals_) {
+          device_assignment(0, global_ordinal) = device_id;
+        }
       }
+
       compile_options.executable_build_options.set_device_assignment(
           device_assignment);
     } else {
@@ -802,6 +869,44 @@ PjRtComputationClient::ExecuteComputation(
   return datas;
 }
 
+namespace {
+
+/**
+ * Filters a list of device strings to include only those with IDs matching
+ * the provided indices.
+ *
+ * @param devices List of device strings in format "TYPE:ID" (e.g., "TPU:0")
+ * @param indices List of device IDs to filter by
+ * @return Filtered list of device strings, or error status if parsing fails
+ *
+ * Example:
+ *   devices = ["TPU:0", "TPU:1", "TPU:2", "TPU:3"]
+ *   indices = [1, 3]
+ *   result = ["TPU:1", "TPU:3"]
+ */
+absl::Span<const std::string> FilterDevicesByAddressableDevices(
+    absl::Span<const std::string> devices,
+    const std::vector<int64_t>& indices) {
+  static std::vector<std::string> filtered_devices_;
+  filtered_devices_.clear();
+  filtered_devices_.reserve(indices.size());
+  for (auto& index : indices) {
+    for (auto& device : devices) {
+      std::vector<std::string> device_spec_parts = absl::StrSplit(device, ':');
+      if ((std::stoi(device_spec_parts[1]) == index) &&
+          (std::find(filtered_devices_.begin(), filtered_devices_.end(),
+                     device) == filtered_devices_.end())) {
+        filtered_devices_.push_back(device);
+        break;
+      }
+    }
+  }
+  // Return a span that points to our filtered data
+  return absl::Span<const std::string>(filtered_devices_);
+}
+
+}  // namespace
+
 std::vector<ComputationClient::DataPtr>
 PjRtComputationClient::ExecuteReplicated(
     const ComputationClient::Computation& computation,
@@ -818,12 +923,41 @@ PjRtComputationClient::ExecuteReplicated(
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
 
-  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(
-      devices.size(), std::vector<xla::PjRtBuffer*>(arguments.size()));
+  absl::Span<const std::string> addressable_devices_;
+  std::vector<std::string> addressable_devices_vec;
+  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles;
   {
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_argument_handle",
         tsl::profiler::TraceMeLevel::kInfo);
+
+    // Step 1: Determine which devices are needed across ALL arguments
+    std::set<std::string> all_required_devices;
+    for (const auto& arg : arguments) {
+      auto pjrt_data = std::dynamic_pointer_cast<PjRtShardedData>(arg);
+      if (pjrt_data->GetSharding().GetDenormalizedTileAssignment().empty()) {
+        // Unsharded: needs all devices
+        all_required_devices.insert(devices.begin(), devices.end());
+      } else {
+        // Sharded: needs filtered devices
+        absl::Span<const std::string> filtered_devices =
+            FilterDevicesByAddressableDevices(
+                devices,
+                pjrt_data->GetSharding().GetDenormalizedTileAssignment());
+        all_required_devices.insert(filtered_devices.begin(),
+                                    filtered_devices.end());
+      }
+    }
+
+    // Convert to vector for indexing and assign to addressable_devices_
+    addressable_devices_vec.assign(all_required_devices.begin(),
+                                   all_required_devices.end());
+    addressable_devices_ = absl::MakeSpan(addressable_devices_vec);
+
+    // Step 2: Pre-allocate argument_handles for all required devices
+    argument_handles.assign(
+        addressable_devices_.size(),
+        std::vector<xla::PjRtBuffer*>(arguments.size(), nullptr));
 
     absl::BlockingCounter counter(arguments.size());
 
@@ -836,24 +970,68 @@ PjRtComputationClient::ExecuteReplicated(
           for (int32_t i = start; i < end; ++i) {
             auto pjrt_data =
                 std::dynamic_pointer_cast<PjRtShardedData>(arguments[i]);
-            XLA_CHECK_EQ(pjrt_data->shards.size(), devices.size())
-                << "Expected one shard per device";
 
-            for (int32_t d = 0; d < devices.size(); d++) {
-              std::shared_ptr<PjRtData> shard = pjrt_data->shards[d];
+            // Determine which devices this specific argument uses
+            absl::Span<const std::string> arg_devices;
+            if (pjrt_data->GetSharding()
+                    .GetDenormalizedTileAssignment()
+                    .empty()) {
+              arg_devices = devices;  // Unsharded: replicated to all devices
+            } else {
+              arg_devices = FilterDevicesByAddressableDevices(
+                  devices,
+                  pjrt_data->GetSharding().GetDenormalizedTileAssignment());
+            }
 
-              xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[d]);
+            TF_VLOG(3) << "Argument " << i
+                       << " uses devices: " << absl::StrJoin(arg_devices, ",")
+                       << "\n";
+
+            XLA_CHECK_EQ(pjrt_data->shards.size(), arg_devices.size())
+                << "Expected one shard per device for argument " << i;
+
+            // Step 3: Map this argument's shards to the current total
+            // addressable device indices
+            for (int32_t shard_idx = 0; shard_idx < arg_devices.size();
+                 shard_idx++) {
+              const std::string& device_name = arg_devices[shard_idx];
+
+              // Find the global device index in addressable_devices_
+              auto device_ = std::find(addressable_devices_.begin(),
+                                       addressable_devices_.end(), device_name);
+              XLA_CHECK(device_ != addressable_devices_.end())
+                  << "Device " << device_name
+                  << " not found in addressable_devices_";
+
+              int32_t device_idx =
+                  std::distance(addressable_devices_.begin(), device_);
+
+              std::shared_ptr<PjRtData> shard = pjrt_data->shards[shard_idx];
+              TF_VLOG(3) << "Mapping arg " << i << ", shard " << shard_idx
+                         << " to device " << device_idx << " (" << device_name
+                         << "), shard data: " << shard->ToString() << "\n";
+
+              xla::PjRtDevice* pjrt_device = StringToPjRtDevice(device_name);
               XLA_CHECK_EQ(shard->buffer->device(), pjrt_device);
               XLA_CHECK(pjrt_device->IsAddressable())
                   << pjrt_device->DebugString();
 
-              argument_handles[d][i] = shard->buffer.get();
+              argument_handles[device_idx][i] = shard->buffer.get();
             }
             counter.DecrementCount();
           }
         });
     counter.Wait();
   }
+  // need to reassign the addressable_devices_ according to the mesh's
+  // denormalized_tile_assignment
+  if (!pjrt_computation.denormalized_tile_assignment_.empty()) {
+    addressable_devices_ = FilterDevicesByAddressableDevices(
+        devices, pjrt_computation.denormalized_tile_assignment_);
+  } else {
+    addressable_devices_ = devices;
+  }
+  argument_handles.resize(addressable_devices_.size());
 
   xla::ExecuteOptions execute_options;
   execute_options.untuple_result = options.explode_tuple;
@@ -924,12 +1102,13 @@ PjRtComputationClient::ExecuteReplicated(
     pool_.ParallelFor(
         num_outputs, result_handle_cost_ns, [&](int64_t start, int64_t end) {
           for (int32_t i = start; i < end; ++i) {
-            std::vector<std::shared_ptr<PjRtData>> shards(devices.size());
-            for (int32_t d = 0; d < devices.size(); d++) {
+            std::vector<std::shared_ptr<PjRtData>> shards(
+                addressable_devices_.size());
+            for (int32_t d = 0; d < addressable_devices_.size(); d++) {
               std::unique_ptr<xla::PjRtBuffer> buffer =
                   std::move(results[d][i]);
-              shards[d] =
-                  std::make_shared<PjRtData>(devices[d], std::move(buffer));
+              shards[d] = std::make_shared<PjRtData>(addressable_devices_[d],
+                                                     std::move(buffer));
             }
 
             data_handles[i] = std::make_shared<PjRtShardedData>(

@@ -78,9 +78,8 @@ class Mesh:
     # devices.
     num_devices = xr.global_runtime_device_count()
     assert num_devices > 0, "This requires XLA supported device(s)."
-    assert num_devices == len(
-        device_ids
-    ), f"Number of device IDs ({len(device_ids)}) must match the global number of devices ({num_devices})"
+    assert len(device_ids) <= num_devices, \
+      f"Number of device IDs ({len(device_ids)}) must be less than the global number of devices ({num_devices})"
 
     if axis_names is not None:
       assert len(mesh_shape) == len(axis_names), \
@@ -97,8 +96,10 @@ class Mesh:
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
-    assert all(d < self.size() for d in device_ids), \
-        f"Device IDs must be less than mesh size ({self.size()}), got: {device_ids}"
+    assert all(d < self.size() for d in device_ids - np.min(device_ids)), \
+        f"Length of device IDs must be less than mesh size ({self.size()}), got: {device_ids}"
+    assert set(device_ids).issubset(set(np.arange(xr.addressable_runtime_device_count()))), \
+        f"Device IDs has to be subset of addressable_devices; got: {device_ids} and {np.arange(xr.addressable_runtime_device_count())}"
 
   def size(self):
     return np.prod(self.mesh_shape)

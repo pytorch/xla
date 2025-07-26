@@ -314,6 +314,8 @@ class PjRtComputationClient : public ComputationClient {
       ss << "  OpSharding: "
          << xla::HloSharding::FromProto(sharding.GetXlaOpSharding())->ToString()
          << "\n";
+      ss << "  DenormalizedTileAssignment: "
+         << sharding.GetDenormalizedTileAssignment() << "\n";
       ss << "  NumShards: " << shards.size() << "\n";
       return ss.str();
     }

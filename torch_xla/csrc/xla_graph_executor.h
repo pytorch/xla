@@ -225,6 +225,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     runtime::ComputationClient::ComputationPtr computation;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
     bool is_sharded = false;
+    std::vector<std::vector<int64_t>> denormalized_tile_assignments = {};
   };
 
   struct Async : public torch::lazy::LazyGraphExecutor::Async {
@@ -359,7 +360,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
       std::vector<torch::lazy::BackendDataPtr> parameters_data,
       std::string device, ComputationCache::TypePtr cached_computation,
-      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
+      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec,
+      std::optional<std::vector<std::vector<int64_t>>>
+          denormalized_tile_assignments = std::nullopt);
 
   // Override to enable profiler.
   PostOrderData RunPostOrder(const std::vector<torch::lazy::Value>& ir_values,
