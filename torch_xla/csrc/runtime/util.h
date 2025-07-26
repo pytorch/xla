@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "absl/status/statusor.h"
+#include "absl/strings/str_split.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/types.h"
@@ -175,6 +176,36 @@ RaisePythonValueErrorOnFailure(const Func& func) {
     return *std::move(result);
   }
   throw std::invalid_argument(std::string(result.status().message()));
+}
+
+/**
+ * Filters a list of device strings to include only those with IDs matching
+ * the provided indices.
+ *
+ * @param devices List of device strings in format "TYPE:ID" (e.g., "TPU:0")
+ * @param indices List of device IDs to filter by
+ * @return Filtered list of device strings
+ *
+ * Example:
+ *   devices = ["TPU:0", "TPU:1", "TPU:2", "TPU:3"]
+ *   indices = [1, 3]
+ *   result = ["TPU:1", "TPU:3"]
+ */
+template<typename DeviceContainer>
+std::vector<std::string> FilterDevicesByAddressableDevices(
+    const DeviceContainer& devices, const std::vector<int64_t>& indices) {
+  std::vector<std::string> filtered_devices_;
+  filtered_devices_.reserve(indices.size());
+  for (auto& index : indices) {
+    for (auto& device : devices) {
+      std::vector<std::string> device_spec_parts = absl::StrSplit(device, ':');
+      if (std::stoi(device_spec_parts[1]) == index) {
+        filtered_devices_.push_back(device);
+        break;
+      }
+    }
+  }
+  return filtered_devices_;
 }
 
 }  // namespace util

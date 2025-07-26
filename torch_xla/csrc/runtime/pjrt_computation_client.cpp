@@ -869,43 +869,17 @@ PjRtComputationClient::ExecuteComputation(
   return datas;
 }
 
-namespace {
-
-/**
- * Filters a list of device strings to include only those with IDs matching
- * the provided indices.
- *
- * @param devices List of device strings in format "TYPE:ID" (e.g., "TPU:0")
- * @param indices List of device IDs to filter by
- * @return Filtered list of device strings, or error status if parsing fails
- *
- * Example:
- *   devices = ["TPU:0", "TPU:1", "TPU:2", "TPU:3"]
- *   indices = [1, 3]
- *   result = ["TPU:1", "TPU:3"]
- */
+// wrapped function to handle absl::Span instead of std::vector
 absl::Span<const std::string> FilterDevicesByAddressableDevices(
     absl::Span<const std::string> devices,
     const std::vector<int64_t>& indices) {
   static std::vector<std::string> filtered_devices_;
   filtered_devices_.clear();
   filtered_devices_.reserve(indices.size());
-  for (auto& index : indices) {
-    for (auto& device : devices) {
-      std::vector<std::string> device_spec_parts = absl::StrSplit(device, ':');
-      if ((std::stoi(device_spec_parts[1]) == index) &&
-          (std::find(filtered_devices_.begin(), filtered_devices_.end(),
-                     device) == filtered_devices_.end())) {
-        filtered_devices_.push_back(device);
-        break;
-      }
-    }
-  }
-  // Return a span that points to our filtered data
-  return absl::Span<const std::string>(filtered_devices_);
+  filtered_devices_ = torch_xla::runtime::util::FilterDevicesByAddressableDevices(
+      devices, indices);
+  return absl::MakeConstSpan(filtered_devices_);
 }
-
-}  // namespace
 
 std::vector<ComputationClient::DataPtr>
 PjRtComputationClient::ExecuteReplicated(

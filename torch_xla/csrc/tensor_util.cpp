@@ -838,39 +838,6 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       runtime::GetComputationClientOrDie()->TransferToDevice(source_tensors));
 }
 
-namespace {
-
-/**
- * Filters a list of device strings to include only those with IDs matching
- * the provided indices.
- *
- * @param devices List of device strings in format "TYPE:ID" (e.g., "TPU:0")
- * @param indices List of device IDs to filter by
- * @return Filtered list of device strings, or error status if parsing fails
- *
- * Example:
- *   devices = ["TPU:0", "TPU:1", "TPU:2", "TPU:3"]
- *   indices = [1, 3]
- *   result = ["TPU:1", "TPU:3"]
- */
-std::vector<std::string> FilterDevicesByAddressableDevices(
-    std::vector<std::string> devices, const std::vector<int64_t>& indices) {
-  std::vector<std::string> filtered_devices_;
-  filtered_devices_.reserve(indices.size());
-  for (auto& index : indices) {
-    for (auto& device : devices) {
-      std::vector<std::string> device_spec_parts = absl::StrSplit(device, ':');
-      if (std::stoi(device_spec_parts[1]) == index) {
-        filtered_devices_.push_back(device);
-        break;
-      }
-    }
-  }
-  return filtered_devices_;
-}
-
-}  // namespace
-
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& shardings,
@@ -900,7 +867,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
         if ((!denormalized_tile_assignment.empty()) &&
             (denormalized_tile_assignment.size() !=
              addressable_devices.size())) {
-          addressable_devices = FilterDevicesByAddressableDevices(
+          addressable_devices = torch_xla::runtime::util::FilterDevicesByAddressableDevices(
               addressable_devices, denormalized_tile_assignment);
         }
       }
