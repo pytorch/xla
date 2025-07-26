@@ -250,6 +250,7 @@ function run_xla_op_tests3 {
   #run_test "$_TEST_DIR/spmd/test_xla_virtual_device.py"
   #run_test "$_TEST_DIR/spmd/test_dynamo_spmd.py"
   run_test "$_TEST_DIR/spmd/test_spmd_debugging.py"
+  run_test "$_TEST_DIR/spmd/test_spmd_placeholder.py"
   #=run_test "$_TEST_DIR/spmd/test_xla_distributed_checkpoint.py"
   run_test "$_TEST_DIR/spmd/test_xla_spmd_python_api_interaction.py"
   #run_test "$_TEST_DIR/spmd/test_dtensor_integration.py"
