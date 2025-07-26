@@ -12,6 +12,10 @@ class CollectivePermute : public XlaNode {
       const torch::lazy::Value& input, const torch::lazy::Value& token,
       std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
+  CollectivePermute(
+      c10::ArrayRef<torch::lazy::Value> inputs, const torch::lazy::Value& token,
+      std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
+
   std::string ToString() const override;
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;

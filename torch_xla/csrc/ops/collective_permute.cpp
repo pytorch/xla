@@ -31,18 +31,71 @@ CollectivePermute::CollectivePermute(
           /*num_outputs=*/2, torch::lazy::MHash(source_target_pairs)),
       source_target_pairs_(std::move(source_target_pairs)) {}
 
+CollectivePermute::CollectivePermute(
+    c10::ArrayRef<torch::lazy::Value> inputs, const torch::lazy::Value& token,
+    std::vector<std::pair<int64_t, int64_t>> source_target_pairs)
+    : XlaNode(
+          xla_collective_permute, GetOperandListWithToken(inputs, token),
+          [&]() {
+            std::vector<xla::Shape> input_shapes;
+            for (const auto& input : inputs) {
+              input_shapes.push_back(GetXlaShape(input));
+            }
+            input_shapes.push_back(GetXlaShape(token));
+            auto shape_fn =
+                [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+              std::vector<xla::XlaOp> input_ops(operands.begin(),
+                                                operands.end() - 1);
+              xla::XlaOp token_op = operands.back();
+              MultiCollectivePermuteResult result = BuildCollectivePermute(
+                  input_ops, token_op, source_target_pairs);
+              std::vector<xla::XlaOp> outputs = result.results;
+              outputs.push_back(result.token);
+              return xla::Tuple(operands[0].builder(), outputs);
+            };
+            return InferOutputShape(input_shapes, shape_fn);
+          },
+          /*num_outputs=*/inputs.size() + 1,
+          torch::lazy::MHash(source_target_pairs)),
+      source_target_pairs_(std::move(source_target_pairs)) {}
+
 torch::lazy::NodePtr CollectivePermute::Clone(
     torch::lazy::OpList operands) const {
-  return torch_xla::MakeNode<CollectivePermute>(operands.at(0), operands.at(1),
-                                                source_target_pairs_);
+  if (operands.size() > 2) {
+    std::vector<torch::lazy::Value> inputs(operands.begin(),
+                                           operands.end() - 1);
+    return torch_xla::MakeNode<CollectivePermute>(inputs, operands.back(),
+                                                  source_target_pairs_);
+  } else {
+    return torch_xla::MakeNode<CollectivePermute>(
+        operands.at(0), operands.at(1), source_target_pairs_);
+  }
 }
 
 XlaOpVector CollectivePermute::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp token = loctx->GetOutputOp(operand(1));
-  CollectivePermuteResult result =
-      BuildCollectivePermute(input, token, source_target_pairs_);
-  return ReturnOps({result.result, result.token}, loctx);
+  auto& operand_list = operands();
+  size_t operand_list_size = operand_list.size();
+  if (operand_list_size > 2) {
+    std::vector<xla::XlaOp> inputs;
+    inputs.reserve(operand_list_size);
+    for (size_t i = 0; i < operand_list_size - 1; ++i) {
+      inputs.push_back(loctx->GetOutputOp(operand(i)));
+    }
+    xla::XlaOp token = loctx->GetOutputOp(operand_list.back());
+
+    MultiCollectivePermuteResult result =
+        BuildCollectivePermute(inputs, token, source_target_pairs_);
+
+    std::vector<xla::XlaOp> outputs = result.results;
+    outputs.push_back(result.token);
+    return ReturnOps(outputs, loctx);
+  } else {
+    xla::XlaOp input = loctx->GetOutputOp(operand(0));
+    xla::XlaOp token = loctx->GetOutputOp(operand(1));
+    CollectivePermuteResult result =
+        BuildCollectivePermute(input, token, source_target_pairs_);
+    return ReturnOps({result.result, result.token}, loctx);
+  }
 }
 
 std::string CollectivePermute::ToString() const {
