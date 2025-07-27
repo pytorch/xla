@@ -761,13 +761,15 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(xr.device_type() == 'TPU' and tpu.version() < 3,
                    "Crash on TPU v2")
+  @patch('torch_xla.runtime.addressable_runtime_device_count')
   @patch('torch_xla.runtime.global_runtime_device_attributes')
   @patch('torch_xla.core.xla_model.xla_device_hw')
   @patch('torch_xla.runtime.global_runtime_device_count')
   def test_hybrid_mesh(self, device_count_mock, xla_device_mock,
-                       device_attributes_mock):
+                       device_attributes_mock, addressable_device_count_mock):
     # mock device attributes for 2 slices of v4-8
     num_slices = 2
+    addressable_device_count_mock.return_value = 8
     device_count_mock.return_value = 8
     xla_device_mock.return_value = "TPU"
     device_attributes_mock.return_value = [{
@@ -1621,7 +1623,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     invalid_ids = np.arange(self.n_devices + 1, self.n_devices * 2 + 1)
 
     with self.assertRaisesRegex(AssertionError,
-                                "Device IDs must be less than mesh size"):
+                                "Device IDs has to be subset of addressable_devices; got:*."):
       xs.Mesh(invalid_ids, mesh_shape)
 
   def test_mesh_size(self):
@@ -1645,7 +1647,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     mesh_shape = (1, partial_num_devices)
     with self.assertRaisesRegex(
         AssertionError,
-        "Number of device IDs .* must match the global number of devices"):
+        "Number of device IDs .* must be less than the global number of devices"):
       xs.Mesh(device_ids, mesh_shape)
 
   @unittest.skipIf(xr.global_runtime_device_count() == 1,

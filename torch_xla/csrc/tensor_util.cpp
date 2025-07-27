@@ -860,14 +860,25 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
       std::vector<std::string> local_devices =
           runtime::GetComputationClientOrDie()->GetLocalDevices();
+      std::vector<std::string> addressable_devices = std::move(local_devices);
+      if (shardings[i]) {
+        const std::vector<int64_t>& denormalized_tile_assignment =
+            shardings[i]->sharding.GetDenormalizedTileAssignment();
+        if ((!denormalized_tile_assignment.empty()) &&
+            (denormalized_tile_assignment.size() !=
+             addressable_devices.size())) {
+          addressable_devices = torch_xla::runtime::util::FilterDevicesByAddressableDevices(
+              addressable_devices, denormalized_tile_assignment);
+        }
+      }
       // Shards the input tensors with padding, to split evenly.
       // The execution requires consistent shard sizes, and the zero-padded
       // values should be ignored.
-      std::vector<at::Tensor> local_shards =
-          ShardingUtil::ShardTensor(tensors[i], shardings[i], local_devices,
-                                    /*padded=*/true);
+      std::vector<at::Tensor> local_shards = ShardingUtil::ShardTensor(
+          tensors[i], shardings[i], addressable_devices,
+          /*padded=*/true);
       new_handles.push_back(ShardingUtil::CreateShardedData(
-          local_shards, local_devices, shardings[i]));
+          local_shards, addressable_devices, shardings[i]));
     } else {
       source_tensors.push_back(std::make_shared<runtime::AtenSource>(
           tensors[i], std::move(shape), devices[i]));
