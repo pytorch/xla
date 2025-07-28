@@ -227,6 +227,7 @@ function run_xla_op_tests2 {
   run_test "$_TEST_DIR/test_assume_pure_spmd.py"
   run_test "$_TEST_DIR/test_assume_pure_torch.py"
   run_test "$_TEST_DIR/test_dynamic_shapes_detector.py"
+  run_test "$_TEST_DIR/test_runtime_client_initialization_error.py"
 }
 
 function run_xla_op_tests3 {
