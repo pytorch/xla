@@ -37,10 +37,6 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
     assert my_dtensor.placements == (
         Shard(0),), f"Expected (Shard(0),), got {my_dtensor.placements}"
 
-    print(
-        "Placements property works correctly for properly initialized XLAShardedTensor"
-    )
-
   def test_placements_property_failure(self):
     """Test that placements property fails with proper error when XLAShardedTensor lacks sharding info."""
     big_tensor = torch.randn(100_000, 88)
@@ -67,8 +63,6 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
         has_expected_keyword,
         f"Error message should mention sharding concepts: {error_message}")
 
-    print(f"Placements property correctly fails with error: {error_message}")
-
   def test_placements_caching_behavior(self):
     """Test that placements property uses caching correctly."""
     world_size = xr.global_runtime_device_count()
@@ -89,8 +83,6 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
                      "Cached placements should be identical")
     self.assertEqual(placements1, (Replicate(),),
                      f"Expected (Replicate(),), got {placements1}")
-
-    print("Placements property caching works correctly")
 
 
 if __name__ == '__main__':
