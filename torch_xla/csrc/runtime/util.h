@@ -191,7 +191,7 @@ RaisePythonValueErrorOnFailure(const Func& func) {
  *   indices = [1, 3]
  *   result = ["TPU:1", "TPU:3"]
  */
-template<typename DeviceContainer>
+template <typename DeviceContainer>
 std::vector<std::string> FilterDevicesByAddressableDevices(
     const DeviceContainer& devices, const std::vector<int64_t>& indices) {
   std::vector<std::string> filtered_devices_;

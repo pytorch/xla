@@ -867,8 +867,9 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
         if ((!denormalized_tile_assignment.empty()) &&
             (denormalized_tile_assignment.size() !=
              addressable_devices.size())) {
-          addressable_devices = torch_xla::runtime::util::FilterDevicesByAddressableDevices(
-              addressable_devices, denormalized_tile_assignment);
+          addressable_devices =
+              torch_xla::runtime::util::FilterDevicesByAddressableDevices(
+                  addressable_devices, denormalized_tile_assignment);
         }
       }
       // Shards the input tensors with padding, to split evenly.

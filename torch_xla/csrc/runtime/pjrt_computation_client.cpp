@@ -876,8 +876,9 @@ absl::Span<const std::string> FilterDevicesByAddressableDevices(
   static std::vector<std::string> filtered_devices_;
   filtered_devices_.clear();
   filtered_devices_.reserve(indices.size());
-  filtered_devices_ = torch_xla::runtime::util::FilterDevicesByAddressableDevices(
-      devices, indices);
+  filtered_devices_ =
+      torch_xla::runtime::util::FilterDevicesByAddressableDevices(devices,
+                                                                  indices);
   return absl::MakeConstSpan(filtered_devices_);
 }
 
@@ -997,15 +998,36 @@ PjRtComputationClient::ExecuteReplicated(
         });
     counter.Wait();
   }
-  // need to reassign the addressable_devices_ according to the mesh's
-  // denormalized_tile_assignment
+  // need to reassign the addressable_devices_ and argument_handles according to
+  // the sub-mesh device_ids used
   if (!pjrt_computation.denormalized_tile_assignment_.empty()) {
     addressable_devices_ = FilterDevicesByAddressableDevices(
         devices, pjrt_computation.denormalized_tile_assignment_);
+    // Create new argument_handles with correct size
+    std::vector<std::vector<xla::PjRtBuffer*>> temp_argument_handles(
+        addressable_devices_.size(),
+        std::vector<xla::PjRtBuffer*>(arguments.size(), nullptr));
+    // Map data from old indices to new indices
+    std::unordered_map<std::string, size_t> old_device_to_idx;
+    for (size_t i = 0; i < addressable_devices_.size(); ++i) {
+      old_device_to_idx[std::string(addressable_devices_[i])] = i;
+    }
+    // Remap argument handles
+    for (size_t new_idx = 0; new_idx < addressable_devices_.size(); ++new_idx) {
+      auto it =
+          old_device_to_idx.find(std::string(addressable_devices_[new_idx]));
+      if (it != old_device_to_idx.end()) {
+        temp_argument_handles[new_idx] =
+            std::move(argument_handles[it->second]);
+      }
+    }
+    // Replace with temp
+    argument_handles = std::move(temp_argument_handles);
   } else {
     addressable_devices_ = devices;
+    // Resize to match all devices if no specific tile assignment
+    argument_handles.resize(addressable_devices_.size());
   }
-  argument_handles.resize(addressable_devices_.size());
 
   xla::ExecuteOptions execute_options;
   execute_options.untuple_result = options.explode_tuple;
