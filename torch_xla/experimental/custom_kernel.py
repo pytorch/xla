@@ -2,6 +2,7 @@ import functools
 import os
 import math
 import warnings
+import logging
 
 import torch
 from torch.library import impl, custom_op
@@ -1097,6 +1098,9 @@ def quantized_matmul_int8(
             "out_block_size": out_block_size,
             "in_block_size": in_block_size,
         })
+  logging.warning(
+      f"Couldn't find w8a8 quantized matmul kernel block sizes for {bs=}, {n_out_features=}, {n_in_features=}, {jnp.dtype(jax_dtype).name=}, {quantize_activation=}, falling back to XLA quantized matmul kernel."
+  )
   from torch_xla.experimental.xla_quantized_matmul import quantized_matmul_xla
   return quantized_matmul_xla(
       x, w, scalar, quantize_activation=quantize_activation).to(x.dtype)
