@@ -65,13 +65,13 @@ void TestSingleReplication(
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
-      results[i] =
+      results[i] = GetValueOrThrow(
           torch_xla::runtime::GetComputationClientOrDie()->ExecuteComputation(
               *compiled_computations[i],
               {std::dynamic_pointer_cast<
                   torch_xla::runtime::ComputationClient::Data>(
                   tensors_data[i])},
-              device_strings[i], exec_options);
+              device_strings[i], exec_options));
       counter.DecrementCount();
     };
     torch_xla::thread::Schedule(std::move(executor));

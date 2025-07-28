@@ -874,10 +874,9 @@ PjRtComputationClient::ExecuteReplicated(
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_execute",
         tsl::profiler::TraceMeLevel::kInfo);
-    XLA_ASSIGN_OR_RETURN(
-        results,
-        pjrt_computation.executable->Execute(
-            std::move(argument_handles), execute_options, returned_futures));
+    XLA_ASSIGN_OR_RETURN(results, pjrt_computation.executable->Execute(
+                                      std::move(argument_handles),
+                                      execute_options, returned_futures));
 
     (*returned_futures)[0].OnReady(
         std::move([timed, op_tracker = std::move(op_tracker)](
