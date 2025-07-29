@@ -31,7 +31,7 @@ namespace bridge {
 //
 ABSL_DEPRECATED(
     "Use GetXlaTensor(), instead. "
-    "This function returns an uninitialized `XLATensorPtr`, instead of "
+    "This function returns an null-initialized `XLATensorPtr`, instead of "
     "propagating errors with StatusOr values.")
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor);
 
@@ -52,7 +52,8 @@ XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor);
 //   2. `tensor` wasn't created within this project
 //      (e.g. meta tensors whose device is XLA)
 //
-absl::StatusOr<XLATensorPtr> GetXlaTensor(const at::Tensor& tensor);
+absl::StatusOr<absl_nonnull XLATensorPtr> GetXlaTensor(
+    const at::Tensor& tensor);
 
 // Same as above, applied to a list of tensors.
 absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> GetXlaTensors(
@@ -60,13 +61,20 @@ absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> GetXlaTensors(
 
 bool IsXlaTensor(const at::Tensor& tensor);
 
-// Replaces the XLA tensor embedded within the XLA TensorImpl with the new
-// version.
+// Replaces the XLA tensor embedded within `tensor`'s XLA TensorImpl with
+// `new_xla_tensor`.
+//
+// Fails if `tensor` is not an XLA tensor.
 absl::Status ReplaceXlaTensor(const at::Tensor& tensor,
                               XLATensorPtr new_xla_tensor);
 
-absl::Status ReplaceXlaTensor(const std::vector<at::Tensor>& tensor,
-                              const std::vector<XLATensorPtr> new_xla_tensor);
+// Replaces the XLA tensor embedded within the `tensors` XLA TensorImpl
+// with `new_xla_tensors`.
+//
+// Fails if any of `tensors` is not an XLA tensor, or if the number of `tensors`
+// does not match the number of `new_xla_tensors`.
+absl::Status ReplaceXlaTensor(const std::vector<at::Tensor>& tensors,
+                              const std::vector<XLATensorPtr> new_xla_tensors);
 
 torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device);

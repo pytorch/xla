@@ -92,7 +92,8 @@ XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor) {
   return GetXlaTensor(tensor).value_or(XLATensorPtr{});
 }
 
-absl::StatusOr<XLATensorPtr> GetXlaTensor(const at::Tensor& tensor) {
+absl::StatusOr<absl_nonnull XLATensorPtr> GetXlaTensor(
+    const at::Tensor& tensor) {
   if (tensor.defined() &&
       at::functionalization::impl::isFunctionalTensor(tensor)) {
     // To make sure we have the most updated version of tensor.
