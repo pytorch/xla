@@ -497,7 +497,8 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
       async != nullptr ? async->tensors_data
                        : absl::Span<const torch::lazy::BackendDataPtr>());
 
-  std::vector<xla::Literal> literals = ReleaseGilAndTransferData(tensors_data);
+  std::vector<xla::Literal> literals =
+      GetValueOrThrow(ReleaseGilAndTransferData(tensors_data));
 
   return FetchTensors(tensors, literals,
                       async != nullptr ? &async->indices : nullptr);
