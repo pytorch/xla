@@ -4,7 +4,7 @@
 # - https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md
 backend: XLA
 cpp_namespace: torch_xla
-# full_codegen is the prefered method of code generation. Through this config
+# full_codegen is the preferred method of code generation. Through this config
 # ops get implementations (and IR classes) generated. See
 # https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md
 # for more details on differences on what gets generated or not.
@@ -33,8 +33,11 @@ full_codegen:
   - bitwise_right_shift.Tensor
   - ceil
   - cholesky
+  - clamp
   - clamp.Tensor
+  - clamp_max
   - clamp_max.Tensor
+  - clamp_min
   - clamp_min.Tensor
   - _conj_copy
   - cos
@@ -183,9 +186,6 @@ supported:
   - cat
   - celu
   - celu_
-  - clamp
-  - clamp_max
-  - clamp_min
   - clone
   - constant_pad_nd
   - convolution_backward_overrideable
