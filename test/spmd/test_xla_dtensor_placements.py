@@ -78,10 +78,7 @@ class XLADTensorSpecConversionTest(test_xla_sharding_base.XlaShardingTest):
                      f"Expected (Replicate(),), got {placements1}")
 
     # Invalidate cache and verify third access
-    def invalidate_spec_cach(tensor):
-      tensor._cached_spec = None
-
-    invalidate_spec_cach(my_dtensor)
+    my_dtensor.invalidate_spec_cache()
     self.assertIsNone(my_dtensor._cached_spec,
                       "Cache should be None after invalidation")
 
