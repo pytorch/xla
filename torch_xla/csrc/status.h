@@ -29,7 +29,8 @@ namespace torch_xla {
 //     |
 //     |_ start with a line break.
 //
-constexpr char kStatusPropagationTraceKey[] = "status-propagation-trace";
+constexpr char kStatusPropagationTraceKey[] =
+    "type.googleapis.com/torch_xla.status_trace";
 
 // If `TORCH_SHOW_CPP_STACKTRACES` is set, creates a new Status instance,
 // appending the current location (e.g. file and line information) to the
