@@ -114,9 +114,11 @@ TEST_F(PjRtComputationClientTest, Init) {
       std::make_shared<LiteralSource>(std::move(literal_y), device_)};
 
   // Execute the graph.
-  std::vector<ComputationClient::DataPtr> results = client_->ExecuteComputation(
-      *computations[0], client_->TransferToDevice(absl::MakeConstSpan(args)),
-      device_, options);
+  std::vector<ComputationClient::DataPtr> results =
+      GetValueOrThrow(client_->ExecuteComputation(
+          *computations[0],
+          client_->TransferToDevice(absl::MakeConstSpan(args)), device_,
+          options));
 
   // Copy the output from device back to host and assert correctness.
   ASSERT_EQ(results.size(), 1);

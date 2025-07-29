@@ -163,11 +163,11 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       torch::lazy::ComputationPtr computation,
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
-    std::vector<runtime::ComputationClient::DataPtr> results =
+    std::vector<runtime::ComputationClient::DataPtr> results = GetValueOrThrow(
         runtime::GetComputationClientOrDie()->ExecuteComputation(
             *std::dynamic_pointer_cast<runtime::ComputationClient::Computation>(
                 computation),
-            UnwrapXlaData(arguments), device.toString());
+            UnwrapXlaData(arguments), device.toString()));
     return WrapXlaData(results);
   }
 

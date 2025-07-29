@@ -295,9 +295,11 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
           std::move(instances));
 
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions options;
-  return torch_xla::runtime::GetComputationClientOrDie()->ExecuteComputation(
-      *computations.front(), UnwrapXlaData(lowering_ctx.GetParametersData()),
-      device.toString(), options);
+  return GetValueOrThrow(
+      torch_xla::runtime::GetComputationClientOrDie()->ExecuteComputation(
+          *computations.front(),
+          UnwrapXlaData(lowering_ctx.GetParametersData()), device.toString(),
+          options));
 }
 
 std::vector<at::Tensor> Fetch(
