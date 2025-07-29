@@ -73,6 +73,11 @@ at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor) {
   return at::functionalization::impl::to_functional_tensor(tensor);
 }
 
+absl::string_view GetCompositeNamespace() {
+  static const char* kCompositePrefix = "ptxla.";
+  return absl::string_view(kCompositePrefix);
+}
+
 }  // namespace torch_xla
 
 namespace torch {
