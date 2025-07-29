@@ -15,6 +15,8 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <iterator>
+#include <numeric>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -268,23 +270,20 @@ std::vector<std::string> GetXlaDevices(
   return xla_devices;
 }
 
-std::vector<XLATensorPtr> GetXlaTensors(const std::vector<at::Tensor>& tensors,
-                                        bool want_all) {
+// Collects all valid `XLATensorPtr` out of `tensors`.
+//
+// Iterates through `tensors`, collecting every `XLATensorPtr` value,
+// ignoring those that return with a non-ok status.
+static std::vector<XLATensorPtr> CollectXlaTensors(
+    const std::vector<at::Tensor>& tensors) {
   std::vector<XLATensorPtr> xtensors;
-  xtensors.reserve(tensors.size());
-  if (want_all) {
-    for (auto& tensor : tensors) {
-      xtensors.push_back(GetValueOrThrow(bridge::GetXlaTensor(tensor)));
-    }
-  } else {
-    for (auto& tensor : tensors) {
-      auto xtensor_status = bridge::GetXlaTensor(tensor);
-      if (xtensor_status.ok()) {
-        xtensors.push_back(std::move(xtensor_status).value());
-      }
+  for (auto& tensor : tensors) {
+    auto xla_tensor_state = bridge::GetXlaTensor(tensor);
+    if (xla_tensor_state.ok()) {
+      // Insert only those that can be successfully retrieved.
+      xtensors.push_back(std::move(xla_tensor_state).value());
     }
   }
-  return xtensors;
 }
 
 bool IsNonDeviceDataIR(const at::Tensor& tensor) {
@@ -396,11 +395,11 @@ void AllReduceInPlace(const std::string& reduce_type,
                       bool pin_layout) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   std::vector<XLATensorPtr> xtensors =
-      GetXlaTensors(tensors, /*want_all=*/true);
+      GetValueOrThrow(bridge::GetXlaTensors(tensors));
   tensor_methods::all_reduce(xtensors, GetReduceType(reduce_type), scale,
                              replica_groups, pin_layout);
   std::vector<XLATensorPtr> new_xtensors =
-      GetXlaTensors(tensors, /*want_all=*/true);
+      GetValueOrThrow(bridge::GetXlaTensors(tensors));
   MaybeThrow(bridge::ReplaceXlaTensor(tensors, new_xtensors));
 }
 
@@ -506,7 +505,8 @@ ReduceScatterCoalesced(const std::string& reduce_type,
                        double scale, int64_t scatter_dim, int64_t shard_count,
                        const std::vector<std::vector<int64_t>>& replica_groups,
                        bool pin_layout) {
-  std::vector<XLATensorPtr> xtensors = GetXlaTensors(inputs, /*want_all=*/true);
+  std::vector<XLATensorPtr> xtensors =
+      GetValueOrThrow(bridge::GetXlaTensors(inputs));
   std::vector<XLATensorPtr> result;
   torch::lazy::Value new_token;
   std::tie(result, new_token) = tensor_methods::reduce_scatter_coalesced(
@@ -526,8 +526,9 @@ std::shared_ptr<torch::lazy::Value> ReduceScatterCoalescedOut(
     int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   std::vector<XLATensorPtr> xtensors_out =
-      GetXlaTensors(outputs, /*want_all=*/true);
-  std::vector<XLATensorPtr> xtensors = GetXlaTensors(inputs, /*want_all=*/true);
+      GetValueOrThrow(bridge::GetXlaTensors(outputs));
+  std::vector<XLATensorPtr> xtensors =
+      GetValueOrThrow(bridge::GetXlaTensors(inputs));
   torch::lazy::Value new_token;
   new_token = tensor_methods::reduce_scatter_coalesced_out(
       xtensors_out, xtensors, *token, GetReduceType(reduce_type), scale,
@@ -568,7 +569,7 @@ AllGatherCoalesced(const std::vector<at::Tensor>& tensors,
                    const std::vector<std::vector<int64_t>>& replica_groups,
                    bool pin_layout) {
   std::vector<XLATensorPtr> xtensors =
-      GetXlaTensors(tensors, /*want_all=*/true);
+      GetValueOrThrow(bridge::GetXlaTensors(tensors));
   std::vector<XLATensorPtr> result;
   torch::lazy::Value new_token;
   std::tie(result, new_token) = tensor_methods::all_gather_coalesced(
@@ -586,8 +587,9 @@ std::shared_ptr<torch::lazy::Value> AllGatherCoalescedOut(
     int64_t shard_count,
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   std::vector<XLATensorPtr> xtensors_out =
-      GetXlaTensors(outputs, /*want_all=*/true);
-  std::vector<XLATensorPtr> xtensors = GetXlaTensors(inputs, /*want_all=*/true);
+      GetValueOrThrow(bridge::GetXlaTensors(outputs));
+  std::vector<XLATensorPtr> xtensors =
+      GetValueOrThrow(bridge::GetXlaTensors(inputs));
   torch::lazy::Value new_token;
   new_token = tensor_methods::all_gather_coalesced_out(
       xtensors_out, xtensors, *token, dim, shard_count, replica_groups,
@@ -624,8 +626,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> CollectivePermute(
 }
 
 void OptimizationBarrier_(std::vector<at::Tensor>& tensors) {
-  std::vector<XLATensorPtr> xtensors =
-      GetXlaTensors(tensors, /*want_all=*/false);
+  auto xtensors = CollectXlaTensors(tensors);
   tensor_methods::optimization_barrier_(xtensors);
 }
 
@@ -654,8 +655,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> Recv(
 void SyncTensors(const std::vector<at::Tensor>& tensors,
                  const std::vector<std::string>& devices, bool wait,
                  bool sync_xla_data, bool warm_up_cache_only = false) {
-  std::vector<XLATensorPtr> xtensors =
-      GetXlaTensors(tensors, /*want_all=*/false);
+  std::vector<XLATensorPtr> xtensors = CollectXlaTensors(tensors);
   XLAGraphExecutor::Get()->SyncTensorsGraph(&xtensors, devices, wait,
                                             sync_xla_data, warm_up_cache_only);
 }
@@ -704,8 +704,7 @@ uint64_t GetRngSeed(const std::string& device_str) {
 
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors,
                                EmitMode mode) {
-  std::vector<XLATensorPtr> xtensors =
-      GetXlaTensors(tensors, /*want_all=*/false);
+  std::vector<XLATensorPtr> xtensors = CollectXlaTensors(tensors);
   return XLAGraphExecutor::Get()->DumpHloComputation(xtensors, mode);
 }
 
@@ -884,7 +883,8 @@ py::object GetRevisions() {
 std::vector<at::Tensor> XlaUserComputation(
     const std::string& opname, const std::vector<at::Tensor>& inputs,
     runtime::ComputationClient::ComputationPtr computation) {
-  std::vector<XLATensorPtr> xinputs = GetXlaTensors(inputs, /*want_all=*/true);
+  std::vector<XLATensorPtr> xinputs =
+      GetValueOrThrow(bridge::GetXlaTensors(inputs));
   std::vector<XLATensorPtr> xresults =
       tensor_methods::user_computation(opname, xinputs, std::move(computation));
   std::vector<at::Tensor> results;
@@ -1141,7 +1141,7 @@ class PyLoweringContext {
   void Build(std::vector<at::Tensor> tensors) {
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
-        GetXlaTensors(tensors, /*want_all=*/true);
+        GetValueOrThrow(bridge::GetXlaTensors(tensors));
 
     // Get the lazy IR value from the output XLA tensors
     std::vector<torch::lazy::Value> ir_values;
@@ -1168,7 +1168,7 @@ class PyLoweringContext {
                      std::vector<at::Tensor> additional_inputs_list = {}) {
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
-        GetXlaTensors(tensors, /*want_all=*/true);
+        GetValueOrThrow(bridge::GetXlaTensors(tensors));
 
     // Get the lazy IR value from the output XLA tensors
     std::vector<torch::lazy::Value> ir_values;
@@ -2285,7 +2285,7 @@ void InitXlaModuleBindings(py::module m) {
               xtensors =
                   XLAGraphExecutor::Get()->GetLiveTensors(&backend_device);
             } else {
-              xtensors = GetXlaTensors(tensors, /*want_all=*/false);
+              xtensors = CollectXlaTensors(tensors);
             }
             return py::bytes(
                 XLAGraphExecutor::Get()->DumpHloComputation(xtensors, mode));
