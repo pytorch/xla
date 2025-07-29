@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/status.h"
 
+#include <c10/util/Exception.h>
 #include <torch/csrc/utils/cpp_stacktraces.h>
 
 #include <iostream>
@@ -95,21 +96,32 @@ absl::Status status_internal::MaybeWithNewMessage(
   return new_status;
 }
 
+// Get a formatted string representation of the status propagation trace
+// if it's not empty.
+static std::string GetFormattedStatusPropagationTrace(
+    const absl::Status& status) {
+  auto status_propagation_trace = GetStatusPropagationTraceOrEmpty(status);
+  return status_propagation_trace.empty()
+             ? ""
+             : absl::StrCat("\nStatus Propagation Trace:",
+                            status_propagation_trace.Flatten(), "\n");
+}
+
+// Get the status message followed by a line break, if we are printing the
+// C++ stacktraces.
+//
+// This is needed so we have a blank line in between the status message and
+// the dumped C++ traces (either the status propagation one, or the C++
+// stacktrace).
+static std::string MaybeGetMessageWithLineBreak(const absl::Status& status) {
+  return torch::get_cpp_stacktraces_enabled()
+             ? absl::StrCat(status.message(), "\n")
+             : std::string(status.message());
+}
+
 void MaybeThrow(const absl::Status& status) {
-  if (!status.ok()) {
-    auto status_propagation_trace = GetStatusPropagationTraceOrEmpty(status);
-    auto status_propagation_trace_str =
-        status_propagation_trace.empty()
-            ? ""
-            : absl::StrCat("\n\nStatus Propagation Trace:",
-                           status_propagation_trace.Flatten());
-    auto cpp_stacktrace_str =
-        torch::get_cpp_stacktraces_enabled()
-            ? absl::StrCat("\n\nC++ Stacktrace:\n", tsl::CurrentStackTrace())
-            : "";
-    throw std::runtime_error(absl::StrCat(
-        status.message(), status_propagation_trace_str, cpp_stacktrace_str));
-  }
+  TORCH_CHECK(status.ok(), MaybeGetMessageWithLineBreak(status),
+              GetFormattedStatusPropagationTrace(status));
 }
 
 }  // namespace torch_xla
