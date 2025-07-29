@@ -90,6 +90,10 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> collective_permute(
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
+
 std::vector<XLATensorPtr> custom_call(
     const std::vector<XLATensorPtr>& inputs, const std::string& target,
     const std::vector<std::vector<int64_t>>& output_shapes,

@@ -744,8 +744,9 @@ def all_to_all(value: torch.Tensor,
   return result[0]
 
 
-def collective_permute(value: torch.Tensor,
-                       pairs: List[List[int]]) -> torch.Tensor:
+def collective_permute(
+    tensors: Union[torch.Tensor, List[torch.Tensor]],
+    pairs: List[List[int]]) -> Union[torch.Tensor, List[torch.Tensor]]:
   """Performs a XLA `CollectivePermute()` operation on the input tensor.
 
   WARNING: This function is not very reliable, may produce wrong results under
@@ -754,7 +755,8 @@ def collective_permute(value: torch.Tensor,
   See: https://www.tensorflow.org/xla/operation_semantics#collectivepermute
 
   Args:
-    value (torch.Tensor): The input tensor.
+    tensors: Either a single `torch.Tensor` or a list of `torch.Tensor` to
+      perform the collective permute over.
     pairs (list): A list of (source_replica_id, target_replica_id) pairs,
       representing the sender and receiver for the `collective_permute()`
       operation. Example: `[[0, 1], [1, 2], [2, 0]]` defines three pairs. The
@@ -762,12 +764,16 @@ def collective_permute(value: torch.Tensor,
         and replica 2 to replica 0.
 
   Returns:
-    The result `torch.Tensor` of the `collective_permute()` operation.
+    A single or list of `torch.Tensor` results of the `collective_permute()` operation.
   """
+  is_single_operand = isinstance(tensors, torch.Tensor)
+  assert is_single_operand or (isinstance(tensors, list) and all(
+      isinstance(v, torch.Tensor) for v in tensors))
+
   token, devctx = _get_all_reduce_token()
-  result = torch_xla._XLAC._xla_collective_permute(value, token, pairs)
-  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
-  return result[0]
+  result = torch_xla._XLAC._xla_collective_permute(tensors, token, pairs)
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[-1])
+  return result[0] if is_single_operand else result[:-1]
 
 
 def collective_broadcast(tensors: List[torch.Tensor],
