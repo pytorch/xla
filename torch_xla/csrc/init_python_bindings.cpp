@@ -278,12 +278,13 @@ static std::vector<XLATensorPtr> CollectXlaTensors(
     const std::vector<at::Tensor>& tensors) {
   std::vector<XLATensorPtr> xtensors;
   for (auto& tensor : tensors) {
-    auto xla_tensor_state = bridge::GetXlaTensor(tensor);
-    if (xla_tensor_state.ok()) {
+    auto xla_tensor_status = bridge::GetXlaTensor(tensor);
+    if (xla_tensor_status.ok()) {
       // Insert only those that can be successfully retrieved.
-      xtensors.push_back(std::move(xla_tensor_state).value());
+      xtensors.push_back(std::move(xla_tensor_status).value());
     }
   }
+  return xtensors;
 }
 
 bool IsNonDeviceDataIR(const at::Tensor& tensor) {
