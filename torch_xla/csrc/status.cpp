@@ -124,8 +124,6 @@ void MaybeThrow(const absl::Status& status) {
               GetFormattedStatusPropagationTrace(status));
 }
 
-void GetValueOrThrow(const absl::Status& status) {
-  MaybeThrow(status);
-}
+void GetValueOrThrow(const absl::Status& status) { MaybeThrow(status); }
 
 }  // namespace torch_xla
