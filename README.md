@@ -6,25 +6,14 @@ status](https://github.com/pytorch/xla/actions/workflows/build_and_test.yml/badg
 PyTorch/XLA is a Python package that uses the [XLA deep learning
 compiler](https://www.tensorflow.org/xla) to connect the [PyTorch deep learning
 framework](https://pytorch.org/) and [Cloud
-TPUs](https://cloud.google.com/tpu/). You can try it right now, for free, on a
-single Cloud TPU VM with
-[Kaggle](https://www.kaggle.com/discussions/product-feedback/369338)!
-
-Take a look at one of our [Kaggle
-notebooks](https://github.com/pytorch/xla/tree/master/contrib/kaggle) to get
-started:
-
-* [Stable Diffusion with PyTorch/XLA
-  2.0](https://github.com/pytorch/xla/blob/master/contrib/kaggle/pytorch-xla-2-0-on-kaggle.ipynb)
-* [Distributed PyTorch/XLA
-  Basics](https://github.com/pytorch/xla/blob/master/contrib/kaggle/distributed-pytorch-xla-basics-with-pjrt.ipynb)
+TPUs](https://cloud.google.com/tpu/)
 
 ## Installation
 
 ### TPU
 
 To install PyTorch/XLA stable build in a new TPU VM:
-Note: Builds are available for Python 3.8 to 3.11; please use one of the supported versions.
+Note: Builds are available for Python 3.11 to 3.13; please use one of the supported versions.
 
 ```sh
 # - for venv
@@ -32,16 +21,7 @@ Note: Builds are available for Python 3.8 to 3.11; please use one of the support
 # - for conda
 # conda create -n py311 python=3.11
 
-pip install torch==2.7.0 'torch_xla[tpu]==2.7.0'
-```
-
-To install PyTorch/XLA nightly build in a new TPU VM:
-
-```sh
-pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
-# Edit `cp310-cp310` to fit your desired Python version as needed
-pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp310-cp310-linux_x86_64.whl' \
-  -f https://storage.googleapis.com/libtpu-wheels/index.html
+pip install torch==2.8.0 'torch_xla[tpu]==2.8.0'
 ```
 
 ### C++11 ABI builds
