@@ -247,7 +247,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
 
     # We surface the C++ runtime error by checking that the backend data is
     # no longer present for the IR node.
-    self.assertTrue(torch_xla._XLAC._is_placecholder(t0))
+    self.assertTrue(torch_xla._XLAC._is_placeholder(t0))
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
 
   @parameterized.parameters(True, False)
@@ -272,7 +272,7 @@ class InputOutputAliasesTest(parameterized.TestCase):
       # We surface the C++ runtime error by checking that the backend data is
       # no longer present for the IR node.
       self.assertEqual(
-          torch_xla._XLAC._is_placecholder(t0), enable_buffer_donor_config)
+          torch_xla._XLAC._is_placeholder(t0), enable_buffer_donor_config)
       self.assertEqual(
           met.metric_data("InputOutputAliasCount")[1],
           enable_buffer_donor_config)
