@@ -88,6 +88,8 @@ namespace {
 
 constexpr int64_t kSeedInfoId = -127389;
 
+// Traits related to the return type of the lambda function that wraps the
+// actual implementation inside PythonScope.
 template <class T>
 struct LambdaReturnTypeTrait {
   using Type = T;
