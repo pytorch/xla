@@ -56,6 +56,13 @@ class DotGeneralTest(unittest.TestCase):
         preferred_element_type=torch.int32)
     self.assertTrue(torch.allclose(xla_out.cpu(), expected_out))
 
+  def test_raises_error_on_non_xla_tensor(self):
+    lhs = torch.rand(10, 3, 4, dtype=torch.bfloat16)
+    rhs = torch.rand(10, 4, 5, dtype=torch.bfloat16, device="xla")
+    error_message = r"Expected input tensor `lhs` to be an actual XLA tensor. Got: CPUBFloat16Type"
+    with self.assertRaisesRegex(RuntimeError, expected_regex=error_message):
+      torch_xla._XLAC._xla_dot_general(lhs, rhs, (([2], [1]), ([0], [0])))
+
 
 if __name__ == '__main__':
   test = unittest.main()

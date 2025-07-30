@@ -84,6 +84,18 @@ class PybindTest(unittest.TestCase):
     xla_out_2 = xla_dummy_model(xla_input)
     assert (hash == torch_xla._XLAC._get_graph_hash([xla_out_2]))
 
+  def test_get_graph_hash_raises_error_on_non_xla_tensor(self):
+    tensors = [
+        torch.rand(10, device=torch_xla.device()),
+        torch.rand(10),
+        torch.rand(10, device=torch_xla.device()),
+    ]
+    error_message = (
+        "Expected all tensors in the given list to be XLA tensors. "
+        "Element at index 1 is not an XLA tensor. Got: torch.FloatTensor")
+    with self.assertRaisesRegex(RuntimeError, expected_regex=error_message):
+      torch_xla._XLAC._get_graph_hash(tensors)
+
   def test_clear_pending_irs(self):
     xla_device = torch_xla.device()
     torch_xla.sync()

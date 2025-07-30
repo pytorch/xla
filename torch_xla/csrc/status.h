@@ -200,6 +200,9 @@ T GetValueOrThrow(absl::StatusOr<T>&& status) {
   return std::move(status).value();
 }
 
+// `GetValueOrThrow` overload for `Status`.
+void GetValueOrThrow(const absl::Status& status);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_STATUS_H_

@@ -38,6 +38,7 @@
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"
+#include "status.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_fallback.h"
@@ -86,6 +87,24 @@ namespace torch_xla {
 namespace {
 
 constexpr int64_t kSeedInfoId = -127389;
+
+template <class T>
+struct LambdaReturnTypeTrait {
+  using Type = T;
+  constexpr static bool is_status = false;
+};
+
+template <>
+struct LambdaReturnTypeTrait<absl::Status> {
+  using Type = void;
+  constexpr static bool is_status = true;
+};
+
+template <class T>
+struct LambdaReturnTypeTrait<absl::StatusOr<T>> {
+  using Type = T;
+  constexpr static bool is_status = true;
+};
 
 // Wraps a python scope (e.g. py::module) to provide more convenient APIs.
 // It behaves like a Scope object but has enhanced behaviors for the def*()
@@ -153,15 +172,25 @@ class PythonScope : public Scope {
     template <typename F>
     static void Bind(Scope& scope, const char* const name, F&& f,
                      const Extra&... extra) {
-      using RetType =
+      // `f` return type.
+      using FnRetType =
           typename c10::guts::infer_function_traits<F>::type::return_type;
-      auto lambda = [f = std::move(f)](Args... args) -> RetType {
+      // Wrapper lambda return type.
+      // This is needed for handling returning status types.
+      using LambdaRetType = typename LambdaReturnTypeTrait<FnRetType>::Type;
+
+      auto lambda = [f = std::move(f)](Args... args) -> LambdaRetType {
         // RAII for emitting Python warnings.
         //
         // This turns messages passed to `TORCH_WARN()` in `f` into Python
         // warnings.
         torch::PyWarningHandler handler;
-        return f(args...);
+
+        if constexpr (LambdaReturnTypeTrait<FnRetType>::is_status) {
+          return GetValueOrThrow(f(args...));
+        } else {
+          return f(args...);
+        }
       };
 
       if constexpr (kind == FunctionKind::kInit) {
@@ -237,13 +266,11 @@ std::string GetTensorsDump(
     const std::vector<at::Tensor>& tensors,
     const std::function<
         std::string(absl::Span<const torch::lazy::Node* const>)>& coverter) {
+  auto xtensors = GetValueOrThrow(bridge::GetXlaTensors(tensors));
   std::vector<const torch::lazy::Node*> nodes;
-  std::vector<torch::lazy::Value> values;
-  for (auto& tensor : tensors) {
-    XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(tensor));
-    values.push_back(xtensor->GetIrValue());
-    nodes.push_back(values.back().node.get());
-  }
+  std::transform(
+      xtensors.begin(), xtensors.end(), std::back_inserter(nodes),
+      [](const XLATensorPtr& ptr) { return ptr->GetIrValue().node.get(); });
   return coverter(nodes);
 }
 
@@ -363,7 +390,7 @@ std::vector<std::vector<int>> ExtractXlaDotGeneralDimVectors(
   return dim_vectors;
 }
 
-at::Tensor XlaDotGeneral(const at::Tensor& lhs, const at::Tensor& rhs,
+at::Tensor XlaDotGeneral(const XLATensorPtr& xlhs, const XLATensorPtr& xrhs,
                          const std::vector<std::vector<int>>& dim_vectors,
                          std::optional<py::object> preferred_element_type) {
   std::optional<at::ScalarType> at_preferred_element_type;
@@ -373,9 +400,7 @@ at::Tensor XlaDotGeneral(const at::Tensor& lhs, const at::Tensor& rhs,
             ->scalar_type;
   }
   return bridge::AtenFromXlaTensor(tensor_methods::xla_dot_general(
-      GetValueOrThrow(bridge::GetXlaTensor(lhs)),
-      GetValueOrThrow(bridge::GetXlaTensor(rhs)), dim_vectors,
-      at_preferred_element_type));
+      xlhs, xrhs, dim_vectors, at_preferred_element_type));
 }
 
 std::vector<std::pair<int64_t, int64_t>> CreateSourceTargetPairs(
@@ -1841,10 +1866,11 @@ void InitXlaModuleBindings(py::module m) {
            })
       .def(
           "_xla_dot_general",
-          [](const at::Tensor& lhs, const at::Tensor& rhs,
+          [](const at::Tensor& lhs,
+             const at::Tensor& rhs,
              py::tuple dimension_numbers,
              std::optional<std::string>& precision_config,
-             std::optional<py::object>& preferred_element_type) -> at::Tensor {
+             std::optional<py::object>& preferred_element_type) -> absl::StatusOr<at::Tensor> {
             // Python binding for xla::DotGeneral
             // https://openxla.org/xla/operation_semantics#dotgeneral
             std::vector<std::vector<int>> dim_vectors =
@@ -1852,9 +1878,13 @@ void InitXlaModuleBindings(py::module m) {
             XLA_CHECK(!precision_config.has_value())
                 << "_xla_dot_general: precision_config is not supported yet, "
                    "default precision setting will be applied.";
-            at::Tensor result =
-                XlaDotGeneral(lhs, rhs, dim_vectors, preferred_element_type);
-            return result;
+            XLA_ASSIGN_OR_RETURN(
+                XLATensorPtr xlhs,
+                bridge::GetInputXlaTensor(lhs, /* name= */ "lhs"));
+            XLA_ASSIGN_OR_RETURN(
+                XLATensorPtr xrhs,
+                bridge::GetInputXlaTensor(rhs, /* name= */ "rhs"));
+            return XlaDotGeneral(xlhs, xrhs, dim_vectors, preferred_element_type);
           },
           py::arg("lhs"),                            //
           py::arg("rhs"),                            //
@@ -3340,19 +3370,17 @@ void InitXlaModuleBindings(py::module m) {
                     opt_device ? &opt_device.value() : nullptr);
             return check_materialization_helper(xtensors);
           })
-      .def(
-          "_get_graph_hash",
-          [](const std::vector<at::Tensor>& tensors) {
-            std::vector<XLATensorPtr> xtensors;
-            xtensors.reserve(tensors.size());
-            for (auto& tensor : tensors) {
-              xtensors.push_back(GetValueOrThrow(bridge::GetXlaTensor(tensor)));
-            }
-            torch::lazy::hash_t hash =
-                XLAGraphExecutor::Get()->GetGraphHash(xtensors);
-            std::string bin((const char*)&hash, sizeof(hash));
-            return py::bytes(bin);
-          })
+      .def("_get_graph_hash",
+           [](const std::vector<at::Tensor>& tensors)
+               -> absl::StatusOr<py::bytes> {
+             XLA_ASSIGN_OR_RETURN(
+                 std::vector<absl_nonnull XLATensorPtr> xtensors,
+                 bridge::GetXlaTensors(tensors));
+             torch::lazy::hash_t hash =
+                 XLAGraphExecutor::Get()->GetGraphHash(xtensors);
+             std::string bin((const char*)&hash, sizeof(hash));
+             return py::bytes(bin);
+           })
       .def("_clear_pending_irs",
            [](const std::string& device) {
              // Use with caution. Those tensor whole ir was cleared
