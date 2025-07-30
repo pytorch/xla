@@ -15,7 +15,7 @@ This compilation step occurs when a graph is first encountered or if the graph s
 **Device Abstraction:**
 
 * **GPUs**: Accessed via `torch.device("cuda:0")` or similar.
-* **TPUs**: Accessed via `xm.xla_device()`.
+* **TPUs**: Accessed via `torch.device('xla')`.
 
 **Distributed Training:**
 
@@ -44,10 +44,8 @@ data = data.to(device)
 **(NEW) PyTorch/XLA Code:**
 
 ```python
-import torch_xla.core.xla_model as xm
-
 # Acquire the XLA device (e.g., a TPU core)
-device = xm.xla_device()
+device = torch.device('xla')
 
 # Move your model and data to the XLA device
 model.to(device)
@@ -112,7 +110,7 @@ import torch_xla.distributed.parallel_loader as pl
 
 # Inside your _mp_fn (multi-processing function, see below)
 # train_loader is your standard PyTorch DataLoader
-# device is xm.xla_device() for the current process
+# device is torch.device('xla') for the current process
 mp_train_loader = pl.MpDeviceLoader(train_loader, device)
 
 for batch_idx, (data, target) in mp_train_loader:
@@ -131,7 +129,7 @@ Let's adapt our single-device MNIST example to run in a distributed fashion usin
 **Single-Device MNIST Snippet (Recap):**
 
 ```python
-device = xm.xla_device()
+device = torch.device('xla')
 model = MNISTNet().to(device)
 train_loader = torch.utils.data.DataLoader(...) # Standard DataLoader
 optimizer = optim.SGD(model.parameters(), lr=learning_rate)
@@ -194,7 +192,7 @@ def _mp_mnist_fn(index, args):
     torch.manual_seed(args.seed) # Ensure consistent model initialization if needed
 
     # 1. Acquire the XLA device for THIS process.
-    device = xm.xla_device()
+    device = torch.device('xla')
 
     # 2. Create the model and move it to the process-specific XLA device
     model = MNISTNet().to(device)
@@ -279,7 +277,7 @@ if __name__ == '__main__':
 
 * **Main Training Logic in** \_**`mp_mnist_fn`**: The core training loop is encapsulated in a function that `torch_xla.launch` will execute in multiple processes.
 * **`torch_xla.launch(_mp_mnist_fn, args=(args,))`**: This is the entry point. It spawns `N` processes (where `N` is the number of available XLA devices/chips, e.g., 8 for a TPU v3-8) and runs `mp_mnist_fn` in each, passing the `index` (global ordinal) and `args`.
-* **`device = xm.xla_device()`** **inside** \_**`mp_mnist_fn`**: Each process gets its unique XLA device.
+* **`device = torch.device('xla')`** **inside** \_**`mp_mnist_fn`**: Each process gets its unique XLA device.
 * **`pl.MpDeviceLoader(args.train_loader, device)`**: This wraps your standard `DataLoader`. `MpDeviceLoader` ensures that each process (and its device) gets a unique shard of the data from `args.train_loader`. It also typically handles `xm.mark_step()` internally after a configurable number of batches.
 * **`xm.optimizer_step(optimizer)`**: This is crucial for distributed training. It performs an all-reduce operation on the gradients across all devices, averages them, and then applies the optimizer step. It also includes the necessary synchronization, so a separate `torch_xla.sync()` is usually not needed when using `xm.optimizer_step()`.
 * **Logging with** **`xm.is_master_ordinal(local=False)`**: In distributed training, you often want to log or save checkpoints only from one process (the global master) to avoid redundant output or race conditions.
@@ -403,7 +401,7 @@ Here is pseudo code that highlights the conceptual differences between GPU, sing
 ```python
 # 1. Imports (include torch_xla, torch_xla.core.xla_model as xm)
 # 2. Model, Optimizer, DataLoader, Loss_fn definitions
-# 3. device = xm.xla_device()
+# 3. device = torch.device('xla')
 # 4. Move model to XLA device
 # 5. Training loop:
 #    a. Move data to XLA device
@@ -420,7 +418,7 @@ Here is pseudo code that highlights the conceptual differences between GPU, sing
 
 ```python
 # def _mp_fn(index, args):
-#    # 1. device = xm.xla_device()
+#    # 1. device = torch.device('xla')
 #    # 2. Model, Optimizer, Loss_fn definitions
 #    # 3. Move model to XLA device
 #    # 4. mp_loader = pl.MpDeviceLoader(args.dataloader, device)
