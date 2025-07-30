@@ -28,7 +28,7 @@ def _dynamo_backend(model: torch.fx.GraphModule, sample_args: Any):
     import torchax.interop
     from torchax.export import JaxInterpreter
     import jax
-  except ImportError:
+  except (ImportError, ModuleNotFoundError):
     print('To use this dynamo backend, please install torchax')
     raise
 

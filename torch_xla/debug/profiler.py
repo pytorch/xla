@@ -5,6 +5,7 @@ from typing import Union
 
 import torch_xla
 import torch_xla.core.xla_model as xm
+from torch_xla._internal.jax_workarounds import maybe_get_jax
 
 _TRACER_MARKED_STEP: bool = False
 
@@ -128,13 +129,16 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
     self.scope = torch_xla._XLAC.profiler.scope_pusher(self.name)
     super().__enter__()
 
+    self._jax_scope = None
     # Also enter the JAX named scope, to support torchax lowering.
-    import jax
-    self._jax_scope = jax.named_scope(self.name)
-    self._jax_scope.__enter__()
+    if jax := maybe_get_jax():
+      self._jax_scope = jax.named_scope(self.name)
+      self._jax_scope.__enter__()
 
   def __exit__(self, type, value, traceback):
-    self._jax_scope.__exit__(type, value, traceback)
+    if self._jax_scope is not None:
+      self._jax_scope.__exit__(type, value, traceback)
+      self._jax_scope = None
     if getattr(self, 'scope', None):
       del self.scope
     super().__exit__(type, value, traceback)
