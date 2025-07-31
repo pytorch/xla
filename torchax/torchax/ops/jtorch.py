@@ -181,7 +181,9 @@ def _tpu_flash_attention(query, key, value, env):
 
 @register_function(torch.nn.functional.one_hot)
 def one_hot(tensor, num_classes=-1):
-  return jax.nn.one_hot(tensor, num_classes)
+  if num_classes == -1:
+    num_classes = jnp.max(tensor) + 1
+  return jax.nn.one_hot(tensor, num_classes).astype(jnp.int64)
 
 
 @register_function(torch.nn.functional.pad)
