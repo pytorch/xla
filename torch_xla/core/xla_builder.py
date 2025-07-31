@@ -3,7 +3,6 @@ from typing import Any, Optional
 from weakref import WeakKeyDictionary
 import torch
 import torch_xla
-from torch.utils._pytree import tree_flatten
 from torch_xla._internal.jax_workarounds import (jax_env_context,
                                                  jax_import_guard, requires_jax,
                                                  maybe_get_torchax,
@@ -888,7 +887,7 @@ class FlattenedInputFunc:
   def preprocess(self, args, kwargs=None):
     with jax_env_context():
       kwargs = kwargs or {}
-      flattened_inputs, spec = pytree.flatten((args, kwargs))
+      flattened_inputs, spec = pytree.tree_flatten((args, kwargs))
       tensors = tuple(
           a for a in flattened_inputs if isinstance(a, torch.Tensor))
       self.non_tensors = tuple(
@@ -911,16 +910,16 @@ class FlattenedInputFunc:
         if new_flattened[i] is self._sentinel:
           new_flattened[i] = next(tensor_args_iter)
 
-      args, kwargs = pytree.unflatten(self.in_spec, new_flattened)
+      args, kwargs = pytree.tree_unflatten(new_flattened, self.in_spec)
       res = self.orig_func(*args, **kwargs)
-      flattened_out, spec = tree.flatten(res)
+      flattened_out, spec = pytree.tree_flatten(res)
       self.out_spec = spec
       return flattened_out
 
   def postprocess(self, res_flattened):
     with jax_env_context():
       assert self.out_spec is not None, 'post process only makes sense after flat_call is called'
-      res = pytree.unflatten(self.out_spec, res_flattened)
+      res = pytree.tree_unflatten(res_flattened, self.out_spec)
       return res
 
 
@@ -1099,7 +1098,7 @@ def call_jax(jax_func,
   if jax is None or tx is None:
     raise AssertionError('Jax is required for this feature')
   from jax._src import config
-  flattened, _ = pytree.flatten((args, kwargs))
+  flattened, _ = pytree.tree_flatten((args, kwargs))
   kwargs = kwargs or {}
   if tx is not None and any(isinstance(a, tx.tensor.Tensor) for a in flattened):
     return tx.interop.call_jax(jax_func, *args, **kwargs)

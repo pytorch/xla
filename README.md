@@ -33,6 +33,9 @@ Note: Builds are available for Python 3.8 to 3.11; please use one of the support
 # conda create -n py311 python=3.11
 
 pip install torch==2.7.0 'torch_xla[tpu]==2.7.0'
+
+# Optional: if you're using custom kernels, install pallas dependencies
+pip install torch_xla[pallas]
 ```
 **As of 07/16/2025 and starting from Pytorch/XLA 2.8 release, PyTorch/XLA will 
 provide nightly and release wheels for Python 3.11 to 3.13**
