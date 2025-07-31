@@ -17,13 +17,13 @@ import torchax
 from torchax.types import JaxValue, TorchValue, JaxCallable, TorchCallable
 
 
-def extract_all_buffers(m: torch.nn.Module):
+def extract_all_buffers(m: torch.nn.Module, remove_duplicate=True):
   params = {}
   buffers = {}
 
-  for name, param in m.named_parameters(recurse=True, remove_duplicate=False):
+  for name, param in m.named_parameters(recurse=True, remove_duplicate=remove_duplicate):
     params[name] = param
-  for name, buf in m.named_buffers(recurse=True, remove_duplicate=False):
+  for name, buf in m.named_buffers(recurse=True, remove_duplicate=remove_duplicate):
     buffers[name] = buf
 
   return params, buffers
