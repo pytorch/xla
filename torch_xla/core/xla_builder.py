@@ -887,7 +887,7 @@ class FlattenedInputFunc:
   def preprocess(self, args, kwargs=None):
     with jax_env_context():
       kwargs = kwargs or {}
-      flattened_inputs, spec = pytree.tree_flatten((args, kwargs))
+      flattened_inputs, spec = self.flatten((args, kwargs))
       tensors = tuple(
           a for a in flattened_inputs if isinstance(a, torch.Tensor))
       self.non_tensors = tuple(
@@ -910,17 +910,24 @@ class FlattenedInputFunc:
         if new_flattened[i] is self._sentinel:
           new_flattened[i] = next(tensor_args_iter)
 
-      args, kwargs = pytree.tree_unflatten(new_flattened, self.in_spec)
+      args, kwargs = self.unflatten(new_flattened, self.in_spec)
       res = self.orig_func(*args, **kwargs)
-      flattened_out, spec = pytree.tree_flatten(res)
+      flattened_out, spec = self.flatten(res)
       self.out_spec = spec
       return flattened_out
 
   def postprocess(self, res_flattened):
     with jax_env_context():
       assert self.out_spec is not None, 'post process only makes sense after flat_call is called'
-      res = pytree.tree_unflatten(res_flattened, self.out_spec)
+      res = self.unflatten(res_flattened, self.out_spec)
       return res
+
+  # Methods to allow subclass to customize how to flatten/unflatten
+  def flatten(self, inputs):
+    return pytree.tree_flatten(inputs)
+
+  def unflatten(self, flattened, spec):
+    return pytree.tree_unflatten(flattened, spec)
 
 
 class CompiledCallableWithCache(abc.ABC):
@@ -972,6 +979,22 @@ class JaxFlattenedInputFunc(FlattenedInputFunc):
     self.non_tensors = tuple(
         tx.ops.mappings.t2j_dtype(a) if isinstance(a, torch.dtype) else a
         for a in self.non_tensors)
+    return res
+  
+  def flatten(self, inputs):
+    # use jax pytree because it can also handle vjp stuff that 
+    # pytorch pytree cannot
+    jax = maybe_get_jax()
+    assert jax is not None, 'Jax dependency is required for calling Jax function'
+    res, spec = jax.tree.flatten(inputs)
+    return res, spec
+
+  def unflatten(self, flattened, spec):
+    # use jax pytree because it can also handle vjp stuff that 
+    # pytorch pytree cannot
+    jax = maybe_get_jax()
+    assert jax is not None, 'Jax dependency is required for calling Jax function'
+    res = jax.tree.unflatten(spec, flattened)
     return res
 
 

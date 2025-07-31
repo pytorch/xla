@@ -13,7 +13,7 @@ import torch_xla._internal.utils as _utils
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
-from torch_xla._internal.jax_workarounds import requires_jax, maybe_get_torchax
+from torch_xla._internal.jax_workarounds import requires_jax, maybe_get_torchax, maybe_get_jax
 
 import numpy as np
 import functools
