@@ -980,9 +980,9 @@ class JaxFlattenedInputFunc(FlattenedInputFunc):
         tx.ops.mappings.t2j_dtype(a) if isinstance(a, torch.dtype) else a
         for a in self.non_tensors)
     return res
-  
+
   def flatten(self, inputs):
-    # use jax pytree because it can also handle vjp stuff that 
+    # use jax pytree because it can also handle vjp stuff that
     # pytorch pytree cannot
     jax = maybe_get_jax()
     assert jax is not None, 'Jax dependency is required for calling Jax function'
@@ -990,7 +990,7 @@ class JaxFlattenedInputFunc(FlattenedInputFunc):
     return res, spec
 
   def unflatten(self, flattened, spec):
-    # use jax pytree because it can also handle vjp stuff that 
+    # use jax pytree because it can also handle vjp stuff that
     # pytorch pytree cannot
     jax = maybe_get_jax()
     assert jax is not None, 'Jax dependency is required for calling Jax function'
