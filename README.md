@@ -265,6 +265,8 @@ The torch wheel version `2.8.0.dev20250423+cpu` can be found at https://download
 
 | Version | Cloud TPU VMs Wheel |
 |---------|-------------------|
+| 2.8 (Python 3.12) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0-cp312-cp312-manylinux_2_28_x86_64.whl` |
+| 2.7 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.6 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.5 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.4 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.4.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
@@ -300,6 +302,7 @@ The torch wheel version `2.8.0.dev20250423+cpu` can be found at https://download
 NOTE: Since PyTorch/XLA 2.7, all builds will use the C++11 ABI by default
 | Version | Cloud TPU VMs Docker |
 | --- | ----------- |
+| 2.8 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.8.0_3.12_tpuvm` |
 | 2.7 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.7.0_3.10_tpuvm` |
 | 2.6 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm` |
 | 2.6 (C++11 ABI) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm_cxx11` |
