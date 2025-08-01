@@ -9,7 +9,7 @@ import collections
 import torch_xla.runtime as xr
 from torch.distributed.tensor._dtensor_spec import DTensorSpec, TensorMeta
 from torch.distributed.device_mesh import DeviceMesh
-from torch.distributed.tensor.placement_types import Placement, Shard, Replicate
+from torch.distributed.tensor.placement_types import Placement, Shard, Replicate, Partial
 from torch.utils._pytree import tree_map_only
 
 
@@ -270,6 +270,13 @@ class XLAShardedTensor(torch.Tensor):
       raise ValueError(
           f"Number of placements ({len(placements)}) must match mesh dimensions ({len(device_mesh.mesh_shape)})"
       )
+
+    # Check for unsupported placement types
+    for placement in placements:
+      if isinstance(placement, Partial):
+        raise NotImplementedError(
+            "Partial placement is not yet implemented and may have unexpected behavior. "
+            "Use Shard or Replicate placements instead.")
 
     # Convert placements to partition spec
     partition_spec = [None] * len(self.global_tensor.shape)
