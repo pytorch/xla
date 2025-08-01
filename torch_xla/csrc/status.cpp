@@ -1,19 +1,49 @@
 #include "torch_xla/csrc/status.h"
 
+#include <c10/util/Exception.h>
 #include <torch/csrc/utils/cpp_stacktraces.h>
 
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+
 #include "absl/log/absl_check.h"
+#include "tsl/platform/stacktrace.h"
 
 namespace torch_xla {
 
-// Common function for generating file location information with a space in the
-// beginning.
-static std::string LocationStrWithSpace(const char* file, const int32_t line) {
-  return absl::StrCat(" (at ", file, ":", line, ")");
+// Indent the stack frame representation so that it's easier to see.
+constexpr char kFramePrefix[] = "\n    ";
+
+// Creates the stack frame representation for the status propagation trace
+// entry.
+//
+// The resulting string will be appended to the existing status propagation
+// trace of the status currently being processed.
+//
+// Example:
+//   \n    From: <function> at <file>:<line> [(error: <message>)]
+//
+static std::string GetStackFrame(const char* file, const int32_t line,
+                                 const char* function,
+                                 const std::string_view new_message) {
+  auto error_suffix =
+      new_message.empty() ? "" : absl::StrCat(" (error: ", new_message, ")");
+  return absl::StrCat(kFramePrefix, "From: ", function, " at ", file, ":", line,
+                      error_suffix);
 }
 
-absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
-                               const int32_t line) {
+// Convenient function that retrieves the status propagation trace payload
+// if it exists. Otherwise, returns an empty absl::Cord.
+static absl::Cord GetStatusPropagationTraceOrEmpty(const absl::Status& status) {
+  auto opt = status.GetPayload(kStatusPropagationTraceKey);
+  return opt.has_value() ? *opt : absl::Cord();
+}
+
+absl::Status status_internal::MaybeWithLocation(const absl::Status& status,
+                                                const char* file,
+                                                const int32_t line,
+                                                const char* function) {
   ABSL_CHECK(!status.ok());
 
   // Return the same status if we don't need to add the C++ source location.
@@ -21,14 +51,19 @@ absl::Status MaybeWithLocation(const absl::Status& status, const char* file,
     return status;
   }
 
-  return absl::Status(
-      status.code(),
-      absl::StrCat(status.message(), LocationStrWithSpace(file, line)));
+  // Make sure this is only called on fresh `status` instances.
+  ABSL_CHECK(GetStatusPropagationTraceOrEmpty(status).empty());
+
+  // Adding source location to `status` has the same semantics as overwriting
+  // the status message:
+  //   1. An stack frame will be added to the status propagation trace
+  //   2. The status' message will be the same
+  return MaybeWithNewMessage(status, file, line, function, status.message());
 }
 
-absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
-                                 const int32_t line,
-                                 const std::string_view new_message) {
+absl::Status status_internal::MaybeWithNewMessage(
+    const absl::Status& status, const char* file, const int32_t line,
+    const char* function, const std::string_view new_message) {
   ABSL_CHECK(!status.ok());
 
   // Return the same status if:
@@ -38,39 +73,55 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
     return status;
   }
 
-  std::string_view old_message = status.message();
-
   // Replace the old status message with `new_message`, if it's not empty.
   //
   // The idea is that whenever `new_message` is given, it should have more
   // context to give a better error message to the user.
-  std::string_view message = new_message.empty() ? old_message : new_message;
+  auto new_status = absl::Status(
+      status.code(), new_message.empty() ? status.message() : new_message);
 
-  // If `TORCH_SHOW_CPP_STACKTRACES` is set, show the context of this error.
-  // In other words, show:
-  //   1. The error location
-  //   2. The old messages that were replaced by `new_message`.
+  // If `TORCH_SHOW_CPP_STACKTRACES` is set:
   //
-  // This should give more context for developers. Showing the older error
-  // messages alongside their debug information.
+  //     1. append the current stack frame to the status propagation trace
+  //        payload
   //
-  // Note that we also condition showing source location information by (2)
-  // (i.e. `new_message` is not empty) because we don't really wish to show
-  // a stacktrace. Instead, we show only the history of error messages that
-  // has led to the current error.
-  const std::string context =
-      (torch::get_cpp_stacktraces_enabled() && !new_message.empty())
-          ? absl::StrCat(LocationStrWithSpace(file, line),
-                         "\nFrom Error: ", old_message)
-          : "";
+  //     2. append the new error message, if not empty
+  if (torch::get_cpp_stacktraces_enabled()) {
+    auto status_propagation_trace = GetStatusPropagationTraceOrEmpty(status);
+    status_propagation_trace.Append(
+        GetStackFrame(file, line, function, new_message));
+    new_status.SetPayload(kStatusPropagationTraceKey, status_propagation_trace);
+  }
 
-  return absl::Status(status.code(), absl::StrCat(message, context));
+  return new_status;
+}
+
+// Get a formatted string representation of the status propagation trace
+// if it's not empty.
+static std::string GetFormattedStatusPropagationTrace(
+    const absl::Status& status) {
+  auto status_propagation_trace = GetStatusPropagationTraceOrEmpty(status);
+  return status_propagation_trace.empty()
+             ? ""
+             : absl::StrCat("\nStatus Propagation Trace:",
+                            status_propagation_trace.Flatten(), "\n");
+}
+
+// Get the status message followed by a line break, if we are printing the
+// C++ stacktraces.
+//
+// This is needed so we have a blank line in between the status message and
+// the dumped C++ traces (either the status propagation one, or the C++
+// stacktrace).
+static std::string MaybeGetMessageWithLineBreak(const absl::Status& status) {
+  return torch::get_cpp_stacktraces_enabled()
+             ? absl::StrCat(status.message(), "\n")
+             : std::string(status.message());
 }
 
 void MaybeThrow(const absl::Status& status) {
-  if (!status.ok()) {
-    throw std::runtime_error(std::string(status.message()));
-  }
+  TORCH_CHECK(status.ok(), MaybeGetMessageWithLineBreak(status),
+              GetFormattedStatusPropagationTrace(status));
 }
 
 }  // namespace torch_xla

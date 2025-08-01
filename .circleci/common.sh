@@ -112,6 +112,7 @@ function build_torch_xla() {
   # Need to uncomment the line below.
   # Currently it fails upstream XLA CI.
   # pip install plugins/cuda -v
+  pip install 'torch_xla[pallas]'
   popd
 }
 

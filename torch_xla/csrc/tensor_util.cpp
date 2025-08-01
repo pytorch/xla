@@ -24,6 +24,7 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
@@ -895,7 +896,7 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
   return literal;
 }
 
-std::vector<xla::Literal> ReleaseGilAndTransferData(
+absl::StatusOr<std::vector<xla::Literal>> ReleaseGilAndTransferData(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data) {
   // HACK: This method may be called outside of python (mainly in C++ tests) or
   // when the GIL is already released, so we must check both cases here. If
@@ -908,9 +909,12 @@ std::vector<xla::Literal> ReleaseGilAndTransferData(
   if (release_gil && Py_IsInitialized() && PyGILState_Check()) {
     save = PyEval_SaveThread();
   }
-  std::vector<xla::Literal> literals =
-      runtime::GetComputationClientOrDie()->TransferFromDevice(
-          UnwrapXlaData(xla_data));
+
+  XLA_ASSIGN_OR_RETURN(runtime::ComputationClient * client,
+                       runtime::GetComputationClient());
+  XLA_ASSIGN_OR_RETURN(std::vector<xla::Literal> literals,
+                       client->TransferFromDevice(UnwrapXlaData(xla_data)));
+
   if (save) {
     PyEval_RestoreThread(save);
   }
@@ -918,10 +922,11 @@ std::vector<xla::Literal> ReleaseGilAndTransferData(
   return literals;
 }
 
-std::vector<at::Tensor> XlaDataToTensors(
+absl::StatusOr<std::vector<at::Tensor>> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     absl::Span<const at::ScalarType> dest_element_type) {
-  std::vector<xla::Literal> literals = ReleaseGilAndTransferData(xla_data);
+  XLA_ASSIGN_OR_RETURN(std::vector<xla::Literal> literals,
+                       ReleaseGilAndTransferData(xla_data));
   std::vector<at::Tensor> tensors(literals.size());
   absl::BlockingCounter counter(literals.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
@@ -1051,7 +1056,7 @@ xla::PrimitiveType GetShapeDimensionType(
 
 std::shared_ptr<runtime::ComputationClient::Data> get_data_handle(
     const at::Tensor& input) {
-  XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+  XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(input));
   if (xtensor->CurrentDataHandle() != nullptr) {
     TF_VLOG(4) << "The xla tensor has a current data handle.";
     return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(

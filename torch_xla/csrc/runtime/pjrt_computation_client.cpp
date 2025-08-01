@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
@@ -386,8 +387,8 @@ PjRtComputationClient::ReplicateShardedData(
     torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
         execute_options;
     auto sharded_results =
-        ExecuteReplicated(*computations.front(), {sharded_data},
-                          GetLocalDevices(), execute_options);
+        GetValueOrThrow(ExecuteReplicated(*computations.front(), {sharded_data},
+                                          GetLocalDevices(), execute_options));
     XLA_CHECK(sharded_results.size() > 0)
         << "empty ExecuteReplicated results returned.";
     XLA_CHECK(sharded_results.size() == 1)
@@ -473,8 +474,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
 
   torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
       execute_options;
-  auto resharded_results = ExecuteReplicated(
-      *computation, handles, GetLocalDevices(), execute_options);
+  auto resharded_results = GetValueOrThrow(ExecuteReplicated(
+      *computation, handles, GetLocalDevices(), execute_options));
   return resharded_results;
 }
 
@@ -508,8 +509,8 @@ std::shared_ptr<xla::PjRtBuffer> PjRtComputationClient::GetPjRtBuffer(
   }
 }
 
-std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
-    absl::Span<const DataPtr> handles) {
+absl::StatusOr<std::vector<xla::Literal>>
+PjRtComputationClient::TransferFromDevice(absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromDeviceMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferFromDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);
@@ -522,21 +523,17 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
     // Use XLA replication to reassemble the sharded data. If input handle
     // is not sharded, then it is a no-op.
     std::shared_ptr<PjRtData> pjrt_data = ReplicateShardedData(handle);
-    XLA_CHECK(pjrt_data) << "PjRt_data is null in " << __FUNCTION__;
-    XLA_CHECK(pjrt_data->buffer != nullptr)
+    ABSL_CHECK(pjrt_data) << "PjRt_data is null in " << __FUNCTION__;
+    ABSL_CHECK(pjrt_data->buffer != nullptr)
         << "PjRt buffer is null in " << __FUNCTION__;
 
-    xla::Literal& literal =
-        literals.emplace_back(host_output_shape(pjrt_data->buffer.get()));
+    xla::Literal& literal = literals.emplace_back(
+        xla::Literal(host_output_shape(pjrt_data->buffer.get())));
     futures.push_back(pjrt_data->buffer->ToLiteral(&literal));
 
     total_size += literal.size_bytes();
   }
-  for (auto& future : futures) {
-    absl::Status status = future.Await();
-    XLA_CHECK_OK(status) << "Failed to await future from buffer to literal in"
-                         << __FUNCTION__;
-  }
+  XLA_RETURN_IF_ERROR(xla::JoinFutures(futures).Await());
   InboundDataMetric()->AddSample(total_size);
 
   return literals;
@@ -725,7 +722,7 @@ torch::lazy::hash_t PjRtComputationClient::HashCompilationEnv() {
   return comp_env_hash_;
 }
 
-std::vector<ComputationClient::DataPtr>
+absl::StatusOr<std::vector<ComputationClient::DataPtr>>
 PjRtComputationClient::ExecuteComputation(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
@@ -745,14 +742,14 @@ PjRtComputationClient::ExecuteComputation(
       dynamic_cast<const PjRtComputation&>(computation);
 
   xla::PjRtDevice* pjrt_device = StringToPjRtDevice(device);
-  XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
+  ABSL_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
 
   std::vector<xla::PjRtBuffer*> buffers;
   buffers.reserve(arguments.size());
   for (auto& argument : arguments) {
     const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
 
-    XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
+    ABSL_CHECK(pjrt_device == pjrt_data->buffer->device())
         << "The device currently being used : " << pjrt_device->DebugString()
         << " is different from the device where the buffer resides: "
         << pjrt_data->buffer->device()->DebugString();
@@ -772,11 +769,10 @@ PjRtComputationClient::ExecuteComputation(
              << " Done";
 
   std::optional<xla::PjRtFuture<>> returned_future;
-  std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
-      pjrt_computation.executable
-          ->ExecuteSharded(buffers, pjrt_device, execute_options,
-                           returned_future)
-          .value();
+  XLA_ASSIGN_OR_RETURN(
+      std::vector<std::unique_ptr<xla::PjRtBuffer>> results,
+      pjrt_computation.executable->ExecuteSharded(
+          buffers, pjrt_device, execute_options, returned_future));
 
   returned_future->OnReady(std::move(
       [timed, op_tracker = std::move(op_tracker)](absl::Status unused) mutable {
@@ -800,7 +796,7 @@ PjRtComputationClient::ExecuteComputation(
   return datas;
 }
 
-std::vector<ComputationClient::DataPtr>
+absl::StatusOr<std::vector<ComputationClient::DataPtr>>
 PjRtComputationClient::ExecuteReplicated(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
@@ -834,15 +830,15 @@ PjRtComputationClient::ExecuteReplicated(
           for (int32_t i = start; i < end; ++i) {
             auto pjrt_data =
                 std::dynamic_pointer_cast<PjRtShardedData>(arguments[i]);
-            XLA_CHECK_EQ(pjrt_data->shards.size(), devices.size())
+            ABSL_CHECK_EQ(pjrt_data->shards.size(), devices.size())
                 << "Expected one shard per device";
 
             for (int32_t d = 0; d < devices.size(); d++) {
               std::shared_ptr<PjRtData> shard = pjrt_data->shards[d];
 
               xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[d]);
-              XLA_CHECK_EQ(shard->buffer->device(), pjrt_device);
-              XLA_CHECK(pjrt_device->IsAddressable())
+              ABSL_CHECK_EQ(shard->buffer->device(), pjrt_device);
+              ABSL_CHECK(pjrt_device->IsAddressable())
                   << pjrt_device->DebugString();
 
               argument_handles[d][i] = shard->buffer.get();
@@ -878,10 +874,9 @@ PjRtComputationClient::ExecuteReplicated(
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_execute",
         tsl::profiler::TraceMeLevel::kInfo);
-    results = pjrt_computation.executable
-                  ->Execute(std::move(argument_handles), execute_options,
-                            returned_futures)
-                  .value();
+    XLA_ASSIGN_OR_RETURN(results, pjrt_computation.executable->Execute(
+                                      std::move(argument_handles),
+                                      execute_options, returned_futures));
 
     (*returned_futures)[0].OnReady(
         std::move([timed, op_tracker = std::move(op_tracker)](
@@ -904,7 +899,7 @@ PjRtComputationClient::ExecuteReplicated(
     const std::vector<xla::Shape>& output_shapes =
         result_shape.IsTuple() ? result_shape.tuple_shapes()
                                : std::vector<xla::Shape>({result_shape});
-    XLA_CHECK_EQ(output_shapes.size(), num_outputs);
+    ABSL_CHECK_EQ(output_shapes.size(), num_outputs);
 
     const std::vector<xla::OpSharding>& output_shardings =
         pjrt_computation.output_shardings_.has_value() && num_outputs > 0
@@ -913,7 +908,7 @@ PjRtComputationClient::ExecuteReplicated(
             // Without an explicit sharding annotation, the output is implicitly
             // replicated, and we mark explicitly replicated here.
             std::vector<xla::OpSharding>(num_outputs);
-    XLA_CHECK_EQ(output_shardings.size(), num_outputs);
+    ABSL_CHECK_EQ(output_shardings.size(), num_outputs);
 
     absl::BlockingCounter counter(num_outputs);
 
@@ -964,6 +959,10 @@ std::vector<std::string> PjRtComputationClient::GetLocalDevices() const {
 
 std::vector<std::string> PjRtComputationClient::GetAllDevices() const {
   return PjRtDevicesToString(client_->devices());
+}
+
+std::string_view PjRtComputationClient::GetPlatformVersion() const {
+  return client_->platform_version();
 }
 
 int PjRtComputationClient::GetNumProcesses() const {

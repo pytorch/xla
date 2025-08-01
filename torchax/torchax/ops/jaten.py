@@ -3532,7 +3532,7 @@ def _aten_tensor_split(ary, indices_or_sections, axis=0):
 
 @op(torch.ops.aten.randn, needs_env=True)
 @op_base.convert_dtype()
-def _randn(
+def _aten_randn(
     *size,
     generator=None,
     out=None,
@@ -3652,7 +3652,7 @@ def _aten_native_batch_norm(input,
 @op(torch.ops.aten.normal, needs_env=True)
 def _aten_normal(self, mean=0, std=1, generator=None, env=None):
   shape = self.shape
-  res = _randn(*shape, generator=generator, env=env)
+  res = _aten_randn(*shape, generator=generator, env=env)
   return res * std + mean
 
 
@@ -5541,6 +5541,7 @@ def _aten_floor_divide(x, y):
 
 
 @op(torch.ops.aten._assert_tensor_metadata)
+@op(torch.ops.aten._assert_scalar)
 def _aten__assert_tensor_metadata(*args, **kwargs):
   pass
 

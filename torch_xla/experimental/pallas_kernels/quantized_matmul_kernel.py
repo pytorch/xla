@@ -42,12 +42,12 @@ def matmul_kernel(
     x_abs_max_ref: jax.Array,  # (1, batch_block_size)
     out_ref: jax.Array,  # (batch_block_size, out_block_size)
     acc_scratch: jax.Array,  # (batch_block_size, out_block_size)
-    q_x_scratch: jax.Array,  # (batch_block_size, in_block_size)
+    x_q_scratch: jax.Array,  # (batch_block_size, in_block_size)
     x_scale_scratch: jax.Array,  # (batch_block_size, 1)
     *,
     quantize_activation: bool,
     save_acc: bool,
-    save_q_x: bool,
+    save_x_q: bool,
     batch_block_size: int,
     out_block_size: int,
     in_block_size: int,
@@ -66,20 +66,20 @@ def matmul_kernel(
   assert out_ref.shape == (batch_block_size,
                            out_block_size), "out_ref shape is not correct"
 
-  if save_q_x:
+  if save_x_q:
     assert quantize_activation
-    assert q_x_scratch is not None
+    assert x_q_scratch is not None
     assert x_scale_scratch is not None
-    quant = out_idx == 0
+    quant = (out_idx == 0)
   else:
-    assert q_x_scratch is None
+    assert x_q_scratch is None
     assert x_scale_scratch is None
     quant = quantize_activation
 
   if save_acc:
     assert acc_scratch is not None
-    is_first_step = in_idx == 0
-    is_last_step = in_idx == n_in - 1
+    is_first_step = (in_idx == 0)
+    is_last_step = (in_idx == (n_in - 1))
   else:
     assert acc_scratch is None
     is_first_step = True
@@ -88,18 +88,18 @@ def matmul_kernel(
   def matmul_body(quant, is_first_step, is_last_step):
     if quantize_activation:
       if quant:
-        q_x_tmp, x_scale_tmp = _quantize_array(x_ref[...], x_abs_max_ref[...])
-        if save_q_x:
-          q_x_scratch[...] = q_x_tmp
+        x_q_tmp, x_scale_tmp = _quantize_array(x_ref[...], x_abs_max_ref[...])
+        if save_x_q:
+          x_q_scratch[...] = x_q_tmp
           x_scale_scratch[...] = x_scale_tmp
       else:
-        assert save_q_x
-        q_x_tmp = q_x_scratch[...]
+        assert save_x_q
+        x_q_tmp = x_q_scratch[...]
         if is_last_step:
           x_scale_tmp = x_scale_scratch[...]
 
       acc = jax.lax.dot_general(
-          q_x_tmp,
+          x_q_tmp,
           w_ref[...],
           (((1,), (1,)), ((), ())),
           preferred_element_type=jnp.int32,
@@ -128,6 +128,44 @@ def matmul_kernel(
 
 def _next_multiple(x, multiple):
   return ((x + multiple - 1) // multiple) * multiple
+
+
+def _get_vmem_limit(n_bs, n_out, n_in, batch_block_size, out_block_size,
+                    in_block_size, x_bytes, w_bytes, x_q_bytes, scale_bytes,
+                    out_bytes, acc_bytes, save_acc, save_x_q):
+  # Calculate in/out VMEM size.
+  x_size = batch_block_size * in_block_size * x_bytes
+  x_abs_max_val_size = batch_block_size * scale_bytes
+  w_size = out_block_size * in_block_size * w_bytes
+  scalar_size = out_block_size * scale_bytes
+  out_size = batch_block_size * out_block_size * out_bytes
+
+  vmem_in_out = x_size + x_abs_max_val_size + w_size + scalar_size + out_size
+  vmem_in_out *= 2  # Account for compute and vreg spills.
+
+  # Account for double buffering.
+  # Double buffering is used only if there are multiple blocks per in/out.
+  vmem_in_out += x_size if (n_bs > 1 or n_in > 1) else 0
+  vmem_in_out += x_abs_max_val_size if (n_bs > 1) else 0
+  vmem_in_out += w_size if (n_out > 1 or n_in > 1) else 0
+  vmem_in_out += scalar_size if (n_out > 1) else 0
+  vmem_in_out += out_size if (n_bs > 1 or n_out > 1) else 0
+
+  # Calculate scratch VMEM size.
+  acc_size = batch_block_size * out_block_size * acc_bytes
+  x_q_scratch_size = batch_block_size * in_block_size * x_q_bytes
+  x_scale_scratch_size = batch_block_size * scale_bytes
+
+  vmem_scratch = acc_size if save_acc else 0
+  vmem_scratch += x_q_scratch_size + x_scale_scratch_size if save_x_q else 0
+  vmem_scratch *= 2  # Account for compute and vreg spills.
+
+  # Add in/out and scratch VMEM size.
+  vmem_used = vmem_in_out + vmem_scratch
+  # Specify upper limit as 96MB.
+  vmem_limit_bytes = min(vmem_used, 96 * 1024 * 1024)
+
+  return vmem_limit_bytes
 
 
 @functools.partial(
@@ -196,17 +234,6 @@ def quantized_matmul_int8(
   assert x.shape[
       1] % in_block_size == 0, f"x.shape[1] ({x.shape[1]}) must be a multiple of block size ({in_block_size})"
 
-  acc_dtype = jnp.int32 if quantize_activation else x.dtype
-  vmem_to_be_transferred = 2 * (
-      batch_block_size * in_block_size * x.dtype.itemsize +
-      out_block_size * in_block_size * w.dtype.itemsize + out_block_size *
-      scalar.dtype.itemsize + batch_block_size * x_abs_max_val.dtype.itemsize +
-      batch_block_size * out_block_size * x.dtype.itemsize
-  ) + batch_block_size * out_block_size * jnp.dtype(acc_dtype).itemsize
-  # Within the kernel, it will use some extra VMEM for computation or vreg spills.
-  vmem_used = vmem_to_be_transferred * 2
-  vmem_limit_bytes = min(vmem_used * 2, 96 * 1024 * 1024)
-
   n_bs = padded_bs // batch_block_size
   n_out = padded_out_features // out_block_size
   n_in = padded_in_features // in_block_size
@@ -214,14 +241,32 @@ def quantized_matmul_int8(
   save_acc = n_in > 1
   # Remove redundant input quantization logic by caching quantized input.
   # For best performance, only enable this behavior when single input block is used per batch.
-  save_q_x = quantize_activation and n_in == 1 and n_out > 1
+  save_x_q = quantize_activation and n_in == 1 and n_out > 1
+
+  acc_dtype = jnp.int32 if quantize_activation else jnp.float32
+
+  vmem_limit_bytes = _get_vmem_limit(
+      n_bs=n_bs,
+      n_out=n_out,
+      n_in=n_in,
+      batch_block_size=batch_block_size,
+      out_block_size=out_block_size,
+      in_block_size=in_block_size,
+      x_bytes=x.dtype.itemsize,
+      w_bytes=w.dtype.itemsize,
+      x_q_bytes=jnp.dtype(jnp.int8).itemsize,
+      scale_bytes=jnp.dtype(jnp.float32).itemsize,
+      out_bytes=x.dtype.itemsize,
+      acc_bytes=jnp.dtype(acc_dtype).itemsize,
+      save_acc=save_acc,
+      save_x_q=save_x_q)
 
   kernel = pl.pallas_call(
       functools.partial(
           matmul_kernel,
           quantize_activation=quantize_activation,
           save_acc=save_acc,
-          save_q_x=save_q_x,
+          save_x_q=save_x_q,
           batch_block_size=batch_block_size,
           out_block_size=out_block_size,
           in_block_size=in_block_size),
@@ -243,9 +288,9 @@ def quantized_matmul_int8(
               pltpu.VMEM((batch_block_size,
                           out_block_size), acc_dtype) if save_acc else None,
               pltpu.VMEM((batch_block_size,
-                          in_block_size), jnp.int8) if save_q_x else None,
+                          in_block_size), jnp.int8) if save_x_q else None,
               pltpu.VMEM(
-                  (batch_block_size, 1), jnp.float32) if save_q_x else None,
+                  (batch_block_size, 1), jnp.float32) if save_x_q else None,
           ],
           grid=(n_bs, n_out, n_in),
       ),
@@ -279,70 +324,202 @@ def quantized_matmul_int8(
 #    - out_block_size
 #    - in_block_size
 TUNED_BLOCK_SIZES = {
-    (6, 128, 28672, 4096, 'bfloat16', True): (128, 28672, 256),
-    (6, 128, 4096, 14336, 'bfloat16', True): (128, 4096, 896),
-    (6, 2048, 6144, 4096, 'bfloat16', True): (2048, 512, 4096),
-    (6, 2048, 4096, 4096, 'bfloat16', True): (2048, 512, 4096),
-    (6, 2048, 4096, 14336, 'bfloat16', True): (2048, 4096, 512),
-    (6, 128, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
-    (6, 128, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
-    (6, 2048, 28672, 4096, 'bfloat16', True): (2048, 1024, 4096),
-    (6, 16, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
-    (6, 16, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
-    (6, 64, 28672, 4096, 'bfloat16', True): (128, 28672, 256),
-    (6, 64, 4096, 14336, 'bfloat16', True): (128, 4096, 896),
-    (6, 256, 6144, 4096, 'bfloat16', True): (256, 512, 4096),
-    (6, 256, 4096, 4096, 'bfloat16', True): (256, 512, 4096),
-    (6, 256, 28672, 4096, 'bfloat16', True): (256, 2048, 4096),
-    (6, 256, 4096, 14336, 'bfloat16', True): (256, 4096, 512),
-    (6, 16, 28672, 4096, 'bfloat16', True): (128, 28672, 256),
-    (6, 512, 6144, 4096, 'bfloat16', True): (512, 1024, 4096),
-    (6, 512, 4096, 4096, 'bfloat16', True): (512, 1024, 4096),
-    (6, 512, 28672, 4096, 'bfloat16', True): (512, 2048, 4096),
-    (6, 512, 4096, 14336, 'bfloat16', True): (512, 256, 14336),
-    (6, 1024, 6144, 4096, 'bfloat16', True): (1024, 768, 4096),
-    (6, 1024, 4096, 4096, 'bfloat16', True): (1024, 512, 4096),
-    (6, 1024, 28672, 4096, 'bfloat16', True): (1024, 2048, 4096),
-    (6, 1024, 4096, 14336, 'bfloat16', True): (1024, 256, 14336),
-    (6, 16, 4096, 14336, 'bfloat16', True): (128, 4096, 896),
-    (6, 32, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
-    (6, 32, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
-    (6, 32, 28672, 4096, 'bfloat16', True): (128, 28672, 256),
-    (6, 32, 4096, 14336, 'bfloat16', True): (128, 4096, 896),
-    (6, 64, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
-    (6, 64, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
-    (6, 16, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
-    (6, 16, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
-    (6, 64, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
-    (6, 64, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
-    (6, 128, 1280, 8192, 'bfloat16', True): (128, 1280, 2048),
-    (6, 128, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
-    (6, 128, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
-    (6, 128, 8192, 3584, 'bfloat16', True): (128, 8192, 512),
-    (6, 256, 1280, 8192, 'bfloat16', True): (256, 256, 8192),
-    (6, 256, 8192, 1024, 'bfloat16', True): (256, 2048, 1024),
-    (6, 256, 7168, 8192, 'bfloat16', True): (256, 512, 8192),
-    (6, 256, 8192, 3584, 'bfloat16', True): (256, 8192, 512),
-    (6, 16, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
-    (6, 512, 1280, 8192, 'bfloat16', True): (512, 256, 8192),
-    (6, 512, 8192, 1024, 'bfloat16', True): (512, 4096, 1024),
-    (6, 512, 7168, 8192, 'bfloat16', True): (512, 512, 8192),
-    (6, 512, 8192, 3584, 'bfloat16', True): (512, 2048, 3584),
     (6, 1024, 1280, 8192, 'bfloat16', True): (1024, 256, 8192),
-    (6, 1024, 8192, 1024, 'bfloat16', True): (1024, 4096, 1024),
+    (6, 1024, 13824, 5120, 'bfloat16', True): (1024, 768, 5120),
+    (6, 1024, 1792, 5120, 'bfloat16', True): (1024, 256, 5120),
+    (6, 1024, 28672, 4096, 'bfloat16', True): (1024, 2048, 4096),
+    (6, 1024, 3584, 18944, 'bfloat16', True): (1024, 3584, 512),
+    (6, 1024, 3584, 3584, 'bfloat16', True): (1024, 512, 3584),
+    (6, 1024, 37888, 3584, 'bfloat16', True): (1024, 1024, 3584),
+    (6, 1024, 4096, 14336, 'bfloat16', True): (1024, 256, 14336),
+    (6, 1024, 4096, 4096, 'bfloat16', True): (1024, 512, 4096),
+    (6, 1024, 4608, 3584, 'bfloat16', True): (1024, 768, 3584),
+    (6, 1024, 5120, 1280, 'bfloat16', True): (1024, 1280, 1280),
+    (6, 1024, 5120, 3456, 'bfloat16', True): (1024, 1024, 3456),
+    (6, 1024, 5120, 640, 'bfloat16', True): (256, 5120, 640),
+    (6, 1024, 5120, 6912, 'bfloat16', True): (1024, 512, 6912),
+    (6, 1024, 6144, 4096, 'bfloat16', True): (1024, 768, 4096),
+    (6, 1024, 6912, 5120, 'bfloat16', True): (1024, 768, 5120),
     (6, 1024, 7168, 8192, 'bfloat16', True): (1024, 512, 8192),
+    (6, 1024, 8192, 1024, 'bfloat16', True): (1024, 4096, 1024),
     (6, 1024, 8192, 3584, 'bfloat16', True): (1024, 1024, 3584),
-    (6, 2048, 1280, 8192, 'bfloat16', True): (2048, 256, 8192),
-    (6, 2048, 8192, 1024, 'bfloat16', True): (256, 8192, 1024),
+    (6, 1024, 896, 5120, 'bfloat16', True): (1024, 896, 2560),
+    (6, 128, 1280, 8192, 'bfloat16', True): (128, 1280, 2048),
+    (6, 128, 13824, 5120, 'bfloat16', True): (128, 512, 5120),
+    (6, 128, 1792, 5120, 'bfloat16', True): (128, 1792, 1280),
+    (6, 128, 28672, 4096, 'bfloat16', True): (128, 28672, 256),
+    (6, 128, 3584, 18944, 'bfloat16', True): (128, 256, 18944),
+    (6, 128, 3584, 3584, 'bfloat16', True): (128, 3584, 896),
+    (6, 128, 37888, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 128, 4096, 14336, 'bfloat16', True): (128, 4096, 896),
+    (6, 128, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 128, 4608, 3584, 'bfloat16', True): (128, 768, 3584),
+    (6, 128, 5120, 1280, 'bfloat16', True): (128, 1280, 1280),
+    (6, 128, 5120, 3456, 'bfloat16', True): (128, 640, 3456),
+    (6, 128, 5120, 640, 'bfloat16', True): (128, 2560, 640),
+    (6, 128, 5120, 6912, 'bfloat16', True): (128, 2560, 1152),
+    (6, 128, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
+    (6, 128, 6912, 5120, 'bfloat16', True): (128, 1152, 2560),
+    (6, 128, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 128, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 128, 8192, 3584, 'bfloat16', True): (128, 8192, 512),
+    (6, 128, 896, 5120, 'bfloat16', True): (128, 896, 2560),
+    (6, 16, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 16, 13824, 5120, 'bfloat16', True): (128, 512, 5120),
+    (6, 16, 1792, 5120, 'bfloat16', True): (128, 896, 2560),
+    (6, 16, 28672, 4096, 'bfloat16', True): (128, 28672, 256),
+    (6, 16, 3584, 18944, 'bfloat16', True): (128, 256, 18944),
+    (6, 16, 3584, 3584, 'bfloat16', True): (128, 896, 3584),
+    (6, 16, 37888, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 16, 4096, 14336, 'bfloat16', True): (128, 4096, 896),
+    (6, 16, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 16, 4608, 3584, 'bfloat16', True): (128, 768, 3584),
+    (6, 16, 5120, 1280, 'bfloat16', True): (128, 1280, 1280),
+    (6, 16, 5120, 3456, 'bfloat16', True): (128, 640, 3456),
+    (6, 16, 5120, 640, 'bfloat16', True): (128, 2560, 640),
+    (6, 16, 5120, 6912, 'bfloat16', True): (128, 1280, 2304),
+    (6, 16, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
+    (6, 16, 6912, 5120, 'bfloat16', True): (128, 1152, 2560),
+    (6, 16, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 16, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
     (6, 16, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 16, 896, 5120, 'bfloat16', True): (128, 896, 2560),
+    (6, 16384, 13824, 5120, 'bfloat16', True): (2048, 1536, 5120),
+    (6, 16384, 1792, 5120, 'bfloat16', True): (1024, 1792, 5120),
+    (6, 16384, 3584, 18944, 'bfloat16', True): (256, 3584, 18944),
+    (6, 16384, 3584, 3584, 'bfloat16', True): (512, 3584, 3584),
+    (6, 16384, 37888, 3584, 'bfloat16', True): (4096, 512, 3584),
+    (6, 16384, 4608, 3584, 'bfloat16', True): (512, 4608, 3584),
+    (6, 16384, 5120, 1280, 'bfloat16', True): (512, 5120, 1280),
+    (6, 16384, 5120, 3456, 'bfloat16', True): (512, 5120, 3456),
+    (6, 16384, 5120, 640, 'bfloat16', True): (512, 5120, 640),
+    (6, 16384, 5120, 6912, 'bfloat16', True): (512, 5120, 6912),
+    (6, 16384, 6912, 5120, 'bfloat16', True): (512, 6912, 5120),
+    (6, 16384, 896, 5120, 'bfloat16', True): (1024, 896, 5120),
+    (6, 2048, 1280, 8192, 'bfloat16', True): (2048, 256, 8192),
+    (6, 2048, 13824, 5120, 'bfloat16', True): (2048, 768, 5120),
+    (6, 2048, 1792, 5120, 'bfloat16', True): (2048, 256, 5120),
+    (6, 2048, 28672, 4096, 'bfloat16', True): (2048, 1024, 4096),
+    (6, 2048, 3584, 18944, 'bfloat16', True): (2048, 3584, 512),
+    (6, 2048, 3584, 3584, 'bfloat16', True): (2048, 512, 3584),
+    (6, 2048, 37888, 3584, 'bfloat16', True): (2048, 1024, 3584),
+    (6, 2048, 4096, 14336, 'bfloat16', True): (2048, 4096, 512),
+    (6, 2048, 4096, 4096, 'bfloat16', True): (2048, 512, 4096),
+    (6, 2048, 4608, 3584, 'bfloat16', True): (2048, 512, 3584),
+    (6, 2048, 5120, 1280, 'bfloat16', True): (256, 5120, 1280),
+    (6, 2048, 5120, 3456, 'bfloat16', True): (2048, 512, 3456),
+    (6, 2048, 5120, 640, 'bfloat16', True): (256, 5120, 640),
+    (6, 2048, 5120, 6912, 'bfloat16', True): (2048, 512, 6912),
+    (6, 2048, 6144, 4096, 'bfloat16', True): (2048, 512, 4096),
+    (6, 2048, 6912, 5120, 'bfloat16', True): (2048, 768, 5120),
     (6, 2048, 7168, 8192, 'bfloat16', True): (2048, 256, 8192),
+    (6, 2048, 8192, 1024, 'bfloat16', True): (256, 8192, 1024),
     (6, 2048, 8192, 3584, 'bfloat16', True): (2048, 512, 3584),
+    (6, 2048, 896, 5120, 'bfloat16', True): (1024, 896, 5120),
+    (6, 256, 1280, 8192, 'bfloat16', True): (256, 256, 8192),
+    (6, 256, 13824, 5120, 'bfloat16', True): (256, 512, 5120),
+    (6, 256, 1792, 5120, 'bfloat16', True): (256, 1792, 1280),
+    (6, 256, 28672, 4096, 'bfloat16', True): (256, 2048, 4096),
+    (6, 256, 3584, 18944, 'bfloat16', True): (256, 256, 18944),
+    (6, 256, 3584, 3584, 'bfloat16', True): (256, 896, 3584),
+    (6, 256, 37888, 3584, 'bfloat16', True): (256, 4736, 896),
+    (6, 256, 4096, 14336, 'bfloat16', True): (256, 4096, 512),
+    (6, 256, 4096, 4096, 'bfloat16', True): (256, 512, 4096),
+    (6, 256, 4608, 3584, 'bfloat16', True): (256, 768, 3584),
+    (6, 256, 5120, 1280, 'bfloat16', True): (256, 2560, 1280),
+    (6, 256, 5120, 3456, 'bfloat16', True): (256, 1024, 3456),
+    (6, 256, 5120, 640, 'bfloat16', True): (256, 2560, 640),
+    (6, 256, 5120, 6912, 'bfloat16', True): (256, 5120, 768),
+    (6, 256, 6144, 4096, 'bfloat16', True): (256, 512, 4096),
+    (6, 256, 6912, 5120, 'bfloat16', True): (256, 6912, 512),
+    (6, 256, 7168, 8192, 'bfloat16', True): (256, 512, 8192),
+    (6, 256, 8192, 1024, 'bfloat16', True): (256, 2048, 1024),
+    (6, 256, 8192, 3584, 'bfloat16', True): (256, 8192, 512),
+    (6, 256, 896, 5120, 'bfloat16', True): (256, 896, 2560),
     (6, 32, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
-    (6, 32, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 32, 13824, 5120, 'bfloat16', True): (128, 512, 5120),
+    (6, 32, 1792, 5120, 'bfloat16', True): (128, 896, 2560),
+    (6, 32, 28672, 4096, 'bfloat16', True): (128, 28672, 256),
+    (6, 32, 3584, 18944, 'bfloat16', True): (128, 128, 18944),
+    (6, 32, 3584, 3584, 'bfloat16', True): (128, 896, 3584),
+    (6, 32, 37888, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 32, 4096, 14336, 'bfloat16', True): (128, 4096, 896),
+    (6, 32, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 32, 4608, 3584, 'bfloat16', True): (128, 768, 3584),
+    (6, 32, 5120, 1280, 'bfloat16', True): (128, 1280, 1280),
+    (6, 32, 5120, 3456, 'bfloat16', True): (128, 640, 3456),
+    (6, 32, 5120, 640, 'bfloat16', True): (128, 2560, 640),
+    (6, 32, 5120, 6912, 'bfloat16', True): (128, 1280, 2304),
+    (6, 32, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
+    (6, 32, 6912, 5120, 'bfloat16', True): (128, 2304, 1280),
     (6, 32, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 32, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
     (6, 32, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 32, 896, 5120, 'bfloat16', True): (128, 896, 2560),
+    (6, 4096, 13824, 5120, 'bfloat16', True): (2048, 1536, 5120),
+    (6, 4096, 1792, 5120, 'bfloat16', True): (512, 1792, 5120),
+    (6, 4096, 3584, 18944, 'bfloat16', True): (2048, 3584, 512),
+    (6, 4096, 3584, 3584, 'bfloat16', True): (4096, 256, 3584),
+    (6, 4096, 37888, 3584, 'bfloat16', True): (4096, 512, 3584),
+    (6, 4096, 4608, 3584, 'bfloat16', True): (4096, 512, 3584),
+    (6, 4096, 5120, 1280, 'bfloat16', True): (256, 5120, 1280),
+    (6, 4096, 5120, 3456, 'bfloat16', True): (4096, 512, 3456),
+    (6, 4096, 5120, 640, 'bfloat16', True): (256, 5120, 640),
+    (6, 4096, 5120, 6912, 'bfloat16', True): (256, 5120, 6912),
+    (6, 4096, 6912, 5120, 'bfloat16', True): (256, 6912, 5120),
+    (6, 4096, 896, 5120, 'bfloat16', True): (256, 896, 5120),
+    (6, 512, 1280, 8192, 'bfloat16', True): (512, 256, 8192),
+    (6, 512, 13824, 5120, 'bfloat16', True): (512, 13824, 512),
+    (6, 512, 1792, 5120, 'bfloat16', True): (512, 1792, 1280),
+    (6, 512, 28672, 4096, 'bfloat16', True): (512, 2048, 4096),
+    (6, 512, 3584, 18944, 'bfloat16', True): (512, 256, 18944),
+    (6, 512, 3584, 3584, 'bfloat16', True): (512, 1792, 3584),
+    (6, 512, 37888, 3584, 'bfloat16', True): (512, 18944, 512),
+    (6, 512, 4096, 14336, 'bfloat16', True): (512, 256, 14336),
+    (6, 512, 4096, 4096, 'bfloat16', True): (512, 1024, 4096),
+    (6, 512, 4608, 3584, 'bfloat16', True): (512, 768, 3584),
+    (6, 512, 5120, 1280, 'bfloat16', True): (512, 2560, 1280),
+    (6, 512, 5120, 3456, 'bfloat16', True): (512, 1280, 3456),
+    (6, 512, 5120, 640, 'bfloat16', True): (512, 2560, 640),
+    (6, 512, 5120, 6912, 'bfloat16', True): (512, 512, 6912),
+    (6, 512, 6144, 4096, 'bfloat16', True): (512, 1024, 4096),
+    (6, 512, 6912, 5120, 'bfloat16', True): (512, 768, 5120),
+    (6, 512, 7168, 8192, 'bfloat16', True): (512, 512, 8192),
+    (6, 512, 8192, 1024, 'bfloat16', True): (512, 4096, 1024),
+    (6, 512, 8192, 3584, 'bfloat16', True): (512, 2048, 3584),
+    (6, 512, 896, 5120, 'bfloat16', True): (512, 896, 2560),
     (6, 64, 1280, 8192, 'bfloat16', True): (128, 256, 8192),
+    (6, 64, 13824, 5120, 'bfloat16', True): (128, 512, 5120),
+    (6, 64, 1792, 5120, 'bfloat16', True): (128, 896, 2560),
+    (6, 64, 28672, 4096, 'bfloat16', True): (128, 28672, 256),
+    (6, 64, 3584, 18944, 'bfloat16', True): (128, 256, 18944),
+    (6, 64, 3584, 3584, 'bfloat16', True): (128, 896, 3584),
+    (6, 64, 37888, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 64, 4096, 14336, 'bfloat16', True): (128, 4096, 896),
+    (6, 64, 4096, 4096, 'bfloat16', True): (128, 512, 4096),
+    (6, 64, 4608, 3584, 'bfloat16', True): (128, 768, 3584),
+    (6, 64, 5120, 1280, 'bfloat16', True): (128, 1280, 1280),
+    (6, 64, 5120, 3456, 'bfloat16', True): (128, 1024, 3456),
+    (6, 64, 5120, 640, 'bfloat16', True): (128, 2560, 640),
+    (6, 64, 5120, 6912, 'bfloat16', True): (128, 1280, 2304),
+    (6, 64, 6144, 4096, 'bfloat16', True): (128, 768, 4096),
+    (6, 64, 6912, 5120, 'bfloat16', True): (128, 2304, 1280),
+    (6, 64, 7168, 8192, 'bfloat16', True): (128, 256, 8192),
     (6, 64, 8192, 1024, 'bfloat16', True): (128, 2048, 1024),
+    (6, 64, 8192, 3584, 'bfloat16', True): (128, 1024, 3584),
+    (6, 64, 896, 5120, 'bfloat16', True): (128, 896, 2560),
+    (6, 8192, 13824, 5120, 'bfloat16', True): (2048, 1536, 5120),
+    (6, 8192, 1792, 5120, 'bfloat16', True): (512, 1792, 5120),
+    (6, 8192, 3584, 18944, 'bfloat16', True): (2048, 3584, 512),
+    (6, 8192, 3584, 3584, 'bfloat16', True): (4096, 512, 3584),
+    (6, 8192, 37888, 3584, 'bfloat16', True): (4096, 1024, 3584),
+    (6, 8192, 4608, 3584, 'bfloat16', True): (4096, 512, 3584),
+    (6, 8192, 5120, 1280, 'bfloat16', True): (256, 5120, 1280),
+    (6, 8192, 5120, 3456, 'bfloat16', True): (512, 5120, 3456),
+    (6, 8192, 5120, 640, 'bfloat16', True): (512, 5120, 640),
+    (6, 8192, 5120, 6912, 'bfloat16', True): (512, 5120, 6912),
+    (6, 8192, 6912, 5120, 'bfloat16', True): (512, 6912, 5120),
+    (6, 8192, 896, 5120, 'bfloat16', True): (512, 896, 5120),
 }
 
 

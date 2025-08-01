@@ -6,6 +6,11 @@ from dataclasses import dataclass
 from typing import List, Tuple, Iterator, Union
 import contextlib
 import collections
+import torch_xla.runtime as xr
+from torch.distributed.tensor._dtensor_spec import DTensorSpec, TensorMeta
+from torch.distributed.device_mesh import DeviceMesh
+from torch.distributed.tensor.placement_types import Placement, Shard, Replicate
+from torch.utils._pytree import tree_map_only
 
 
 @dataclass
@@ -91,10 +96,15 @@ class XLAShardedTensor(torch.Tensor):
   # >> assert len(input.shape) == len(partition_spec)
   partition_spec: Tuple[int, None]
 
-  __slots__ = ['global_tensor']
+  __slots__ = ['global_tensor', 'mesh_shape', 'partition_spec', '_cached_spec']
 
   @staticmethod
-  def __new__(cls, elem: torch.Tensor, *args, **kwargs):
+  def __new__(cls,
+              elem: torch.Tensor,
+              mesh_shape=None,
+              partition_spec=None,
+              *args,
+              **kwargs):
     # TODO(yeounoh) wrapper can take different arguments
     r = torch.Tensor._make_wrapper_subclass(  # type: ignore[attr-defined]
         cls,
@@ -106,6 +116,13 @@ class XLAShardedTensor(torch.Tensor):
         device=elem.device,
         requires_grad=kwargs.get("requires_grad", False))
     r.global_tensor = elem.detach() if r.requires_grad else elem
+
+    # Initialize mesh, partition, and spec information
+    r.mesh_shape = mesh_shape or (elem.mesh_shape if isinstance(
+        elem, XLAShardedTensor) else None)
+    r.partition_spec = partition_spec or (elem.partition_spec if isinstance(
+        elem, XLAShardedTensor) else None)
+    r._cached_spec = None
     return r
 
   # Shards on the devices are materialized/available after the lazy
@@ -129,6 +146,9 @@ class XLAShardedTensor(torch.Tensor):
     data = [s.data for s in shards]
     devices = [s.shard_device for s in shards]
     torch_xla._XLAC._load_local_shards(self.global_tensor, data, devices)
+
+    # Invalidate cached spec since the global_tensor data has changed
+    self.invalidate_spec_cache()
 
   @property
   def sharding_spec(self):
@@ -168,6 +188,81 @@ class XLAShardedTensor(torch.Tensor):
       rs = tree_map(wrap,
                     func(*tree_map(unwrap, args), **tree_map(unwrap, kwargs)))
     return rs
+
+  @property
+  def _spec(self):
+    """
+    Convert XLA sharding information to DTensorSpec for DTensor interface compatibility.
+    """
+    # Return cached spec if available
+    if self._cached_spec is not None:
+      return self._cached_spec
+
+    # use existing mesh_shape
+    if self.mesh_shape is not None:
+      device_count = xr.global_runtime_device_count()
+      device_list = list(range(device_count))
+      mesh = DeviceMesh("xla",
+                        torch.tensor(device_list).reshape(self.mesh_shape))
+    else:
+      raise ValueError(
+          "mesh_shape must be specified to create DTensorSpec. "
+          "If this tensor was created through torch operations, it may be auto-wrapped. "
+          "Use wrap_as_sharded_tensor() to set mesh_shape before accessing _spec. "
+      )
+
+    # use existing partition_spec
+    if self.partition_spec is not None:
+      placements = []
+      for mesh_dim in range(len(self.mesh_shape)):
+        # find tensor dimension sharded on this mesh dimension
+        tensor_dim = None
+        for t_dim, m_dim in enumerate(self.partition_spec):
+          if m_dim == mesh_dim:
+            tensor_dim = t_dim
+            break
+        placements.append(
+            Shard(tensor_dim) if tensor_dim is not None else Replicate())
+    else:
+      raise ValueError(
+          "partition_spec must be specified to create DTensorSpec. "
+          "If this tensor was created through torch operations, it may be auto-wrapped. "
+          "Use wrap_as_sharded_tensor() to set partition_spec before accessing _spec. "
+      )
+
+    # tensor metadata
+    tensor_meta = TensorMeta(
+        shape=self.global_tensor.shape,
+        stride=self.global_tensor.stride(),
+        dtype=self.global_tensor.dtype)
+
+    # Create and cache the spec
+    self._cached_spec = DTensorSpec(
+        mesh=mesh, placements=tuple(placements), tensor_meta=tensor_meta)
+    return self._cached_spec
+
+  @property
+  def placements(self) -> tuple[Placement, ...]:
+    """
+    Get the placements of this XLAShardedTensor.
+    
+    Returns:
+        tuple[Placement, ...]: The placements that describe how this tensor is distributed.
+        
+    Raises:
+        ValueError: If _spec cannot be created due to missing mesh_shape or partition_spec.
+    """
+    try:
+      return self._spec.placements
+    except:
+      raise ValueError(
+          "Placements not available: XLAShardedTensor requires mesh_shape and "
+          "partition_spec to be set. Use mark_sharding() to properly initialize sharding information."
+      )
+
+  def invalidate_spec_cache(self):
+    """Invalidate the cached DTensorSpec."""
+    self._cached_spec = None
 
   @classmethod
   def __torch_function__(cls, func, types, args=(), kwargs=None):

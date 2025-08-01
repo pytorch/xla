@@ -19,10 +19,6 @@ static std::atomic<bool> g_computation_client_initialized(false);
 // Can only be called when g_computation_client_initialized is false.
 static absl::StatusOr<ComputationClient * absl_nonnull>
 InitializeComputationClient() {
-  ABSL_CHECK(!g_computation_client_initialized)
-      << "InitializeComputationClient() can only be called once.";
-  g_computation_client_initialized = true;
-
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
     tsl::testing::InstallStacktraceHandler();
   }
@@ -37,12 +33,18 @@ InitializeComputationClient() {
         absl::FailedPreconditionError("$PJRT_DEVICE is not set."));
   }
 
+  ABSL_CHECK(!g_computation_client_initialized)
+      << "ComputationClient can only be initialized once.";
+
   std::unique_ptr<ComputationClient> client;
   if (use_ifrt) {
     XLA_ASSIGN_OR_RETURN(client, IfrtComputationClient::Create());
   } else {
     XLA_ASSIGN_OR_RETURN(client, PjRtComputationClient::Create());
   }
+
+  // Set only if we actually successfully initialized a client.
+  g_computation_client_initialized = true;
 
   return client.release();
 }
@@ -59,7 +61,7 @@ const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient() {
 }
 
 ComputationClient* absl_nonnull GetComputationClientOrDie() {
-  return GetComputationClient().value();
+  return GetValueOrThrow(GetComputationClient());
 }
 
 ComputationClient* GetComputationClientIfInitialized() {

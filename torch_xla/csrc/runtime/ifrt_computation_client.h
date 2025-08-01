@@ -62,7 +62,7 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
-  std::vector<xla::Literal> TransferFromDevice(
+  absl::StatusOr<std::vector<xla::Literal>> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
 
   std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;
@@ -78,12 +78,12 @@ class IfrtComputationClient : public ComputationClient {
   std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) override;
 
-  std::vector<DataPtr> ExecuteComputation(
+  absl::StatusOr<std::vector<DataPtr>> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
       const std::string& device,
       const ExecuteComputationOptions& options) override;
 
-  std::vector<DataPtr> ExecuteReplicated(
+  absl::StatusOr<std::vector<DataPtr>> ExecuteReplicated(
       const Computation& computation, const absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
@@ -117,6 +117,8 @@ class IfrtComputationClient : public ComputationClient {
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
+
+  std::string_view GetPlatformVersion() const override;
 
   int GetProcessIndex() const override { return client_->process_index(); };
 

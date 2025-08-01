@@ -227,6 +227,7 @@ function run_xla_op_tests2 {
   run_test "$_TEST_DIR/test_assume_pure_spmd.py"
   run_test "$_TEST_DIR/test_assume_pure_torch.py"
   run_test "$_TEST_DIR/test_dynamic_shapes_detector.py"
+  run_test "$_TEST_DIR/test_runtime_client_initialization_error.py"
 }
 
 function run_xla_op_tests3 {
@@ -254,6 +255,7 @@ function run_xla_op_tests3 {
   run_test "$_TEST_DIR/spmd/test_dtensor_integration2.py"
   run_test_multi_devices_without_func "$_TEST_DIR/spmd/test_dtensor_integration3.py"
   run_test_multi_devices "$_TEST_DIR/spmd/test_dtensor_convert_mesh.py"
+  run_test_multi_devices "$_TEST_DIR/spmd/test_xla_dtensor_spec_conversion.py"
   run_test "$_TEST_DIR/spmd/test_xla_auto_sharding.py"
   run_test "$_TEST_DIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$_TEST_DIR/spmd/test_mp_input_sharding.py"
@@ -268,6 +270,7 @@ function run_xla_op_tests3 {
   run_test "$_TEST_DIR/test_persistent_cache.py"
   run_test "$_TEST_DIR/test_devices.py"
   run_test "$_TEST_DIR/test_manual_xla_registration.py"
+  run_test_multi_devices "$_TEST_DIR/spmd/test_xla_dtensor_placements.py"
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$_TEST_DIR/test_core_aten_ops.py"
   run_test "$_TEST_DIR/test_pallas.py"
