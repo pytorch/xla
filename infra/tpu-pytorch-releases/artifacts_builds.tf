@@ -8,7 +8,7 @@ locals {
   nightly_package_version = "2.9.0"
   cuda_versions = {
     "nightly": [],
-    "r2.8": ["12.1", "12.6"] # Note: PyTorch 2.8 release supports 11.8, 12.6, 12.8
+    "r2.8": [] # Note: PyTorch 2.8 release doesn't have CUDA support
   }
 
   # Built once a day from master
