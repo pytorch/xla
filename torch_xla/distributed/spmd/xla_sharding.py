@@ -13,7 +13,7 @@ import torch_xla._internal.utils as _utils
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
-from torch_xla._internal.jax_workarounds import requires_jax, maybe_get_torchax
+from torch_xla._internal.jax_workarounds import requires_jax, maybe_get_torchax, maybe_get_jax
 
 import numpy as np
 import functools
@@ -185,7 +185,8 @@ class Mesh:
   def get_jax_mesh(self):
     # Construct a JAX mesh object with the same device ids shape and ordering
     # from torch_xla device mesh.
-    import jax
+    jax = maybe_get_jax()
+    assert jax is not None
     import numpy as np
     from jax._src import mesh as mesh_lib
 
@@ -642,7 +643,8 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
   tx = maybe_get_torchax()
-  if tx is not None and isinstance(t, tx.tensor.Tensor):
+  jax = maybe_get_jax()
+  if (jax is not None) and (tx is not None) and isinstance(t, tx.tensor.Tensor):
     from jax.sharding import PartitionSpec as P, NamedSharding
     jmesh = mesh.get_jax_mesh()
     t.shard_(NamedSharding(jmesh, P(*partition_spec)))
