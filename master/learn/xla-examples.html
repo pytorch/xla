@@ -10,7 +10,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Pytorch/XLA Overview &mdash; PyTorch/XLA master documentation</title>
+  <title>Converting code to PyTorch XLA &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -37,8 +37,8 @@
   <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Converting code to PyTorch XLA" href="xla-examples.html" />
-    <link rel="prev" title="PyTorch on XLA Devices" href="pytorch-on-xla-devices.html" />
+    <link rel="next" title="Profiling and performance analysis" href="xla-profiling.html" />
+    <link rel="prev" title="Pytorch/XLA Overview" href="xla-overview.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -322,8 +322,8 @@
               <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Pytorch/XLA Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="xla-examples.html">Converting code to PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xla-overview.html">Pytorch/XLA Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Converting code to PyTorch XLA</a></li>
 <li class="toctree-l1"><a class="reference internal" href="xla-profiling.html">Profiling and performance analysis</a></li>
 <li class="toctree-l1"><a class="reference internal" href="xla-advanced.html">Advanced Topics in PyTorch XLA</a></li>
 </ul>
@@ -416,13 +416,13 @@
       </li>
 
         
-      <li>Pytorch/XLA Overview</li>
+      <li>Converting code to PyTorch XLA</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/learn/xla-overview.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/learn/xla-examples.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -452,106 +452,230 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <section id="pytorch-xla-overview">
-<h1>Pytorch/XLA Overview<a class="headerlink" href="#pytorch-xla-overview" title="Permalink to this heading">¶</a></h1>
-<p>PyTorch/XLA is an open-source Python package that enables PyTorch to run on XLA
-(Accelerated Linear Algebra) compatible devices, with a primary focus on
-<strong>Google Cloud TPUs</strong> and also supporting <strong>XLA-compatible GPUs</strong>. It allows
-developers and researchers to leverage the massive parallel processing
-capabilities of these accelerators for training and inferencing large-scale AI
-models with minimal code changes from their existing PyTorch workflows.</p>
-<p>At its core, PyTorch/XLA acts as a bridge between the familiar PyTorch Python
-frontend and the XLA compiler. When you run PyTorch operations on XLA
-devices using this library, you get the following key features:</p>
-<ol class="arabic simple">
-<li><p><strong>Lazy Evaluation</strong>: Operations are not executed immediately. Instead,
-PyTorch/XLA records these operations in an intermediate representation (IR)
-graph. The process of generating the IR graph is often referred to as
-“tracing” (LazyTensor tracing or code tracing). Sometimes this is also called
-lazy evaluation and it can lead to significant
-<a class="reference external" href="https://arxiv.org/pdf/2102.13267.pdf">performance improvements</a>.</p></li>
-<li><p><strong>Graph Compilation</strong>: When results are actually needed (e.g., printing a
-tensor, saving a checkpoint, or at an explicit synchronization point like
-<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code>), the accumulated IR graph is converted into a lower-level
-machine-readable format called HLO (High-Level Opcodes). HLO is a
-representation of a computation that is specific to the XLA compiler and
-allows it to generate efficient code for the hardware that it is running on.</p></li>
-<li><p><strong>XLA Optimization</strong>: The XLA compiler takes this HLO, performs a series of
-optimizations (like operator fusion, memory layout optimization, and
-parallelization), and compiles it into highly efficient machine code tailored
-for the specific XLA device (e.g., TPU).</p></li>
-<li><p><strong>Execution</strong>: The compiled code is then executed on the XLA device(s).
-Compiled graphs are cached, so subsequent executions with the same
-computation graph and input shapes can reuse the optimized binary,
-significantly speeding up repeated operations typical in training loops.</p></li>
-</ol>
-<p><img alt="img" src="../_images/pytorchXLA_flow.svg" /></p>
-<p>This process allows PyTorch/XLA to provide significant performance benefits,
-especially for large models and distributed training scenarios. For a deeper
-dive into the lazy tensor system, see our
-<a class="reference external" href="https://pytorch.org/blog/understanding-lazytensor-system-performance-with-pytorch-xla-on-cloud-tpu/">LazyTensor guide</a>.</p>
-<section id="why-use-pytorch-xla">
-<h2><strong>Why Use PyTorch/XLA?</strong><a class="headerlink" href="#why-use-pytorch-xla" title="Permalink to this heading">¶</a></h2>
+  <section id="converting-code-to-pytorch-xla">
+<h1>Converting code to PyTorch XLA<a class="headerlink" href="#converting-code-to-pytorch-xla" title="Permalink to this heading">¶</a></h1>
+<p>General guidelines to modify your code:</p>
 <ul class="simple">
-<li><p><strong>High Performance on TPUs</strong>: PyTorch/XLA is optimized to deliver exceptional performance for training and inference on Google Cloud TPUs, which are custom-designed AI accelerators.</p></li>
-<li><p><strong>Scalability</strong>: Seamlessly scale your models from a single device to large TPU Pods with minimal code changes, enabling you to tackle more ambitious projects.</p></li>
-<li><p><strong>Familiar PyTorch Experience</strong>: Continue using the PyTorch APIs and ecosystem you know and love. PyTorch/XLA aims to make the transition to XLA devices as smooth as possible, often requiring only minor modifications to existing PyTorch code.</p></li>
-<li><p><strong>Cost-Efficiency</strong>: TPUs offer a compelling price/performance ratio for many AI workloads. PyTorch/XLA helps you take advantage of this efficiency.</p></li>
-<li><p><strong>Versatility</strong>: Accelerate a wide range of AI workloads, including chatbots, code generation, media content generation, vision services, and recommendation engines.</p></li>
-<li><p><strong>Support for Leading Frameworks</strong>: While focused on PyTorch, XLA itself is a compiler backend used by other major frameworks like JAX and TensorFlow.</p></li>
+<li><p>Replace <code class="docutils literal notranslate"><span class="pre">cuda</span></code> with <code class="docutils literal notranslate"><span class="pre">torch_xla.device()</span></code></p></li>
+<li><p>Remove code that would access the XLA tensor values</p></li>
+<li><p>Wrap data loader with MPDeviceLoader</p></li>
+<li><p>Profile to further optimize the code</p></li>
 </ul>
-</section>
-<section id="target-hardware">
-<h2><strong>Target Hardware</strong><a class="headerlink" href="#target-hardware" title="Permalink to this heading">¶</a></h2>
-<p>While PyTorch/XLA can theoretically run on any XLA-compatible backend, its primary development and optimization focus is on:</p>
-<ul class="simple">
-<li><p><strong>Google Cloud TPUs</strong>: Including various generations like TPU v5 and v6. <a class="reference external" href="https://cloud.google.com/tpu/docs/intro-to-tpu">Learn more about TPUs</a>.</p></li>
-<li><p><strong>GPUs via XLA</strong>: PyTorch/XLA also supports running on NVIDIA GPUs through the OpenXLA PJRT plugin, providing an alternative execution path. <a class="reference external" href="https://cloud.google.com/compute/docs/gpus">Learn more about GPUs on Google Cloud</a>.</p></li>
-</ul>
-</section>
-<section id="tpu-setup">
-<h2>TPU Setup<a class="headerlink" href="#tpu-setup" title="Permalink to this heading">¶</a></h2>
-<p>Create a TPU with the base image to use nightly wheels or from the stable
-release by specifying the <code class="docutils literal notranslate"><span class="pre">RUNTIME_VERSION</span></code>.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">ZONE</span><span class="o">=</span>us-central2-b
-<span class="nb">export</span><span class="w"> </span><span class="nv">PROJECT_ID</span><span class="o">=</span>your-project-id
-<span class="nb">export</span><span class="w"> </span><span class="nv">ACCELERATOR_TYPE</span><span class="o">=</span>v4-8<span class="w"> </span><span class="c1"># v4-16, v4-32, …</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">RUNTIME_VERSION</span><span class="o">=</span>tpu-vm-v4-pt-2.0<span class="w"> </span><span class="c1"># or tpu-vm-v4-base</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">TPU_NAME</span><span class="o">=</span>your_tpu_name
-
-gcloud<span class="w"> </span>compute<span class="w"> </span>tpus<span class="w"> </span>tpu-vm<span class="w"> </span>create<span class="w"> </span><span class="si">${</span><span class="nv">TPU_NAME</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---zone<span class="o">=</span><span class="si">${</span><span class="nv">ZONE</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---accelerator-type<span class="o">=</span><span class="si">${</span><span class="nv">ACCELERATOR_TYPE</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---version<span class="o">=</span><span class="si">${</span><span class="nv">RUNTIME_VERSION</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---subnetwork<span class="o">=</span>tpusubnet
+<p>Remember: each case is unique so you might need to do something
+different for each case.</p>
+<section id="example-1-stable-diffusion-inference-in-pytorch-lightning-on-a-single-tpu-device">
+<h2>Example 1. Stable Diffusion inference in PyTorch Lightning on a Single TPU Device<a class="headerlink" href="#example-1-stable-diffusion-inference-in-pytorch-lightning-on-a-single-tpu-device" title="Permalink to this heading">¶</a></h2>
+<p>To get a better understanding of the code changes needed to convert PyTorch code
+that runs on GPUs to run on TPUs, let’s look at the <a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/main/scripts/txt2img.py">inference
+code</a>
+from a PyTorch implementation of the stable diffusion model. You can run the
+script from the command line:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>python<span class="w"> </span>scripts/txt2img.py<span class="w"> </span>--prompt<span class="w"> </span><span class="s2">&quot;a photograph of an astronaut riding a horse&quot;</span>
 </pre></div>
 </div>
-<p>If you have a single host VM (e.g. v4-8), you can ssh to your vm and run
-the following commands from the vm directly. Otherwise, in case of TPU
-pods, you can use <code class="docutils literal notranslate"><span class="pre">--worker=all</span> <span class="pre">--command=&quot;&quot;</span></code> similar to</p>
+<p>To see a diff of the modifications explained below, see
+<a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/commit/57f398eb784387e244dc5fb78421aa5261abd1ef">ldm/models/diffusion/ddim.py</a>.
+Let’s go over them step by step. As in the general guidelines above,
+start with changes related to <code class="docutils literal notranslate"><span class="pre">cuda</span></code> devices. This inference code is
+written to run on GPUs and <code class="docutils literal notranslate"><span class="pre">cuda</span></code> can be found in multiple places. Start
+making changes by removing <code class="docutils literal notranslate"><span class="pre">model.cuda()</span></code> from <a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/978da4c625a712a01ee066d019a0b0d2319cd8b3/scripts/txt2img.py#L64">this
+line</a>,
+and <code class="docutils literal notranslate"><span class="pre">precision_scope</span></code> from
+<a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/978da4c625a712a01ee066d019a0b0d2319cd8b3/scripts/txt2img.py#L290">here</a>.
+Additionally, replace the <code class="docutils literal notranslate"><span class="pre">cuda</span></code> device in <a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/978da4c625a712a01ee066d019a0b0d2319cd8b3/scripts/txt2img.py#L248">this
+line</a>
+with the <code class="docutils literal notranslate"><span class="pre">xla</span></code> device similar to the code below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Next, this particular configuration of the model is using
+<code class="docutils literal notranslate"><span class="pre">FrozenCLIPEmbedder</span></code>, therefore we will modify this
+<a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/978da4c625a712a01ee066d019a0b0d2319cd8b3/ldm/modules/encoders/modules.py#L143">line</a>
+as well. For simplicity we will directly define the <code class="docutils literal notranslate"><span class="pre">device</span></code> in this
+tutorial, but you can pass the <code class="docutils literal notranslate"><span class="pre">device</span></code> value to the function as well.</p>
+<p>Another place in the code that has cuda specific code is <a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/978da4c625a712a01ee066d019a0b0d2319cd8b3/ldm/models/diffusion/ddim.py#L12">DDIM scheduler</a>.
+Add <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">torch_xla.core.xla_model</span> <span class="pre">as</span> <span class="pre">xm</span></code> on top of the file then
+replace
+<a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/978da4c625a712a01ee066d019a0b0d2319cd8b3/ldm/models/diffusion/ddim.py#L21-L22">these</a>
+lines</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">attr</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">):</span>
+   <span class="n">attr</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>with</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
+<span class="n">attr</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Next, you can reduce device (TPU) and host (CPU) communication by
+removing print statements, disabling progress bars, and reducing or
+removing callbacks and logging. These operations require the device to
+stop executing, falling back to the CPU, executing the
+logging/callbacks, and then returning to the device. This can be a
+significant performance bottleneck, especially on large models.</p>
+<p>After making these changes, the code will run on TPUs. However, the
+performance will not be optimized. This is because the XLA compiler tries to
+build a single (huge) graph that wraps the number of inference steps (in
+this case, 50) as there is no barrier inside the for loop. It is
+difficult for the compiler to optimize the graph, and this leads to
+significant performance degradation. As discussed above, breaking the
+for loop with a call to <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> will result in a smaller
+graph that is easier for the compiler to optimize. This allows
+the compiler to reuse the graph from the previous step, which can
+improve performance.</p>
+<p>Now the
+<a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/ss-inference/scripts/txt2img.py">code</a>
+is ready to run on TPUs in a reasonable time. More optimization and
+analysis can be done by <a class="reference external" href="https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm">capturing a
+profile</a>
+and investigating further. However, this is not covered here.</p>
+<p>Note: if you are running on v4-8 TPU, then you have 4 available XLA
+(TPU) devices. Running the code as above will only use one XLA device.
+In order to run on all 4 devices, use the <code class="docutils literal notranslate"><span class="pre">torch_xla.launch()</span></code> function.
+We will discuss a <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code> in the next example.</p>
+</section>
+<section id="example-2-hf-stable-diffusion-inference">
+<h2>Example 2. HF Stable Diffusion Inference<a class="headerlink" href="#example-2-hf-stable-diffusion-inference" title="Permalink to this heading">¶</a></h2>
+<p>Now, consider using <a class="reference external" href="https://github.com/huggingface/diffusers/tree/main/examples/text_to_image">Stable Diffusion
+Inference</a>
+in the HuggingFace diffusers library for both the SD-XL and 2.1 versions
+of the model. You can find the changes described below in the <a class="reference external" href="https://github.com/pytorch-tpu/diffusers">diffusers repo</a>.
+Clone the repo and run the inference script using the following command on your
+TPU VM:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>vm<span class="o">)</span>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/pytorch-tpu/diffusers.git
+<span class="o">(</span>vm<span class="o">)</span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>diffusers/examples/text_to_image/
+<span class="o">(</span>vm<span class="o">)</span>$<span class="w"> </span>python3<span class="w"> </span>inference_tpu_single_device.py
+</pre></div>
+</div>
+</section>
+<section id="running-on-a-single-tpu-device">
+<h2>Running on a Single TPU device<a class="headerlink" href="#running-on-a-single-tpu-device" title="Permalink to this heading">¶</a></h2>
+<p>This section describes how to update the
+<a class="reference external" href="https://github.com/huggingface/diffusers/tree/main/examples/text_to_image#inference">text_to_image inference example</a>
+to run on TPUs.</p>
+<p>The original code uses Lora for inference, but this tutorial will not
+use it. Instead, we will set the <code class="docutils literal notranslate"><span class="pre">model_id</span></code> argument to
+<code class="docutils literal notranslate"><span class="pre">stabilityai/stable-diffusion-xl-base-0.9</span></code> when initializing the
+pipeline. We will also use the default scheduler
+(DPMSolverMultistepScheduler). However, similar changes can be made to
+the other schedulers as well.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/huggingface/diffusers
+<span class="nb">cd</span><span class="w"> </span>diffusers
+pip<span class="w"> </span>install<span class="w"> </span>.<span class="w"> </span><span class="c1"># pip install -e .</span>
+
+<span class="nb">cd</span><span class="w"> </span>examples/text_to_image/
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+pip<span class="w"> </span>install<span class="w"> </span>invisible_watermark<span class="w"> </span>transformers<span class="w"> </span>accelerate<span class="w"> </span>safetensors
+</pre></div>
+</div>
+<p>(If <code class="docutils literal notranslate"><span class="pre">accelerate</span></code> is not found, log out, log back in.)</p>
+<p>Log in to HF and agree to the <a class="reference external" href="https://huggingface.co/stabilityai/stable-diffusion-xl-base-0.9">sd-xl 0.9
+license</a>
+on the model card. Next, go to
+<a class="reference external" href="https://huggingface.co/settings/tokens">account→settings→access</a> and generate a
+new token. Copy the token and run the following command
+with that specific token value on your vm</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>VM<span class="o">)</span>$<span class="w"> </span>huggingface-cli<span class="w"> </span>login<span class="w"> </span>--token<span class="w"> </span>_your_copied_token__
+</pre></div>
+</div>
+<p>The <a class="reference external" href="https://huggingface.co/stabilityai/stable-diffusion-xl-base-0.9#sd-xl-09-base-model-card">HuggingFace readme</a>
+provides PyTorch code that is written to run on
+GPUs. To run it on TPUs, the first step is to change the CUDA device to
+an XLA device. This can be done by replacing the line <code class="docutils literal notranslate"><span class="pre">pipe.to(&quot;cuda&quot;)</span></code>
+with the following lines:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
+<span class="n">pipe</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The first time you run an inference with XLA, the compiler builds a graph of the
+computations, and optimizes this graph for the specific hardware the code is
+running on. Once the graph has been compiled, is can be reused for subsequent
+calls, which will be much faster. For example, compilation time for stable
+diffusion XL model inference from HuggingFace can take about an hour to compile,
+whereas the actual inference may take only 5 seconds, depending on the batch
+size. Likewise, a GPT-2 model can take about 10-15 mins to compile, after
+which the training epoch time becomes much faster.</p>
+<p>If you are running inference multiple times, you will start to see the
+advantages of XLA after the graph is compiled. For example, if you
+run inference on a list of 10 prompts, the first inference (maybe
+two[^1]) may take a long time to compile, but the remaining inference
+steps will be much faster. This is because XLA will reuse the graph that
+it compiled for the first inference.</p>
+<p>If you try to run the code without making any additional changes, you
+will notice that the compilation time is very long (&gt;6 hours). This is
+because the XLA compiler tries to build a single graph for all of the
+scheduler steps at once similar to what we have discussed in the
+previous example. To make the code run faster, we need to break the
+graph up into smaller pieces with <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> and reuse them in the
+next steps. This happens inside the <code class="docutils literal notranslate"><span class="pre">pipe.__call__</span></code>
+<a class="reference external" href="https://github.com/huggingface/diffusers/blob/2b1786735e27bc97f4d4699712292d5c463a7380/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py#L559">function</a>
+in <a class="reference external" href="https://github.com/huggingface/diffusers/blob/2b1786735e27bc97f4d4699712292d5c463a7380/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py#L805-L839">these
+lines</a>.
+Disabling the progress bar, removing callbacks and adding
+<code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> at the end of the for loop speeds up the code
+significantly. Changes are provided in this
+<a class="reference external" href="https://github.com/huggingface/diffusers/compare/main...pytorch-tpu:diffusers:main">commit</a>.</p>
+<p>Additionally, the <code class="docutils literal notranslate"><span class="pre">self.scheduler.step()</span></code> function, which by default
+uses the <code class="docutils literal notranslate"><span class="pre">DPMSolverMultistepScheduler</span></code> scheduler, has a few issues that
+are described in the <a class="reference external" href="https://pytorch.org/xla/release/2.0/index.html#known-performance-caveats">PyTorch XLA
+caveats</a>.
+The <code class="docutils literal notranslate"><span class="pre">.nonzero()</span></code> and <code class="docutils literal notranslate"><span class="pre">.item()</span></code> calls in this function send requests to
+the CPU for tensor evaluation, which trigger device-host communication.
+This is not desirable, as it can slow down the code. In this particular
+case, we can avoid these calls by passing the index to the function
+directly. This prevents unnecessary device-host communitation. Changes are available
+in
+<a class="reference external" href="https://github.com/pytorch-tpu/diffusers/commit/0243d2ef9c2c7bc06956bb1bcc92c23038f6519d">this</a>
+commit. The code now is ready to be run on TPUs.</p>
+</section>
+<section id="running-on-multiple-tpu-devices">
+<h2>Running on Multiple TPU Devices<a class="headerlink" href="#running-on-multiple-tpu-devices" title="Permalink to this heading">¶</a></h2>
+<p>To use multiple TPU devices, use the <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code> function
+to run the function on multiple devices and sync when necessary.
+The <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code> function will start processes on multiple TPU
+devices and sync them when needed. This can be done by passing the
+<code class="docutils literal notranslate"><span class="pre">index</span></code> argument to the function that runs on a single device. For
+example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">my_function</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
+  <span class="c1"># function that runs on a single device</span>
+
+<span class="n">torch_xla</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">my_function</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,))</span>
+</pre></div>
+</div>
+<p>In this example, the <code class="docutils literal notranslate"><span class="pre">my_function</span></code> function will be run on 4 TPU
+devices (for a v4-8 TPU slice). Each device is assigned an index from 0 to 3.
+By default, <code class="docutils literal notranslate"><span class="pre">launch()</span></code> will run the function on all
+TPU devices. If you want a single process, set <code class="docutils literal notranslate"><span class="pre">debug_single_process=True</span></code>:
+<code class="docutils literal notranslate"><span class="pre">launch(...,</span> <span class="pre">debug_single_process=True)</span></code>.</p>
+<p><a class="reference external" href="https://github.com/ssusie/diffusers/blob/main/examples/text_to_image/inference_tpu_multidevice.py">This
+file</a>
+illustrates how xmp.spawn can be used to run stable diffusion 2.1
+version on multiple TPU devices. For this example, changes were made to the
+<a class="reference external" href="https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py">pipeline</a>
+file.</p>
+</section>
+<section id="running-on-pods">
+<h2>Running on Pods<a class="headerlink" href="#running-on-pods" title="Permalink to this heading">¶</a></h2>
+<p>Once you have the code for running on a single host device, there is no
+further change needed. You can create the TPU pod, for example, by
+following these
+<a class="reference external" href="https://cloud.google.com/tpu/docs/pytorch-pods#create-tpu-vm">instructions</a>.
+Then run your script with</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>gcloud<span class="w"> </span>compute<span class="w"> </span>tpus<span class="w"> </span>tpu-vm<span class="w"> </span>ssh<span class="w"> </span><span class="si">${</span><span class="nv">TPU_NAME</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
---zone<span class="o">=</span>us-central2-b<span class="w"> </span><span class="se">\</span>
---worker<span class="o">=</span>all<span class="w"> </span><span class="se">\</span>
---command<span class="o">=</span><span class="s2">&quot;pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch-nightly-cp38-cp38-linux_x86_64.whl&quot;</span>
-</pre></div>
-</div>
-<p>Next, if you are using base image, install nightly packages and required
-libraries</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip3<span class="w"> </span>install<span class="w"> </span>https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch-nightly-cp38-cp38-linux_x86_64.whl
-<span class="w">  </span>pip3<span class="w"> </span>install<span class="w"> </span>https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl
-sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>libopenblas-dev<span class="w"> </span>-y
-
-sudo<span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>libgl1<span class="w"> </span>-y<span class="w"> </span><span class="c1"># diffusion specific</span>
+<span class="w">  </span>--zone<span class="o">=</span><span class="si">${</span><span class="nv">ZONE</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--worker<span class="o">=</span>all<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--command<span class="o">=</span><span class="s2">&quot;python3 your_script.py&quot;</span>
 </pre></div>
 </div>
 </section>
-<section id="next-steps">
-<h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this heading">¶</a></h2>
-<ul class="simple">
-<li><p><a class="reference internal" href="xla-examples.html"><span class="doc std std-doc">Examples</span></a>: Explore example code for training and inference on TPUs.</p></li>
-<li><p><a class="reference internal" href="xla-profiling.html"><span class="doc std std-doc">Profiling and Performance</span></a>: Learn how to profile and optimize your PyTorch/XLA applications.</p></li>
-<li><p><a class="reference internal" href="xla-advanced.html"><span class="doc std std-doc">Advanced Topics</span></a>: Dive deeper into advanced concepts like graph optimization, data loading, and distributed training with PyTorch/XLA.</p></li>
-</ul>
+<section id="reference-implementations">
+<h2>Reference implementations<a class="headerlink" href="#reference-implementations" title="Permalink to this heading">¶</a></h2>
+<p>The <a class="reference external" href="https://github.com/AI-Hypercomputer/tpu-recipes">AI-Hypercomputer/tpu-recipes</a>
+repo contains examples for training and serving many LLM and diffusion models.</p>
 </section>
 </section>
 
@@ -563,10 +687,10 @@ sudo<span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="xla-examples.html" class="btn btn-neutral float-right" title="Converting code to PyTorch XLA" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="xla-profiling.html" class="btn btn-neutral float-right" title="Profiling and performance analysis" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="pytorch-on-xla-devices.html" class="btn btn-neutral" title="PyTorch on XLA Devices" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="xla-overview.html" class="btn btn-neutral" title="Pytorch/XLA Overview" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -598,11 +722,13 @@ sudo<span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Pytorch/XLA Overview</a><ul>
-<li><a class="reference internal" href="#why-use-pytorch-xla"><strong>Why Use PyTorch/XLA?</strong></a></li>
-<li><a class="reference internal" href="#target-hardware"><strong>Target Hardware</strong></a></li>
-<li><a class="reference internal" href="#tpu-setup">TPU Setup</a></li>
-<li><a class="reference internal" href="#next-steps">Next Steps</a></li>
+<li><a class="reference internal" href="#">Converting code to PyTorch XLA</a><ul>
+<li><a class="reference internal" href="#example-1-stable-diffusion-inference-in-pytorch-lightning-on-a-single-tpu-device">Example 1. Stable Diffusion inference in PyTorch Lightning on a Single TPU Device</a></li>
+<li><a class="reference internal" href="#example-2-hf-stable-diffusion-inference">Example 2. HF Stable Diffusion Inference</a></li>
+<li><a class="reference internal" href="#running-on-a-single-tpu-device">Running on a Single TPU device</a></li>
+<li><a class="reference internal" href="#running-on-multiple-tpu-devices">Running on Multiple TPU Devices</a></li>
+<li><a class="reference internal" href="#running-on-pods">Running on Pods</a></li>
+<li><a class="reference internal" href="#reference-implementations">Reference implementations</a></li>
 </ul>
 </li>
 </ul>
