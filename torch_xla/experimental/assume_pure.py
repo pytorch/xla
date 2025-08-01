@@ -7,6 +7,7 @@ from torch.utils._pytree import tree_flatten, tree_unflatten
 import torch_xla
 from torch_xla._internal.jax_workarounds import requires_jax
 import torch_xla.core.xla_builder as xb
+from torch_xla._internal.jax_workarounds import maybe_get_jax, maybe_get_torchax
 
 _XLA_COMPUTATION_CACHE = {}
 
@@ -31,6 +32,11 @@ def assume_pure(fn):
   - Other custom PyTorch/XLA operations such as `flash_attention` are not
     supported. This limitation may be lifted in the future.
   """
+  tx = maybe_get_torchax()
+  jax = maybe_get_jax()
+  if tx is None or jax is None:
+    raise AssertionError('Jax is required for this feature')
+
   from torchax.interop import jax_view
   return j2t_autograd(jax_view(fn))
 
