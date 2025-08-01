@@ -656,6 +656,10 @@ std::vector<std::string> IfrtComputationClient::GetAllDevices() const {
   return IfrtDevicesToString(client_->devices());
 }
 
+std::string_view IfrtComputationClient::GetPlatformVersion() const {
+  return client_->platform_version();
+}
+
 int IfrtComputationClient::GetNumProcesses() const {
   int max_process_index = client_->process_index();
   for (auto* device : client_->devices()) {
