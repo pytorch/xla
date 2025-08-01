@@ -179,6 +179,13 @@ def _tpu_flash_attention(query, key, value, env):
   return wrap_flash_attention(query, key, value)
 
 
+@register_function(torch.nn.functional.one_hot)
+def one_hot(tensor, num_classes=-1):
+  if num_classes == -1:
+    num_classes = jnp.max(tensor) + 1
+  return jax.nn.one_hot(tensor, num_classes).astype(jnp.int64)
+
+
 @register_function(torch.nn.functional.pad)
 def pad(tensor, pad, mode="constant", value=None):
   # For padding modes that have different names between Torch and NumPy, this
