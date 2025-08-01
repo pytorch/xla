@@ -112,9 +112,7 @@ function build_torch_xla() {
   # Need to uncomment the line below.
   # Currently it fails upstream XLA CI.
   # pip install plugins/cuda -v
-  pip install 'torch_xla[pallas]' \
-  -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
-  -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+  pip install 'torch_xla[pallas]'
   popd
 }
 

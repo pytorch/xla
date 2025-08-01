@@ -185,7 +185,7 @@ class Mesh:
   def get_jax_mesh(self):
     # Construct a JAX mesh object with the same device ids shape and ordering
     # from torch_xla device mesh.
-    jax = maybe_import_jax()
+    jax = maybe_get_jax()
     assert jax is not None
     import numpy as np
     from jax._src import mesh as mesh_lib

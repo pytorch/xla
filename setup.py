@@ -501,7 +501,7 @@ setup(
             f'libtpu=={_libtpu_version}',
             'tpu-info',
         ],
-        # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+        # pip install torch_xla[pallas]
         'pallas': [*_get_jax_install_requirements(),]
     },
     cmdclass={
