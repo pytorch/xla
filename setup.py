@@ -484,8 +484,10 @@ setup(
         *_get_jax_install_requirements(),
     ],
     package_data={
-        'torch_xla': ['lib/*.so*','py.typed',],
-    },
+        'torch_xla': [
+            'lib/*.so*',
+            'py.typed',
+        ],    },
     entry_points={
         'console_scripts': [
             'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
