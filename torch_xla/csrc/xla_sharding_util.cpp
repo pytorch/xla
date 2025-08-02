@@ -889,4 +889,20 @@ bool ShardingUtil::GetAutoSharding() {
   }
   return use_auto_sharding;
 }
+
+xla::Shape ShardingUtil::GetAdjustedGlobalShape(const at::Tensor& tensor,
+                                                bool minibatch) {
+  xla::Shape global_shape = CreateComputationShapeFromTensor(tensor, nullptr);
+  if (minibatch) {
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                        runtime::GetComputationClient());
+    int num_local_devices = client->GetLocalDevices().size();
+    int num_global_devices = client->GetAllDevices().size();
+    int batch_dim_shape =
+        tensor.sizes()[0] * num_global_devices / num_local_devices;
+    global_shape.set_dimensions(0, batch_dim_shape);
+  }
+  return global_shape;
+}
+
 }  // namespace torch_xla

@@ -1534,24 +1534,21 @@ void InitXlaModuleBindings(py::module m) {
                    const py::list& replication_groups, int sharding_type,
                    bool minibatch) {
         xla::Shape global_shape =
-            CreateComputationShapeFromTensor(tensor, nullptr);
-        if (minibatch) {
-          XLA_ASSIGN_OR_THROW(
-              runtime::ComputationClient * absl_nonnull const client,
-              runtime::GetComputationClient());
-          int num_local_devices = client->GetLocalDevices().size();
-          int num_global_devices = client->GetAllDevices().size();
-          XLA_CHECK(tile_assignment.size() == num_global_devices)
-              << "Minibatch sharding only supports sharding along the batch "
-                 "dimension";
-          int batch_dim_shape =
-              tensor.sizes()[0] * num_global_devices / num_local_devices;
-          global_shape.set_dimensions(0, batch_dim_shape);
-        }
+            ShardingUtil::GetAdjustedGlobalShape(tensor, minibatch);
         return std::make_shared<XLATensor::ShardingSpec>(
             ShardingUtil::CreateOpSharding(
                 tile_assignment, group_assignment, replication_groups,
                 ShardingUtil::ShardingType(sharding_type)),
+            global_shape, minibatch);
+      })
+      .def_init([](at::Tensor tensor, const py::list& dims,
+                   const py::list& reshape_dims, const py::list& transpose_perm,
+                   bool minibatch) {
+        xla::Shape global_shape =
+            ShardingUtil::GetAdjustedGlobalShape(tensor, minibatch);
+        return std::make_shared<XLATensor::ShardingSpec>(
+            ShardingUtil::CreateIotaOpSharding(dims, reshape_dims,
+                                               transpose_perm),
             global_shape, minibatch);
       });
 

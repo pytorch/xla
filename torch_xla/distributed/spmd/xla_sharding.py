@@ -154,12 +154,10 @@ class Mesh:
 
   @functools.lru_cache(maxsize=None)
   def _get_op_sharding_args_v2(self, partition_spec: PartitionSpec):
-    """
-    Returns the appropriate dims, reshape_dims, and transpose_perm for the given partition spec.
-    """
     partition_spec = _translate_named_partition_spec(self, partition_spec)
     self._validate_translated_partition_spec(partition_spec)
 
+    # 1. Calculate the initial part of dims based on the partition_spec.
     dims = []
     used_axes = OrderedDict()
     for axis in partition_spec:
@@ -175,14 +173,22 @@ class Mesh:
         dims.append(self.mesh_shape[axis])
         used_axes[axis] = True
       else:
-        # Replicated mesh axis
         dims.append(1)
 
-    transpose_perm = [k for k in used_axes.keys()]
+    # 2. If the product of dims is less than the total number of devices,
+    #    append the sizes of the unused mesh axes.
+    if math.prod(dims) < math.prod(self.mesh_shape):
+      for i in range(len(self.mesh_shape)):
+        if i not in used_axes:
+          dims.append(self.mesh_shape[i])
+
+    # 3. Calculate transpose_perm (sharded axes first, then unused axes).
+    transpose_perm = list(used_axes.keys())
     for i in range(len(self.mesh_shape)):
       if i not in used_axes:
-        dims.append(self.mesh_shape[i])
         transpose_perm.append(i)
+
+    # 4. reshape_dims is always the physical mesh shape.
     reshape_dims = list(self.mesh_shape)
 
     return dims, reshape_dims, transpose_perm
@@ -592,6 +598,11 @@ def _mark_manual_sharding(
   return wrap_as_sharded_tensor(t)
 
 
+def _use_shlo_to_shardy() -> bool:
+  return os.environ.get("CONVERT_SHLO_TO_SHARDY",
+                        "").lower() in ("1", "true", "yes")
+
+
 def enable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
                            partition_spec: PartitionSpec,
                            *,
@@ -716,7 +727,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     t.shard_(NamedSharding(jmesh, P(*partition_spec)))
     return t
 
-  if os.environ.get('CONVERT_SHLO_TO_SHARDY', False):
+  if _use_shlo_to_shardy():
     op_sharding = mesh.get_op_sharding_v2(partition_spec)
   else:
     op_sharding = mesh.get_op_sharding(partition_spec)
@@ -898,6 +909,9 @@ class ShardingSpec:
     self._group_assignment, self._replication_groups = _get_group_assignment(
         self._sharding_type, tile_assignment, len(partition_spec),
         replicate_dims)
+    if _use_shlo_to_shardy():
+      self.dims, self.reshape_dims, self.transpose_dims = mesh._get_op_sharding_args_v2(
+          partition_spec)
 
   def xla_spec(self, t: torch.Tensor) -> Union['XlaShardingSpec', None]:
     """
@@ -906,6 +920,13 @@ class ShardingSpec:
     """
     if not self.can_apply(t):
       return None
+
+    if _use_shlo_to_shardy():
+      # Convert to Shardy spec if the environment variable is set.
+      return torch_xla._XLAC.XlaShardingSpec(t, self.dims, self.reshape_dims,
+                                             self.transpose_dims,
+                                             self.minibatch)
+
     return torch_xla._XLAC.XlaShardingSpec(t, self._tile_assignment,
                                            self._group_assignment,
                                            self._replication_groups,
