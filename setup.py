@@ -482,8 +482,10 @@ setup(
         'importlib_metadata>=4.6;python_version<"3.10"',
     ],
     package_data={
-        'torch_xla': ['lib/*.so*',],
-    },
+        'torch_xla': [
+            'lib/*.so*',
+            'py.typed',
+        ],    },
     entry_points={
         'console_scripts': [
             'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
