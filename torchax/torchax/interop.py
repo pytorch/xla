@@ -56,29 +56,6 @@ def set_all_buffers(m, params, buffers):
 
 
 class JittableModule(torch.nn.Module):
-  """A wrapper class that makes a `torch.nn.Module` compatible with `jax.jit`. It separates the model's parameters and buffers, allowing them to be passed as arguments to a functional version of the model.
-
-  **Arguments:**
-
-  *   `m` (`torch.nn.Module`): The PyTorch model to wrap.
-  *   `extra_jit_args` (`dict`, optional): A dictionary of extra arguments to pass to `jax.jit`.
-  *   `dedup_parameters` (`bool`, optional): If `True`, deduplicates parameters that are shared within the model.
-
-  **Usage:**
-
-  ```python
-  import torch
-  import torchax
-  from torchax.interop import JittableModule
-
-  model = torch.nn.Linear(10, 20)
-  jittable_model = JittableModule(model)
-
-  # The first call will compile the model
-  inputs = torch.randn(5, 10, device='jax')
-  outputs = jittable_model(inputs)
-  ```
-  """
 
   def __init__(self,
                m: torch.nn.Module,
@@ -253,17 +230,12 @@ def call_torch(torch_func: TorchCallable, *args: JaxValue,
 
 
 def j2t_autograd(fn, call_jax=call_jax):
-  """Given a JAX function, returns a PyTorch `autograd` function that is implemented with `jax.vjp`. This allows you to define custom gradients for your PyTorch operations using JAX.
+  """Given a JAX function, returns a PyTorch autograd function implemented with `jax.vjp(fn)`.
 
-  **Arguments:**
-
-  *   `fn`: The JAX function for which to create a PyTorch `autograd` function.
-  *   `call_jax` (optional): The function to use for calling JAX functions from PyTorch.
-
-  **Returns:**
-
-  A PyTorch function with custom gradients defined by the JAX function.
-  """
+    It wraps `fn` with `jax.vjp` to compute both the output and residuals (intermediate
+    activations). The wrapped function is then run via `call_jax` and integrated into
+    the PyTorch autograd framework by saving the residuals into the context object.
+    """
 
   @wraps(fn)
   def inner(*args, **kwargs):
@@ -361,50 +333,11 @@ def wrap_jax_jit(torch_function, jax_jit_func=jax.jit, kwargs_for_jax=None):
 def jax_jit(torch_function,
             kwargs_for_jax_jit=None,
             fix_for_buffer_donation=False):
-  """A decorator that applies `jax.jit` to a PyTorch function.
-
-  **Arguments:**
-
-  *   `torch_function`: The PyTorch function to be JIT-compiled.
-  *   `kwargs_for_jax_jit` (`dict`, optional): A dictionary of keyword arguments to pass to `jax.jit`.
-  *   `fix_for_buffer_donation` (`bool`, optional): A flag to enable a workaround for buffer donation issues.
-
-  **Returns:**
-
-  A JIT-compiled version of the PyTorch function.
-
-  **Usage:**
-
-  ```python
-  import torch
-  import torchax
-  from torchax.interop import jax_jit
-
-  @jax_jit
-  def my_function(x, y):
-      return torch.sin(x) + torch.cos(y)
-
-  x = torch.randn(5, 10, device='jax')
-  y = torch.randn(5, 10, device='jax')
-  result = my_function(x, y)
-  ```
-  """
   return wrap_jax_jit(
       torch_function, jax_jit_func=jax.jit, kwargs_for_jax=kwargs_for_jax_jit)
 
 
 def jax_shard_map(torch_function, kwargs_for_jax_shard_map=None):
-  """Applies `jax.experimental.shard_map` to a PyTorch function, allowing for data parallelism across multiple devices.
-
-  **Arguments:**
-
-  *   `torch_function`: The PyTorch function to be sharded.
-  *   `kwargs_for_jax_shard_map` (`dict`, optional): A dictionary of keyword arguments to pass to `shard_map`.
-
-  **Returns:**
-
-  A sharded version of the PyTorch function.
-  """
   return wrap_jax_jit(
       torch_function,
       jax_jit_func=shard_map,
@@ -412,17 +345,6 @@ def jax_shard_map(torch_function, kwargs_for_jax_shard_map=None):
 
 
 def jax_value_and_grad(torch_function, kwargs_for_value_and_grad=None):
-  """Applies `jax.value_and_grad` to a PyTorch function.
-
-  **Arguments:**
-
-  *   `torch_function`: The PyTorch function.
-  *   `kwargs_for_value_and_grad` (`dict`, optional): A dictionary of keyword arguments to pass to `jax.value_and_grad`.
-
-  **Returns:**
-
-  A function that computes both the value and the gradient of the input `torch_function`.
-  """
   return wrap_jax_jit(
       torch_function,
       jax_jit_func=jax.value_and_grad,
@@ -430,16 +352,5 @@ def jax_value_and_grad(torch_function, kwargs_for_value_and_grad=None):
 
 
 def gradient_checkpoint(torch_function, kwargs=None):
-  """Applies `jax.checkpoint` to a PyTorch function. This is useful for reducing memory usage during training by recomputing intermediate activations during the backward pass instead of storing them.
-
-  **Arguments:**
-
-  *   `torch_function`: The PyTorch function to checkpoint.
-  *   `kwargs` (`dict`, optional): A dictionary of keyword arguments to pass to `jax.checkpoint`.
-
-  **Returns:**
-
-  A checkpointed version of the PyTorch function.
-  """
   return wrap_jax_jit(
       torch_function, jax_jit_func=jax.checkpoint, kwargs_for_jax=kwargs)
