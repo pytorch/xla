@@ -487,7 +487,8 @@ setup(
         'torch_xla': [
             'lib/*.so*',
             'py.typed',
-        ],    },
+        ],
+    },
     entry_points={
         'console_scripts': [
             'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
