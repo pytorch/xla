@@ -15,6 +15,8 @@ __all__ = [
     'default_env',
     'extract_jax',
     'enable_globally',
+    'enable_performance_mode',
+    'enable_accuracy_mode',
 ]
 
 from jax._src import xla_bridge
@@ -40,7 +42,7 @@ def default_env():
 
 
 def extract_jax(mod: torch.nn.Module, env=None):
-  """Extracts the state of a `torch.nn.Module` into a JAX-compatible format.
+  """Extracts `torch.nn.Module` into a (pytree, function) pair.
 
   **Arguments:**
 
@@ -83,7 +85,10 @@ def extract_jax(mod: torch.nn.Module, env=None):
 
 
 def enable_globally():
-  """Enables `torchax` globally, which intercepts PyTorch operations and routes them to the JAX backend. This is the primary entry point for using `torchax`.
+  """Enables `torchax` globally.
+  
+  This which intercepts PyTorch operations and routes them to 
+  the JAX backend. This is the primary entry point for using `torchax`.
 
   **Usage:**
 
@@ -98,7 +103,9 @@ def enable_globally():
 
 
 def disable_globally():
-  """Disables the `torchax` backend. After calling this, PyTorch operations will revert to their default behavior.
+  """Disables the `torchax` backend. 
+  
+  After calling this, PyTorch operations will revert to their default behavior.
 
   **Usage:**
 
