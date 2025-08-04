@@ -141,6 +141,11 @@ class XlaNode : public torch::lazy::Node {
     return output_shardings_[index];
   }
 
+  const std::vector<std::shared_ptr<torch_xla::OpSharding>> GetShardings()
+      const {
+    return output_shardings_;
+  }
+
   void SetSharding(const torch_xla::OpSharding& sharding, size_t index);
 
   void ClearSharding() {

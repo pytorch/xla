@@ -238,6 +238,18 @@ xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
   return it->second;
 }
 
+void LoweringContext::ExtractShardingAndSetDenormalizedTileAssignments(
+    std::vector<std::shared_ptr<torch_xla::OpSharding>> shardings) {
+  for (auto sharding : shardings) {
+    std::vector<int64_t> denormalized_tile_assignment =
+        sharding->GetDenormalizedTileAssignment();
+    if (!denormalized_tile_assignment.empty()) {
+      denormalized_tile_assignments_.push_back(
+          sharding->GetDenormalizedTileAssignment());
+    }
+  }
+}
+
 XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node& node) {
   XlaOpVector result_ops;
   try {
@@ -245,6 +257,12 @@ XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node& node) {
     const XlaNode* const casted = dynamic_cast<const XlaNode*>(&node);
 
     result_ops = casted->Lower(this);
+    // save the denormalized_tile_assignment from all nodes and then use it
+    // during Compile
+    auto shardings = casted->GetShardings();
+    if (!shardings.empty()) {
+      ExtractShardingAndSetDenormalizedTileAssignments(shardings);
+    }
     if (!casted->dynamic_dims().empty()) {
       const xla::internal::XlaBuilderFriend builder_friend;
       auto* const inst = builder_friend.GetInstruction(result_ops[0]);
