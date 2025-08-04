@@ -95,7 +95,8 @@ class ShardingUtil {
   static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
       const std::vector<xla::Shape>& output_shapes,
       runtime::ComputationClient::ComputationPtr computation,
-      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
+      std::optional<std::vector<int64_t>> denormalized_tile_assignment =
+          std::nullopt);
 
   // Create sharded data placeholders, each corresponding to the individual
   // sharding spec from the input list
@@ -112,7 +113,9 @@ class ShardingUtil {
       std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
       runtime::ComputationClient::ComputationPtr computation,
       std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
-      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
+      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs,
+      std::optional<std::vector<int64_t>> denormalized_tile_assignment =
+          std::nullopt);
 
   // Transfers the individual shards to the devices and returns a DataPtr for
   // the PjRtShardedData wrapping the shards.

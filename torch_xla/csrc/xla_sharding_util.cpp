@@ -386,9 +386,8 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
     }
   } else if (sharding.type() == xla::OpSharding::OTHER) {
     auto device_index = build_index_map(devices);
-    std::vector<int64_t> tile_assignment_devices(
-        sharding.tile_assignment_devices().begin(),
-        sharding.tile_assignment_devices().end());
+    std::vector<int64_t> tile_assignment_devices =
+        sharding.GetDenormalizedTileAssignment();
     if (!sharding.iota_reshape_dims().empty()) {
       auto tileAssignment = xla::TileAssignment(
           sharding.tile_assignment_dimensions(), sharding.iota_reshape_dims(),
@@ -508,7 +507,7 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
 std::vector<XLATensor::ShardingSpecPtr> ShardingUtil::GetOutputSharding(
     const std::vector<xla::Shape>& output_shapes,
     runtime::ComputationClient::ComputationPtr computation,
-    std::vector<XLATensor::ShardingSpecPtr>* sharding_specs_) {
+    std::optional<std::vector<int64_t>> denormalized_tile_assignment) {
   const auto& computation_proto = computation->computation().proto();
   size_t num_outputs = output_shapes.size();
   std::vector<xla::OpSharding> xla_output_shardings;
@@ -534,14 +533,12 @@ std::vector<XLATensor::ShardingSpecPtr> ShardingUtil::GetOutputSharding(
   }
 
   for (const auto& sharding : xla_output_shardings) {
-    if (sharding_specs_ && !sharding_specs_->empty() && (*sharding_specs_)[0]) {
-      std::vector<int64_t> denormalized_tile_assignment =
-          (*sharding_specs_)[0]->sharding.GetDenormalizedTileAssignment();
-      output_shardings.emplace_back(sharding, denormalized_tile_assignment);
+    if ((denormalized_tile_assignment.has_value()) &&
+        (!denormalized_tile_assignment.value().empty())) {
+      output_shardings.emplace_back(sharding,
+                                    denormalized_tile_assignment.value());
     } else {
-      std::optional<std::vector<int64_t>> denormalized_tile_assignment =
-          std::nullopt;
-      output_shardings.emplace_back(sharding, denormalized_tile_assignment);
+      output_shardings.emplace_back(sharding, std::nullopt);
     }
   }
 
@@ -576,7 +573,8 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
     runtime::ComputationClient::ComputationPtr computation,
     std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
-    std::vector<XLATensor::ShardingSpecPtr>* sharding_specs) {
+    std::vector<XLATensor::ShardingSpecPtr>* sharding_specs,
+    std::optional<std::vector<int64_t>> denormalized_tile_assignment) {
   // Resizes the containers to `indices.size()`.
   data_placeholders->resize(indices.size());
   sharding_specs->resize(indices.size());
@@ -587,8 +585,8 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     auto xtensor = (*tensors)[indices[i]];
     output_shapes.push_back(xtensor->shape().get());
   }
-  auto new_sharding_specs =
-      GetOutputSharding(output_shapes, computation, sharding_specs);
+  auto new_sharding_specs = GetOutputSharding(output_shapes, computation,
+                                              denormalized_tile_assignment);
   XLA_CHECK(indices.size() == new_sharding_specs.size())
       << "Expected size: " << indices.size()
       << ", actual size: " << new_sharding_specs.size();

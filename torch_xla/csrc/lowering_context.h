@@ -117,6 +117,14 @@ class LoweringContext : public torch::lazy::LoweringContext {
   int64_t AddStackFrameLocation(const torch::lazy::SourceLocation& source,
                                 int64_t parent_id);
 
+  void ExtractShardingAndSetDenormalizedTileAssignments(
+      std::vector<std::shared_ptr<torch_xla::OpSharding>>);
+
+  const std::vector<std::vector<int64_t>>& GetDenormalizedTileAssignments()
+      const {
+    return denormalized_tile_assignments_;
+  }
+
  private:
   struct Parameter {
     xla::XlaOp param;
@@ -135,6 +143,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
   std::string name_;
 
   std::shared_ptr<StackFrameIndexBuilder> stack_frame_index_builder_;
+  std::vector<std::vector<int64_t>> denormalized_tile_assignments_;
 };  // namespace torch_xla
 
 }  // namespace torch_xla
