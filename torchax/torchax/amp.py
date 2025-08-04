@@ -57,19 +57,6 @@ def execute_policy(policy, args, kwargs, target_lower_fp):
 
 @contextlib.contextmanager
 def autocast(device, dtype=torch.bfloat16, env=None):
-  """A context manager for automatic mixed precision (AMP).
-
-  This context manager enables automatic mixed precision, which can improve
-  performance by using lower-precision data types for certain operations.
-
-  **Arguments:**
-
-  *   `device`: The device to use for autocasting (e.g., "cuda", "cpu").
-  *   `dtype` (`torch.dtype`, optional): The lower-precision data type to use.
-      Defaults to `torch.bfloat16`.
-  *   `env` (optional): The `torchax` environment. If not provided, the default
-      environment is used.
-  """
   del device
   if env is None:
     import torchax

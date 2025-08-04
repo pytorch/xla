@@ -8,21 +8,6 @@ import torch.utils._mode_utils as mode_utils
 
 
 def t2j(t, use_dlpack=True):
-  """Converts a `torch.Tensor` to a `jax.Array`.
-
-  This function handles the conversion of a PyTorch tensor to a JAX array,
-  with an option to use DLPack for zero-copy conversion where possible.
-
-  **Arguments:**
-
-  *   `t` (`torch.Tensor`): The PyTorch tensor to convert.
-  *   `use_dlpack` (`bool`, optional): If `True`, attempts to use DLPack for
-      zero-copy conversion. Defaults to `True`.
-
-  **Returns:**
-
-  A `jax.Array` that is equivalent to the input tensor.
-  """
   is_bool = False
   if t.dtype == torch.bool:
     is_bool = True
@@ -58,21 +43,6 @@ def t2j(t, use_dlpack=True):
 
 
 def j2t(x, use_dlpack=True):
-  """Converts a `jax.Array` to a `torch.Tensor`.
-
-  This function handles the conversion of a JAX array to a PyTorch tensor,
-  with an option to use DLPack for zero-copy conversion where possible.
-
-  **Arguments:**
-
-  *   `x` (`jax.Array`): The JAX array to convert.
-  *   `use_dlpack` (`bool`, optional): If `True`, attempts to use DLPack for
-      zero-copy conversion. Defaults to `True`.
-
-  **Returns:**
-
-  A `torch.Tensor` that is equivalent to the input array.
-  """
   with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
     res = None
     if use_dlpack:
@@ -156,7 +126,6 @@ JAX_DTYPE_TO_TORCH[jnp.dtype('uint4')] = torch.uint8
 
 
 def t2j_dtype(dtype):
-  """Converts a `torch.dtype` to a JAX dtype."""
   if dtype not in TORCH_DTYPE_TO_JAX:
     raise RuntimeError(
         f'Attempting to convert unknown type: {dtype} to jax type,')
@@ -164,7 +133,6 @@ def t2j_dtype(dtype):
 
 
 def j2t_dtype(dtype):
-  """Converts a JAX dtype to a `torch.dtype`."""
   if dtype not in JAX_DTYPE_TO_TORCH:
     raise RuntimeError(
         f'Attempting to convert unknown type: {dtype} to torch type,')

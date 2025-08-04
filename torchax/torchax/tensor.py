@@ -38,18 +38,6 @@ log_nested.level = 0
 
 
 class Tensor(torch.Tensor):
-  """A `torch.Tensor` subclass that wraps a `jax.Array`.
-
-  This class is the core of `torchax`, allowing PyTorch operations to be
-  dispatched to JAX. It holds a `jax.Array` internally and overrides
-  the necessary methods to ensure that operations are correctly routed
-  through the `torchax` dispatch mechanism.
-
-  **Attributes:**
-
-  *   `_elem` (`jax.Array`): The underlying JAX array.
-  *   `_env` (`Environment`): The `torchax` environment this tensor belongs to.
-  """
 
   @staticmethod
   def __new__(cls, elem, env, requires_grad=False):
@@ -125,21 +113,17 @@ class Tensor(torch.Tensor):
         'call torchax.enable_globally() before.')
 
   def detach(self):
-    """Detaches the tensor from the computation graph."""
     return Tensor(jax.lax.stop_gradient(self.jax()), self._env)
 
   def numpy(self) -> numpy.ndarray:
-    """Converts the tensor to a NumPy array."""
     import numpy as np
 
     return np.array(self._elem)
 
   def jax(self) -> jax.Array:
-    """Returns the underlying `jax.Array`."""
     return self._elem
 
   def torch(self) -> torch.Tensor:
-    """Converts the tensor to a standard `torch.Tensor`."""
     return self._env.j2t_copy(self.jax())
 
   @property
@@ -169,22 +153,18 @@ class Tensor(torch.Tensor):
       self._elem = other._elem
 
   def apply_jax(self, jax_function, *args, **kwargs):
-    """Applies a JAX function to the underlying `jax.Array`."""
     # Call a jax function on _elem
     res = jax_function(self._elem, *args, **kwargs)
     return self._env.j2t_iso(res)
 
   def apply_jax_(self, jax_function, *args, **kwargs):
-    """Applies a JAX function in-place to the underlying `jax.Array`."""
     self._elem = jax_function(self._elem, *args, **kwargs)
     return self
 
   def tolist(self):
-    """Converts the tensor to a list."""
     return self._elem.tolist()
 
   def shard_(self, sharding):
-    """Applies a sharding constraint to the tensor in-place."""
     self.apply_jax_(jax.lax.with_sharding_constraint, sharding)
 
 
@@ -267,8 +247,6 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
 
 
 class XLADispatchMode(torch_dispatch.TorchDispatchMode):
-  """A `TorchDispatchMode` that intercepts PyTorch operations and dispatches them to the JAX backend through the `Environment`.
-  """
 
   def __init__(self, env):
     self.env = env
@@ -351,12 +329,16 @@ class OverrideProperty(RuntimeProperty):
 
 
 class Environment(contextlib.ContextDecorator):
-  """Manages the execution environment for `torchax`.
+  """This class holds a set of configurations and "globals" needed
 
-  This class holds the configuration, operator registry, PRNG key, and other
-  "global" state needed to execute PyTorch programs using the JAX backend.
-  It also provides helper functions for dispatching operations and converting
-  tensors between PyTorch and JAX representations.
+  for executing torch program using jax.
+  Things included so far:
+
+  op registry
+  PRNGKey
+  Configs
+
+  Also helper functions to manipulate those.
   """
 
   def __init__(self, configuration=None):
@@ -388,7 +370,6 @@ class Environment(contextlib.ContextDecorator):
     return self._property.content[-1]
 
   def manual_seed(self, key):
-    """Sets the seed for the JAX random number generator."""
     jax_key = jax.random.PRNGKey(key)
     new_prop = self.param.override(prng=jax_key)
     self._property.content.append(new_prop)
@@ -541,7 +522,6 @@ class Environment(contextlib.ContextDecorator):
     return self._to_copy(the_tensor, dtype, device)
 
   def dispatch(self, func, types, args, kwargs):
-    """Dispatches a PyTorch operation to the appropriate JAX implementation."""
     kwargs = kwargs or {}
     if func in TENSOR_CONSTRUCTORS:
       return self._handle_tensor_constructor(func, args, kwargs)
@@ -620,13 +600,11 @@ class Environment(contextlib.ContextDecorator):
       return res
 
   def enable_torch_modes(self):
-    """Enables the `torchax` dispatch modes."""
     self._dispatch_mode.__enter__()
     self._function_mode.__enter__()
     self.enabled = True
 
   def disable_torch_modes(self, *exc):
-    """Disables the `torchax` dispatch modes."""
     if not exc:
       exc = (None, None, None)
     self._function_mode.__exit__(*exc)
@@ -656,12 +634,10 @@ class Environment(contextlib.ContextDecorator):
     return res
 
   def t2j_iso(self, torchtensors):
-    """Converts `torchax.Tensor`s to `jax.Array`s without copying.
-
-    This function unwraps the underlying `jax.Array` from each `torchax.Tensor`
-    in the input pytree.
-
-    Note: "iso" is short for "isomorphic".
+    """Convert torchax Tensor to jax array.
+    
+    This function will not copy, will just unwrap the inner jax array out.
+    Note: iso is short for "isomorphic"
     """
 
     def to_jax(x):
@@ -681,7 +657,6 @@ class Environment(contextlib.ContextDecorator):
     return res
 
   def v2t_iso(self, views):
-    """Converts `torchax.View`s to `torchax.Tensor`s without copying."""
 
     def to_tensor(x):
       if isinstance(x, View):
@@ -692,18 +667,18 @@ class Environment(contextlib.ContextDecorator):
     return res
 
   def j2t_iso(self, jaxarray):
-    """Converts `jax.Array`s to `torchax.Tensor`s without copying.
-
-    This function wraps each `jax.Array` in the input pytree with a
-    `torchax.Tensor`.
-
-    Note: "iso" is short for "isomorphic".
+    """Convert jax array to torchax Tensor.
+    
+    This function will not copy, will just wrap the jax array with a torchax Tensor
+    Note: iso is short for "isomorphic"
     """
     return torch_pytree.tree_map_only(jax.Array, lambda x: Tensor(x, self),
                                       jaxarray)
 
   def j2t_copy(self, args):
-    """Converts `jax.Array`s to `torch.Tensor`s on the CPU, potentially copying the data.
+    """Convert torch.Tensor in cpu to a jax array
+    
+    This might involves copying the data (depending if dlpack is enabled)
     """
     return torch_pytree.tree_map_only(
         jax.Array,
@@ -711,7 +686,9 @@ class Environment(contextlib.ContextDecorator):
         args)
 
   def t2j_copy(self, args):
-    """Converts `torch.Tensor`s to `jax.Array`s, potentially copying the data.
+    """Convert jax array to torch.Tensor in cpu.
+    
+    This might involves copying the data (depending if dlpack is enabled)
     """
     return torch_pytree.tree_map_only(
         torch.Tensor,
@@ -719,7 +696,6 @@ class Environment(contextlib.ContextDecorator):
         args)
 
   def override_op_definition(self, op_to_override, op_impl):
-    """Overrides the implementation of a PyTorch operator."""
     self._ops[op_to_override] = ops_registry.Operator(
         op_to_override,
         op_impl,
@@ -730,7 +706,6 @@ class Environment(contextlib.ContextDecorator):
 
   @contextlib.contextmanager
   def override_property(self, **kwargs):
-    """A context manager to temporarily override properties of the environment."""
     new_prop = self.param.override(**kwargs)
     self._property.content.append(new_prop)
     yield
