@@ -9,6 +9,21 @@ from torchax import export
 
 
 def exported_program_to_tf_function(ep, enable_xla=True):
+  """Converts a `torch.export.ExportedProgram` to a TensorFlow function.
+
+  This function takes a PyTorch `ExportedProgram`, converts it to a JAX program,
+  and then wraps it as a TensorFlow function using `jax2tf`.
+
+  **Arguments:**
+
+  *   `ep` (`torch.export.ExportedProgram`): The PyTorch `ExportedProgram` to convert.
+  *   `enable_xla` (`bool`, optional): Whether to enable XLA compilation for the
+      converted TensorFlow function. Defaults to `True`.
+
+  **Returns:**
+
+  A TensorFlow function that is equivalent to the input `ExportedProgram`.
+  """
   weights, jax_program = export.exported_program_to_jax(ep)
   wrapped = lambda *args: jax_program(weights, (args,))
   avals = export.extract_avals(ep)
@@ -30,6 +45,21 @@ def exported_program_to_tf_function(ep, enable_xla=True):
 
 def exported_program_to_tf_module(ep: torch.export.ExportedProgram,
                                   enable_xla=True) -> tf.Module:
+  """Converts a `torch.export.ExportedProgram` to a `tf.Module`.
+
+  This function wraps the TensorFlow function created by
+  `exported_program_to_tf_function` in a `tf.Module` for easier use and saving.
+
+  **Arguments:**
+
+  *   `ep` (`torch.export.ExportedProgram`): The PyTorch `ExportedProgram` to convert.
+  *   `enable_xla` (`bool`, optional): Whether to enable XLA compilation. Defaults
+      to `True`.
+
+  **Returns:**
+
+  A `tf.Module` containing the converted TensorFlow function.
+  """
   tfm = tf.Module()
   tfm.f = exported_program_to_tf_function(ep, enable_xla)
   return tfm
@@ -42,22 +72,23 @@ def save_exported_program_as_tf_saved_model(
     function_alias: str = "",
     enable_xla=True,
 ):
-  """This function will export and save a pytorch ExportedProgram to tf.saved_model format.
+  """Exports and saves a PyTorch `ExportedProgram` to the TensorFlow SavedModel format.
 
-  The resulting tf.saved_model can be used inference using tf.serving model
-  server
-  or further convert to tflite flatbuffer for on-device serving.
+  The resulting SavedModel can be used for inference with TensorFlow Serving or
+  further converted to TFLite for on-device deployment.
 
-  Args:
-    torch_model: torch.nn.Module - model to export and save
-    args: Tuple[Any] - a set of args to trace the model with, i.e.
-      torch_model(*args) must run
-    saved_model_dir: os.PathLike - location to an empty directory to store the
-      saved_model
-    serving_key: str  - serving key tag, this is used by tf.serving to know
-      which function to run.
-    function_alias: str - passed through saved_model.save, used to tag a
-      function for inference converter or other tools.
+  **Arguments:**
+
+  *   `ep` (`torch.export.ExportedProgram`): The PyTorch `ExportedProgram` to save.
+  *   `saved_model_dir` (`os.PathLike`): The path to an empty directory where the
+      SavedModel will be stored.
+  *   `serving_key` (`str`, optional): The serving key to use for the signature
+      definition. This is used by TensorFlow Serving to identify the function
+      to run. Defaults to `tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY`.
+  *   `function_alias` (`str`, optional): An alias for the function, which can be
+      used by other tools.
+  *   `enable_xla` (`bool`, optional): Whether to enable XLA compilation. Defaults
+      to `True`.
   """
   tfm = exported_program_to_tf_module(ep, enable_xla=enable_xla)
   signatures = {
@@ -82,22 +113,22 @@ def save_torch_module_as_tf_saved_model(
     function_alias: str = "",
     enable_xla=True,
 ):
-  """This function will export and save a pytorch nn.Module to tf.saved_model format.
+  """Exports and saves a `torch.nn.Module` to the TensorFlow SavedModel format.
 
-  The resulting tf.saved_model can be used inference using tf.serving model
-  server
-  or further convert to tflite flatbuffer for on-device serving.
+  This function first exports the `torch.nn.Module` to an `ExportedProgram`
+  and then saves it as a SavedModel.
 
-  Args:
-    torch_model: torch.nn.Module - model to export and save
-    args: Tuple[Any] - a set of args to trace the model with, i.e.
-      torch_model(*args) must run
-    saved_model_dir: os.PathLike - location to an empty directory to store the
-      saved_model
-    serving_key: str  - serving key tag, this is used by tf.serving to know
-      which function to run.
-    function_alias: str - passed through saved_model.save, used to tag a
-      function for inference converter or other tools.
+  **Arguments:**
+
+  *   `torch_model` (`torch.nn.Module`): The PyTorch model to export and save.
+  *   `args` (`Tuple[Any]`): A tuple of arguments to trace the model with (i.e.,
+      `torch_model(*args)` must be a valid call).
+  *   `saved_model_dir` (`os.PathLike`): The path to an empty directory where the
+      SavedModel will be stored.
+  *   `serving_key` (`str`, optional): The serving key for the signature
+      definition.
+  *   `function_alias` (`str`, optional): An alias for the function.
+  *   `enable_xla` (`bool`, optional): Whether to enable XLA compilation.
   """
   ep = torch.export.export(torch_model, args)
   save_exported_program_as_tf_saved_model(ep, saved_model_dir, serving_key,
@@ -105,6 +136,16 @@ def save_torch_module_as_tf_saved_model(
 
 
 def exported_program_to_tflite_flatbuffer(ep: torch.export.ExportedProgram):
+  """Converts a `torch.export.ExportedProgram` to a TFLite flatbuffer.
+
+  **Arguments:**
+
+  *   `ep` (`torch.export.ExportedProgram`): The PyTorch `ExportedProgram` to convert.
+
+  **Returns:**
+
+  A TFLite flatbuffer model.
+  """
   tfm = exported_program_to_tf_module(ep)
   tf_concrete_func = tfm.f.get_concrete_function(*tfm.f.input_signature)
   converter = tf.lite.TFLiteConverter.from_concrete_functions(
@@ -115,5 +156,16 @@ def exported_program_to_tflite_flatbuffer(ep: torch.export.ExportedProgram):
 
 def torch_module_to_tflite_flatbuffer(torch_model: torch.nn.Module,
                                       args: Tuple[Any]):
+  """Converts a `torch.nn.Module` to a TFLite flatbuffer.
+
+  **Arguments:**
+
+  *   `torch_model` (`torch.nn.Module`): The PyTorch model to convert.
+  *   `args` (`Tuple[Any]`): A tuple of arguments to trace the model with.
+
+  **Returns:**
+
+  A TFLite flatbuffer model.
+  """
   ep = torch.export.export(torch_model, args)
   return exported_program_to_tflite_flatbuffer(ep)

@@ -1,10 +1,10 @@
-"""This file contains some decompositons that are not available in torch stable.
+"""This file contains PyTorch operator decompositions that are not available in
+the stable version of PyTorch.
 
-Most likely from Content of
-https://github.com/pytorch/pytorch/blob/main/torch/_decomp/decompositions.py
-at main branch HEAD that we find useful here.
-
-Can also contain decompositions of a torch op in terms of other torch ops.
+The decompositions are primarily sourced from the `main` branch of the PyTorch
+repository and are included here to provide support for newer operators. This
+module can also contain decompositions of a PyTorch op in terms of other
+PyTorch ops.
 """
 
 import functools
@@ -104,6 +104,7 @@ _try_register(aten.replication_pad3d, _replication_pad)
 
 
 def bernoulli(self, *, generator=None):
+  """Decomposition for the `bernoulli` operator."""
   return (torch.rand_like(self, dtype=torch.float32) < self).to(self.dtype)
 
 
@@ -111,11 +112,13 @@ _try_register(aten.bernoulli.default, bernoulli)
 
 
 def rand_like(self, **kwargs):
+  """Decomposition for the `rand_like` operator."""
   dtype = kwargs.get("dtype", self.dtype)
   return torch.rand(self.shape, dtype=dtype)
 
 
 def channel_shuffle(self, groups):
+  """Decomposition for the `channel_shuffle` operator."""
   batchsize, channels, height, width = self.shape
   channels_per_group = channels // groups
   self = self.reshape(batchsize, groups, channels_per_group, height, width)
@@ -131,6 +134,7 @@ _try_register(aten.rand_like, rand_like)
 
 
 def bernoulli_float(self, p=0.5):
+  """Decomposition for the `bernoulli_` operator with a float probability."""
   return self.bernoulli_(p)
 
 
@@ -150,9 +154,10 @@ def _grid_sampler_3d(
     padding_mode: int = 0,
     align_corners: bool = False,
 ) -> Tensor:
-  """References: https://github.com/pytorch/pytorch/blob/06a7dc21c1005750598c37f3adbc031183c74de6/torch/_decomp/decompositions.py#L4075
+  """Decomposition for the `grid_sampler_3d` operator.
 
-  The above implement the 2d case.
+  This implementation is based on the 2D version in the PyTorch repository:
+  https://github.com/pytorch/pytorch/blob/06a7dc21c1005750598c37f3adbc031183c74de6/torch/_decomp/decompositions.py#L4075
   """
   _expand_grid = False
   torch._check(

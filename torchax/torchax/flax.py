@@ -6,8 +6,32 @@ import torchax.interop
 
 
 class FlaxNNModule(torch.nn.Module):
+  """A `torch.nn.Module` that wraps a Flax module for interoperability.
+
+  This class allows you to use a Flax module within a PyTorch model. It
+  initializes the Flax module, extracts its parameters, and wraps them in a
+  `torch.nn.ParameterDict` so they can be managed by PyTorch. The `forward`
+  pass then calls the Flax module's `apply` method with the appropriate
+  parameters.
+
+  **Attributes:**
+
+  *   `_params` (`torch.nn.Module`): A nested `torch.nn.Module` that holds the
+      parameters of the Flax module.
+  *   `_flax_module`: The original Flax module.
+  """
 
   def __init__(self, env, flax_module, sample_args, sample_kwargs=None):
+    """Initializes the `FlaxNNModule`.
+
+    **Args:**
+
+    *   `env`: The `torchax` environment.
+    *   `flax_module`: The Flax module to wrap.
+    *   `sample_args`: A tuple of sample arguments to initialize the Flax module.
+    *   `sample_kwargs` (optional): A dictionary of sample keyword arguments to
+        initialize the Flax module.
+    """
     super().__init__()
     prng = env.prng_key
     sample_kwargs = sample_kwargs or {}
@@ -34,6 +58,7 @@ class FlaxNNModule(torch.nn.Module):
     return result
 
   def forward(self, *args, **kwargs):
+    """Performs the forward pass by calling the wrapped Flax module."""
     nested_dict_params = self._decode_nested_dict(self._params)
     return tx.interop.call_jax(self._flax_module.apply, nested_dict_params,
                                *args, **kwargs)

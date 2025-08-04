@@ -16,7 +16,13 @@ DEBUG = False
 
 
 class JaxInterpreter(torch.fx.Interpreter):
-  """Experimental."""
+  """An `fx.Interpreter` that executes a PyTorch FX graph using JAX.
+
+  This interpreter traverses an FX graph and replaces PyTorch operations with
+  their corresponding JAX implementations from the `torchax` operator registry.
+  It is a key component in the process of exporting PyTorch models to JAX and
+  StableHLO.
+  """
 
   def __init__(self, graph_module):
     super().__init__(graph_module)
@@ -74,11 +80,24 @@ def _extract_states_from_exported_program(exported_model):
 
 
 def exported_program_to_jax(exported_program, export_raw: bool = False):
-  """returns a pytree of jax arrays(state), and
+  """Converts a `torch.export.ExportedProgram` to a JAX-compatible function and state.
 
-  a callable(func) that is jax function.
+  This function takes a PyTorch `ExportedProgram`, runs the necessary
+  decompositions, and returns a JAX-compatible function and the model's state
+  (parameters and buffers) as JAX arrays.
 
-  func(state, input) would be how you call it.
+  **Arguments:**
+
+  *   `exported_program` (`torch.export.ExportedProgram`): The PyTorch
+      `ExportedProgram` to convert.
+  *   `export_raw` (`bool`, optional): If `True`, returns the raw states and
+      function without converting them to JAX arrays. Defaults to `False`.
+
+  **Returns:**
+
+  A tuple containing:
+  *   A pytree of JAX arrays representing the model's state.
+  *   A JAX-callable function that takes the state and inputs as arguments.
   """
   if torch.__version__ >= '2.2':
     # torch version 2.1 didn't expose this yet
@@ -115,8 +134,19 @@ def exported_program_to_jax(exported_program, export_raw: bool = False):
 
 
 def extract_avals(exported):
-  """Return JAX Abstract Value shapes for all input parameters of the exported
-  program. This supports dynamic batch dimensions, including with constraints.
+  """Returns JAX abstract values (`ShapeDtypeStruct`) for all input parameters of the exported program.
+
+  This function supports dynamic batch dimensions, including those with
+  constraints.
+
+  **Arguments:**
+
+  *   `exported` (`torch.export.ExportedProgram`): The exported PyTorch program.
+
+  **Returns:**
+
+  A list of `jax.ShapeDtypeStruct` objects representing the abstract values of
+  the input parameters.
   """
 
   def _to_aval(arg_meta, symbolic_shapes):
@@ -232,12 +262,24 @@ def extract_avals(exported):
 
 
 def exported_program_to_stablehlo(exported_program):
-  """Replacement for torch_xla.stablehlo.exported_program_to_stablehlo
+  """Converts a `torch.export.ExportedProgram` to StableHLO.
 
-  Convert a program exported via torch.export to StableHLO.
+  This function serves as a replacement for
+  `torch_xla.stablehlo.exported_program_to_stablehlo`. It supports dynamic
+  dimension sizes and generates explicit checks for Dynamo guards in the IR
+  using `shape_assertion` custom calls.
 
-  This supports dynamic dimension sizes and generates explicit checks for
-  dynamo guards in the IR using shape_assertion custom_call ops.
+  **Arguments:**
+
+  *   `exported_program` (`torch.export.ExportedProgram`): The exported PyTorch
+      program.
+
+  **Returns:**
+
+  A tuple containing:
+  *   The model's state (weights) as a pytree of JAX arrays.
+  *   A `jax.export.Exported` object containing the StableHLO representation of
+      the model.
   """
   weights, func = exported_program_to_jax(exported_program)
   jax_avals = extract_avals(exported_program)
