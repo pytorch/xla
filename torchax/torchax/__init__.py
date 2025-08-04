@@ -40,7 +40,30 @@ def default_env():
 
 
 def extract_jax(mod: torch.nn.Module, env=None):
-  """Returns a pytree of jax.ndarray and a jax callable."""
+  """Extracts the state of a `torch.nn.Module` into a JAX-compatible format.
+
+  **Arguments:**
+
+  *   `mod` (`torch.nn.Module`): The PyTorch model to extract the state from.
+  *   `env` (optional): The `torchax` environment to use. If not provided, the default environment is used.
+
+  **Returns:**
+
+  A tuple containing:
+
+  *   A `pytree` of `jax.ndarray` representing the model's state (parameters and buffers).
+  *   A JAX-callable function that executes the model's forward pass.
+
+  **Usage:**
+
+  ```python
+  import torch
+  import torchax
+
+  model = torch.nn.Linear(10, 20)
+  states, jax_func = torchax.extract_jax(model)
+  ```
+  """
   if env is None:
     env = default_env()
   states = dict(mod.named_buffers())
@@ -60,11 +83,31 @@ def extract_jax(mod: torch.nn.Module, env=None):
 
 
 def enable_globally():
+  """Enables `torchax` globally, which intercepts PyTorch operations and routes them to the JAX backend. This is the primary entry point for using `torchax`.
+
+  **Usage:**
+
+  ```python
+  import torchax
+
+  torchax.enable_globally()
+  ```
+  """
   env = default_env().enable_torch_modes()
   return env
 
 
 def disable_globally():
+  """Disables the `torchax` backend. After calling this, PyTorch operations will revert to their default behavior.
+
+  **Usage:**
+
+  ```python
+  import torchax
+
+  torchax.disable_globally()
+  ```
+  """
   global env
   default_env().disable_torch_modes()
 
@@ -110,6 +153,40 @@ class CompileOptions:
 
 
 def compile(fn, options: Optional[CompileOptions] = None):
+  """Compiles a function or `torch.nn.Module` for optimized execution with JAX.
+
+  **Arguments:**
+
+  *   `fn`: The function or `torch.nn.Module` to compile.
+  *   `options` (`CompileOptions`, optional): A `CompileOptions` object to configure the compilation process.
+
+  **`CompileOptions`:**
+
+  *   `methods_to_compile` (`List[str]`, default=`['forward']`): A list of methods to compile when `fn` is a `torch.nn.Module`.
+  *   `jax_jit_kwargs` (`Dict[str, Any]`, default=`{}`): A dictionary of keyword arguments to pass to `jax.jit`.
+  *   `mode` (`str`, default=`'jax'`): The compilation mode. Currently, only `'jax'` is supported.
+
+  **Returns:**
+
+  A compiled version of the input function or module.
+
+  **Usage:**
+
+  ```python
+  import torch
+  import torchax
+
+  model = torch.nn.Linear(10, 20)
+  compiled_model = torchax.compile(model)
+
+  # With options
+  options = torchax.CompileOptions(
+      methods_to_compile=['forward', 'encode'],
+      jax_jit_kwargs={'static_argnums': (0,)}
+  )
+  compiled_model = torchax.compile(model, options)
+  ```
+  """
   options = options or CompileOptions()
   if options.mode == 'jax':
     from torchax import interop
