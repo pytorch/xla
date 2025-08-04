@@ -12,34 +12,21 @@ mark_sharding = torch_view(jax.lax.with_sharding_constraint)
 
 
 def make_train_step(model_fn, loss_fn, optax_optimizer, remat_policy=None):
-  """Creates a function that performs one training step.
+  """Make a function that do one train step given model and loss.
 
-  This function is designed to be used with JAX's `jit` for efficient training.
-  It takes a model function, a loss function, and an Optax optimizer, and
-  returns a function that computes the loss, calculates gradients, and updates
-  the model's weights.
-
-  **Arguments:**
-
-  *   `model_fn`: A function representing the model's forward pass. It should
-      have the signature `Callable[weights, buffers, args] -> result`, where:
-      *   `weights` is a pytree of trainable parameters.
-      *   `buffers` is a pytree of non-trainable parameters and constants.
-      *   `args` is the input data from the dataset.
-      *   `result` is the model's output.
-  *   `loss_fn`: A function to compute the loss. It should have the signature
-      `Callable[result, label] -> loss`, where:
-      *   `result` is the output of `model_fn`.
-      *   `label` is the ground truth from the dataloader.
-  *   `optax_optimizer`: An optimizer from the Optax library (e.g., `optax.adam`).
-  *   `remat_policy` (optional): A policy from `jax.ad_checkpoint.checkpoint_policies`
-      that specifies how to perform gradient checkpointing. If `None`, all
-      intermediate activations will be checkpointed.
-
-  **Returns:**
-
-  A function that performs one training step. It has the signature
-  `Callable[weights, buffers, opt_state, args, label] -> (loss, new_weights, new_opt_state)`.
+  model_fn: a function representing the model's forward:
+      i.e. has signature Callable[weights, buffers, args] -> result. Where,
+      weights is a pytree of trainable parameters
+      buffers is a pytree of non-trainable parameters / constants
+      args is the input data loaded from the data set
+      result is the return value of the model
+  loss_fn: a function to compute loss.
+      i.e. it has signature of Callable[result, label] -> loss
+      where, result is what model_fn returned
+        loss is loaded from the dataloader.
+  optax_optimizer: the optimizer from optax library. for example, optax.adam
+  remat_policy: One of jax.ad_checkpoint.checkpoint_policies, specifies how
+      to do gradient checkpointing. If None, then it means checkpoint everything.
   """
   env = torchax.default_env()
 
@@ -71,18 +58,6 @@ class Container:
 
 
 class ScannedModule(torch.nn.Module):
-  """A `torch.nn.Module` that applies a list of identical modules sequentially.
-
-  This module is designed to be used with `jax.lax.scan` for efficient
-  execution of repeated layers. It takes a list of modules, stacks their
-  weights, and applies the same module function to the input in a loop.
-
-  **Attributes:**
-
-  *   `checkpoint_policy`: The gradient checkpointing policy to use.
-  *   `params`: A `torch.nn.ParameterDict` containing the stacked weights of the
-      input modules.
-  """
 
   def __init__(self, module_list, checkpoint_policy=None):
     super().__init__()

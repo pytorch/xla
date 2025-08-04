@@ -12,21 +12,6 @@ from typing import Callable, Optional, ParamSpec, Concatenate
 
 
 class InplaceOp:
-  """A wrapper for creating in-place versions of functional operators.
-
-  This class takes a functional operator and creates an in-place version of it.
-  It handles the mutation of the input tensor, including the case where the
-  input is a `View`.
-
-  **Attributes:**
-
-  *   `functional`: The functional operator to wrap.
-  *   `replace` (`bool`): If `True`, the underlying `jax.Array` of the input
-      tensor is replaced with the new value. Otherwise, the new value is
-      copied into the input tensor.
-  *   `position_to_mutate` (`int`): The position of the argument to be mutated.
-  *   `is_jax_func` (`bool`): `True` if the functional operator is a JAX function.
-  """
 
   def __init__(self,
                functional_op,
@@ -66,11 +51,6 @@ class InplaceOp:
 
 
 class OutVariant:
-  """A wrapper for creating out-of-place versions of functional operators.
-
-  This class takes a functional operator and creates an out-of-place version
-  that writes the result to the `out` keyword argument.
-  """
 
   def __call__(self, *args, **kwargs):
     to_mutate = kwargs['out']
@@ -83,16 +63,13 @@ P = ParamSpec('P')
 
 
 def convert_dtype(use_default_dtype: bool = True):
-  """A decorator that converts the `dtype` kwarg of a function from `torch.dtype` to a JAX dtype.
+  """Converts `dtype` kwarg of function from torch to JAX.
 
-  **Args:**
+  Args:
+    use_default_dtype: Whether to use torch default dtype if none is provided.
 
-  *   `use_default_dtype` (`bool`): If `True`, uses the default PyTorch dtype if
-      no `dtype` is provided.
-
-  **Returns:**
-
-  A decorator that wraps a JAX implementation of a PyTorch function.
+  Returns:
+    A decorator that wraps a JAX implementation of a torch function.
   """
 
   def decorator(func: types.TorchCallable):
@@ -117,10 +94,9 @@ def convert_dtype(use_default_dtype: bool = True):
 
 def maybe_convert_constant_dtype(val: Optional[types.JaxValue],
                                  dtype: Optional[jnp.dtype]):
-  """Optionally converts the dtype of a scalar constant using NumPy.
+  """Optionally converts scalar constant's dtype using `numpy`
 
-  This function is useful in cases where you require a constant and cannot
-  handle a traced array.
+  Use in cases where you require a constant and can't handle a traced array.
   """
   if val and dtype:
     if isinstance(val, jax.Array):
@@ -132,7 +108,7 @@ def maybe_convert_constant_dtype(val: Optional[types.JaxValue],
 
 
 def promote_int_input(f: Callable[Concatenate[jax.Array, P], types.JaxValue]):
-  """A decorator that promotes the first integer input of a function to `float32`."""
+  """If the first argument is an int array, promote it to float32."""
 
   @functools.wraps(f)
   def wrapper(x: jax.Array, *args: P.args, **kwargs: P.kwargs):
@@ -147,11 +123,9 @@ def promote_int_input(f: Callable[Concatenate[jax.Array, P], types.JaxValue]):
 def foreach_loop(seq: jax.Array,
                  fn: Callable[[jax.Array, jax.Array], jax.Array],
                  init_val=0.0):
-  """Applies a function to each element of a 1D array.
+  """Run `fn` for each element of 1D array `seq`.
 
-  This function is similar to `functools.reduce`, but is implemented with
-  `jax.lax.fori_loop` for efficient execution on accelerators.
-  """
+  Similar to `functools.reduce`, but implemented with `jax.lax.fori_loop`."""
   assert len(seq.shape) == 1
   return jax.lax.fori_loop(0, len(seq), lambda i, carry: fn(carry, seq[i]),
                            init_val)

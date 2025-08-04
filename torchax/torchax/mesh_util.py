@@ -38,52 +38,46 @@ def _shard_first_multiple_of(axis_name, shape, multiple_of):
 
 
 class SingleAxisSharder:
-  """A callable object that generates `PartitionSpec`s for single-axis sharding.
+  """A callable object that generates PartitionSpecs for single-axis sharding.
 
-  This sharding strategy attempts to shard the *first* dimension of a tensor
+  This sharder strategy attempts to shard the *first* dimension of a tensor
   that is divisible by the specified `axis_size` along the given `axis_name`.
-  It's useful for simple 1D mesh sharding scenarios like FSDP, where parameters
+  It's useful for simple 1D mesh sharding scenarios like FSDP where parameters
   are typically sharded along one dimension.
 
-  **Attributes:**
-
-  *   `axis_name` (`str`): The name of the mesh axis to shard along.
-  *   `axis_size` (`int`): The size of the mesh axis (number of devices along
-      that axis).
-  *   `replicate_unshardable` (`bool`): If `True`, tensors that cannot be sharded
-      will be replicated.
+  Attributes:
+    axis_name: The name of the mesh axis to shard along.
+    axis_size: The size of the mesh axis (number of devices along that axis).
   """
 
   def __init__(self, axis_name, axis_size, replicate_unshardable=False):
-    """Initializes the `SingleAxisSharder`.
+    """Initializes the SingleAxisSharder.
 
-    **Args:**
-
-    *   `axis_name` (`str`): The name of the mesh axis (e.g., "fsdp", "data").
-    *   `axis_size` (`int`): The number of devices along the specified mesh axis.
-    *   `replicate_unshardable` (`bool`): If `True`, returns a replicated sharding
-        (`P()`) when no dimension is divisible by the axis size.
+    Args:
+      axis_name: The name of the mesh axis (e.g., "fsdp", "data").
+      axis_size: The number of devices along the specified mesh axis.
+      replicate_unshardable: indicate whether it should return replicated sharding
+        (P()) when none of the axis is divisible by the axis size.
     """
     self.axis_name = axis_name
     self.axis_size = axis_size
     self.replicate_unshardable = replicate_unshardable
 
   def __call__(self, name, shapedtype):
-    """Generates a `PartitionSpec` for a given tensor name and shaped type.
+    """Generates a PartitionSpec for a given tensor name and shaped type.
 
-    **Args:**
+    Args:
+      name: The name of the tensor (e.g., parameter name). This argument is
+        provided for compatibility with more complex sharders but is not used
+        by this simple sharder.
+      shapedtype: An object with a `.shape` attribute describing the tensor's shape,
+        and `.dtype` describing it's dtype. Example: jax.Array, jax.ShapeDtypeStruct
+        or a torch.Tensor)
 
-    *   `name` (`str`): The name of the tensor (e.g., parameter name). This
-        argument is provided for compatibility with more complex sharders but is
-        not used by this simple sharder.
-    *   `shapedtype`: An object with a `.shape` attribute describing the
-        tensor's shape, and a `.dtype` attribute describing its dtype (e.g.,
-        `jax.Array`, `jax.ShapeDtypeStruct`, or a `torch.Tensor`).
-
-    **Returns:**
-
-    A `jax.sharding.PartitionSpec` determined by finding the first dimension
-    in `shapedtype.shape` that is divisible by `self.axis_size`.
+    Returns:
+      A jax.sharding.PartitionSpec determined by finding the first dimension
+      in `shapedtype.shape` divisible by `self.axis_size` using the helper
+      `_shard_first_multiple_of`.
     """
     del name
     sharding = _shard_first_multiple_of(self.axis_name, shapedtype.shape,
@@ -97,38 +91,36 @@ class SingleAxisSharder:
 
 
 class Mesh:
-  """A helper class that wraps a `jax.sharding.Mesh` object.
+  """A helper class that wraps `jax.sharding.Mesh` object.
 
-  This class provides helper methods for sharding PyTorch tensors and models
-  across a JAX device mesh, simplifying the process of initializing models
-  directly into a sharded state.
+  The goal of this class is to provide helper methods that facilitate the
+  sharding of PyTorch tensors or models given a JAX device mesh configuration.
+  It simplifies initializing models directly into a sharded state.
 
-  **Attributes:**
-
-  *   `jax_mesh` (`jax.sharding.Mesh`): The underlying `jax.sharding.Mesh` object
-      that defines the device grid and axis names.
-  *   `_sharder`: The default sharding strategy callable (like
-      `SingleAxisSharder`) used to determine the `PartitionSpec` for each
-      parameter if not overridden.
+  Attributes:
+    jax_mesh: The underlying `jax.sharding.Mesh` object defining the device grid
+      and axis names.
+    _sharder: The default sharding strategy callable (like SingleAxisSharder)
+      used to determine the PartitionSpec for each parameter if not overridden
+      during method calls. Can be None if no default is appropriate or set.
   """
 
   @classmethod
   def fsdp_mesh(cls, axis_name="fsdp"):
-    """Creates a `Mesh` instance suitable for 1D FSDP-style sharding.
+    """Creates a Mesh instance suitable for 1D FSDP-style sharding.
 
-    This method creates a 1D mesh that encompasses all available XLA devices and
-    assigns the specified `axis_name` to this dimension. It then creates a
-    `Mesh` instance with a `SingleAxisSharder` configured for this 1D mesh.
+    This named constructor creates a 1D mesh encompassing all available XLA
+    devices. It assigns the specified `axis_name` to this single dimension.
+    It then creates a `Mesh` instance using this JAX mesh and a
+    `SingleAxisSharder` configured appropriately for this 1D mesh.
 
-    **Args:**
+    Args:
+      axis_name: The name to assign to the single mesh axis (default: "fsdp").
+        This name will be used by the default `SingleAxisSharder`.
 
-    *   `axis_name` (`str`, optional): The name to assign to the single mesh
-        axis. Defaults to `"fsdp"`.
-
-    **Returns:**
-
-    A `Mesh` instance configured with a 1D JAX mesh and a corresponding
-    `SingleAxisSharder`.
+    Returns:
+      A Mesh instance configured with a 1D JAX mesh across all devices and a
+      corresponding SingleAxisSharder.
     """
     ndevice = jax.device_count()
     jax_mesh = jax.make_mesh((ndevice,), (axis_name,))
@@ -136,16 +128,19 @@ class Mesh:
     return cls(jax_mesh, SingleAxisSharder(axis_name, ndevice, True))
 
   def __init__(self, jax_mesh, sharder=None):
-    """Initializes the `Mesh` helper.
+    """Initializes the Mesh helper.
 
-    **Args:**
-
-    *   `jax_mesh` (`jax.sharding.Mesh`): A pre-configured `jax.sharding.Mesh`
-        object that defines the physical device grid and logical axis names.
-    *   `sharder` (optional): A callable that takes `(name, shapedtype)` and
-        returns a `jax.sharding.PartitionSpec`. This serves as the default
-        sharding strategy. If `None`, and the provided `jax_mesh` has exactly
-        one axis, a `SingleAxisSharder` is created automatically.
+    Args:
+      jax_mesh: A pre-configured `jax.sharding.Mesh` object defining the
+        physical device grid and logical axis names.
+      sharder: An optional callable (e.g., an instance of SingleAxisSharder)
+        that takes (name, shapedtype) and returns a `jax.sharding.PartitionSpec`.
+        This serves as the default sharding strategy.
+        If None, and the provided `jax_mesh` has exactly one axis, a
+        `SingleAxisSharder` is created automatically for that single axis.
+        If None and the mesh has multiple axes, `_sharder` remains None, and
+        an `override_sharder` must be provided to methods like
+        `initialize_model_sharded`.
     """
     self.jax_mesh = jax_mesh
     if sharder is None:
@@ -161,24 +156,35 @@ class Mesh:
                                override_sharder=None):
     """Initializes a PyTorch model with its parameters sharded across the mesh.
 
-    This method initializes a `torch.nn.Module` such that its parameters are
-    created directly on the target devices according to the sharding
-    specifications derived from the mesh and the chosen sharder.
+    This method orchestrates the initialization of a `torch.nn.Module` such
+    that its parameters are created directly on the target devices according
+    to the sharding specifications derived from the mesh and the chosen sharder.
+    It leverages `torchax.interop.jax_jit` to achieve this.
 
-    **Args:**
-
-    *   `model_class`: The PyTorch model class (a subclass of `torch.nn.Module`).
-    *   `init_args`: A tuple of positional arguments for the `model_class.__init__`
-        method.
-    *   `init_kwargs` (optional): A dictionary of keyword arguments for the
+    Args:
+      model_class: The PyTorch model class (a subclass of `torch.nn.Module`).
+      init_args: A tuple containing the positional arguments required by the
         `model_class.__init__` method.
-    *   `override_sharder` (optional): A callable sharding strategy to use for
-        this initialization, which takes precedence over the default sharder.
+      init_kwargs: An optional dictionary containing the keyword arguments for
+        the `model_class.__init__` method. Defaults to None (treated as {}).
+      override_sharder: An optional callable sharding strategy to use
+        specifically for this initialization. If provided, it takes precedence
+        over the mesh's default `_sharder`. It must accept `(name, shapedtype)`
+        and return a `PartitionSpec`. If None, the mesh's default `_sharder`
+        is used.
 
-    **Returns:**
+    Returns:
+      An instance of `model_class` whose parameters have been initialized and
+      are represented by sharded tensors distributed across the devices in the
+      `jax_mesh`.
 
-    An instance of `model_class` with its parameters initialized and sharded
-    across the devices in the `jax_mesh`.
+    Raises:
+      ValueError: If no sharder is available (i.e., `override_sharder` is None
+        and the mesh's default `_sharder` is also None).
+      AssertionError: Can be raised by the sharder (e.g., `SingleAxisSharder`)
+        if it fails to determine a valid sharding for any parameter.
+      TypeError: If `shapedtype` passed to the sharder doesn't have a `.shape`.
+      Other errors from JAX JIT compilation or PyTorch model initialization.
     """
     init_kwargs = init_kwargs or {}
     with torch.device("meta"), torchax.disable_temporarily():
@@ -205,7 +211,6 @@ class Mesh:
     return model
 
   def shard_model(self, model, override_sharder=None):
-    """Shards the parameters of an existing model across the mesh."""
     sharder = override_sharder or self._sharder
     states = model.state_dict()
     output_shards = {
