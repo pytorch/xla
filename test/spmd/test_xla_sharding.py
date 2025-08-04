@@ -1622,8 +1622,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     mesh_shape = (1, self.n_devices)
     invalid_ids = np.arange(self.n_devices + 1, self.n_devices * 2 + 1)
 
-    with self.assertRaisesRegex(AssertionError,
-                                "Device IDs has to be subset of addressable_devices; got:*."):
+    with self.assertRaisesRegex(
+        AssertionError,
+        "Device IDs has to be subset of addressable_devices; got:*."):
       xs.Mesh(invalid_ids, mesh_shape)
 
   def test_mesh_size(self):
@@ -1647,7 +1648,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     mesh_shape = (1, partial_num_devices)
     with self.assertRaisesRegex(
         AssertionError,
-        "Number of device IDs .* must be less than the global number of devices"):
+        "Number of device IDs .* must be less than the global number of devices"
+    ):
       xs.Mesh(device_ids, mesh_shape)
 
   @unittest.skipIf(xr.global_runtime_device_count() == 1,

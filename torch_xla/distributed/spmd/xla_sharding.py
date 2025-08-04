@@ -96,8 +96,8 @@ class Mesh:
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
-    assert all(d < self.size() for d in device_ids - np.min(device_ids)), \
-        f"Length of device IDs must be less than mesh size ({self.size()}), got: {device_ids}"
+    assert len(self.device_ids) <= self.size(), \
+        f"Length of device IDs cannot be greater than mesh size ({self.size()}), got: {device_ids}"
     assert set(device_ids).issubset(set(np.arange(xr.addressable_runtime_device_count()))), \
         f"Device IDs has to be subset of addressable_devices; got: {device_ids} and {np.arange(xr.addressable_runtime_device_count())}"
 

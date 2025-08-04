@@ -868,6 +868,78 @@ PjRtComputationClient::ExecuteComputation(
   TF_VLOG(1) << "Returning " << datas.size() << " results";
   return datas;
 }
+namespace {
+// Add this function somewhere in the file (e.g., before ExecuteReplicated
+// function)
+void PrintArgumentHandles2D(
+    const std::vector<std::vector<xla::PjRtBuffer*>>& argument_handles,
+    const std::string& label = "argument_handles") {
+  std::cout << "\n=== " << label << " (2D Matrix) ===" << std::endl;
+  std::cout << "Dimensions: " << argument_handles.size()
+            << " devices (rows) x ";
+  if (!argument_handles.empty()) {
+    std::cout << argument_handles[0].size() << " arguments (cols)" << std::endl;
+  } else {
+    std::cout << "0 arguments (cols)" << std::endl;
+    return;
+  }
+
+  // Print column headers
+  std::cout << std::setw(12) << "Device\\Arg";
+  for (size_t col = 0; col < argument_handles[0].size(); ++col) {
+    std::cout << std::setw(15) << ("Arg[" + std::to_string(col) + "]");
+  }
+  std::cout << std::endl;
+
+  // Print separator line
+  std::cout << std::setw(12) << std::setfill('-') << "";
+  for (size_t col = 0; col < argument_handles[0].size(); ++col) {
+    std::cout << std::setw(15) << std::setfill('-') << "";
+  }
+  std::cout << std::setfill(' ') << std::endl;
+
+  // Print each row (device)
+  for (size_t row = 0; row < argument_handles.size(); ++row) {
+    std::cout << std::setw(11) << ("Dev[" + std::to_string(row) + "]") << "|";
+    for (size_t col = 0; col < argument_handles[row].size(); ++col) {
+      if (argument_handles[row][col] != nullptr) {
+        // Print pointer address (you can modify this to print other info)
+        std::cout << std::setw(14) << std::hex << argument_handles[row][col]
+                  << std::dec;
+      } else {
+        std::cout << std::setw(14) << "nullptr";
+      }
+      std::cout << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << "=== End " << label << " ===" << std::endl << std::endl;
+}
+
+// Alternative version that shows more buffer information
+void PrintArgumentHandlesDetailed(
+    const std::vector<std::vector<xla::PjRtBuffer*>>& argument_handles,
+    const std::string& label = "argument_handles") {
+  std::cout << "\n=== " << label << " (Detailed) ===" << std::endl;
+
+  for (size_t row = 0; row < argument_handles.size(); ++row) {
+    std::cout << "Device[" << row << "]: ";
+    for (size_t col = 0; col < argument_handles[row].size(); ++col) {
+      std::cout << "Arg[" << col << "]=";
+      if (argument_handles[row][col] != nullptr) {
+        auto* buffer = argument_handles[row][col];
+        std::cout << "{ptr:" << std::hex << buffer << std::dec
+                  << ", device:" << buffer->device()->DebugString() << "}";
+      } else {
+        std::cout << "nullptr";
+      }
+      if (col < argument_handles[row].size() - 1) std::cout << ", ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << "=== End " << label << " ===" << std::endl << std::endl;
+}
+}  // namespace
 
 // wrapped function to handle absl::Span instead of std::vector
 absl::Span<const std::string> FilterDevicesByAddressableDevices(
@@ -1001,28 +1073,37 @@ PjRtComputationClient::ExecuteReplicated(
   // need to reassign the addressable_devices_ and argument_handles according to
   // the sub-mesh device_ids used
   if (!pjrt_computation.denormalized_tile_assignment_.empty()) {
-    addressable_devices_ = FilterDevicesByAddressableDevices(
-        devices, pjrt_computation.denormalized_tile_assignment_);
-    // Create new argument_handles with correct size
-    std::vector<std::vector<xla::PjRtBuffer*>> temp_argument_handles(
-        addressable_devices_.size(),
-        std::vector<xla::PjRtBuffer*>(arguments.size(), nullptr));
-    // Map data from old indices to new indices
-    std::unordered_map<std::string, size_t> old_device_to_idx;
+    // Get the filtered devices for the submesh
+    absl::Span<const std::string> submesh_devices =
+        FilterDevicesByAddressableDevices(
+            devices, pjrt_computation.denormalized_tile_assignment_);
+    // Create a mapping from device name to its index in the ORIGINAL
+    // argument_handles
+    std::unordered_map<std::string, size_t> device_to_original_idx;
     for (size_t i = 0; i < addressable_devices_.size(); ++i) {
-      old_device_to_idx[std::string(addressable_devices_[i])] = i;
+      device_to_original_idx[std::string(addressable_devices_[i])] = i;
     }
-    // Remap argument handles
-    for (size_t new_idx = 0; new_idx < addressable_devices_.size(); ++new_idx) {
-      auto it =
-          old_device_to_idx.find(std::string(addressable_devices_[new_idx]));
-      if (it != old_device_to_idx.end()) {
-        temp_argument_handles[new_idx] =
-            std::move(argument_handles[it->second]);
+    // Create new argument_handles containing only the submesh devices
+    std::vector<std::vector<xla::PjRtBuffer*>> submesh_argument_handles;
+    submesh_argument_handles.reserve(submesh_devices.size());
+    for (const std::string& device_name : submesh_devices) {
+      auto it = device_to_original_idx.find(device_name);
+      if (it != device_to_original_idx.end()) {
+        // Copy the row for this device from the original argument_handles
+        submesh_argument_handles.push_back(argument_handles[it->second]);
+      } else {
+        // This shouldn't happen if the logic is correct, but handle gracefully
+        TF_VLOG(3) << "WARNING: Device " << device_name
+                   << " not found in original devices!" << std::endl;
+        submesh_argument_handles.push_back(
+            std::vector<xla::PjRtBuffer*>(arguments.size(), nullptr));
       }
     }
-    // Replace with temp
-    argument_handles = std::move(temp_argument_handles);
+    // Update the addressable devices and argument handles
+    addressable_devices_vec.assign(submesh_devices.begin(),
+                                   submesh_devices.end());
+    addressable_devices_ = absl::MakeSpan(addressable_devices_vec);
+    argument_handles = std::move(submesh_argument_handles);
   } else {
     addressable_devices_ = devices;
     // Resize to match all devices if no specific tile assignment

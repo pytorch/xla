@@ -127,5 +127,64 @@ TEST_F(PjRtComputationClientTest, Init) {
       result_literals[0]));
 }
 
+TEST_F(PjRtComputationClientTest, ThrowsWhenTileAssignmentsAreDifferent) {
+  // Compose a computation to add two matrices.
+  xla::Shape out_shape(xla::F32, {2, 2},
+                       /*dynamic_dimensions=*/{});
+  std::vector<ComputationClient::CompileInstance> instances;
+
+  // Create an instance with different tile assignments for different tensors
+  ComputationClient::CompileInstance instance(
+      std::move(MakeAddComputation().value()), device_,
+      client_->GetCompilationDevices(device_, client_->GetLocalDevices()),
+      &out_shape,
+      /*parameter_is_tupled_arguments=*/false,
+      /*is_sharded=*/true,
+      /*allow_spmd_sharding_propagation_to_output=*/true,
+      /*denormalized_tile_assignments=*/
+      {
+          {0, 1, 2, 3},  // First tensor assignment
+          {4, 5, 6, 7}   // Second tensor assignment
+      });
+
+  instances.push_back(std::move(instance));
+
+  // Compiling should fail due to mismatched tile assignments
+  EXPECT_THROW(client_->Compile(std::move(instances)), std::runtime_error);
+}
+
+TEST_F(PjRtComputationClientTest,
+       ThrowsWhenTileAssignmentDevicesNotAddressable) {
+  // Compose a computation to add two matrices.
+  xla::Shape out_shape(xla::F32, {2, 2},
+                       /*dynamic_dimensions=*/{});
+  std::vector<ComputationClient::CompileInstance> instances;
+
+  // Get the number of local devices to create an invalid device ID
+  std::vector<std::string> local_devices = client_->GetLocalDevices();
+  int64_t invalid_device_id =
+      local_devices.size() + 100;  // Use a device ID that doesn't exist
+
+  // Create an instance with tile assignment containing non-addressable device
+  // IDs
+  ComputationClient::CompileInstance instance(
+      std::move(MakeAddComputation().value()), device_,
+      client_->GetCompilationDevices(device_, client_->GetLocalDevices()),
+      &out_shape,
+      /*parameter_is_tupled_arguments=*/false,
+      /*is_sharded=*/true,
+      /*allow_spmd_sharding_propagation_to_output=*/true,
+      /*denormalized_tile_assignments=*/
+      {
+          {0, 1, invalid_device_id,
+           invalid_device_id + 1}  // Contains non-addressable device IDs
+      });
+
+  instances.push_back(std::move(instance));
+
+  // Compiling should fail due to non-addressable device IDs in tile assignment
+  EXPECT_THROW(client_->Compile(std::move(instances)), std::runtime_error);
+}
+
 }  // namespace runtime
 }  // namespace torch_xla

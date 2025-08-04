@@ -261,6 +261,8 @@ function run_xla_op_tests3 {
   run_test "$_TEST_DIR/spmd/test_train_spmd_linear_model.py" "$@" --skip-gradient-checkpointing
   run_test "$_TEST_DIR/test_gradient_accumulation.py"
   run_save_tensor_hlo run_test "$_TEST_DIR/spmd/test_spmd_lowering_context.py"
+  run_test_multi_devices "$_TEST_DIR/spmd/test_submesh_zero_indexed.py"
+  run_test_multi_devices "$_TEST_DIR/spmd/test_submesh_non_zero_indexed.py"
   run_test "$_TEST_DIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$_TEST_DIR/test_input_output_aliases.py"
   run_test_without_functionalization "$_TEST_DIR/test_input_output_aliases.py"
