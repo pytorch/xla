@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "absl/status/status.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -130,9 +130,9 @@ absl::StatusOr<absl_nonnull XLATensorPtr> GetInputXlaTensor(
     const at::Tensor& tensor, const std::string_view param) {
   XLA_ASSIGN_OR_RETURN(
       XLATensorPtr ptr, GetXlaTensor(tensor),
-      absl::StrCat("Expected input tensor `", param,
-                   "` to be an actual XLA tensor. Got: ", tensor.toString(),
-                   ". Consider moving `", param, "` to XLA before."));
+      absl::StrCat("Expected input tensor (", param,
+                   ") to be an actual XLA tensor. Got: ", tensor.toString(),
+                   ". Consider moving it (", param, ") to XLA."));
   return ptr;
 }
 
@@ -142,22 +142,24 @@ bool IsXlaTensor(const at::Tensor& tensor) {
 
 absl::Status ReplaceXlaTensor(const at::Tensor& tensor,
                               XLATensorPtr new_xla_tensor) {
-  XLA_ASSIGN_OR_RETURN(XLATensorImpl * impl, GetXlaTensorImpl(tensor));
+  XLA_ASSIGN_OR_RETURN(XLATensorImpl * impl, GetXlaTensorImpl(tensor),
+                       "Failed replacing the XLA tensor in the given tensor.");
   impl->set_tensor(std::move(new_xla_tensor));
   return absl::OkStatus();
 }
 
 absl::Status ReplaceXlaTensor(const std::vector<at::Tensor>& tensors,
                               const std::vector<XLATensorPtr> new_xla_tensors) {
-  if (tensors.size() != new_xla_tensors.size()) {
-    std::string error_message = absl::StrCat(
-        "Expected the size of the list of tensors (", tensors.size(),
-        ") to match the size of the list of XLATensorPtr (",
-        new_xla_tensors.size(), ").");
-    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(error_message));
-  }
+  ABSL_CHECK(tensors.size() == new_xla_tensors.size())
+      << "Expected the size of the list of tensors (" << tensors.size()
+      << ") to match the size of the list of XLATensorPtr ("
+      << new_xla_tensors.size() << ")";
   for (size_t i = 0; i < tensors.size(); ++i) {
-    XLA_RETURN_IF_ERROR(ReplaceXlaTensor(tensors[i], new_xla_tensors[i]));
+    XLA_RETURN_IF_ERROR(
+        ReplaceXlaTensor(tensors[i], new_xla_tensors[i]),
+        absl::StrCat(
+            "Failed replacing the XLA tensor at index ", i,
+            ". The reason being that that tensor is not an XLA tensor."));
   }
   return absl::OkStatus();
 }

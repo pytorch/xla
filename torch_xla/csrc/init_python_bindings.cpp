@@ -25,7 +25,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/status/status.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/variant.h"
@@ -1882,10 +1882,10 @@ void InitXlaModuleBindings(py::module m) {
                    "default precision setting will be applied.";
             XLA_ASSIGN_OR_RETURN(
                 XLATensorPtr xlhs,
-                bridge::GetInputXlaTensor(lhs, /* name= */ "lhs"));
+                bridge::GetInputXlaTensor(lhs, /* param= */ "first argument"));
             XLA_ASSIGN_OR_RETURN(
                 XLATensorPtr xrhs,
-                bridge::GetInputXlaTensor(rhs, /* name= */ "rhs"));
+                bridge::GetInputXlaTensor(rhs, /* param= */ "second argument"));
             return XlaDotGeneral(xlhs, xrhs, dim_vectors, preferred_element_type);
           },
           py::arg("lhs"),                            //
@@ -3373,11 +3373,19 @@ void InitXlaModuleBindings(py::module m) {
             return check_materialization_helper(xtensors);
           })
       .def("_get_graph_hash",
-           [](const std::vector<at::Tensor>& tensors)
-               -> absl::StatusOr<py::bytes> {
-             XLA_ASSIGN_OR_RETURN(
-                 std::vector<absl_nonnull XLATensorPtr> xtensors,
-                 bridge::GetXlaTensors(tensors));
+           [](const std::vector<at::Tensor>& tensors) -> py::bytes {
+             absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>>
+                 xtensors_status = bridge::GetXlaTensors(tensors);
+             ABSL_CHECK(xtensors_status.ok())
+                 << "_get_graph_hash(): error retrieving the XLA tensors from "
+                 << "the given tensor arguments. "
+                 << "This is a bug! Please, open an issue in the PyTorch/XLA "
+                 << "GitHub repository: https://github.com/pytorch/xla"
+                 << std::endl
+                 << "Status Error: "
+                 << BuildStatusErrorMessage(xtensors_status.status());
+             std::vector<absl_nonnull XLATensorPtr> xtensors =
+                 xtensors_status.value();
              torch::lazy::hash_t hash =
                  XLAGraphExecutor::Get()->GetGraphHash(xtensors);
              std::string bin((const char*)&hash, sizeof(hash));

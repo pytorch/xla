@@ -119,9 +119,13 @@ static std::string MaybeGetMessageWithLineBreak(const absl::Status& status) {
              : std::string(status.message());
 }
 
+std::string BuildStatusErrorMessage(const absl::Status& status) {
+  return absl::StrCat(MaybeGetMessageWithLineBreak(status),
+                      GetFormattedStatusPropagationTrace(status));
+}
+
 void MaybeThrow(const absl::Status& status) {
-  TORCH_CHECK(status.ok(), MaybeGetMessageWithLineBreak(status),
-              GetFormattedStatusPropagationTrace(status));
+  TORCH_CHECK(status.ok(), BuildStatusErrorMessage(status));
 }
 
 void GetValueOrThrow(const absl::Status& status) { MaybeThrow(status); }
