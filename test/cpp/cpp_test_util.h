@@ -24,6 +24,24 @@
     }                                                       \
   } while (0)
 
+// The PyTorch C++ stacktrace is ALWAYS appended to the error message.
+// More specifically, when `what()` function is called.
+//
+// However, it's only when the raised `c10::Error` gets translated to a
+// Python exception that PyTorch checks the value of the
+// `TORCH_SHOW_CPP_STACKTRACES` environment variable, which actually
+// controls whether the stacktrace will get shown or not by calling
+// `what_without_backtraces()`, instead.
+//
+// Therefore, we need to mimic this behavior.
+#define THROW_RUNTIME_ERROR_FROM_C10_ERROR_IMPL(block, show_backtrace)         \
+  try {                                                                        \
+    block;                                                                     \
+  } catch (const c10::Error& error) {                                          \
+    throw std::runtime_error(show_backtrace ? error.what()                     \
+                                            : error.what_without_backtrace()); \
+  }
+
 namespace torch_xla {
 namespace cpp_test {
 

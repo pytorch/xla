@@ -6,6 +6,13 @@
 #include "tsl/platform/stacktrace.h"
 #include "tsl/platform/statusor.h"
 
+// DEPRECATED
+// ==========
+// These macros are deprecated in favor of error handling by propagating abseil
+// status types (e.g. `absl::Status` and `absl::StatusOr<T>`).
+//
+// Description
+// ===========
 // TORCH_SHOW_CPP_STACKTRACES environment variable changes the behavior of the
 // macros below, such as XLA_CHECK(), XLA_CHECK_EQ(), etc. (except for
 // XLA_CHECK_OK) in the following way:
@@ -30,6 +37,10 @@
 #define XLA_CHECK_GT(a, b) TF_CHECK_GT(a, b)
 
 template <typename T>
+ABSL_DEPRECATED(
+    "Use GetValueOrThrow() (at status.h) function, instead. "
+    "This function does not handle non-ok status by crashing the whole "
+    "program, because of the XLA_CHECK_OK() macro call.")
 T ConsumeValue(absl::StatusOr<T>&& status) {
   XLA_CHECK_OK(status.status());
   return std::move(status).value();
