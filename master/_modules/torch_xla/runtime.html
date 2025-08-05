@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+git43589c0 )
+                  master (2.9.0+git15496cd )
                 </div>
               
             
@@ -513,16 +513,6 @@
   <span class="k">if</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_found_libtpu</span> <span class="ow">and</span> <span class="n">tpu</span><span class="o">.</span><span class="n">num_available_chips</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.&#39;</span><span class="p">)</span>
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">PJRT_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;TPU&#39;</span>
-  <span class="k">elif</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">GPU_NUM_DEVICES</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=CUDA&#39;</span><span class="p">)</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">PJRT_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;CUDA&#39;</span>
-  <span class="k">elif</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="ow">and</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">device_count</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-    <span class="n">num_devices_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">device_count</span><span class="p">())</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-        <span class="s1">&#39;Found CUDA without GPU_NUM_DEVICES. Defaulting to PJRT_DEVICE=CUDA with GPU_NUM_DEVICES=&#39;</span>
-        <span class="o">+</span> <span class="n">num_devices_str</span><span class="p">)</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">PJRT_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;CUDA&#39;</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">GPU_NUM_DEVICES</span><span class="p">]</span> <span class="o">=</span> <span class="n">num_devices_str</span>
   <span class="k">elif</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_found_libneuronxla</span><span class="p">:</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Found libneuronpjrt.so. Setting PJRT_DEVICE=NEURON.&#39;</span><span class="p">)</span>
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">PJRT_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;NEURON&#39;</span>
