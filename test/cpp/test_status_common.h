@@ -79,7 +79,7 @@ class StatusTest : public testing::TestWithParam<CppStacktracesMode> {
 namespace testing {
 
 // Catches the c10 error, and transforms it into a runtime error, calling
-// what() or what_without_backtrace() depending on IsShowCppStacktracesMode(). 
+// what() or what_without_backtrace() depending on IsShowCppStacktracesMode().
 #define XLA_THROW_RUNTIME_ERROR_FROM_C10_ERROR(block) \
   XLA_THROW_RUNTIME_ERROR_FROM_C10_ERROR_(block, IsShowCppStacktracesMode())
 
