@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include "absl/base/nullability.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/view.h"
 
@@ -149,8 +150,8 @@ class XLATensor : public torch::lazy::LazyTensor {
     bool is_cloned = false;
   };
 
-  static XLATensorPtr Create(const at::Tensor& tensor,
-                             const torch::lazy::BackendDevice& device);
+  static absl::StatusOr<absl_nonnull XLATensorPtr> Create(
+      const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
   static XLATensorPtr Create(
       torch::lazy::BackendDataPtr handle,
       std::optional<at::ScalarType> logical_element_type = std::nullopt);
