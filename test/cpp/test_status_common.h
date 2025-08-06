@@ -78,8 +78,10 @@ class StatusTest : public testing::TestWithParam<CppStacktracesMode> {
 
 namespace testing {
 
-#define THROW_RUNTIME_ERROR_FROM_C10_ERROR(block) \
-  THROW_RUNTIME_ERROR_FROM_C10_ERROR_IMPL(block, IsShowCppStacktracesMode())
+// Catches the c10 error, and transforms it into a runtime error, calling
+// what() or what_without_backtrace() depending on IsShowCppStacktracesMode(). 
+#define XLA_THROW_RUNTIME_ERROR_FROM_C10_ERROR(block) \
+  XLA_THROW_RUNTIME_ERROR_FROM_C10_ERROR_(block, IsShowCppStacktracesMode())
 
 // Prefix of the C++ stacktrace PyTorch adds to the error message.
 constexpr inline char kTorchCppStacktracePrefix[] =
@@ -109,7 +111,7 @@ TEST_P(StatusTest, MaybeThrowWithOkStatus) {
 
 TEST_P(StatusTest, MaybeThrowWithErrorStatus) {
   auto throw_exception = [=]() {
-    THROW_RUNTIME_ERROR_FROM_C10_ERROR({
+    XLA_THROW_RUNTIME_ERROR_FROM_C10_ERROR({
       absl::Status error_status = absl::InvalidArgumentError(kMessage);
       MaybeThrow(error_status);
     });
@@ -135,7 +137,7 @@ TEST_P(StatusTest, GetValueOrThrowWithOkStatusOr) {
 
 TEST_P(StatusTest, GetValueOrThrowWithErrorStatusOr) {
   auto throw_exception = [=]() {
-    THROW_RUNTIME_ERROR_FROM_C10_ERROR({
+    XLA_THROW_RUNTIME_ERROR_FROM_C10_ERROR({
       absl::StatusOr<int> error_status = absl::InvalidArgumentError(kMessage);
       int value = GetValueOrThrow(error_status);
     });
@@ -369,7 +371,7 @@ TEST_P(StatusTest, MaybeThrowWithErrorPropagationWithNewMessage) {
   };
 
   auto throw_exception = [&]() {
-    THROW_RUNTIME_ERROR_FROM_C10_ERROR(MaybeThrow(outerfn()));
+    XLA_THROW_RUNTIME_ERROR_FROM_C10_ERROR(MaybeThrow(outerfn()));
   };
 
   if (IsShowCppStacktracesMode()) {
