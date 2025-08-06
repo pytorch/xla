@@ -91,21 +91,18 @@ constexpr int64_t kSeedInfoId = -127389;
 // Traits related to the return type of the lambda function that wraps the
 // actual implementation inside PythonScope.
 template <class T>
-struct LambdaReturnTypeTrait {
-  using Type = T;
-  constexpr static bool is_status = false;
+struct RemoveStatus {
+  using type = T;
 };
 
 template <>
-struct LambdaReturnTypeTrait<absl::Status> {
-  using Type = void;
-  constexpr static bool is_status = true;
+struct RemoveStatus<absl::Status> {
+  using type = void;
 };
 
 template <class T>
-struct LambdaReturnTypeTrait<absl::StatusOr<T>> {
-  using Type = T;
-  constexpr static bool is_status = true;
+struct RemoveStatus<absl::StatusOr<T>> {
+  using type = T;
 };
 
 // Wraps a python scope (e.g. py::module) to provide more convenient APIs.
@@ -179,7 +176,11 @@ class PythonScope : public Scope {
           typename c10::guts::infer_function_traits<F>::type::return_type;
       // Wrapper lambda return type.
       // This is needed for handling returning status types.
-      using LambdaRetType = typename LambdaReturnTypeTrait<FnRetType>::Type;
+      using LambdaRetType = typename RemoveStatus<FnRetType>::type;
+      // FnRetType is a status type iff after unwrapping the status type,
+      // the resulting type (i.e. LambdaRetType) is NOT the same as FnRetType.
+      constexpr bool returns_status_type =
+          !std::is_same<FnRetType, LambdaRetType>::value;
 
       auto lambda = [f = std::move(f)](Args... args) -> LambdaRetType {
         // RAII for emitting Python warnings.
@@ -188,7 +189,7 @@ class PythonScope : public Scope {
         // warnings.
         torch::PyWarningHandler handler;
 
-        if constexpr (LambdaReturnTypeTrait<FnRetType>::is_status) {
+        if constexpr (returns_status_type) {
           return GetValueOrThrow(f(args...));
         } else {
           return f(args...);
