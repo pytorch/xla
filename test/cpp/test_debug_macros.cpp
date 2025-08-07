@@ -5,7 +5,8 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 
-using absl::StrCat;
+namespace torch_xla::cpp_test {
+namespace {
 
 // Prefix of the C++ stacktrace PyTorch adds to the error message.
 constexpr char kTorchCppStacktracePrefix[] =
@@ -18,23 +19,24 @@ TEST(DebugMacrosTest, Check) {
     XLA_CHECK(false) << "Error message.";
   } catch (const c10::Error& error) {
     EXPECT_THAT(error.what(),
-                testing::StartsWith(
-                    StrCat("Check failed: false: Error message. (at ", __FILE__,
-                           ":", line, ")\n\n", kTorchCppStacktracePrefix)));
+                testing::StartsWith(absl::StrCat(
+                    "Check failed: false: Error message. (at ", __FILE__, ":",
+                    line, ")\n\n", kTorchCppStacktracePrefix)));
   }
 }
 
-#define TEST_XLA_CHECK_OP_(opstr, lhs, rhs, compstr, valstr)             \
-  TEST(DebugMacrosTest, Check##opstr) {                                  \
-    try {                                                                \
-      XLA_CHECK_##opstr(lhs, rhs) << " Error message.";                  \
-    } catch (const c10::Error& error) {                                  \
-      EXPECT_THAT(error.what(), ::testing::StartsWith(StrCat(            \
-                                    "Check failed: " compstr " (" valstr \
-                                    ") Error message. (at ",             \
-                                    __FILE__, ":", __LINE__, ")\n\n",    \
-                                    ::kTorchCppStacktracePrefix)));      \
-    }                                                                    \
+#define TEST_XLA_CHECK_OP_(opstr, lhs, rhs, compstr, valstr)                \
+  TEST(DebugMacrosTest, Check##opstr) {                                     \
+    try {                                                                   \
+      XLA_CHECK_##opstr(lhs, rhs) << " Error message.";                     \
+    } catch (const c10::Error& error) {                                     \
+      EXPECT_THAT(                                                          \
+          error.what(),                                                     \
+          ::testing::StartsWith(absl::StrCat(                               \
+              "Check failed: " compstr " (" valstr ") Error message. (at ", \
+              __FILE__, ":", __LINE__, ")\n\n",                             \
+              ::torch_xla::cpp_test::kTorchCppStacktracePrefix)));          \
+    }                                                                       \
   }
 
 #define TEST_XLA_CHECK_OP(opstr, op, lhs, rhs) \
@@ -67,8 +69,11 @@ static void SetUp() {
   setenv("TORCH_SHOW_CPP_STACKTRACES", /* value= */ "1", /* replace= */ 1);
 }
 
+}  // namespace
+}  // namespace torch_xla::cpp_test
+
 int main(int argc, char** argv) {
-  SetUp();
+  ::torch_xla::cpp_test::SetUp();
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

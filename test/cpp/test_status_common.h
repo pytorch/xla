@@ -77,7 +77,7 @@ class StatusTest : public testing::TestWithParam<CppStacktracesMode> {
       [](const ::testing::TestParamInfo<::torch_xla::CppStacktracesMode>&    \
              info) { return ToString(info.param); })
 
-namespace testing {
+namespace cpp_test {
 
 // Prefix of the C++ stacktrace PyTorch adds to the error message.
 constexpr inline char kTorchCppStacktracePrefix[] =
@@ -394,7 +394,7 @@ TEST_P(StatusTest, MaybeThrowWithErrorPropagationWithNewMessage) {
   }
 }
 
-}  // namespace testing
+}  // namespace cpp_test
 }  // namespace torch_xla
 
 #endif  // XLA_TEST_CPP_TEST_STATUS_COMMON_H_
