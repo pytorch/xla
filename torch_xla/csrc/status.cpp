@@ -103,29 +103,23 @@ static std::string GetFormattedStatusPropagationTrace(
   auto status_propagation_trace = GetStatusPropagationTraceOrEmpty(status);
   return status_propagation_trace.empty()
              ? ""
-             : absl::StrCat("\nStatus Propagation Trace:",
-                            status_propagation_trace.Flatten(), "\n");
-}
-
-// Get the status message followed by a line break, if we are printing the
-// C++ stacktraces.
-//
-// This is needed so we have a blank line in between the status message and
-// the dumped C++ traces (either the status propagation one, or the C++
-// stacktrace).
-static std::string MaybeGetMessageWithLineBreak(const absl::Status& status) {
-  return torch::get_cpp_stacktraces_enabled()
-             ? absl::StrCat(status.message(), "\n")
-             : std::string(status.message());
+             : absl::StrCat("\n\nStatus Propagation Trace:",
+                            status_propagation_trace.Flatten());
 }
 
 std::string BuildStatusErrorMessage(const absl::Status& status) {
-  return absl::StrCat(MaybeGetMessageWithLineBreak(status),
+  return absl::StrCat(status.message(),
                       GetFormattedStatusPropagationTrace(status));
 }
 
+// Return a line break if torch::get_cpp_stacktraces_enabled() is true.
+static std::string LineBreakIfCppStacktracesEnabled() {
+  return torch::get_cpp_stacktraces_enabled() ? "\n" : "";
+}
+
 void MaybeThrow(const absl::Status& status) {
-  TORCH_CHECK(status.ok(), BuildStatusErrorMessage(status));
+  TORCH_CHECK(status.ok(), absl::StrCat(BuildStatusErrorMessage(status),
+                                        LineBreakIfCppStacktracesEnabled()));
 }
 
 void GetValueOrThrow(const absl::Status& status) { MaybeThrow(status); }
