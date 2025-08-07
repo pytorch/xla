@@ -111,11 +111,12 @@ TEST_P(StatusTest, MaybeThrowWithErrorStatus) {
     MaybeThrow(error_status);
   } catch (const c10::Error& error) {
     if (IsShowCppStacktracesMode()) {
-      EXPECT_THAT(error.what(),
+      EXPECT_THAT(std::string_view(error.what()),
                   ::testing::StartsWith(absl::StrCat(
                       kMessage, "\n\n", kTorchCppStacktracePrefix)));
     } else {
-      EXPECT_EQ(error.what_without_backtrace(), std::string_view(kMessage));
+      EXPECT_EQ(std::string_view(error.what_without_backtrace()),
+                std::string_view(kMessage));
     }
   }
 }
@@ -133,11 +134,12 @@ TEST_P(StatusTest, GetValueOrThrowWithErrorStatusOr) {
     int value = GetValueOrThrow(error_status);
   } catch (const c10::Error& error) {
     if (IsShowCppStacktracesMode()) {
-      EXPECT_THAT(error.what(),
+      EXPECT_THAT(std::string_view(error.what()),
                   ::testing::StartsWith(absl::StrCat(
                       kMessage, "\n\n", kTorchCppStacktracePrefix)));
     } else {
-      EXPECT_EQ(error.what_without_backtrace(), std::string_view(kMessage));
+      EXPECT_EQ(std::string_view(error.what_without_backtrace()),
+                std::string_view(kMessage));
     }
   }
 }
@@ -387,9 +389,11 @@ TEST_P(StatusTest, MaybeThrowWithErrorPropagationWithNewMessage) {
           << errline2;
       oss << "\n\n";
       oss << kTorchCppStacktracePrefix;
-      EXPECT_THAT(error.what(), ::testing::StartsWith(oss.str()));
+      EXPECT_THAT(std::string_view(error.what()),
+                  ::testing::StartsWith(oss.str()));
     } else {
-      EXPECT_EQ(error.what_without_backtrace(), std::string_view(kNewMessage));
+      EXPECT_EQ(std::string_view(error.what_without_backtrace()),
+                std::string_view(kNewMessage));
     }
   }
 }
