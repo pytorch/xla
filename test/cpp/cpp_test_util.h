@@ -24,36 +24,6 @@
     }                                                       \
   } while (0)
 
-// The PyTorch C++ stacktrace is ALWAYS appended to the error message.
-// More specifically, when `what()` function is called.
-//
-// However, it's only when the raised `c10::Error` gets translated to a
-// Python exception that PyTorch checks the value of the
-// `TORCH_SHOW_CPP_STACKTRACES` environment variable, which actually
-// controls whether the stacktrace will get shown or not by calling
-// `what_without_backtraces()`, instead. Therefore, we mimic this
-// behavior.
-//
-// This macro runs `block`, and, if it throws a `c10::Error` error, the
-// macro catches it, and throws a new `std::runtime_error`. The error
-// message will depend on `show_backtrace`. The error message will be
-// `error.what()` if `show_backtrace` is true.  Otherwise, the error
-// message will be `error.what_without_backtrace()`.
-//
-// Example usage:
-//
-// XLA_THROW_RUNTIME_ERROR_FROM_C10_ERROR_([]() { TORCH_CHECK(false); }, true);
-//
-// If a `c10::Error` is thrown, this macro will catch it and throw a
-// `std::runtime_error` with backtrace, since `show_backtrace` is true.
-#define XLA_THROW_RUNTIME_ERROR_FROM_C10_ERROR_(block, show_backtrace)         \
-  try {                                                                        \
-    block;                                                                     \
-  } catch (const c10::Error& error) {                                          \
-    throw std::runtime_error(show_backtrace ? error.what()                     \
-                                            : error.what_without_backtrace()); \
-  }
-
 namespace torch_xla {
 namespace cpp_test {
 
