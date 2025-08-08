@@ -1536,9 +1536,9 @@ at::Tensor XLANativeFunctions::div(
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   at::ScalarType dtype = at::result_type(self, other);
   auto operands = GetBinaryOperands(self, UnwrapNumber(other, dtype));
-  auto result = GetValueOrThrow(tensor_methods::div(
+  auto output = GetValueOrThrow(tensor_methods::div(
       operands.first, operands.second, rounding_mode, dtype));
-  return bridge::AtenFromXlaTensor(std::move(result));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::div(const at::Tensor& self,
