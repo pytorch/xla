@@ -6,6 +6,13 @@
 #include "tsl/platform/stacktrace.h"
 #include "tsl/platform/statusor.h"
 
+// DEPRECATED
+// ==========
+// These macros are deprecated in favor of error handling by propagating abseil
+// status types (e.g. `absl::Status` and `absl::StatusOr<T>`).
+//
+// Description
+// ===========
 // TORCH_SHOW_CPP_STACKTRACES environment variable changes the behavior of the
 // macros below, such as XLA_CHECK(), XLA_CHECK_EQ(), etc. (except for
 // XLA_CHECK_OK) in the following way:

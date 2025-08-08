@@ -395,6 +395,8 @@ cc_library(
     hdrs = ["tf_logging.h"],
     deps = [
         "//torch_xla/csrc:status",
+        "@torch//:headers",
+        "@torch//:runtime_headers",
         "@tsl//tsl/platform:stacktrace",
         "@tsl//tsl/platform:statusor",
         "@xla//xla/service:platform_util",

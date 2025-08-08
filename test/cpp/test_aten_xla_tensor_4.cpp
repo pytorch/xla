@@ -307,7 +307,7 @@ TEST_F(AtenXlaTensorTest, TestGettingSizeOnDynamicTensor) {
                                     torch::TensorOptions(torch::kFloat));
     torch::Tensor xla_b = CopyToDevice(b, device);
     torch::Tensor xla_nonzero = torch::nonzero(xla_b);
-    EXPECT_THROW(xla_nonzero.sizes(), std::runtime_error);
+    EXPECT_THROW(xla_nonzero.sizes(), c10::Error);
     EXPECT_NO_THROW(xla_nonzero.sym_sizes());
   });
 }
