@@ -186,8 +186,9 @@ XLATensorPtr GetOrCreateXlaTensor(const at::Tensor& tensor,
   }
 
   auto xtensor = GetXlaTensor(tensor);
-  return xtensor.ok() ? xtensor.value()
-                      : XLATensor::Create(inner_tensor, device);
+  return xtensor.ok()
+             ? xtensor.value()
+             : GetValueOrThrow(XLATensor::Create(inner_tensor, device));
 }
 
 XLATensorPtr GetOrCreateXlaTensor(const std::optional<at::Tensor>& tensor,
@@ -478,7 +479,8 @@ at::Tensor CreateXlaTensor(
     at::Tensor tensor,
     const std::optional<torch::lazy::BackendDevice>& device) {
   if (tensor.defined() && device) {
-    XLATensorPtr xla_tensor = XLATensor::Create(std::move(tensor), *device);
+    XLATensorPtr xla_tensor =
+        GetValueOrThrow(XLATensor::Create(std::move(tensor), *device));
     tensor = AtenFromXlaTensor(xla_tensor);
   }
   return tensor;
