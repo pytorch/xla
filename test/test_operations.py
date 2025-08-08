@@ -2454,15 +2454,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     a = torch.rand(2, 2, 4, 4, device="xla")
     b = torch.rand(2, 2, device="xla")
 
-    try:
+    expected_regex = (
+        r"Shapes are not compatible for broadcasting: f32\[2,2,4,4\] vs. f32\[2,2\]. "
+        r"Expected dimension 2 of shape f32\[2,2,4,4\] \(4\) to match dimension "
+        r"0 of shape f32\[2,2\] \(2\). .*")
+
+    with self.assertRaisesRegex(RuntimeError, expected_regex):
       torch.add(a, b)
       torch_xla.sync()
-    except RuntimeError as e:
-      expected_error = (
-          "Shapes are not compatible for broadcasting: f32[2,2,4,4] vs. f32[2,2]. "
-          "Expected dimension 2 of shape f32[2,2,4,4] (4) to match dimension "
-          "0 of shape f32[2,2] (2). .*")
-      self.assertEqual(str(e), expected_error)
 
   @onlyOnCPU
   def test_construct_large_tensor_raises_error(self):
