@@ -1804,8 +1804,10 @@ at::Tensor& XLANativeFunctions::fill_(at::Tensor& self,
 at::Tensor XLANativeFunctions::flip(const at::Tensor& self,
                                     at::IntArrayRef dims) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::flip(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), XlaHelpers::I64List(dims)));
+  auto xself = GetValueOrThrow(bridge::GetXlaTensor(self));
+  auto output =
+      GetValueOrThrow(tensor_methods::flip(xself, XlaHelpers::I64List(dims)));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::floor_divide(const at::Tensor& self,

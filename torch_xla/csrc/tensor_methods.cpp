@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <iterator>
 
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
@@ -1680,12 +1681,48 @@ void fill_(XLATensorPtr& input, const at::Scalar& value) {
   input->SetInPlaceIrValue(std::move(constant));
 }
 
-XLATensorPtr flip(const XLATensorPtr& input, absl::Span<const int64_t> dims) {
+absl::StatusOr<absl_nonnull XLATensorPtr> flip(const XLATensorPtr& input,
+                                               absl::Span<const int64_t> dims) {
   auto dimensions = torch::lazy::GetCanonicalDimensionIndices(
       torch_xla::runtime::util::ToVector<int64_t>(dims),
       input->shape().get().dimensions_size());
-  std::set<int64_t> unique_dims(dimensions.begin(), dimensions.end());
-  XLA_CHECK_EQ(unique_dims.size(), dimensions.size());
+
+  // Count the number of times each dimension appears.
+  std::map<int64_t, int64_t> dim_count;
+  for (auto dim : dimensions) {
+    int64_t count = dim_count.find(dim) == dim_count.end() ? 0 : dim_count[dim];
+    dim_count[dim] = count + 1;
+  }
+
+  // If the number of uniquely counted dimensions is not the same as the number
+  // of given dimensions, it means that there were some dimensions that were
+  // given more than once.
+  if (dim_count.size() < dimensions.size()) {
+    // Collect `dim_count` keys to suggest a corresponding `dims` value that
+    // wouldn't error.
+    std::vector<int64_t> dims_suggestion;
+    std::transform(dim_count.begin(), dim_count.end(),
+                   std::back_inserter(dims_suggestion),
+                   [](auto& pair) { return pair.first; });
+    // Collect the bad dimensions, i.e. those that appeared more than once.
+    std::vector<std::pair<int64_t, int64_t>> bad_dim_count;
+    std::copy_if(dim_count.begin(), dim_count.end(),
+                 std::back_inserter(bad_dim_count),
+                 [](auto& pair) { return pair.second > 1; });
+    auto bad_dimensions_str = absl::StrJoin(
+        bad_dim_count, /* sep= */ ", ",
+        [](std::string* out, const std::pair<int64_t, int64_t>& pair) {
+          absl::StrAppend(out, pair.first, " (", pair.second, " times)");
+        });
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("flip(): expected each dimension to appear at most once. "
+                     "Found dimensions: ",
+                     bad_dimensions_str, ". Consider changing dims from [",
+                     absl::StrJoin(dims, /* sep= */ ", "), "] to [",
+                     absl::StrJoin(dims_suggestion, /* sep= */ ", "), "].")));
+  }
+
+  ABSL_CHECK(dim_count.size() == dimensions.size());
   return input->CreateFrom(
       torch_xla::MakeNode<Flip>(input->GetIrValue(), dimensions));
 }
