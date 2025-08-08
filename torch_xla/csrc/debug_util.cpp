@@ -21,6 +21,7 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/status.h"
+#include "torch_xla/csrc/torch_xla_op_sharding.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
@@ -218,7 +219,8 @@ void DebugUtil::SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
     auto xtensor = (*tensors)[indices[i]];
     ss << xtensor->shape().get().ToString() << " ";
     if (xtensor->sharding_spec()) {
-      ss << xla::HloSharding::FromProto(xtensor->sharding_spec()->sharding)
+      ss << xla::HloSharding::FromProto(
+                xtensor->sharding_spec()->sharding.GetXlaOpSharding())
                 ->ToString();
     } else {
       ss << xla::HloSharding::FromProto(xla::HloSharding::Unknown().ToProto())
