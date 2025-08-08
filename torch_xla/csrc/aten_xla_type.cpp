@@ -1317,7 +1317,7 @@ at::Tensor XLANativeFunctions::cat(const at::ITensorListRef& tensors,
   auto xtensors = GetValueOrThrow(bridge::GetXlaTensors(tensors));
   auto result = GetValueOrThrow(
       tensor_methods::cat(xtensors, dim, at::native::result_type(tensors)));
-  return bridge::AtenFromXlaTensor(result);
+  return bridge::AtenFromXlaTensor(std::move(result));
 }
 
 at::Tensor XLANativeFunctions::celu(const at::Tensor& self,
