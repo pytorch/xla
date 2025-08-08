@@ -2486,6 +2486,17 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
           "or that either of them was a 1D empty tensor of size (0,).")
       self.assertEqual(str(e), expected_error)
 
+  def test_div_raises_error_on_invalid_rounding_mode(self):
+    a = torch.rand(2, 2, device=torch_xla.device())
+
+    try:
+      torch.div(a, 2, rounding_mode="bad")
+    except RuntimeError as e:
+      expected_error = (
+          "div(): invalid rounding mode `bad`. Expected it to be either "
+          "'trunc', 'floor', or be left unspecified.")
+      self.assertEqual(str(e), expected_error)
+
 
 class MNISTComparator(nn.Module):
 
