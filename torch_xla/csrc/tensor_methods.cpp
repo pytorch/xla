@@ -1449,7 +1449,7 @@ absl::StatusOr<absl_nonnull XLATensorPtr> div(
     } else {
       return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
           absl::StrCat("div(): invalid rounding mode `", *rounding_mode,
-                       "`. Expected it to be either 'trunc', 'floor' or be "
+                       "`. Expected it to be either 'trunc', 'floor', or be "
                        "left unspecified.")));
     }
   }
