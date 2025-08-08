@@ -2454,14 +2454,15 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     a = torch.rand(2, 2, 4, 4, device="xla")
     b = torch.rand(2, 2, device="xla")
 
-    expected_regex = (
-        r"Shapes are not compatible for broadcasting: f32\[2,2,4,4\] vs. f32\[2,2\]. "
-        r"Expected dimension 2 of shape f32\[2,2,4,4\] \(4\) to match dimension "
-        r"0 of shape f32\[2,2\] \(2\). .*")
-
-    with self.assertRaisesRegex(RuntimeError, expected_regex):
+    try:
       torch.add(a, b)
       torch_xla.sync()
+    except RuntimeError as e:
+      expected_error = (
+          "Shapes are not compatible for broadcasting: f32[2,2,4,4] vs. f32[2,2]. "
+          "Expected dimension 2 of shape f32[2,2,4,4] (4) to match dimension "
+          "0 of shape f32[2,2] (2). .*")
+      self.assertEqual(str(e), expected_error)
 
   @onlyOnCPU
   def test_construct_large_tensor_raises_error(self):
@@ -2472,6 +2473,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       b = a.sum()
       # OOM is raised when we try to bring data from the device.
       b.cpu()
+
+  def test_cat_raises_error_on_incompatible_shapes(self):
+    a = torch.rand(2, 2, device=torch_xla.device())
+    b = torch.rand(5, 1, device=torch_xla.device())
+
+    try:
+      torch.cat([a, b])
+    except RuntimeError as e:
+      expected_error = (
+          "cat(): cannot concatenate tensors of shape f32[2,2] with f32[5,1] "
+          "at dimension 0. Expected shapes to be equal (except at dimension 0) "
+          "or that either of them was a 1D empty tensor of size (0,).")
+      self.assertEqual(str(e), expected_error)
 
 
 class MNISTComparator(nn.Module):
