@@ -25,7 +25,7 @@
 
 - name: Build PyTorch
   ansible.builtin.command:
-    cmd: python setup.py bdist_wheel
+    cmd: python setup.py bdist_wheel -p manylinux_2_28_x86_64
     chdir: "{{ (src_root, 'pytorch') | path_join }}"
     creates: "{{ (src_root, 'pytorch/dist/*.whl') | path_join }}"
   # Set `USE_CUDA=0` as PyTorch cannot be used with GPU in eager and XLA mode.
