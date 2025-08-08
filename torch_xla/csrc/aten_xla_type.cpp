@@ -1315,9 +1315,9 @@ at::Tensor XLANativeFunctions::cat(const at::ITensorListRef& tensors,
                                    int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   auto xtensors = GetValueOrThrow(bridge::GetXlaTensors(tensors));
-  auto result = GetValueOrThrow(
+  auto output = GetValueOrThrow(
       tensor_methods::cat(xtensors, dim, at::native::result_type(tensors)));
-  return bridge::AtenFromXlaTensor(std::move(result));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::celu(const at::Tensor& self,
