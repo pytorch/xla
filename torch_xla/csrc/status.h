@@ -179,10 +179,7 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
 // If `TORCH_SHOW_CPP_STACKTRACES` is enabled, returns the concatenation of
 // `status.message()` with its inner status propagation trace.
 //
-// TODO(ysiraichi): this call does not append the C++ stacktrace, which,
-// ideally, should. It can be done by not using `TORCH_CHECK()` macro directly
-// in `MaybeThrow()`, but using PyTorch `c10::get_lazy_backtrace()`
-// (at c10/util/Backtrace.h).
+// It doesn't add a trailing line break.
 std::string BuildStatusErrorMessage(const absl::Status& status);
 
 // Maybe throws an exception if `status` has a non-ok code.

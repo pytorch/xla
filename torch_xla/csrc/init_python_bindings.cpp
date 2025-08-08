@@ -3378,13 +3378,16 @@ void InitXlaModuleBindings(py::module m) {
              absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>>
                  xtensors_status = bridge::GetXlaTensors(tensors);
              ABSL_CHECK(xtensors_status.ok())
-                 << "_get_graph_hash(): error retrieving the XLA tensors from "
-                 << "the given tensor arguments. "
+                 << "\n\n"
+                 << "Internal Error:\n"
+                 << "    _get_graph_hash(): error retrieving the XLA tensors "
+                    "from the given tensor arguments. "
                  << "This is a bug! Please, open an issue in the PyTorch/XLA "
                  << "GitHub repository: https://github.com/pytorch/xla"
-                 << std::endl
-                 << "Status Error: "
-                 << BuildStatusErrorMessage(xtensors_status.status());
+                 << "\n\n"
+                 << "Status Error:\n"
+                 << "    " << BuildStatusErrorMessage(xtensors_status.status())
+                 << "\n";
              std::vector<absl_nonnull XLATensorPtr> xtensors =
                  xtensors_status.value();
              torch::lazy::hash_t hash =
