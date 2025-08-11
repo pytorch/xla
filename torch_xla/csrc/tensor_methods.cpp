@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <functional>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "torch_xla/csrc/LazyIr.h"
@@ -1160,8 +1161,8 @@ std::vector<XLATensorPtr> broadcast_tensors(
   return tensors.front()->MakeOutputTensors(node);
 }
 
-XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
-                 at::ScalarType dtype) {
+absl::StatusOr<absl_nonnull XLATensorPtr> cat(
+    absl::Span<const XLATensorPtr> tensors, int64_t dim, at::ScalarType dtype) {
   // Shape checks for cat:
   // - If not empty, every tensor shape must be the same.
   // - Empty tensor passes but is simply ignore in implementation,
@@ -1169,9 +1170,10 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
   // - If empty dimension, other dimensions must be the same.
   //   e.g. ([4, 0, 32, 32], [4, 2, 32, 32], dim=1) passes.
   //   ([4, 0, 32, 32], [4, 2, 31, 32], dim=1) throws.
-  XLA_CHECK_GT(tensors.size(), 0);
+  ABSL_CHECK(tensors.size() > 0);
   std::vector<torch::lazy::Value> values;
   std::vector<xla::Shape> shapes;
+  size_t last_tensor_index;
   for (size_t i = 0; i < tensors.size(); ++i) {
     xla::Shape tensor_shape = tensors[i]->shape();
     if (tensor_shape.dimensions_size() == 1 &&
@@ -1181,13 +1183,20 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
     dim = torch::lazy::GetCanonicalDimensionIndex(
         dim, tensor_shape.dimensions_size());
     tensor_shape.DeleteDimension(dim);
-    if (!shapes.empty()) {
-      XLA_CHECK(xla::ShapeUtil::CompatibleIgnoringElementType(shapes.back(),
-                                                              tensor_shape))
-          << shapes.back() << " vs. " << tensor_shape;
+    if (!shapes.empty() && !xla::ShapeUtil::CompatibleIgnoringElementType(
+                               shapes.back(), tensor_shape)) {
+      auto last_tensor = tensors[last_tensor_index];
+      auto tensor = tensors[i];
+      return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+          "cat(): cannot concatenate tensors of shape ",
+          last_tensor->shape().get().ToString(), " with ",
+          tensor->shape().get().ToString(), " at dimension ", dim,
+          ". Expected shapes to be equal (except at dimension ", dim,
+          ") or that either of them was a 1D empty tensor of size (0,).")));
     }
     shapes.push_back(tensor_shape);
     values.push_back(tensors[i]->GetIrValue());
+    last_tensor_index = i;
   }
   if (values.empty()) {
     return tensors[0];

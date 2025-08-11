@@ -2473,6 +2473,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       # OOM is raised when we try to bring data from the device.
       b.cpu()
 
+  def test_cat_raises_error_on_incompatible_shapes(self):
+    a = torch.rand(2, 2, device=torch_xla.device())
+    b = torch.rand(5, 1, device=torch_xla.device())
+
+    try:
+      torch.cat([a, b])
+    except RuntimeError as e:
+      expected_error = (
+          "cat(): cannot concatenate tensors of shape f32[2,2] with f32[5,1] "
+          "at dimension 0. Expected shapes to be equal (except at dimension 0) "
+          "or that either of them was a 1D empty tensor of size (0,).")
+      self.assertEqual(str(e), expected_error)
+
 
 class MNISTComparator(nn.Module):
 
