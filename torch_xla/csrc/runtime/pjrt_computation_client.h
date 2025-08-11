@@ -174,6 +174,9 @@ class PjRtComputationClient : public ComputationClient {
   void OnReadyCallback(DataPtr data,
                        const std::function<void()>& callback) override;
 
+  void SetCustomCompileOptions(
+      const std::unordered_map<std::string, std::string>& options) override;
+
   // Creates a new instance of PjRtComputationClient and initializes it.
   static absl::StatusOr<absl_nonnull std::unique_ptr<PjRtComputationClient>>
   Create();
@@ -206,6 +209,7 @@ class PjRtComputationClient : public ComputationClient {
   // If not nullptr, invoke this instead of the actual XLA compilation. Used
   // only for testing.
   std::function<absl::Status()> fake_xla_compile_ = nullptr;
+  std::unordered_map<std::string, std::string> custom_compile_options_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 
