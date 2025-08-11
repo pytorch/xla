@@ -116,6 +116,7 @@ def compile(
     full_graph: Optional[bool] = False,
     name: Optional[str] = None,
     max_different_graphs: Optional[int] = None,
+    custom_compile_options: Optional[dict] = None,
 ):
   """
   Optimizes given model/function using torch_xla's LazyTensor tracing mode.
@@ -136,6 +137,8 @@ def compile(
       max_different_graphs (Optional[int]): number of different traced graphs of the given
         model/function that we are allowed to have. An error will be raised in case this limit
         is exceeded.
+      custom_compile_options (Optional[dict]): A dictionary of custom compile options to be set.
+        The keys are strings and the values can be of type bool, float, int, or str.
 
   Example::
 
@@ -215,6 +218,8 @@ def compile(
       torch_xla._XLAC._set_use_eager_mode(saved_eager_mode_status)
       torch_xla._XLAC._set_current_graph_name(saved_current_graph_name)
 
+  if custom_compile_options is not None and len(custom_compile_options) > 0:
+    torch_xla._XLAC._set_custom_compile_options(custom_compile_options)
   return _compile() if f is None else _compile()(f)
 
 
@@ -264,3 +269,15 @@ def launch(
     fn(xu.getenv_as(xenv.LOCAL_RANK, int), *args)
   else:
     xmp.spawn(fn, args=args, nprocs=nprocs, start_method=start_method)
+
+
+def set_custom_compile_options(options: Optional[dict] = None,):
+  """Sets custom compile options for the XLA compilation.
+
+  Args:
+    options: A dictionary of custom compile options to be set.
+      The keys are strings and the values can be of type bool, float, int, or str.
+  """
+  if options is None:
+    options = {}
+  torch_xla._XLAC._set_custom_compile_options(options)
