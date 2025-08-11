@@ -1421,9 +1421,10 @@ XLATensorPtr diagonal(const XLATensorPtr& input, int64_t offset, int64_t dim1,
       input->GetIrValue(), offset, canonical_dim1, canonical_dim2));
 }
 
-XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
-                 const std::optional<std::string_view>& rounding_mode,
-                 std::optional<at::ScalarType> logical_element_type) {
+absl::StatusOr<absl_nonnull XLATensorPtr> div(
+    const XLATensorPtr& input, const XLATensorPtr& other,
+    const std::optional<std::string_view>& rounding_mode,
+    std::optional<at::ScalarType> logical_element_type) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
   xla::PrimitiveType input_type = input->shape().get().element_type();
@@ -1446,8 +1447,10 @@ XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
     } else if (*rounding_mode == "floor") {
       res = torch_xla::MakeNode<Floor>(res);
     } else {
-      XLA_CHECK(false)
-          << "rounding_mode must be one of None, 'trunc', or 'floor'";
+      return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+          absl::StrCat("div(): invalid rounding mode `", *rounding_mode,
+                       "`. Expected it to be either 'trunc', 'floor', or be "
+                       "left unspecified.")));
     }
   }
 

@@ -389,7 +389,7 @@ XLATensorPtr diag(const XLATensorPtr& input, int64_t offset);
 XLATensorPtr diagonal(const XLATensorPtr& input, int64_t offset, int64_t dim1,
                       int64_t dim2);
 
-XLATensorPtr div(
+absl::StatusOr<absl_nonnull XLATensorPtr> div(
     const XLATensorPtr& input, const XLATensorPtr& other,
     const std::optional<std::string_view>& rounding_mode = std::nullopt,
     std::optional<at::ScalarType> logical_element_type = std::nullopt);
