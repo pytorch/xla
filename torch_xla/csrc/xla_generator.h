@@ -26,7 +26,8 @@ struct XLAGeneratorState : c10::intrusive_ptr_target {
 struct TORCH_API XLAGeneratorImpl : public c10::GeneratorImpl {
   // Constructors
   XLAGeneratorImpl(DeviceIndex device_index = -1);
-  XLAGeneratorImpl(DeviceIndex device_index, c10::intrusive_ptr<XLAGeneratorState> state);
+  XLAGeneratorImpl(DeviceIndex device_index,
+                   c10::intrusive_ptr<XLAGeneratorState> state);
   ~XLAGeneratorImpl() override = default;
 
   // Cloning support
@@ -50,7 +51,6 @@ struct TORCH_API XLAGeneratorImpl : public c10::GeneratorImpl {
 
   // The actual state is held in a separate, cloneable object.
   c10::intrusive_ptr<XLAGeneratorState> state_;
-
 };
 
 }  // namespace at
