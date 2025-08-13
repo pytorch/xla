@@ -9,11 +9,7 @@ import collections
 import torch_xla.runtime as xr
 from torch.distributed.tensor._dtensor_spec import DTensorSpec, TensorMeta
 from torch.distributed.device_mesh import DeviceMesh
-<<<<<<< HEAD
 from torch.distributed.tensor.placement_types import Placement, Shard, Replicate, Partial
-=======
-from torch.distributed.tensor.placement_types import Shard, Replicate
->>>>>>> 566959e10 (Removed auto wrapping sharding propagation, added cached spec invalidation)
 from torch.utils._pytree import tree_map_only
 from torch.distributed.tensor import DTensor
 
