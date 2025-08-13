@@ -68,8 +68,6 @@ class DTensorXLAFromLocalConversionTest(test_xla_sharding_base.XlaShardingTest):
     # All gradients should be 1.0 since we did a sum()
     self.assertTrue(torch.allclose(local_tensor.grad, torch.ones_like(tensor)))
 
-    print("Gradient flow test successful")
-
 
 if __name__ == "__main__":
   result = unittest.main(exit=False)
