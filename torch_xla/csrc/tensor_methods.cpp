@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <functional>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "torch_xla/csrc/LazyIr.h"
@@ -1160,8 +1161,8 @@ std::vector<XLATensorPtr> broadcast_tensors(
   return tensors.front()->MakeOutputTensors(node);
 }
 
-XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
-                 at::ScalarType dtype) {
+absl::StatusOr<absl_nonnull XLATensorPtr> cat(
+    absl::Span<const XLATensorPtr> tensors, int64_t dim, at::ScalarType dtype) {
   // Shape checks for cat:
   // - If not empty, every tensor shape must be the same.
   // - Empty tensor passes but is simply ignore in implementation,
@@ -1169,9 +1170,10 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
   // - If empty dimension, other dimensions must be the same.
   //   e.g. ([4, 0, 32, 32], [4, 2, 32, 32], dim=1) passes.
   //   ([4, 0, 32, 32], [4, 2, 31, 32], dim=1) throws.
-  XLA_CHECK_GT(tensors.size(), 0);
+  ABSL_CHECK(tensors.size() > 0);
   std::vector<torch::lazy::Value> values;
   std::vector<xla::Shape> shapes;
+  size_t last_tensor_index;
   for (size_t i = 0; i < tensors.size(); ++i) {
     xla::Shape tensor_shape = tensors[i]->shape();
     if (tensor_shape.dimensions_size() == 1 &&
@@ -1181,13 +1183,20 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
     dim = torch::lazy::GetCanonicalDimensionIndex(
         dim, tensor_shape.dimensions_size());
     tensor_shape.DeleteDimension(dim);
-    if (!shapes.empty()) {
-      XLA_CHECK(xla::ShapeUtil::CompatibleIgnoringElementType(shapes.back(),
-                                                              tensor_shape))
-          << shapes.back() << " vs. " << tensor_shape;
+    if (!shapes.empty() && !xla::ShapeUtil::CompatibleIgnoringElementType(
+                               shapes.back(), tensor_shape)) {
+      auto last_tensor = tensors[last_tensor_index];
+      auto tensor = tensors[i];
+      return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+          "cat(): cannot concatenate tensors of shape ",
+          last_tensor->shape().get().ToString(), " with ",
+          tensor->shape().get().ToString(), " at dimension ", dim,
+          ". Expected shapes to be equal (except at dimension ", dim,
+          ") or that either of them was a 1D empty tensor of size (0,).")));
     }
     shapes.push_back(tensor_shape);
     values.push_back(tensors[i]->GetIrValue());
+    last_tensor_index = i;
   }
   if (values.empty()) {
     return tensors[0];
@@ -1336,8 +1345,9 @@ std::tuple<XLATensorPtr, XLATensorPtr> cummax(const XLATensorPtr& input,
     at::Tensor val =
         at::empty(shape_, at::TensorOptions().dtype(input->dtype()));
     at::Tensor idx = at::empty(shape_, at::TensorOptions().dtype(at::kLong));
-    return std::make_tuple(input->Create(val, input->GetDevice()),
-                           input->Create(idx, input->GetDevice()));
+    return std::make_tuple(
+        GetValueOrThrow(XLATensor::Create(val, input->GetDevice())),
+        GetValueOrThrow(XLATensor::Create(idx, input->GetDevice())));
   }
   torch::lazy::NodePtr node =
       torch_xla::MakeNode<CumMax>(input->GetIrValue(), canonical_dim);
@@ -1411,9 +1421,10 @@ XLATensorPtr diagonal(const XLATensorPtr& input, int64_t offset, int64_t dim1,
       input->GetIrValue(), offset, canonical_dim1, canonical_dim2));
 }
 
-XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
-                 const std::optional<std::string_view>& rounding_mode,
-                 std::optional<at::ScalarType> logical_element_type) {
+absl::StatusOr<absl_nonnull XLATensorPtr> div(
+    const XLATensorPtr& input, const XLATensorPtr& other,
+    const std::optional<std::string_view>& rounding_mode,
+    std::optional<at::ScalarType> logical_element_type) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
   xla::PrimitiveType input_type = input->shape().get().element_type();
@@ -1436,8 +1447,10 @@ XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
     } else if (*rounding_mode == "floor") {
       res = torch_xla::MakeNode<Floor>(res);
     } else {
-      XLA_CHECK(false)
-          << "rounding_mode must be one of None, 'trunc', or 'floor'";
+      return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+          absl::StrCat("div(): invalid rounding mode `", *rounding_mode,
+                       "`. Expected it to be either 'trunc', 'floor', or be "
+                       "left unspecified.")));
     }
   }
 

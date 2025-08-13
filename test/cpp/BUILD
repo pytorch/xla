@@ -167,6 +167,7 @@ cc_library(
     name = "test_status_common",
     hdrs = ["test_status_common.h"],
     deps = [
+        ":cpp_test_util",
         "//torch_xla/csrc:status",
         "//torch_xla/csrc/runtime:env_vars",
         "@com_google_absl//absl/status:statusor",
@@ -196,6 +197,7 @@ ptxla_cc_test(
     name = "test_debug_macros",
     srcs = ["test_debug_macros.cpp"],
     deps = [
+        ":cpp_test_util",
         "//torch_xla/csrc:status",
         "//torch_xla/csrc/runtime:debug_macros",
         "//torch_xla/csrc/runtime:env_vars",

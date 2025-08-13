@@ -1,6 +1,7 @@
 #ifndef XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 #define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
+#include "absl/base/nullability.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -307,8 +308,8 @@ XLATensorPtr bmm(const XLATensorPtr& batch1, const XLATensorPtr& batch2);
 std::vector<XLATensorPtr> broadcast_tensors(
     absl::Span<const XLATensorPtr> tensors);
 
-XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
-                 at::ScalarType dtype);
+absl::StatusOr<absl_nonnull XLATensorPtr> cat(
+    absl::Span<const XLATensorPtr> tensors, int64_t dim, at::ScalarType dtype);
 
 XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
                            double p);
@@ -388,7 +389,7 @@ XLATensorPtr diag(const XLATensorPtr& input, int64_t offset);
 XLATensorPtr diagonal(const XLATensorPtr& input, int64_t offset, int64_t dim1,
                       int64_t dim2);
 
-XLATensorPtr div(
+absl::StatusOr<absl_nonnull XLATensorPtr> div(
     const XLATensorPtr& input, const XLATensorPtr& other,
     const std::optional<std::string_view>& rounding_mode = std::nullopt,
     std::optional<at::ScalarType> logical_element_type = std::nullopt);

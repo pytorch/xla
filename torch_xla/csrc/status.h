@@ -174,6 +174,14 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
 
 }  // namespace status_internal
 
+// Builds the complete error message for the given `status`.
+//
+// If `TORCH_SHOW_CPP_STACKTRACES` is enabled, returns the concatenation of
+// `status.message()` with its inner status propagation trace.
+//
+// It doesn't add a trailing line break.
+std::string BuildStatusErrorMessage(const absl::Status& status);
+
 // Maybe throws an exception if `status` has a non-ok code.
 //
 // Ideally, this function should be used only used in the project's
@@ -199,6 +207,9 @@ T GetValueOrThrow(absl::StatusOr<T>&& status) {
   MaybeThrow(status.status());
   return std::move(status).value();
 }
+
+// `GetValueOrThrow` overload for `Status`.
+void GetValueOrThrow(const absl::Status& status);
 
 }  // namespace torch_xla
 

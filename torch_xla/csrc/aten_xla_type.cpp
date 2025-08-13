@@ -1314,9 +1314,10 @@ at::Tensor XLANativeFunctions::bmm(const at::Tensor& self,
 at::Tensor XLANativeFunctions::cat(const at::ITensorListRef& tensors,
                                    int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::cat(GetValueOrThrow(bridge::GetXlaTensors(tensors)), dim,
-                          at::native::result_type(tensors)));
+  auto xtensors = GetValueOrThrow(bridge::GetXlaTensors(tensors));
+  auto output = GetValueOrThrow(
+      tensor_methods::cat(xtensors, dim, at::native::result_type(tensors)));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::celu(const at::Tensor& self,
@@ -1535,8 +1536,9 @@ at::Tensor XLANativeFunctions::div(
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   at::ScalarType dtype = at::result_type(self, other);
   auto operands = GetBinaryOperands(self, UnwrapNumber(other, dtype));
-  return bridge::AtenFromXlaTensor(tensor_methods::div(
+  auto output = GetValueOrThrow(tensor_methods::div(
       operands.first, operands.second, rounding_mode, dtype));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::div(const at::Tensor& self,

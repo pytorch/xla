@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 
+#include <c10/util/Exception.h>
 #include <torch/csrc/utils/cpp_stacktraces.h>
 
 #include <stdexcept>
@@ -19,12 +20,10 @@ void ErrorGenerator::operator&(const std::basic_ostream<char>& oss) const {
 
   if (torch::get_cpp_stacktraces_enabled()) {
     ess << " (at " << file_ << ":" << line_ << ")\n";
-    ess << tsl::CurrentStackTrace();
   }
 
   TF_VLOG(1) << ess.str();
-  // We cannot use AT_ERROR() here, due to layering issues.
-  throw std::runtime_error(ess.str());
+  TORCH_CHECK(false, ess.str());
 }
 
 }  // namespace internal
