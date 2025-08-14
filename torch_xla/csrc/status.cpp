@@ -126,6 +126,10 @@ void GetValueOrThrow(const absl::Status& status) { MaybeThrow(status); }
 
 void OkOrDie(const absl::Status& status, const char* file, const int32_t line,
              const char* function, std::string_view message) {
+  if (status.ok()) {
+    return;
+  }
+
   std::ostringstream oss;
   oss << "\n\n"
       << "Internal Error:\n";
