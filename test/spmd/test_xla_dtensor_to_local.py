@@ -19,10 +19,6 @@ class DTensorXLAFromLocalConversionTest(test_xla_sharding_base.XlaShardingTest):
     in DTensor.from_local() when using XLA device mesh.
     """
 
-  @classmethod
-  def setUpClass(cls):
-    super().setUpClass()
-
   def test_to_local(self):
     from torch.distributed.tensor import distribute_tensor
     world_size = xr.global_runtime_device_count()
