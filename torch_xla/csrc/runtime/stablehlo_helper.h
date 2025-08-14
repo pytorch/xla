@@ -13,6 +13,8 @@ namespace torch_xla {
 std::string hloToStablehlo(const xla::HloModuleProto* proto,
                            bool emit_bytecode);
 
+void ConvertStableHloToSdy(mlir::ModuleOp* mlir_module);
+
 void ConvertHloToStableHlo(const xla::HloModuleProto* proto,
                            mlir::ModuleOp* mlir_module);
 
