@@ -117,12 +117,12 @@ static std::string LineBreakIfCppStacktracesEnabled() {
   return torch::get_cpp_stacktraces_enabled() ? "\n" : "";
 }
 
-void MaybeThrow(const absl::Status& status) {
+void OkOrThrow(const absl::Status& status) {
   TORCH_CHECK(status.ok(), absl::StrCat(BuildStatusErrorMessage(status),
                                         LineBreakIfCppStacktracesEnabled()));
 }
 
-void GetValueOrThrow(const absl::Status& status) { MaybeThrow(status); }
+void GetValueOrThrow(const absl::Status& status) { OkOrThrow(status); }
 
 void OkOrDie(const absl::Status& status, const char* file, const int32_t line,
              const char* function, std::string_view message) {

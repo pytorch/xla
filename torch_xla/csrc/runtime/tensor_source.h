@@ -31,7 +31,7 @@ class TensorSource {
 
   virtual std::vector<int64_t> byte_strides() const {
     std::vector<int64_t> byte_strides(shape().dimensions_size());
-    MaybeThrow(
+    OkOrThrow(
         xla::ShapeUtil::ByteStrides(shape(), absl::MakeSpan(byte_strides)));
     return byte_strides;
   }

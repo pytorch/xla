@@ -664,7 +664,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   } else {
     auto dst_tensor = std::move(dst_tensor_status).value();
     tensor_methods::copy_(dst_tensor, self_tensor_status.value());
-    MaybeThrow(bridge::ReplaceXlaTensor(dst, dst_tensor));
+    OkOrThrow(bridge::ReplaceXlaTensor(dst, dst_tensor));
   }
   return dst;
 }
@@ -3438,7 +3438,7 @@ at::Tensor& XLANativeFunctions::set_(at::Tensor& self,
                                      const at::Tensor& source) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr source_tensor = GetValueOrThrow(bridge::GetXlaTensor(source));
-  MaybeThrow(bridge::ReplaceXlaTensor(self, source_tensor));
+  OkOrThrow(bridge::ReplaceXlaTensor(self, source_tensor));
   return self;
 }
 

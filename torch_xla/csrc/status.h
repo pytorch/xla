@@ -200,29 +200,29 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
 // It doesn't add a trailing line break.
 std::string BuildStatusErrorMessage(const absl::Status& status);
 
-// Maybe throws an exception if `status` has a non-ok code.
+// Throws an exception if `status` has a non-ok code.
 //
 // Ideally, this function should be used only used in the project's
 // boundary, e.g. when we need to throw an exception for the user to see.
-void MaybeThrow(const absl::Status& status);
+void OkOrThrow(const absl::Status& status);
 
 // Either returns the value `status` holds, if it's an ok-status, or throw an
 // exception from its error status.
 template <class T>
 T& GetValueOrThrow(absl::StatusOr<T>& status) {
-  MaybeThrow(status.status());
+  OkOrThrow(status.status());
   return status.value();
 }
 
 template <class T>
 const T& GetValueOrThrow(const absl::StatusOr<T>& status) {
-  MaybeThrow(status.status());
+  OkOrThrow(status.status());
   return status.value();
 }
 
 template <class T>
 T GetValueOrThrow(absl::StatusOr<T>&& status) {
-  MaybeThrow(status.status());
+  OkOrThrow(status.status());
   return std::move(status).value();
 }
 
