@@ -7,4 +7,3 @@ pytest-forked==1.6.0
 sentencepiece==0.2.0
 expecttest==0.3.0
 optax==0.2.4
-tensorflow==2.19.0
