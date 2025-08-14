@@ -28,7 +28,6 @@
 // unnecessary or undesirable.
 #define XLA_ERROR() TF_ERROR_STREAM()
 #define XLA_CHECK(c) TF_CHECK(c)
-#define XLA_CHECK_OK(c) TF_CHECK_OK(c)
 #define XLA_CHECK_EQ(a, b) TF_CHECK_EQ(a, b)
 #define XLA_CHECK_NE(a, b) TF_CHECK_NE(a, b)
 #define XLA_CHECK_LE(a, b) TF_CHECK_LE(a, b)

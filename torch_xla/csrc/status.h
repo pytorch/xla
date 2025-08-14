@@ -10,6 +10,8 @@
 #ifndef XLA_TORCH_XLA_CSRC_STATUS_H_
 #define XLA_TORCH_XLA_CSRC_STATUS_H_
 
+#include <sstream>
+
 #include "absl/status/statusor.h"
 
 namespace torch_xla {
@@ -125,6 +127,22 @@ constexpr char kStatusPropagationTraceKey[] =
                             lhs = std::move(XLA_STATUS_VAR_).value(), \
                             ##__VA_ARGS__)
 
+// Crashes if `status` is not an ok status.
+//
+// Example:
+//
+//     XLA_CHECK_OK(
+//         FnThatReturnStatus(),
+//         "New error message"
+//     );
+//
+// If `FnThatReturnStatus()` returns a non-ok status, this macro will
+// call `ABSL_CHECK()`, which will crash.
+//
+#define XLA_CHECK_OK(status, ...)                                       \
+  ::torch_xla::OkOrDie(::torch_xla::status_internal::GetStatus(status), \
+                       __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+
 namespace status_internal {
 
 // Adds source location information to the status propagation trace if
@@ -210,6 +228,14 @@ T GetValueOrThrow(absl::StatusOr<T>&& status) {
 
 // `GetValueOrThrow` overload for `Status`.
 void GetValueOrThrow(const absl::Status& status);
+
+// Checks that `status` is an ok status.
+//
+// Otherwise, it will create a new status instance with the given source
+// location information, and incorporate its message (alongside the
+// status propagation trace) to the crash report.
+void OkOrDie(const absl::Status& status, const char* file, const int32_t line,
+             const char* function, std::string_view message = "");
 
 }  // namespace torch_xla
 

@@ -124,4 +124,30 @@ void MaybeThrow(const absl::Status& status) {
 
 void GetValueOrThrow(const absl::Status& status) { MaybeThrow(status); }
 
+void OkOrDie(const absl::Status& status, const char* file, const int32_t line,
+             const char* function, std::string_view message) {
+  if (status.ok()) {
+    return;
+  }
+
+  std::ostringstream oss;
+  oss << "\n\n"
+      << "Internal Error:\n";
+
+  if (!message.empty()) {
+    oss << "    " << message << "\n";
+  }
+
+  oss << "    This is a bug! Please, open an issue in the PyTorch/XLA "
+      << "GitHub repository: https://github.com/pytorch/xla"
+      << "\n\n"
+      << "Status Error:\n"
+      << "    "
+      << BuildStatusErrorMessage(
+             status_internal::MaybeWithNewMessage(status, file, line, function))
+      << "\n";
+
+  ABSL_CHECK(status.ok()) << oss.str();
+}
+
 }  // namespace torch_xla
