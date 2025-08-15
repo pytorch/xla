@@ -124,8 +124,9 @@ void OkOrThrow(const absl::Status& status) {
 
 void GetValueOrThrow(const absl::Status& status) { OkOrThrow(status); }
 
-void OkOrDie(const absl::Status& status, const char* file, const int32_t line,
-             const char* function, std::string_view message) {
+void status_internal::OkOrDie(const absl::Status& status, const char* file,
+                              const int32_t line, const char* function,
+                              std::string_view message) {
   if (status.ok()) {
     return;
   }
