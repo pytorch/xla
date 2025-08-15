@@ -139,9 +139,10 @@ constexpr char kStatusPropagationTraceKey[] =
 // If `FnThatReturnStatus()` returns a non-ok status, this macro will
 // call `ABSL_CHECK()`, which will crash.
 //
-#define XLA_CHECK_OK(status, ...)                                       \
-  ::torch_xla::OkOrDie(::torch_xla::status_internal::GetStatus(status), \
-                       __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define XLA_CHECK_OK(status, ...)                                          \
+  ::torch_xla::status_internal::OkOrDie(                                   \
+      ::torch_xla::status_internal::GetStatus(status), __FILE__, __LINE__, \
+      __FUNCTION__, ##__VA_ARGS__)
 
 namespace status_internal {
 
@@ -190,6 +191,14 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
                                  int32_t line, const char* function,
                                  std::string_view new_message = "");
 
+// Checks that `status` is an ok status.
+//
+// Otherwise, it will create a new status instance with the given source
+// location information, and incorporate its message (alongside the
+// status propagation trace) to the crash report.
+void OkOrDie(const absl::Status& status, const char* file, const int32_t line,
+             const char* function, std::string_view message = "");
+
 }  // namespace status_internal
 
 // Builds the complete error message for the given `status`.
@@ -228,14 +237,6 @@ T GetValueOrThrow(absl::StatusOr<T>&& status) {
 
 // `GetValueOrThrow` overload for `Status`.
 void GetValueOrThrow(const absl::Status& status);
-
-// Checks that `status` is an ok status.
-//
-// Otherwise, it will create a new status instance with the given source
-// location information, and incorporate its message (alongside the
-// status propagation trace) to the crash report.
-void OkOrDie(const absl::Status& status, const char* file, const int32_t line,
-             const char* function, std::string_view message = "");
 
 }  // namespace torch_xla
 
