@@ -1811,10 +1811,9 @@ XLATensorPtr fmod(const XLATensorPtr& input, const at::Scalar& other,
                            logical_element_type);
 }
 
-absl::StatusOr<XLATensorPtr> full(absl::Span<const int64_t> size,
-                                  const at::Scalar& fill_value,
-                                  const torch::lazy::BackendDevice& device,
-                                  at::ScalarType scalar_type) {
+absl::StatusOr<absl_nonnull XLATensorPtr> full(
+    absl::Span<const int64_t> size, const at::Scalar& fill_value,
+    const torch::lazy::BackendDevice& device, at::ScalarType scalar_type) {
   XLA_RETURN_IF_ERROR(internal::full::CheckSizesArePositive(size));
   xla::Shape shape =
       MakeArrayShapeFromDimensions(size, /*dynamic_dimensions=*/{},
@@ -1839,7 +1838,7 @@ XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                            device, *scalar_type);
 }
 
-absl::StatusOr<XLATensorPtr> full_symint(
+absl::StatusOr<absl_nonnull XLATensorPtr> full_symint(
     at::SymIntArrayRef sym_size, const at::Scalar& fill_value,
     const torch::lazy::BackendDevice& device, at::ScalarType scalar_type) {
   XLA_RETURN_IF_ERROR(internal::full::CheckConcreteSizesArePositive(sym_size));
