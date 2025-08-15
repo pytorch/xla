@@ -64,6 +64,49 @@ class DTensorXLAFromLocalConversionTest(test_xla_sharding_base.XlaShardingTest):
     # All gradients should be 1.0 since we did a sum()
     self.assertTrue(torch.allclose(local_tensor.grad, torch.ones_like(tensor)))
 
+  def test_to_local_grad_independence(self):
+    """Test that gradients are independent between original and local tensor."""
+    world_size = xr.global_runtime_device_count()
+    mesh = DeviceMesh("xla", list(range(world_size)))
+
+    tensor = torch.randn(100_000, 88, requires_grad=True)
+    sharded_tensor = XLAShardedTensor(tensor, mesh, [Shard(0)])
+
+    # Create gradients
+    res = sharded_tensor.sum()
+    res.backward()
+
+    # Get local tensor
+    local_tensor = sharded_tensor.to_local()
+
+    # Verify gradients are initially the same
+    self.assertTrue(torch.allclose(local_tensor.grad, sharded_tensor.grad))
+
+    # Modify local tensor's gradient
+    local_tensor.grad[0, 0] = 999.0
+
+    # Verify gradients are now independent (not the same object)
+    self.assertFalse(local_tensor.grad is sharded_tensor.grad)
+    self.assertFalse(torch.allclose(local_tensor.grad, sharded_tensor.grad))
+
+  def test_to_local_grad_none_handling(self):
+    """Test that to_local() handles None gradients correctly."""
+    world_size = xr.global_runtime_device_count()
+    mesh = DeviceMesh("xla", list(range(world_size)))
+
+    tensor = torch.randn(100_000, 88, requires_grad=True)
+    sharded_tensor = XLAShardedTensor(tensor, mesh, [Shard(0)])
+
+    # Don't do backward pass, so grad remains None
+    self.assertIsNone(sharded_tensor.grad)
+
+    # Get local tensor
+    local_tensor = sharded_tensor.to_local()
+
+    # Verify local tensor has correct properties
+    self.assertTrue(local_tensor.requires_grad)
+    self.assertIsNone(local_tensor.grad)
+
 
 if __name__ == "__main__":
   result = unittest.main(exit=False)

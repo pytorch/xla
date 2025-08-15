@@ -169,8 +169,8 @@ class XLAShardedTensor(DTensor):
     result = self.global_tensor.clone()
     # Since global tensor is detached, add requires_grad and grad values back to the local tensor
     if self.requires_grad:
-      result.requires_grad = self.requires_grad
-      result.grad = self.grad
+      result.requires_grad_(self.requires_grad)
+      result.grad = self.grad.clone() if self.grad is not None else None
 
     return result
 
