@@ -115,12 +115,12 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = True  # Whether to use nightly or stable libtpu and JAX.
 
-_libtpu_version = '0.0.18'
-_libtpu_date = '20250617'
+_libtpu_version = '0.0.20'
+_libtpu_date = '20250722'
 
-_jax_version = '0.6.2'
-_jaxlib_version = '0.6.2'
-_jax_date = '20250617'  # Date for jax and jaxlib.
+_jax_version = '0.7.0'
+_jaxlib_version = '0.7.0'
+_jax_date = '20250722'  # Date for jax and jaxlib.
 
 if USE_NIGHTLY:
   _libtpu_version += f".dev{_libtpu_date}"
