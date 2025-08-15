@@ -315,7 +315,8 @@ XLATensorPtr GetZeroElementTensor(const XLATensorPtr& base,
                     base_dimensions.begin() + start_dim + indices.size(),
                     base_dimensions.end());
 
-  return tensor_methods::full(dimensions, 0, base->GetDevice(), base->dtype());
+  return GetValueOrThrow(
+      tensor_methods::full(dimensions, 0, base->GetDevice(), base->dtype()));
 }
 
 XLATensorPtr IndexByTensors(const XLATensorPtr& base,
