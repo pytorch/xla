@@ -2511,6 +2511,16 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
           f"from {dims} to {dims_suggestion}.")
       self.assertEqual(str(e), expected_error)
 
+  def test_full_raises_error_on_negative_size(self):
+    shape = [2, -2, 2]
+    try:
+      torch.full(shape, 1.5, device="xla")
+    except RuntimeError as e:
+      expected_error = (
+          "full(): expected concrete sizes (i.e. non-symbolic) to be "
+          f"positive values. However found negative ones: {shape}.")
+      self.assertEqual(str(e), expected_error)
+
 
 class MNISTComparator(nn.Module):
 

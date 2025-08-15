@@ -426,8 +426,8 @@ absl::Status CheckSizesArePositiveImpl(absl::Span<const int64_t> sizes,
   if (has_concrete_negative_size) {
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
         absl::StrCat("full(): expected concrete sizes (i.e. non-symbolic) to "
-                     "be positive values, however found negative ones: [",
-                     get_joined_original_arguments(), "]")));
+                     "be positive values. However found negative ones: [",
+                     get_joined_original_arguments(), "].")));
   }
   return absl::OkStatus();
 }
