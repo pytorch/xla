@@ -471,8 +471,9 @@ XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
                          const torch::lazy::BackendDevice& device,
                          at::ScalarType scalar_type);
 
-XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
-                    const XLATensorPtr& index);
+absl::StatusOr<absl_nonnull XLATensorPtr> gather(const XLATensorPtr& input,
+                                                 int64_t dim,
+                                                 const XLATensorPtr& index);
 
 XLATensorPtr ge(const XLATensorPtr& input, const at::Scalar& other);
 
