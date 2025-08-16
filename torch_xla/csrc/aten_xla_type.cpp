@@ -1702,16 +1702,14 @@ at::Tensor XLANativeFunctions::empty_symint(
   // does not actually end up doing any memory initialization, we use that and
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
-  XLATensorPtr xla_tensor;
-  if (all_dims_static) {
-    xla_tensor = tensor_methods::full(XlaHelpers::I64List(int_sizes.value()), 0,
-                                      GetXlaDeviceOrCurrent(device),
-                                      at::dtype_or_default(dtype));
-  } else {
-    xla_tensor =
-        tensor_methods::full_symint(sym_size, 0, GetXlaDeviceOrCurrent(device),
-                                    at::dtype_or_default(dtype));
-  }
+  XLATensorPtr xla_tensor = GetValueOrThrow(
+      all_dims_static
+          ? tensor_methods::full(XlaHelpers::I64List(int_sizes.value()), 0,
+                                 GetXlaDeviceOrCurrent(device),
+                                 at::dtype_or_default(dtype))
+          : tensor_methods::full_symint(sym_size, 0,
+                                        GetXlaDeviceOrCurrent(device),
+                                        at::dtype_or_default(dtype)));
   // `tensor.to` will trigger an `empty` + `_to_copy`. In the egaer mode, the
   // `full` will be evulated eagerly and got a replicated sharding. We should
   // leave the sharding to be empty.
@@ -1858,9 +1856,9 @@ at::Tensor XLANativeFunctions::full(at::IntArrayRef size,
   } else {
     intend_dtype = fill_value.type();
   }
-  return bridge::AtenFromXlaTensor(
+  return bridge::AtenFromXlaTensor(GetValueOrThrow(
       tensor_methods::full(absl::Span<const int64_t>(size), fill_value,
-                           GetXlaDeviceOrCurrent(device), intend_dtype));
+                           GetXlaDeviceOrCurrent(device), intend_dtype)));
 }
 
 at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
@@ -2681,8 +2679,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss2d_forward(
     int64_t ignore_index) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLATensorPtr total_weight = tensor_methods::full(
-      {}, 1, self_tensor->GetDevice(), self_tensor->dtype());
+  XLATensorPtr total_weight = GetValueOrThrow(tensor_methods::full(
+      {}, 1, self_tensor->GetDevice(), self_tensor->dtype()));
   return std::make_tuple(
       bridge::AtenFromXlaTensor(tensor_methods::nll_loss2d(
           self_tensor, GetValueOrThrow(bridge::GetXlaTensor(target)),
@@ -2716,8 +2714,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss_forward(
     int64_t ignore_index) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLATensorPtr total_weight = tensor_methods::full(
-      {}, 1, self_tensor->GetDevice(), self_tensor->dtype());
+  XLATensorPtr total_weight = GetValueOrThrow(tensor_methods::full(
+      {}, 1, self_tensor->GetDevice(), self_tensor->dtype()));
   return std::make_tuple(
       bridge::AtenFromXlaTensor(tensor_methods::nll_loss(
           self_tensor, GetValueOrThrow(bridge::GetXlaTensor(target)),
@@ -4038,10 +4036,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
   if (!compute_uv) {
     // When compute_uv is false, torch::_linalg_svd returns an empty tensor for
     // u and vh.
-    u = tensor_methods::full({0}, 0, self_tensor->GetDevice(),
-                             self_tensor->dtype());
-    vh = tensor_methods::full({0}, 0, self_tensor->GetDevice(),
-                              self_tensor->dtype());
+    u = GetValueOrThrow(tensor_methods::full({0}, 0, self_tensor->GetDevice(),
+                                             self_tensor->dtype()));
+    vh = GetValueOrThrow(tensor_methods::full({0}, 0, self_tensor->GetDevice(),
+                                              self_tensor->dtype()));
   }
   return std::make_tuple(bridge::AtenFromXlaTensor(u),
                          bridge::AtenFromXlaTensor(s),
