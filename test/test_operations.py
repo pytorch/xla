@@ -2523,8 +2523,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     except RuntimeError as e:
       expected_error = (
           "gather(): expected rank of input (2) and index (3) tensors "
-          "to be the same."
-      )
+          "to be the same.")
       self.assertEqual(str(e), expected_error)
 
   def test_gather_raises_error_on_invalid_index_size(self):
@@ -2542,8 +2541,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
           f"gather(): expected sizes of index [{X}, {S}, {X}, {S}] to be "
           f"smaller or equal those of input [{S}, {S}, {S}, {S}] on all "
           f"dimensions, except on dimension {dim}. "
-          "However, that's not true on dimensions [0, 2]."
-      )
+          "However, that's not true on dimensions [0, 2].")
       self.assertEqual(str(e), expected_error)
 
 
