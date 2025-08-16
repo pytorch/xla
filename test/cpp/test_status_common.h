@@ -81,7 +81,7 @@ namespace cpp_test {
 
 // Prefix of the C++ stacktrace PyTorch adds to the error message.
 constexpr inline char kTorchCppStacktracePrefix[] =
-    "Exception raised from MaybeThrow at torch_xla/csrc/status.cpp:";
+    "Exception raised from OkOrThrow at torch_xla/csrc/status.cpp:";
 
 constexpr inline char kNewMessage[] = "New test error message";
 constexpr inline char kMessage[] = "Test error message";
@@ -100,15 +100,15 @@ inline std::string GetStatusPropagationTrace(const absl::Status& status) {
              : "";
 }
 
-TEST_P(StatusTest, MaybeThrowWithOkStatus) {
+TEST_P(StatusTest, OkOrThrowWithOkStatus) {
   absl::Status ok_status = absl::OkStatus();
-  EXPECT_NO_THROW(MaybeThrow(ok_status));
+  EXPECT_NO_THROW(OkOrThrow(ok_status));
 }
 
-TEST_P(StatusTest, MaybeThrowWithErrorStatus) {
+TEST_P(StatusTest, OkOrThrowWithErrorStatus) {
   try {
     absl::Status error_status = absl::InvalidArgumentError(kMessage);
-    MaybeThrow(error_status);
+    OkOrThrow(error_status);
   } catch (const c10::Error& error) {
     if (IsShowCppStacktracesMode()) {
       EXPECT_THAT(std::string_view(error.what()),
@@ -343,7 +343,7 @@ TEST_P(StatusTest, MacroErrorWithLocation) {
   }
 }
 
-TEST_P(StatusTest, MaybeThrowWithErrorPropagationWithNewMessage) {
+TEST_P(StatusTest, OkOrThrowWithErrorPropagationWithNewMessage) {
   int32_t errline0 = __LINE__ + 2;
   auto innerfn = [&]() -> absl::Status {
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(kMessage));
@@ -362,7 +362,7 @@ TEST_P(StatusTest, MaybeThrowWithErrorPropagationWithNewMessage) {
   };
 
   try {
-    MaybeThrow(outerfn());
+    OkOrThrow(outerfn());
   } catch (const c10::Error& error) {
     if (IsShowCppStacktracesMode()) {
       // Expected Error Message Prefix
