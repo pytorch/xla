@@ -58,7 +58,7 @@ http_archive(
     patches = [
         "//openxla_patches:gpu_nvml.diff",
         "//openxla_patches:gpu_race_condition.diff",
-        "//openxla_patches:count_down.diff",
+     #   "//openxla_patches:count_down.diff",
     ],
     strip_prefix = "xla-" + xla_hash,
     urls = [
@@ -80,6 +80,14 @@ http_archive(
 #    name = "xla",
 #    path = "/path/to/openxla",
 # )
+# Initialize OpenXLA's external dependencies.
+load("@xla//:workspace4.bzl", "xla_workspace4")
+
+xla_workspace4()
+
+load("@xla//:workspace3.bzl", "xla_workspace3")
+
+xla_workspace3()
 
 # Initialize hermetic Python
 load("@xla//third_party/py:python_init_rules.bzl", "python_init_rules")
@@ -115,14 +123,6 @@ install_deps()
 
 
 
-# Initialize OpenXLA's external dependencies.
-load("@xla//:workspace4.bzl", "xla_workspace4")
-
-xla_workspace4()
-
-load("@xla//:workspace3.bzl", "xla_workspace3")
-
-xla_workspace3()
 
 load("@xla//:workspace2.bzl", "xla_workspace2")
 
