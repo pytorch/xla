@@ -1186,18 +1186,26 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
     std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::string device, ComputationCache::TypePtr cached_computation,
-    const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
+    const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec,
+    std::optional<std::vector<std::vector<int64_t>>>
+        denormalized_tile_assignments) {
   auto tensors_data =
       SetTensorData(tensors, coll->config, coll->indices, tensor_data_vec);
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(coll->indices.size(),
                                                          nullptr);
 
+  std::optional<std::vector<int64_t>> denormalized_tile_assignment =
+      std::nullopt;
+  if ((denormalized_tile_assignments.has_value()) &&
+      (!denormalized_tile_assignments.value().empty())) {
+    denormalized_tile_assignment = denormalized_tile_assignments.value()[0];
+  }
   // Extract sharding specs for the results and prepare the sharded data
   // placeholders if the computation is sharded.
   if (cached_computation->is_sharded) {
     ShardingUtil::PrepareOutputShardingPropagation(
         tensors, coll->indices, cached_computation->computation, &tensors_data,
-        &sharding_specs);
+        &sharding_specs, denormalized_tile_assignment);
     DebugUtil::SaveOutputShardingInfo(tensors, coll->indices);
   }
 
@@ -1258,15 +1266,31 @@ XLAGraphExecutor::TryRunCachedSync(
                << torch::lazy::Hash(po_data->parameter_sequence);
   }
 
+  std::vector<std::vector<int64_t>> denormalized_tile_assignments;
+  for (const auto* node : po_data->post_order) {
+    const XlaNode* const casted = dynamic_cast<const XlaNode*>(node);
+    auto shardings = casted->GetShardings();
+    if (!shardings.empty()) {
+      for (auto sharding : shardings) {
+        std::vector<int64_t> denormalized_tile_assignment =
+            sharding->GetDenormalizedTileAssignment();
+        if (!denormalized_tile_assignment.empty()) {
+          denormalized_tile_assignments.push_back(
+              sharding->GetDenormalizedTileAssignment());
+        }
+      }
+    }
+  }
   // don't schedule the execution if the purpose of this SyncTensor is just to
   // warm up the cache.
   return std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>>(
-      cache_hit, warm_up_cache_only
-                     ? nullptr
-                     : ScheduleSyncTensorsGraph(
-                           tensors, coll, std::move(po_data->parameters_data),
-                           coll->device.toString(),
-                           std::move(cached_computation), tensor_data_vec));
+      cache_hit,
+      warm_up_cache_only
+          ? nullptr
+          : ScheduleSyncTensorsGraph(
+                tensors, coll, std::move(po_data->parameters_data),
+                coll->device.toString(), std::move(cached_computation),
+                tensor_data_vec, denormalized_tile_assignments));
 }
 
 std::vector<size_t> GetBufferDonorIndexForStepMarker(
@@ -1442,13 +1466,16 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   }
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
-
+  std::vector<std::vector<int64_t>> denormalized_tile_assignments =
+      lowering_ctx.GetDenormalizedTileAssignments();
   std::vector<runtime::ComputationClient::CompileInstance> instances;
   instances.push_back(
       {std::move(computation), coll.device.toString(),
        runtime::GetComputationClientOrDie()->GetCompilationDevices(
            coll.device.toString(), devices),
-       &shape, should_wrap_parameter, is_sharded});
+       &shape, should_wrap_parameter, is_sharded,
+       /*allow_spmd_sharding_propagation_to_output=*/true,
+       /*denormalized_tile_assignments=*/denormalized_tile_assignments});
   instances.front().eager_mode = UseEagerMode();
   if (use_autosharding) {
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
@@ -1511,7 +1538,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
           /*computation=*/computations.front(),
           /*parameters_data=*/std::move(po_data->parameters_data),
-          /*is_sharded=*/is_sharded};
+          /*is_sharded=*/is_sharded,
+          /*denormalized_tile_assignments=*/denormalized_tile_assignments};
 }
 
 std::shared_ptr<XLAGraphExecutor::Async>
@@ -1587,7 +1615,7 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
     return ScheduleSyncTensorsGraph(
         tensors, &coll, std::move(compile_result.parameters_data),
         compile_result.device.toString(), std::move(cached_computation),
-        tensor_data_vec);
+        tensor_data_vec, compile_result.denormalized_tile_assignments);
   }
 }
 
