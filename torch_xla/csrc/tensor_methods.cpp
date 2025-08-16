@@ -442,6 +442,43 @@ absl::Status CheckFullConcreteSizesArePositive(at::SymIntArrayRef sym_sizes) {
   });
 }
 
+absl::Status CheckGatherRanksAreEqual(const XLATensorPtr& input,
+                                      const XLATensorPtr& index) {
+  int64_t input_rank = input->shape().get().dimensions_size();
+  int64_t index_rank = index->shape().get().dimensions_size();
+  if (input_rank != index_rank) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "gather(): expected rank of input (", input_rank, ") and index (",
+        index_rank, ") tensors to be the same.")));
+  }
+  return absl::OkStatus();
+}
+
+// Checks that all index dimensions are smaller or equal to those of input,
+// except on dimension canonical_dim.
+absl::Status CheckGatherDimensionsAreCompatible(const XLATensorPtr& input,
+                                                const XLATensorPtr& index,
+                                                int64_t canonical_dim) {
+  // Dimensions that fail the "smaller or equal" condition.
+  std::vector<int64_t> bad_dims;
+  for (int64_t dim = 0; dim < input->shape().get().dimensions_size(); dim++) {
+    if (dim != canonical_dim && input->size(dim) < index->size(dim)) {
+      bad_dims.push_back(dim);
+    }
+  }
+  if (!bad_dims.empty()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "gather(): expected sizes of index [",
+        absl::StrJoin(index->shape().get().dimensions(), /* sep= */ ", "),
+        "] to be smaller or equal those of input [",
+        absl::StrJoin(input->shape().get().dimensions(), /* sep= */ ", "),
+        "] on all dimensions, except on dimension ", canonical_dim,
+        ". However, that's not true on dimensions [",
+        absl::StrJoin(bad_dims, /* sep= */ ", "), "].")));
+  }
+  return absl::OkStatus();
+}
+
 }  // namespace
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1838,18 +1875,14 @@ absl::StatusOr<absl_nonnull XLATensorPtr> full_symint(
       device, scalar_type);
 }
 
-XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
-                    const XLATensorPtr& index) {
-  xla::Shape input_shape = input->shape();
-  xla::Shape index_shape = index->shape();
-  XLA_CHECK_EQ(input_shape.dimensions_size(), index_shape.dimensions_size());
+absl::StatusOr<absl_nonnull XLATensorPtr> gather(const XLATensorPtr& input,
+                                                 int64_t dim,
+                                                 const XLATensorPtr& index) {
   int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
-      dim, input_shape.dimensions_size());
-  for (size_t dim = 0; dim < input_shape.dimensions_size(); dim++) {
-    if (dim != canonical_dim) {
-      XLA_CHECK_LE(index->size(dim), input->size(dim));
-    }
-  }
+      dim, input->shape().get().dimensions_size());
+  XLA_RETURN_IF_ERROR(CheckGatherRanksAreEqual(input, index));
+  XLA_RETURN_IF_ERROR(
+      CheckGatherDimensionsAreCompatible(input, index, canonical_dim));
   return input->CreateFrom(torch_xla::MakeNode<Gather>(
       input->GetIrValue(), canonical_dim, index->GetIrValue()));
 }

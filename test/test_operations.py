@@ -2521,6 +2521,39 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
           f"positive values. However found negative ones: {shape}.")
       self.assertEqual(str(e), expected_error)
 
+  def test_gather_raises_error_on_rank_mismatch(self):
+    S = 2
+
+    input = torch.arange(4, device=torch_xla.device()).view(S, S)
+    index = torch.randint(0, S, (S, S, S), device=torch_xla.device())
+    dim = 1
+
+    try:
+      torch.gather(input, dim, index)
+    except RuntimeError as e:
+      expected_error = (
+          "gather(): expected rank of input (2) and index (3) tensors "
+          "to be the same.")
+      self.assertEqual(str(e), expected_error)
+
+  def test_gather_raises_error_on_invalid_index_size(self):
+    S = 2
+    X = S + 2
+
+    input = torch.arange(16, device=torch_xla.device()).view(S, S, S, S)
+    index = torch.randint(0, S, (X, S, X, S), device=torch_xla.device())
+    dim = 1
+
+    try:
+      torch.gather(input, dim, index)
+    except RuntimeError as e:
+      expected_error = (
+          f"gather(): expected sizes of index [{X}, {S}, {X}, {S}] to be "
+          f"smaller or equal those of input [{S}, {S}, {S}, {S}] on all "
+          f"dimensions, except on dimension {dim}. "
+          "However, that's not true on dimensions [0, 2].")
+      self.assertEqual(str(e), expected_error)
+
 
 class MNISTComparator(nn.Module):
 
