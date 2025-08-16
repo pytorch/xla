@@ -8,6 +8,7 @@
 #include <stdexcept>
 
 #include "absl/log/absl_check.h"
+#include "absl/strings/str_cat.h"
 #include "tsl/platform/stacktrace.h"
 
 namespace torch_xla {

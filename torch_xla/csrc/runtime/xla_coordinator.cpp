@@ -19,10 +19,8 @@ absl::Status XlaCoordinator::Initialize(int global_rank, int world_size,
     // Default value can be found in
     // https://github.com/openxla/xla/blob/4b88636002bc5834d7fe3f862997c66a490987bc/xla/pjrt/distributed/client.h#L63-L72.
     int heartbeat_interval_sec =
-        sys_util::GetEnvInt(env::kEnvDistSvcHeartbeatIntervalInSec, 10);
-    service_options.heartbeat_interval = absl::Seconds(heartbeat_interval_sec);
-    service_options.max_missing_heartbeats =
-        sys_util::GetEnvInt(env::kEnvDistSvcMaxMissingHeartbeats, 10);
+        sys_util::GetEnvInt(env::kEnvDistSvcHeartbeatIntervalInSec, 100);
+    service_options.heartbeat_timeout = absl::Seconds(heartbeat_interval_sec);
     int shutdown_timeout =
         sys_util::GetEnvInt(env::kEnvDistSvcShutdownTimeoutInMin, 5);
     service_options.shutdown_timeout = absl::Minutes(shutdown_timeout);

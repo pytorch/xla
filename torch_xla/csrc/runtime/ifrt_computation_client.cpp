@@ -218,7 +218,8 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::GetDataShards(
     std::vector<tsl::RCReference<xla::ifrt::Array>> arrays =
         ifrt_data->buffer
             ->DisassembleIntoSingleDeviceArrays(
-                xla::ifrt::ArrayCopySemantics::kAlwaysCopy)
+                xla::ifrt::ArrayCopySemantics::kAlwaysCopy,
+                xla::ifrt::SingleDeviceShardSemantics::kAddressableShards)
             .value();
 
     for (auto array : arrays) {

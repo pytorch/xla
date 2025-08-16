@@ -1,10 +1,4 @@
 """Rules that simplify deps and compiler configuration for PyTorch/XLA."""
-
-load(
-    "@xla//xla:xla.default.bzl",
-    "xla_cc_test",
-)
-
 def ptxla_cc_library(
         deps = [],
         copts = [],
@@ -22,7 +16,7 @@ def ptxla_cc_test(
         deps,
         copts = [],
         **kwargs):
-    xla_cc_test(
+    native.cc_test(
         linkstatic = True,
         copts = copts + [
             "-isystemexternal/torch",  # Required for system includes.
