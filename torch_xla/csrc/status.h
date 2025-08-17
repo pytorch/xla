@@ -10,6 +10,8 @@
 #ifndef XLA_TORCH_XLA_CSRC_STATUS_H_
 #define XLA_TORCH_XLA_CSRC_STATUS_H_
 
+#include <sstream>
+
 #include "absl/status/statusor.h"
 
 namespace torch_xla {
@@ -125,6 +127,23 @@ constexpr char kStatusPropagationTraceKey[] =
                             lhs = std::move(XLA_STATUS_VAR_).value(), \
                             ##__VA_ARGS__)
 
+// Crashes if `status` is not an ok status.
+//
+// Example:
+//
+//     XLA_CHECK_OK(
+//         FnThatReturnStatus(),
+//         "New error message"
+//     );
+//
+// If `FnThatReturnStatus()` returns a non-ok status, this macro will
+// call `ABSL_CHECK()`, which will crash.
+//
+#define XLA_CHECK_OK(status, ...)                                          \
+  ::torch_xla::status_internal::OkOrDie(                                   \
+      ::torch_xla::status_internal::GetStatus(status), __FILE__, __LINE__, \
+      __FUNCTION__, ##__VA_ARGS__)
+
 namespace status_internal {
 
 // Adds source location information to the status propagation trace if
@@ -172,6 +191,14 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
                                  int32_t line, const char* function,
                                  std::string_view new_message = "");
 
+// Checks that `status` is an ok status.
+//
+// Otherwise, it will create a new status instance with the given source
+// location information, and incorporate its message (alongside the
+// status propagation trace) to the crash report.
+void OkOrDie(const absl::Status& status, const char* file, const int32_t line,
+             const char* function, std::string_view message = "");
+
 }  // namespace status_internal
 
 // Builds the complete error message for the given `status`.
@@ -182,29 +209,29 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
 // It doesn't add a trailing line break.
 std::string BuildStatusErrorMessage(const absl::Status& status);
 
-// Maybe throws an exception if `status` has a non-ok code.
+// Throws an exception if `status` has a non-ok code.
 //
 // Ideally, this function should be used only used in the project's
 // boundary, e.g. when we need to throw an exception for the user to see.
-void MaybeThrow(const absl::Status& status);
+void OkOrThrow(const absl::Status& status);
 
 // Either returns the value `status` holds, if it's an ok-status, or throw an
 // exception from its error status.
 template <class T>
 T& GetValueOrThrow(absl::StatusOr<T>& status) {
-  MaybeThrow(status.status());
+  OkOrThrow(status.status());
   return status.value();
 }
 
 template <class T>
 const T& GetValueOrThrow(const absl::StatusOr<T>& status) {
-  MaybeThrow(status.status());
+  OkOrThrow(status.status());
   return status.value();
 }
 
 template <class T>
 T GetValueOrThrow(absl::StatusOr<T>&& status) {
-  MaybeThrow(status.status());
+  OkOrThrow(status.status());
   return std::move(status).value();
 }
 

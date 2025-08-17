@@ -450,7 +450,8 @@ void eye_out(XLATensorPtr& out, int64_t lines, int64_t cols);
 void fill_(XLATensorPtr& input, const at::Scalar& value);
 
 // Flips (reverses) the values in the dimensions of the input tensor.
-XLATensorPtr flip(const XLATensorPtr& input, absl::Span<const int64_t> dims);
+absl::StatusOr<absl_nonnull XLATensorPtr> flip(const XLATensorPtr& input,
+                                               absl::Span<const int64_t> dims);
 
 XLATensorPtr fmod(
     const XLATensorPtr& input, const XLATensorPtr& other,

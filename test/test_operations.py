@@ -2497,6 +2497,20 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
           "'trunc', 'floor', or be left unspecified.")
       self.assertEqual(str(e), expected_error)
 
+  def test_flip_raises_error_on_duplicated_dims(self):
+    a = torch.rand(2, 2, 2, 2, device=torch_xla.device())
+    dims = [0, 0, 0, 1, 2, 3, -1]
+    dims_suggestion = [0, 1, 2, 3]
+
+    try:
+      torch.flip(a, dims=dims)
+    except RuntimeError as e:
+      expected_error = (
+          "flip(): expected each dimension to appear at most once. Found "
+          "dimensions: 0 (3 times), 3 (2 times). Consider changing dims "
+          f"from {dims} to {dims_suggestion}.")
+      self.assertEqual(str(e), expected_error)
+
 
 class MNISTComparator(nn.Module):
 

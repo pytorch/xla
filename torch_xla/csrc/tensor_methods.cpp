@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <iterator>
 
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
@@ -343,6 +344,69 @@ XLATensorPtr DispatchComparisonOp(c10::Symbol kind, const XLATensorPtr& input,
   torch::lazy::NodePtr node =
       ComparisonOp(kind, input->GetIrValue(), other->GetIrValue());
   return XLATensor::Create(node, input->GetDevice(), at::ScalarType::Bool);
+}
+
+// Checks that the canonical dimensions out of the given dimensions are unique
+// for the `flip` operation.
+//
+// This function fails if any canonical dimension appears more than once.
+// Notice that its error message is specialized for the `flip` operation.
+//
+// @param rank Input rank
+// @param dims (Error Message) `flip` operation original `dims` argument
+// @param canonical_dims (Error Message) Canonical dimensions extracted from
+//                       the `dims` argument
+absl::Status CheckFlipDimensionsAreUnique(
+    int64_t rank, absl::Span<const int64_t> dims,
+    absl::Span<const int64_t> canonical_dims) {
+  // Counter that maps each given dimension to the number of times it has
+  // appeared.
+  std::vector<int64_t> count(rank, 0);
+
+  // Count the number of times each dimension appears.
+  for (auto dim : canonical_dims) {
+    count[dim] += 1;
+  }
+
+  bool any_dimension_appears_more_than_once = std::any_of(
+      count.begin(), count.end(), [](const auto n) { return n > 1; });
+
+  if (any_dimension_appears_more_than_once) {
+    // Suggestion for the value of dims that wouldn't raise an error.
+    std::vector<int64_t> dims_suggestion;
+    // Each "bad" dimension is represented as a string of the form:
+    //
+    //     <dimension> (<count> times)
+    //
+    // To be later joined with commas.
+    std::vector<std::string> bad_count_str;
+
+    // Iterates each dimension, populating both `dims_suggestion` and
+    // `bad_count_str`.
+    for (int64_t i : c10::irange(rank)) {
+      // Dimension does not appear. Do nothing.
+      if (count[i] == 0) {
+        continue;
+      }
+
+      // Dimension appears in `dims`. Add it to the suggestion list.
+      dims_suggestion.push_back(i);
+
+      // Dimension appears more than once. Add it to the "bad" list.
+      if (count[i] > 1) {
+        bad_count_str.push_back(absl::StrCat(i, " (", count[i], " times)"));
+      }
+    }
+
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "flip(): expected each dimension to appear at most once. Found "
+        "dimensions: ",
+        absl::StrJoin(bad_count_str, /* sep= */ ", "),
+        ". Consider changing dims from [", absl::StrJoin(dims, /* sep= */ ", "),
+        "] to [", absl::StrJoin(dims_suggestion, /* sep= */ ", "), "].")));
+  }
+
+  return absl::OkStatus();
 }
 
 }  // namespace
@@ -1680,12 +1744,11 @@ void fill_(XLATensorPtr& input, const at::Scalar& value) {
   input->SetInPlaceIrValue(std::move(constant));
 }
 
-XLATensorPtr flip(const XLATensorPtr& input, absl::Span<const int64_t> dims) {
-  auto dimensions = torch::lazy::GetCanonicalDimensionIndices(
-      torch_xla::runtime::util::ToVector<int64_t>(dims),
-      input->shape().get().dimensions_size());
-  std::set<int64_t> unique_dims(dimensions.begin(), dimensions.end());
-  XLA_CHECK_EQ(unique_dims.size(), dimensions.size());
+absl::StatusOr<absl_nonnull XLATensorPtr> flip(const XLATensorPtr& input,
+                                               absl::Span<const int64_t> dims) {
+  auto rank = input->shape().get().dimensions_size();
+  auto dimensions = torch::lazy::GetCanonicalDimensionIndices(dims, rank);
+  XLA_RETURN_IF_ERROR(CheckFlipDimensionsAreUnique(rank, dims, dimensions));
   return input->CreateFrom(
       torch_xla::MakeNode<Flip>(input->GetIrValue(), dimensions));
 }
