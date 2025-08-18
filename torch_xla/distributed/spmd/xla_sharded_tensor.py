@@ -115,7 +115,7 @@ class XLAShardedTensor(DTensor):
         dtype=elem.dtype,
         layout=elem.layout,
         device=elem.device,
-        requires_grad=kwargs.get("requires_grad", elem.requires_grad))
+        requires_grad=kwargs.get("requires_grad", False))
     r.global_tensor = elem.detach() if r.requires_grad else elem
 
     # Initialize mesh, partition, and spec information
@@ -165,14 +165,20 @@ class XLAShardedTensor(DTensor):
         torch.Tensor: The global tensor representation with appropriate requires_grad setting.
     """
 
-    # Create a new tensor with the same values of global_tensor
-    result = self.global_tensor.clone()
-    # Since global tensor is detached, add requires_grad and grad values back to the local tensor
-    if self.requires_grad:
-      result.requires_grad_(self.requires_grad)
-      result.grad = self.grad.clone() if self.grad is not None else None
 
-    return result
+    if not self.requires_grad:
+      #  When requires_grad is False, global_tensor is the original tensor
+      return self.global_tensor
+    else:
+      # When requires_grad is True, global_tensor is detached
+      # Create a new tensor with the same values of global_tensor
+      result = self.global_tensor.clone()
+      # Since global tensor is detached, add requires_grad and grad values back to the local tensor
+      if self.requires_grad:
+        result.requires_grad_(self.requires_grad)
+        result.grad = self.grad.clone() if self.grad is not None else None
+
+      return result
 
   @property
   def sharding_spec(self):

@@ -44,7 +44,7 @@ class DTensorXLAFromLocalConversionTest(test_xla_sharding_base.XlaShardingTest):
     tensor = torch.randn(100_000, 88, requires_grad=True)
 
     # Create XLAShardedTensor
-    sharded_tensor = XLAShardedTensor(tensor, mesh, [Shard(0)])
+    sharded_tensor = XLAShardedTensor(tensor, mesh, [Shard(0)], requires_grad=tensor.requires_grad)
 
     # Verify requires_grad is set
     self.assertTrue(sharded_tensor.requires_grad)
@@ -70,7 +70,7 @@ class DTensorXLAFromLocalConversionTest(test_xla_sharding_base.XlaShardingTest):
     mesh = DeviceMesh("xla", list(range(world_size)))
 
     tensor = torch.randn(100_000, 88, requires_grad=True)
-    sharded_tensor = XLAShardedTensor(tensor, mesh, [Shard(0)])
+    sharded_tensor = XLAShardedTensor(tensor, mesh, [Shard(0)], requires_grad=tensor.requires_grad)
 
     # Create gradients
     res = sharded_tensor.sum()
@@ -95,7 +95,7 @@ class DTensorXLAFromLocalConversionTest(test_xla_sharding_base.XlaShardingTest):
     mesh = DeviceMesh("xla", list(range(world_size)))
 
     tensor = torch.randn(100_000, 88, requires_grad=True)
-    sharded_tensor = XLAShardedTensor(tensor, mesh, [Shard(0)])
+    sharded_tensor = XLAShardedTensor(tensor, mesh, [Shard(0)], requires_grad=tensor.requires_grad)
 
     # Don't do backward pass, so grad remains None
     self.assertIsNone(sharded_tensor.grad)
