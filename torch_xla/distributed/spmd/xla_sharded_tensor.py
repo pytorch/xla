@@ -165,7 +165,6 @@ class XLAShardedTensor(DTensor):
         torch.Tensor: The global tensor representation with appropriate requires_grad setting.
     """
 
-
     if not self.requires_grad:
       #  When requires_grad is False, global_tensor is the original tensor
       return self.global_tensor
