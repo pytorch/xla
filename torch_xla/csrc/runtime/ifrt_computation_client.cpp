@@ -309,8 +309,7 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToDevice(
                     ifrt_device, xla::ifrt::MemoryKind()),
                 xla::ifrt::Client::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
-                [tensor, timed]() { /* frees tensor and timer */ },
-                client_->CreateUserContext())
+                [tensor, timed]() { /* frees tensor and timer */ })
             .value();
 
     ComputationClient::DataPtr data =
