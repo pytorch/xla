@@ -135,6 +135,14 @@ function run_pt_xla_debug_level2 {
   PT_XLA_DEBUG_LEVEL=2 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
+function run_neuron_pipelining_test {
+    if ! test_is_selected "$1"; then
+    return
+  fi
+  echo "Running neuron specific pp test : $@"
+  PJRT_DEVICE=NEURON torchrun --nproc_per_node 2 "$@"
+}
+
 function run_torch_op_tests {
   run_dynamic "$_TEST_DIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test_without_functionalization "$_TEST_DIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
@@ -276,6 +284,7 @@ function run_xla_op_tests3 {
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$_TEST_DIR/test_core_aten_ops.py"
   run_test "$_TEST_DIR/test_pallas.py"
   run_xla_ir_hlo_debug run_test "$_TEST_DIR/test_user_computation_debug_cache.py"
+  # run_neuron_pipelining_test "$_TEST_DIR/pipelining/test_basic_pipelining.py"
 
   # Test examples
   run_test "$_TEST_DIR/../examples/scan/scan_examples.py"
