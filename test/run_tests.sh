@@ -284,6 +284,7 @@ function run_xla_op_tests3 {
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$_TEST_DIR/test_core_aten_ops.py"
   run_test "$_TEST_DIR/test_pallas.py"
   run_xla_ir_hlo_debug run_test "$_TEST_DIR/test_user_computation_debug_cache.py"
+  # TODO: enable the below test once https://github.com/pytorch/xla/pull/9373 is merged
   # run_neuron_pipelining_test "$_TEST_DIR/pipelining/test_basic_pipelining.py"
 
   # Test examples
