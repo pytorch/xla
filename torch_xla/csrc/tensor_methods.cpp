@@ -346,11 +346,6 @@ XLATensorPtr DispatchComparisonOp(c10::Symbol kind, const XLATensorPtr& input,
   return XLATensor::Create(node, input->GetDevice(), at::ScalarType::Bool);
 }
 
-}  // namespace
-
-namespace internal {
-namespace flip {
-
 // Checks that the canonical dimensions out of the given dimensions are unique
 // for the `flip` operation.
 //
@@ -361,7 +356,7 @@ namespace flip {
 // @param dims (Error Message) `flip` operation original `dims` argument
 // @param canonical_dims (Error Message) Canonical dimensions extracted from
 //                       the `dims` argument
-absl::Status CheckDimensionsAreUnique(
+absl::Status CheckFlipDimensionsAreUnique(
     int64_t rank, absl::Span<const int64_t> dims,
     absl::Span<const int64_t> canonical_dims) {
   // Counter that maps each given dimension to the number of times it has
@@ -414,35 +409,31 @@ absl::Status CheckDimensionsAreUnique(
   return absl::OkStatus();
 }
 
-}  // namespace flip
-
-namespace full {
-
 template <class F>
-absl::Status CheckSizesArePositiveImpl(const absl::Span<const int64_t>& sizes,
-                                       F&& get_joined_original_arguments) {
+absl::Status CheckFullSizesArePositiveImpl(absl::Span<const int64_t> sizes,
+                                           const F& original_sizes_as_str) {
   const bool has_concrete_negative_size = std::any_of(
       sizes.begin(), sizes.end(), [](const int64_t size) { return size < 0; });
   if (has_concrete_negative_size) {
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
         absl::StrCat("full(): expected concrete sizes (i.e. non-symbolic) to "
                      "be positive values. However found negative ones: [",
-                     get_joined_original_arguments(), "].")));
+                     original_sizes_as_str(), "].")));
   }
   return absl::OkStatus();
 }
 
-absl::Status CheckSizesArePositive(const absl::Span<const int64_t>& sizes) {
-  return CheckSizesArePositiveImpl(
+absl::Status CheckFullSizesArePositive(absl::Span<const int64_t> sizes) {
+  return CheckFullSizesArePositiveImpl(
       sizes, [&]() { return absl::StrJoin(sizes, /* sep= */ ", "); });
 }
 
-absl::Status CheckConcreteSizesArePositive(at::SymIntArrayRef sym_sizes) {
+absl::Status CheckFullConcreteSizesArePositive(at::SymIntArrayRef sym_sizes) {
   std::vector<int64_t> concrete_sizes_or_zero;
   std::transform(sym_sizes.begin(), sym_sizes.end(),
                  std::back_inserter(concrete_sizes_or_zero),
                  [](at::SymInt sym) { return sym.maybe_as_int().value_or(0); });
-  return CheckSizesArePositiveImpl(concrete_sizes_or_zero, [&]() {
+  return CheckFullSizesArePositiveImpl(concrete_sizes_or_zero, [&]() {
     return absl::StrJoin(sym_sizes.begin(), sym_sizes.end(), /* sep= */ ", ",
                          [](std::string* out, at::SymInt sym) {
                            absl::StrAppendFormat(out, "%s",
@@ -451,8 +442,7 @@ absl::Status CheckConcreteSizesArePositive(at::SymIntArrayRef sym_sizes) {
   });
 }
 
-}  // namespace full
-}  // namespace internal
+}  // namespace
 
 //////////////////////////////////////////////////////////////////////////////
 // XLA dedicated operators follows here, listed in alphabetical order.
@@ -1791,8 +1781,7 @@ absl::StatusOr<absl_nonnull XLATensorPtr> flip(const XLATensorPtr& input,
                                                absl::Span<const int64_t> dims) {
   auto rank = input->shape().get().dimensions_size();
   auto dimensions = torch::lazy::GetCanonicalDimensionIndices(dims, rank);
-  XLA_RETURN_IF_ERROR(
-      internal::flip::CheckDimensionsAreUnique(rank, dims, dimensions));
+  XLA_RETURN_IF_ERROR(CheckFlipDimensionsAreUnique(rank, dims, dimensions));
   return input->CreateFrom(
       torch_xla::MakeNode<Flip>(input->GetIrValue(), dimensions));
 }
@@ -1814,7 +1803,7 @@ XLATensorPtr fmod(const XLATensorPtr& input, const at::Scalar& other,
 absl::StatusOr<absl_nonnull XLATensorPtr> full(
     absl::Span<const int64_t> size, const at::Scalar& fill_value,
     const torch::lazy::BackendDevice& device, at::ScalarType scalar_type) {
-  XLA_RETURN_IF_ERROR(internal::full::CheckSizesArePositive(size));
+  XLA_RETURN_IF_ERROR(CheckFullSizesArePositive(size));
   xla::Shape shape =
       MakeArrayShapeFromDimensions(size, /*dynamic_dimensions=*/{},
                                    MakeXlaPrimitiveType(scalar_type, &device),
@@ -1841,7 +1830,7 @@ XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
 absl::StatusOr<absl_nonnull XLATensorPtr> full_symint(
     at::SymIntArrayRef sym_size, const at::Scalar& fill_value,
     const torch::lazy::BackendDevice& device, at::ScalarType scalar_type) {
-  XLA_RETURN_IF_ERROR(internal::full::CheckConcreteSizesArePositive(sym_size));
+  XLA_RETURN_IF_ERROR(CheckFullConcreteSizesArePositive(sym_size));
   return XLATensor::Create(
       XLAGraphExecutor::Get()->GetIrValueForScalar(
           fill_value, MakeXlaPrimitiveType(scalar_type, &device), sym_size,
