@@ -419,9 +419,9 @@ absl::Status CheckDimensionsAreUnique(
 namespace full {
 
 template <class F>
-absl::Status CheckSizesArePositiveImpl(absl::Span<const int64_t> sizes,
+absl::Status CheckSizesArePositiveImpl(const absl::Span<const int64_t>& sizes,
                                        F&& get_joined_original_arguments) {
-  bool has_concrete_negative_size = std::any_of(
+  const bool has_concrete_negative_size = std::any_of(
       sizes.begin(), sizes.end(), [](const int64_t size) { return size < 0; });
   if (has_concrete_negative_size) {
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
@@ -432,7 +432,7 @@ absl::Status CheckSizesArePositiveImpl(absl::Span<const int64_t> sizes,
   return absl::OkStatus();
 }
 
-absl::Status CheckSizesArePositive(absl::Span<const int64_t> sizes) {
+absl::Status CheckSizesArePositive(const absl::Span<const int64_t>& sizes) {
   return CheckSizesArePositiveImpl(
       sizes, [&]() { return absl::StrJoin(sizes, /* sep= */ ", "); });
 }
