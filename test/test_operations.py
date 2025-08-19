@@ -2554,6 +2554,33 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
           "However, that's not true on dimensions [0, 2].")
       self.assertEqual(str(e), expected_error)
 
+  def test_random__raises_error_on_empty_interval(self):
+    a = torch.empty(10, device=torch_xla.device())
+    from_ = 3
+    to_ = 1
+
+    try:
+      a.random_(from_, to_)
+    except RuntimeError as e:
+      expected_error = (
+          f"random_(): expected `from` ({from_}) to be smaller than "
+          f"`to` ({to_}).")
+      self.assertEqual(str(e), expected_error)
+
+  def test_random__raises_error_on_value_out_of_type_value_range(self):
+    a = torch.empty(10, device=torch_xla.device(), dtype=torch.float16)
+    from_ = 3
+    to_ = 65504 + 1
+
+    try:
+      a.random_(from_, to_)
+    except RuntimeError as e:
+      expected_error = (
+          f"random_(): expected `to` to be within the range "
+          f"[-65504, 65504]. However got value {to_}, which is greater "
+          "than the upper bound.")
+      self.assertEqual(str(e), expected_error)
+
 
 class MNISTComparator(nn.Module):
 
