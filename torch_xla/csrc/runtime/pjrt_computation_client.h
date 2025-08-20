@@ -328,6 +328,8 @@ class PjRtComputationClient : public ComputationClient {
     torch_xla::OpSharding sharding;
   };
 
+  // TODO - move the below constructor to pjrt_computation_client.cpp
+  // issue link - https://github.com/pytorch/xla/issues/9572
   struct PjRtComputation : public Computation {
     /**
      * Constructs a PjRtComputation with the given parameters.
@@ -346,6 +348,7 @@ class PjRtComputationClient : public ComputationClient {
           denormalized_tile_assignment_(std::move(
               denormalized_tile_assignment.value_or(std::vector<int64_t>{}))) {
       xla_output_shardings_ = this->executable->GetOutputShardings();
+      output_shardings_ = std::nullopt;
       if (xla_output_shardings_.has_value()) {
         output_shardings_ = std::vector<torch_xla::OpSharding>{};
         output_shardings_->reserve(xla_output_shardings_.value().size());
@@ -355,8 +358,6 @@ class PjRtComputationClient : public ComputationClient {
               sharding, denormalized_tile_assignment_);
           output_shardings_.value().push_back(torch_xla_op_sharding);
         }
-      } else {
-        output_shardings_ = std::nullopt;
       }
     }
 

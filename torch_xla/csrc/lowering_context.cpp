@@ -244,8 +244,7 @@ void LoweringContext::ExtractShardingAndSetDenormalizedTileAssignments(
     std::vector<int64_t> denormalized_tile_assignment =
         sharding->GetDenormalizedTileAssignment();
     if (!denormalized_tile_assignment.empty()) {
-      denormalized_tile_assignments_.push_back(
-          sharding->GetDenormalizedTileAssignment());
+      denormalized_tile_assignments_.push_back(denormalized_tile_assignment);
     }
   }
 }

@@ -511,7 +511,6 @@ std::vector<XLATensor::ShardingSpecPtr> ShardingUtil::GetOutputSharding(
   const auto& computation_proto = computation->computation().proto();
   size_t num_outputs = output_shapes.size();
   std::vector<xla::OpSharding> xla_output_shardings;
-  std::vector<torch_xla::OpSharding> output_shardings;
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(num_outputs);
   if (computation_proto.has_spmd_output_sharding()) {
     if (computation_proto.spmd_output_sharding().tuple_shardings().size() > 0) {
@@ -532,6 +531,7 @@ std::vector<XLATensor::ShardingSpecPtr> ShardingUtil::GetOutputSharding(
     xla_output_shardings.resize(num_outputs);
   }
 
+  std::vector<torch_xla::OpSharding> output_shardings;
   for (const auto& sharding : xla_output_shardings) {
     if ((denormalized_tile_assignment.has_value()) &&
         (!denormalized_tile_assignment.value().empty())) {
@@ -728,7 +728,6 @@ void ShardingUtil::ReshardParameters(
     std::vector<const torch::lazy::Node*>* nodes) {
   // Extract input shardings generated from auto-sharding pass.
   std::vector<xla::OpSharding> xla_input_shardings;
-  std::vector<torch_xla::OpSharding> input_shardings;
   if (module.spmd_parameters_shardings().size() == 1 &&
       module.spmd_parameters_shardings()[0].type() == xla::OpSharding::TUPLE) {
     auto tuple_shardings =
@@ -741,7 +740,7 @@ void ShardingUtil::ReshardParameters(
     }
   }
   if (xla_input_shardings.size() == 0) {
-    TF_VLOG(3) << "ReshardParamters... skip with empty input_shardings.";
+    TF_VLOG(3) << "ReshardParamters... skip with empty xla_input_shardings.";
     return;
   }
   XLA_CHECK_EQ(xla_input_shardings.size(), parameters->size());
@@ -755,16 +754,17 @@ void ShardingUtil::ReshardParameters(
   std::vector<torch_xla::OpSharding> shardings_to_reshard;
 
   std::vector<int64_t> denormalized_tile_assignment;
+  std::vector<torch_xla::OpSharding> input_shardings;
   auto sharding_spec = (*tensors)[0]->sharding_spec();
   if (sharding_spec) {
     denormalized_tile_assignment =
         sharding_spec->sharding.GetDenormalizedTileAssignment();
-  }
-  for (const auto& sharding : xla_input_shardings) {
-    if (denormalized_tile_assignment.size() > 0) {
-      input_shardings.emplace_back(sharding, denormalized_tile_assignment);
-    } else {
-      input_shardings.emplace_back(sharding);
+    for (const auto& sharding : xla_input_shardings) {
+      if (denormalized_tile_assignment.size() > 0) {
+        input_shardings.emplace_back(sharding, denormalized_tile_assignment);
+      } else {
+        input_shardings.emplace_back(sharding);
+      }
     }
   }
 

@@ -276,6 +276,8 @@ class IfrtComputationClient : public ComputationClient {
   tsl::RCReference<xla::ifrt::Array> ReplicateShardedData(
       const std::shared_ptr<IfrtData> handle);
 
+  // TODO - move the below constructor to ifrt_computation_client.cpp
+  // issue link - https://github.com/pytorch/xla/issues/9572
   struct IfrtComputation : public Computation {
     IfrtComputation(
         xla::XlaComputation computation, std::vector<std::string> devices,
@@ -286,6 +288,7 @@ class IfrtComputationClient : public ComputationClient {
           denormalized_tile_assignment_(std::move(
               denormalized_tile_assignment.value_or(std::vector<int64_t>{}))) {
       xla_output_shardings_ = this->executable->GetOutputShardings();
+      output_shardings_ = std::nullopt;
       if (xla_output_shardings_.has_value()) {
         output_shardings_ = std::vector<torch_xla::OpSharding>{};
         output_shardings_->reserve(xla_output_shardings_.value().size());
@@ -295,8 +298,6 @@ class IfrtComputationClient : public ComputationClient {
               sharding, denormalized_tile_assignment_);
           output_shardings_.value().push_back(torch_xla_op_sharding);
         }
-      } else {
-        output_shardings_ = std::nullopt;
       }
     }
 

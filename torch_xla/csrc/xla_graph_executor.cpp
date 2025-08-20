@@ -1267,16 +1267,22 @@ XLAGraphExecutor::TryRunCachedSync(
   }
 
   std::vector<std::vector<int64_t>> denormalized_tile_assignments;
+  // Extract denormalized tile assignments from all nodes in the post-order
+  // traversal. This iterates through each node in the computation graph and
+  // collects sharding information that will be used during compilation. The
+  // denormalized tile assignments represent how tensors are distributed across
+  // devices in localized SPMD/submesh execution mode.
   for (const auto* node : po_data->post_order) {
     const XlaNode* const casted = dynamic_cast<const XlaNode*>(node);
     auto shardings = casted->GetShardings();
     if (!shardings.empty()) {
+      // For each sharding specification on this node, extract the denormalized
+      // tile assignment which describes the physical device placements
       for (auto sharding : shardings) {
         std::vector<int64_t> denormalized_tile_assignment =
             sharding->GetDenormalizedTileAssignment();
         if (!denormalized_tile_assignment.empty()) {
-          denormalized_tile_assignments.push_back(
-              sharding->GetDenormalizedTileAssignment());
+          denormalized_tile_assignments.push_back(denormalized_tile_assignment);
         }
       }
     }
