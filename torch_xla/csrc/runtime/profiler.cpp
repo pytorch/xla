@@ -79,8 +79,9 @@ absl::Status Trace(
     const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
         options) {
   // by 20250815 Upstream CaptureRemoteTrace changed signature of options to
-  // include bool option. For backward compatibility we don't change signature of Trace, 
-  // but instead we make an adaptor to adapt the new function signature.
+  // include bool option. For backward compatibility we don't change signature
+  // of Trace, but instead we make an adaptor to adapt the new function
+  // signature.
   absl::flat_hash_map<std::string, std::variant<bool, int, std::string>>
       updated_options;
   for (const auto& item : options) {
