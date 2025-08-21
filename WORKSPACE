@@ -80,7 +80,12 @@ http_archive(
 #    name = "xla",
 #    path = "/path/to/openxla",
 # )
-# Initialize OpenXLA's external dependencies.
+
+# Initialize OpenXLA's external dependencies. There is an specific order
+# which those dependencies are initialized, because for bazel it's the
+# first definition that takes precedence.
+# We follow what openxla/xla does exactly: 
+# https://github.com/openxla/xla/blob/main/WORKSPACE#L37
 load("@xla//:workspace4.bzl", "xla_workspace4")
 
 xla_workspace4()
