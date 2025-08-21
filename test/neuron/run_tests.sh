@@ -285,6 +285,8 @@ function run_xla_op_tests3 {
 function run_xla_neuron_tests {
   run_test "$_TEST_DIR/neuron/test_neuron_utils.py"
   run_test "$_TEST_DIR/neuron/test_neuron_data_types.py"
+  # TODO: enable the below test once https://github.com/pytorch/xla/pull/9373 is merged
+  # run_torchrun "$_TEST_DIR/neuron/pipelining/test_basic_pipelining.py"
 }
 
 #######################################################################################
