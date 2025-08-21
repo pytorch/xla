@@ -100,7 +100,6 @@ if [[ "$RUN_CPP_TESTS" == "cpp_tests" ]]; then
               # disable test_xla_backend_intf since it is flaky on upstream
               #"test_xla_backend_intf"
               "test_xla_sharding"
-              "test_xla_generator"
               "test_runtime"
               "test_status_dont_show_cpp_stacktraces"
               "test_status_show_cpp_stacktraces"

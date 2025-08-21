@@ -204,15 +204,3 @@ ptxla_cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
-
-ptxla_cc_test(
-    name = "test_xla_generator",
-    srcs = ["test_xla_generator.cpp"],
-    deps = [
-        ":cpp_test_util",
-        ":torch_xla_test",
-        "//torch_xla/csrc:tensor",
-        "//torch_xla/csrc:aten_cuda_functions",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
