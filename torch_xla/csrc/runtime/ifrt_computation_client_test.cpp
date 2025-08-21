@@ -36,7 +36,8 @@ absl::StatusOr<xla::XlaComputation> MakeComputation() {
 TEST(PjRtComputationClientTest, Init) {
   // Get a CPU client.
   tsl::setenv("PJRT_DEVICE", "CPU", true);
-  auto client = GetValueOrThrow(IfrtComputationClient::Create());
+  XLA_ASSIGN_OR_THROW(std::unique_ptr<IfrtComputationClient> client,
+                      IfrtComputationClient::Create());
   std::string device = client->GetDefaultDevice();
 
   // Compose a computation.
@@ -64,14 +65,16 @@ TEST(PjRtComputationClientTest, Init) {
       std::make_shared<LiteralSource>(std::move(literal_y), device)};
 
   // Execute the graph.
-  std::vector<ComputationClient::DataPtr> results =
-      GetValueOrThrow(client->ExecuteReplicated(
+  XLA_ASSIGN_OR_THROW(
+      std::vector<ComputationClient::DataPtr> results,
+      client->ExecuteReplicated(
           *computations[0], client->TransferToDevice(absl::MakeConstSpan(args)),
           {device}, options));
 
   // Copy the output from device back to host and assert correctness..
   ASSERT_EQ(results.size(), 1);
-  auto result_literals = GetValueOrThrow(client->TransferFromDevice(results));
+  XLA_ASSIGN_OR_THROW(std::vector<xla::Literal> result_literals,
+                      client->TransferFromDevice(results));
   ASSERT_THAT(result_literals, ::testing::SizeIs(1));
   EXPECT_TRUE(xla::LiteralTestUtil::Equal(
       xla::LiteralUtil::CreateR2<float>({{6.0f, 8.0f}, {10.0f, 12.0f}}),

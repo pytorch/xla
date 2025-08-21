@@ -62,8 +62,8 @@ ConditionMaskData CreateConditionMaskData(xla::XlaOp condition) {
 
 xla::XlaOp GetPromotedMask(xla::XlaOp mask, const xla::Shape& input_shape) {
   const xla::Shape& mask_shape = ShapeHelper::ShapeOfXlaOp(mask);
-  xla::Shape promoted_mask_shape =
-      GetValueOrThrow(XlaHelpers::GetPromotedShape(mask_shape, input_shape));
+  XLA_ASSIGN_OR_THROW(xla::Shape promoted_mask_shape,
+                      XlaHelpers::GetPromotedShape(mask_shape, input_shape));
   return XlaHelpers::ImplicitBroadcast(mask, mask_shape, promoted_mask_shape);
 }
 
@@ -150,7 +150,9 @@ xla::XlaComputation MakeScatterComputation(
   if (combiner != nullptr) {
     result = combiner(p0, result);
   }
-  return GetValueOrThrow(cb.Build(result));
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation scatter_computation,
+                      cb.Build(result));
+  return scatter_computation;
 }
 
 xla::XlaOp CreateIndexAlongDim(
@@ -543,8 +545,8 @@ std::vector<xla::XlaOp> CreateBroadcastTensors(
   for (const xla::XlaOp operand : operands) {
     const xla::Shape& operand_shape = ShapeHelper::ShapeOfXlaOp(operand);
     operand_shapes.push_back(operand_shape);
-    result_shape = GetValueOrThrow(
-        XlaHelpers::GetPromotedShape(result_shape, operand_shape));
+    XLA_ASSIGN_OR_THROW(result_shape, XlaHelpers::GetPromotedShape(
+                                          result_shape, operand_shape));
   }
   std::vector<xla::XlaOp> result;
   for (size_t i = 0; i < operands.size(); ++i) {
@@ -1366,54 +1368,59 @@ std::vector<xla::XlaOp> BuildBoxSelectionLoop(int64_t num_boxes,
   // 3. The actual IoU threshold matrix.
   init_values[2] = iou_threshold_mask;
 
-  return GetValueOrThrow(xla::WhileLoopHelper(
-      [=](absl::Span<const xla::XlaOp> values, xla::XlaBuilder* builder) {
-        xla::XlaOp box_index = values[0];
-        // Check: current loop counter is within bounds, i.e. has a
-        // corresponding box.
-        return xla::Lt(box_index,
-                       xla::ConstantR0<IndexType>(builder, num_boxes));
-      },
-      [=](absl::Span<const xla::XlaOp> values, xla::XlaBuilder* builder) {
-        const xla::XlaOp ONE = xla::One(builder, XLAIndexType);
-        const xla::XlaOp ZERO = xla::Zero(builder, XLAIndexType);
+  XLA_ASSIGN_OR_THROW(
+      std::vector<xla::XlaOp> result,
+      xla::WhileLoopHelper(
+          [=](absl::Span<const xla::XlaOp> values, xla::XlaBuilder* builder) {
+            xla::XlaOp box_index = values[0];
+            // Check: current loop counter is within bounds, i.e. has a
+            // corresponding box.
+            return xla::Lt(box_index,
+                           xla::ConstantR0<IndexType>(builder, num_boxes));
+          },
+          [=](absl::Span<const xla::XlaOp> values, xla::XlaBuilder* builder) {
+            const xla::XlaOp ONE = xla::One(builder, XLAIndexType);
+            const xla::XlaOp ZERO = xla::Zero(builder, XLAIndexType);
 
-        xla::XlaOp box_index = values[0];
-        xla::XlaOp state = values[1];
-        xla::XlaOp iou_threshold_mask = values[2];
+            xla::XlaOp box_index = values[0];
+            xla::XlaOp state = values[1];
+            xla::XlaOp iou_threshold_mask = values[2];
 
-        // Retrieve the IoU mask row corresponding to this box.
-        xla::XlaOp box_iou_threshold_mask = xla::DynamicSlice(
-            iou_threshold_mask, {box_index, ZERO}, {1, num_boxes});
+            // Retrieve the IoU mask row corresponding to this box.
+            xla::XlaOp box_iou_threshold_mask = xla::DynamicSlice(
+                iou_threshold_mask, {box_index, ZERO}, {1, num_boxes});
 
-        // Update the current state with the IoU mask.
-        // Basically, sets to false every box X whose IoU with the current box
-        // is less-than or equal than the given threshold.
-        xla::XlaOp updated_state = xla::And(
-            state,
-            // Update the mask so that if we select this box
-            // (i.e. state[box] == true), we don't de-select it.
-            xla::DynamicUpdateSlice(
-                // Before that, we need to pre-process the mask.
-                //   1. Negate the mask: if this box is selected, we only want
-                //      those that have a low intersection ratio.
-                //   2. Reshape it to: [num_boxes].
-                xla::Reshape(xla::Not(box_iou_threshold_mask), {num_boxes}),
-                xla::ConstantR1<bool>(builder, {true}), {box_index}));
+            // Update the current state with the IoU mask.
+            // Basically, sets to false every box X whose IoU with the current
+            // box is less-than or equal than the given threshold.
+            xla::XlaOp updated_state = xla::And(
+                state,
+                // Update the mask so that if we select this box
+                // (i.e. state[box] == true), we don't de-select it.
+                xla::DynamicUpdateSlice(
+                    // Before that, we need to pre-process the mask.
+                    //   1. Negate the mask: if this box is selected, we only
+                    //   want
+                    //      those that have a low intersection ratio.
+                    //   2. Reshape it to: [num_boxes].
+                    xla::Reshape(xla::Not(box_iou_threshold_mask), {num_boxes}),
+                    xla::ConstantR1<bool>(builder, {true}), {box_index}));
 
-        // Flag: should this box (loop counter) be included in the output?
-        xla::XlaOp should_include = xla::DynamicSlice(state, {box_index}, {1});
-        // Pick the new values of state, depending on whether we should include
-        // this box or not.
-        xla::XlaOp new_state =
-            xla::Select(xla::BroadcastInDim(should_include, {num_boxes}, {0}),
-                        updated_state, state);
+            // Flag: should this box (loop counter) be included in the output?
+            xla::XlaOp should_include =
+                xla::DynamicSlice(state, {box_index}, {1});
+            // Pick the new values of state, depending on whether we should
+            // include this box or not.
+            xla::XlaOp new_state = xla::Select(
+                xla::BroadcastInDim(should_include, {num_boxes}, {0}),
+                updated_state, state);
 
-        xla::XlaOp next_box_index = box_index + ONE;
-        return std::vector<xla::XlaOp>{next_box_index, new_state,
-                                       iou_threshold_mask};
-      },
-      init_values, "BoxSelectionLoop", builder));
+            xla::XlaOp next_box_index = box_index + ONE;
+            return std::vector<xla::XlaOp>{next_box_index, new_state,
+                                           iou_threshold_mask};
+          },
+          init_values, "BoxSelectionLoop", builder));
+  return result;
 }
 
 xla::XlaOp BuildNms(xla::XlaOp boxes, xla::XlaOp scores,

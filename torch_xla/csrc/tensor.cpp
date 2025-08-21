@@ -518,8 +518,8 @@ at::Tensor XLATensor::ToTensor(bool detached) {
     XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
     // XlaNode is available on the tensor.
-    std::vector<at::Tensor> tensors =
-        GetValueOrThrow(XlaDataToTensors({GetXlaData()}, {dtype()}));
+    XLA_ASSIGN_OR_THROW(std::vector<at::Tensor> tensors,
+                        XlaDataToTensors({GetXlaData()}, {dtype()}));
     tensor = std::move(tensors.front());
     if (!detached) {
       SetTensorData(tensor);
@@ -627,7 +627,9 @@ std::vector<XLATensorPtr> XLATensor::MakeOutputTensors(
 XLATensorPtr XLATensor::CopyTensorToDevice(
     const torch::lazy::BackendDevice& device) {
   // TODO: This can be optimized via proper XRT/XLA computation.
-  return GetValueOrThrow(Create(ToTensor(/*detached=*/true), device));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr result,
+                      Create(ToTensor(/*detached=*/true), device));
+  return result;
 }
 
 torch::lazy::Value XLATensor::MaybeCastIrValue(

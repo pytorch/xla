@@ -170,7 +170,9 @@ torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
       (tensor.dim() == 0 && tensor.numel() == 1)) {
     return torch_xla::bridge::GetOrCreateXlaTensor(tensor, device);
   } else {
-    return GetValueOrThrow(torch_xla::bridge::GetXlaTensor(tensor));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor,
+                        torch_xla::bridge::GetXlaTensor(tensor));
+    return xla_tensor;
   }
 }
 
@@ -186,9 +188,13 @@ XLATensorPtr GetOrCreateXlaTensor(const at::Tensor& tensor,
   }
 
   auto xtensor = GetXlaTensor(tensor);
-  return xtensor.ok()
-             ? xtensor.value()
-             : GetValueOrThrow(XLATensor::Create(inner_tensor, device));
+  if (xtensor.ok()) {
+    return xtensor.value();
+  } else {
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor,
+                        XLATensor::Create(inner_tensor, device));
+    return xla_tensor;
+  }
 }
 
 XLATensorPtr GetOrCreateXlaTensor(const std::optional<at::Tensor>& tensor,
@@ -479,8 +485,8 @@ at::Tensor CreateXlaTensor(
     at::Tensor tensor,
     const std::optional<torch::lazy::BackendDevice>& device) {
   if (tensor.defined() && device) {
-    XLATensorPtr xla_tensor =
-        GetValueOrThrow(XLATensor::Create(std::move(tensor), *device));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor,
+                        XLATensor::Create(std::move(tensor), *device));
     tensor = AtenFromXlaTensor(xla_tensor);
   }
   return tensor;

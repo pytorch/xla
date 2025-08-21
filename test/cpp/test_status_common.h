@@ -81,7 +81,7 @@ namespace cpp_test {
 
 // Prefix of the C++ stacktrace PyTorch adds to the error message.
 constexpr inline char kTorchCppStacktracePrefix[] =
-    "Exception raised from OkOrThrow at torch_xla/csrc/status.cpp:";
+    "Exception raised from ThrowStatusError at torch_xla/csrc/status.cpp:";
 
 constexpr inline char kNewMessage[] = "New test error message";
 constexpr inline char kMessage[] = "Test error message";
@@ -100,43 +100,24 @@ inline std::string GetStatusPropagationTrace(const absl::Status& status) {
              : "";
 }
 
-TEST_P(StatusTest, OkOrThrowWithOkStatus) {
-  absl::Status ok_status = absl::OkStatus();
-  EXPECT_NO_THROW(OkOrThrow(ok_status));
-}
-
-TEST_P(StatusTest, OkOrThrowWithErrorStatus) {
+TEST_P(StatusTest, ThrowStatusError) {
   try {
     absl::Status error_status = absl::InvalidArgumentError(kMessage);
-    OkOrThrow(error_status);
+    status_internal::ThrowStatusError(error_status, kFile, kLine, kFunction);
+    FAIL() << "Expected `status_internal::ThrowStatusError(error_status, "
+              "kFile, kLine, kFunction)` to throw.";
   } catch (const c10::Error& error) {
     if (IsShowCppStacktracesMode()) {
+      std::ostringstream oss;
+      oss << kMessage;
+      oss << "\n\n";
+      oss << "Status Propagation Trace:";
+      oss << kEntryPrefix << "From: " << kFunction << " at " << kFile << ":"
+          << kLine;
+      oss << "\n\n";
+      oss << kTorchCppStacktracePrefix;
       EXPECT_THAT(std::string_view(error.what()),
-                  ::testing::StartsWith(absl::StrCat(
-                      kMessage, "\n\n", kTorchCppStacktracePrefix)));
-    } else {
-      EXPECT_EQ(std::string_view(error.what_without_backtrace()),
-                std::string_view(kMessage));
-    }
-  }
-}
-
-TEST_P(StatusTest, GetValueOrThrowWithOkStatusOr) {
-  int value = 42;
-  absl::StatusOr<int> status_or = value;
-  int result = GetValueOrThrow(std::move(status_or));
-  EXPECT_EQ(result, value);
-}
-
-TEST_P(StatusTest, GetValueOrThrowWithErrorStatusOr) {
-  try {
-    absl::StatusOr<int> error_status = absl::InvalidArgumentError(kMessage);
-    int value = GetValueOrThrow(error_status);
-  } catch (const c10::Error& error) {
-    if (IsShowCppStacktracesMode()) {
-      EXPECT_THAT(std::string_view(error.what()),
-                  ::testing::StartsWith(absl::StrCat(
-                      kMessage, "\n\n", kTorchCppStacktracePrefix)));
+                  ::testing::StartsWith(oss.str()));
     } else {
       EXPECT_EQ(std::string_view(error.what_without_backtrace()),
                 std::string_view(kMessage));
@@ -343,7 +324,7 @@ TEST_P(StatusTest, MacroErrorWithLocation) {
   }
 }
 
-TEST_P(StatusTest, OkOrThrowWithErrorPropagationWithNewMessage) {
+TEST_P(StatusTest, MacroThrowIfErrorWithErrorPropagationWithNewMessage) {
   int32_t errline0 = __LINE__ + 2;
   auto innerfn = [&]() -> absl::Status {
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(kMessage));
@@ -361,22 +342,28 @@ TEST_P(StatusTest, OkOrThrowWithErrorPropagationWithNewMessage) {
     return absl::OkStatus();
   };
 
+  int32_t errline3 = __LINE__ + 2;
   try {
-    OkOrThrow(outerfn());
+    XLA_THROW_IF_ERROR(outerfn());
+    FAIL() << "Expected `XLA_THROW_IF_ERROR(outerfn())` to throw.";
   } catch (const c10::Error& error) {
     if (IsShowCppStacktracesMode()) {
+      // clang-format off
+      //
       // Expected Error Message Prefix
       // =============================
       //
       // New test error kMessage
       //
       // Status Propagation Stacktrace:
-      //     From: ./test/cpp/test_status_common.h:329 (error: Test error
-      //     kMessage) From: ./test/cpp/test_status_common.h:335 (error: New
-      //     test error kMessage) From: ./test/cpp/test_status_common.h:342
+      //     From: operator() at ./test/cpp/test_status_common.h:334 (error: Test error kMessage)
+      //     From: operator() at ./test/cpp/test_status_common.h:339 (error: New test error kMessage)
+      //     From: operator() at ./test/cpp/test_status_common.h:345
+      //     From: TestBody at ./test/cpp/test_status_common.h:350
       //
       // C++ Stacktrace:
       //
+      // clang-format on
       std::ostringstream oss;
       oss << kNewMessage;
       oss << "\n\n";
@@ -387,6 +374,71 @@ TEST_P(StatusTest, OkOrThrowWithErrorPropagationWithNewMessage) {
           << errline1 << " (error: " << kNewMessage << ")";
       oss << kEntryPrefix << "From: operator() at " << __FILE__ << ":"
           << errline2;
+      oss << kEntryPrefix << "From: TestBody at " << __FILE__ << ":"
+          << errline3;
+      oss << "\n\n";
+      oss << kTorchCppStacktracePrefix;
+      EXPECT_THAT(std::string_view(error.what()),
+                  ::testing::StartsWith(oss.str()));
+    } else {
+      EXPECT_EQ(std::string_view(error.what_without_backtrace()),
+                std::string_view(kNewMessage));
+    }
+  }
+}
+
+TEST_P(StatusTest, MacroAssignOrThrowWithErrorPropagationWithNewMessage) {
+  int32_t errline0 = __LINE__ + 2;
+  auto innerfn = [&]() -> absl::Status {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(kMessage));
+  };
+
+  int32_t errline1 = __LINE__ + 2;
+  auto midfn = [&]() -> absl::Status {
+    XLA_RETURN_IF_ERROR(innerfn(), kNewMessage);
+    return absl::OkStatus();
+  };
+
+  int32_t errline2 = __LINE__ + 2;
+  auto outerfn = [&]() -> absl::StatusOr<int> {
+    XLA_RETURN_IF_ERROR(midfn());
+    return 42;
+  };
+
+  int32_t errline3 = __LINE__ + 2;
+  try {
+    XLA_ASSIGN_OR_THROW(int ret, outerfn());
+    FAIL() << "Expected `XLA_ASSIGN_OR_THROW(int ret, outerfn())` to throw.";
+  } catch (const c10::Error& error) {
+    if (IsShowCppStacktracesMode()) {
+      // clang-format off
+      //
+      // Expected Error Message Prefix
+      // =============================
+      //
+      // New test error kMessage
+      //
+      // Status Propagation Stacktrace:
+      //     From: operator() at ./test/cpp/test_status_common.h:393 (error: Test error kMessage)
+      //     From: operator() at ./test/cpp/test_status_common.h:398 (error: New test error kMessage)
+      //     From: operator() at ./test/cpp/test_status_common.h:404
+      //     From: TestBody at ./test/cpp/test_status_common.h:410
+      //
+      // C++ Stacktrace:
+      //
+      // clang-format on
+      std::ostringstream oss;
+      oss << kNewMessage;
+      oss << "\n\n";
+      oss << "Status Propagation Trace:";
+      oss << kEntryPrefix << "From: operator() at " << __FILE__ << ":"
+          << errline0 << " (error: " << kMessage << ")";
+      oss << kEntryPrefix << "From: operator() at " << __FILE__ << ":"
+          << errline1 << " (error: " << kNewMessage << ")";
+      oss << kEntryPrefix << "From: operator() at " << __FILE__ << ":"
+          << errline2;
+      oss << kEntryPrefix << "From: TestBody at " << __FILE__ << ":"
+          << errline3;
       oss << "\n\n";
       oss << kTorchCppStacktracePrefix;
       EXPECT_THAT(std::string_view(error.what()),
