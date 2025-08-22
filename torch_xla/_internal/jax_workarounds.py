@@ -63,6 +63,8 @@ def maybe_get_jax():
     jax_import_guard()
     with jax_env_context():
       import jax
+      # TorchXLA still expects SPMD style sharding
+      jax.config.update('jax_use_shardy_partitioner', False)
       return jax
   except (ModuleNotFoundError, ImportError):
     logging.warn('You are trying to use a feature that requires jax/pallas.'
