@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+git0f56dec )
+                  master (2.9.0+git6b6ef5c )
                 </div>
               
             
@@ -498,8 +498,8 @@ follows:</p>
 <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">triton</span><span class="o">.</span><span class="n">cdiv</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">block_size</span><span class="p">),)</span>
 
 <span class="c1"># triton_call takes the same arguments as the triton.jit function, in addition</span>
-<span class="n">to</span> <span class="n">the</span> <span class="n">kernel</span> <span class="n">itself</span> <span class="ow">and</span> <span class="n">the</span> <span class="n">grid</span> <span class="n">that</span> <span class="ow">is</span> <span class="n">used</span> <span class="n">to</span> <span class="n">execute</span> <span class="n">the</span> <span class="n">kernel</span><span class="o">.</span>
-<span class="n">All</span> <span class="n">the</span> <span class="n">tl</span><span class="o">.</span><span class="n">constexpr</span> <span class="n">terms</span> <span class="n">are</span> <span class="n">passed</span> <span class="k">as</span> <span class="n">kwargs</span> <span class="n">at</span> <span class="n">the</span> <span class="n">end</span><span class="o">.</span>
+<span class="c1"># to the kernel itself and the grid that is used to execute the kernel.</span>
+<span class="c1"># All the tl.constexpr terms are passed as kwargs at the end.</span>
 <span class="n">payload</span> <span class="o">=</span> <span class="n">xla_triton</span><span class="o">.</span><span class="n">triton_call</span><span class="p">(</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="n">add_kernel</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">BLOCK_SIZE</span><span class="o">=</span><span class="n">block_size</span><span class="p">)</span>
 
