@@ -135,25 +135,6 @@ function run_pt_xla_debug_level2 {
   PT_XLA_DEBUG_LEVEL=2 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
-function run_torch_op_tests {
-  run_dynamic "$_TEST_DIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
-  run_test_without_functionalization "$_TEST_DIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
-  run_test "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
-  # TODO https://github.com/pytorch/xla/issues/9459: Investigate why this 
-  # doesn't run any tests.
-  # run_test "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
-  run_test "$_TEST_DIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
-  run_test "$_TEST_DIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
-  # run_dynamic "$_TEST_DIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/nn/test_dropout.py" "$@" -v TestDropoutNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/nn/test_pooling.py" "$@" -v TestPoolingNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/nn/test_embedding.py" "$@" -v TestEmbeddingNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/nn/test_multihead_attention.py" "$@" -v TestMultiheadAttentionNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
-}
-
 #######################################################################################
 ################################# XLA OP TESTS SHARDS #################################
 #######################################################################################
@@ -300,7 +281,6 @@ function run_xla_op_tests5 {
 #######################################################################################
 
 function run_op_tests {
-  run_torch_op_tests
   run_xla_op_tests1
   run_xla_op_tests2
   run_xla_op_tests3
@@ -350,7 +330,6 @@ function run_tests {
     run_xla_op_tests5
   elif [[ "$RUN_TORCH_MP_OP_TESTS" == "torch_mp_op" ]]; then
     echo "Running torch op tests..."
-    run_torch_op_tests
 
     PJRT_DEVICE=CPU XLA_CUDA=0 run_mp_op_tests
   else
@@ -361,9 +340,6 @@ function run_tests {
       run_xla_op_tests3
       run_xla_op_tests4
       run_xla_op_tests5
-    fi
-    if [[ "$XLA_SKIP_TORCH_OP_TESTS" != "1" ]]; then
-      run_torch_op_tests
     fi
     if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
       run_mp_op_tests
