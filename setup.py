@@ -115,18 +115,18 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = True  # Whether to use nightly or stable libtpu and JAX.
 
-_libtpu_version = '0.0.18'
-_libtpu_date = '20250617'
+_libtpu_version = '0.0.21'
+_libtpu_date = '20250813'
 
-_jax_version = '0.6.2'
-_jaxlib_version = '0.6.2'
-_jax_date = '20250617'  # Date for jax and jaxlib.
+_jax_version = '0.7.1'
+_jaxlib_version = '0.7.1'
+_jax_date = '20250813'  # Date for jax and jaxlib.
 
 if USE_NIGHTLY:
-  _libtpu_version += f".dev{_libtpu_date}"
+  _libtpu_version += f".dev{_libtpu_date}+nightly"
   _jax_version += f'.dev{_jax_date}'
   _jaxlib_version += f'.dev{_jax_date}'
-  _libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_libtpu_date}+nightly-py3-none-manylinux_2_31_{platform_machine}'
+  _libtpu_wheel_name = f'libtpu-{_libtpu_version}-py3-none-manylinux_2_31_{platform_machine}'
   _libtpu_storage_directory = 'libtpu-nightly-releases'
 else:
   # The postfix can be changed when the version is updated. Check
@@ -134,8 +134,8 @@ else:
   # versioning.
   _libtpu_wheel_name = f'libtpu-{_libtpu_version}-py3-none-manylinux_2_31_{platform_machine}'
   _libtpu_storage_directory = 'libtpu-lts-releases'
-
-_libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
+#https://us-python.pkg.dev/ml-oss-artifacts-published/jax/libtpu/libtpu-0.0.19.1-py3-none-manylinux_2_31_x86_64.whl
+_libtpu_storage_path = f'https://us-python.pkg.dev/ml-oss-artifacts-published/jax/libtpu/{_libtpu_wheel_name}.whl'
 
 
 def _get_build_mode():
@@ -423,22 +423,10 @@ class Develop(develop.develop):
 
 
 def _get_jax_install_requirements():
-  if not USE_NIGHTLY:
-    # Stable versions of JAX can be directly installed from PyPI.
-    return [
-        f'jaxlib=={_jaxlib_version}',
-        f'jax=={_jax_version}',
-    ]
-
-  # Install nightly JAX libraries from the JAX package registries.
-  jax = f'jax @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/jax/jax-{_jax_version}-py3-none-any.whl'
-
-  jaxlib = []
-  for python_minor_version in [9, 10, 11, 12]:
-    jaxlib.append(
-        f'jaxlib @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/jaxlib/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
-    )
-  return [jax] + jaxlib
+  return [
+      f'jaxlib=={_jaxlib_version}',
+      f'jax=={_jax_version}',
+  ]
 
 
 setup(
@@ -496,12 +484,12 @@ setup(
     },
     extras_require={
         # On Cloud TPU VM install with:
-        # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
+        # pip install torch_xla[tpu] --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
         'tpu': [
             f'libtpu=={_libtpu_version}',
             'tpu-info',
         ],
-        # pip install torch_xla[pallas]
+        # pip install torch_xla[pallas] --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
         'pallas': [*_get_jax_install_requirements(),]
     },
     cmdclass={

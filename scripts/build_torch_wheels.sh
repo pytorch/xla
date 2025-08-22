@@ -139,9 +139,9 @@ function install_llvm_clang() {
   sudo update-alternatives --install /usr/bin/clang++ clang++ $(which clang++-8) 70
 }
 
-function install_gcc10() {
-  sudo apt-get -y install gcc-10 g++-10
-  export CC=/usr/bin/gcc-10 export CXX=/usr/bin/g++-10
+function install_gcc() {
+  sudo apt-get -y install gcc-11 g++-11
+  export CC=/usr/bin/gcc-10 export CXX=/usr/bin/g++-11
   sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100
   sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
 }
@@ -332,7 +332,7 @@ function main() {
   if [[ $(uname -m) == "x86_64" ]]; then
     install_llvm_clang
   elif [[ $(uname -m) == "aarch64" ]]; then
-    install_gcc10
+    install_gcc
   fi
   install_and_setup_conda
   build_and_install_torch
