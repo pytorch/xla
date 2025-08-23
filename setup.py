@@ -458,7 +458,6 @@ setup(
     package_dir=package_dir_mapping,
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
-        BazelExtension('//:_XLAC_cuda_functions.so'),
     ],
     install_requires=[
         'absl-py>=1.0.0',
