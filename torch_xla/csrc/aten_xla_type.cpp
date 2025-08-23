@@ -1865,9 +1865,9 @@ at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
                                       const at::Tensor& index,
                                       bool /* sparse_grad */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
+  return bridge::AtenFromXlaTensor(GetValueOrThrow(
       tensor_methods::gather(GetValueOrThrow(bridge::GetXlaTensor(self)), dim,
-                             GetValueOrThrow(bridge::GetXlaTensor(index))));
+                             GetValueOrThrow(bridge::GetXlaTensor(index)))));
 }
 
 at::Tensor XLANativeFunctions::gelu(const at::Tensor& self,
