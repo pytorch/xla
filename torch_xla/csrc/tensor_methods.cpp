@@ -409,6 +409,39 @@ absl::Status CheckFlipDimensionsAreUnique(
   return absl::OkStatus();
 }
 
+template <class F>
+absl::Status CheckFullSizesArePositiveImpl(absl::Span<const int64_t> sizes,
+                                           const F& original_sizes_as_str) {
+  const bool has_concrete_negative_size = std::any_of(
+      sizes.begin(), sizes.end(), [](const int64_t size) { return size < 0; });
+  if (has_concrete_negative_size) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("full(): expected concrete sizes (i.e. non-symbolic) to "
+                     "be positive values. However found negative ones: [",
+                     original_sizes_as_str(), "].")));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckFullSizesArePositive(absl::Span<const int64_t> sizes) {
+  return CheckFullSizesArePositiveImpl(
+      sizes, [&]() { return absl::StrJoin(sizes, /* sep= */ ", "); });
+}
+
+absl::Status CheckFullConcreteSizesArePositive(at::SymIntArrayRef sym_sizes) {
+  std::vector<int64_t> concrete_sizes_or_zero;
+  std::transform(sym_sizes.begin(), sym_sizes.end(),
+                 std::back_inserter(concrete_sizes_or_zero),
+                 [](at::SymInt sym) { return sym.maybe_as_int().value_or(0); });
+  return CheckFullSizesArePositiveImpl(concrete_sizes_or_zero, [&]() {
+    return absl::StrJoin(sym_sizes.begin(), sym_sizes.end(), /* sep= */ ", ",
+                         [](std::string* out, at::SymInt sym) {
+                           absl::StrAppendFormat(out, "%s",
+                                                 absl::FormatStreamed(sym));
+                         });
+  });
+}
+
 }  // namespace
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1767,10 +1800,10 @@ XLATensorPtr fmod(const XLATensorPtr& input, const at::Scalar& other,
                            logical_element_type);
 }
 
-XLATensorPtr full(absl::Span<const int64_t> size, const at::Scalar& fill_value,
-                  const torch::lazy::BackendDevice& device,
-                  at::ScalarType scalar_type) {
-  CheckShapeDimensions(size);
+absl::StatusOr<absl_nonnull XLATensorPtr> full(
+    absl::Span<const int64_t> size, const at::Scalar& fill_value,
+    const torch::lazy::BackendDevice& device, at::ScalarType scalar_type) {
+  XLA_RETURN_IF_ERROR(CheckFullSizesArePositive(size));
   xla::Shape shape =
       MakeArrayShapeFromDimensions(size, /*dynamic_dimensions=*/{},
                                    MakeXlaPrimitiveType(scalar_type, &device),
@@ -1794,19 +1827,10 @@ XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                            device, *scalar_type);
 }
 
-XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
-                         const at::Scalar& fill_value,
-                         const torch::lazy::BackendDevice& device,
-                         at::ScalarType scalar_type) {
-  XLA_CHECK(std::all_of(sym_size.begin(), sym_size.end(), [](at::SymInt dim) {
-    // TODO: It should be OK to perform this test on symbolic ints too, not
-    // sure why you conditionalized it.
-    if (auto c = dim.maybe_as_int()) {
-      return *c >= 0;
-    }
-    return true;
-  })) << "Dimensions cannot be negative numbers";
-
+absl::StatusOr<absl_nonnull XLATensorPtr> full_symint(
+    at::SymIntArrayRef sym_size, const at::Scalar& fill_value,
+    const torch::lazy::BackendDevice& device, at::ScalarType scalar_type) {
+  XLA_RETURN_IF_ERROR(CheckFullConcreteSizesArePositive(sym_size));
   return XLATensor::Create(
       XLAGraphExecutor::Get()->GetIrValueForScalar(
           fill_value, MakeXlaPrimitiveType(scalar_type, &device), sym_size,
