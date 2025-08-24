@@ -220,6 +220,119 @@ xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
   return input;
 }
 
+xla::XlaOp BuildResize3d(xla::XlaOp input, const xla::Shape& output_shape,
+                         bool align_corners, bool half_pixel_centers) {
+  xla::XlaBuilder* builder = input.builder();
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  XLA_CHECK_EQ(input_shape.rank(), 5) << "input must be 5-dimensional";
+
+  const int64_t batch = input_shape.dimensions(0);
+  const int64_t depth = input_shape.dimensions(1);
+  const int64_t height = input_shape.dimensions(2);
+  const int64_t width = input_shape.dimensions(3);
+  const int64_t channels = input_shape.dimensions(4);
+
+  std::vector<int64_t> in_size = {depth, height, width};
+  std::vector<int64_t> out_size = {output_shape.dimensions(1),
+                                   output_shape.dimensions(2),
+                                   output_shape.dimensions(3)};
+
+  xla::PrimitiveType input_type = input_shape.element_type();
+  xla::PrimitiveType output_type = output_shape.element_type();
+  XLA_CHECK(input_type == output_type) << "input and output must have the same element type";
+
+  xla::PrimitiveType original_input_type = input_type;
+  if (xla::primitive_util::IsIntegralType(input_type)) {
+    input = xla::ConvertElementType(input, xla::F32);
+    input_type = xla::F32;
+  }
+
+  xla::XlaOp scalar_one_op = xla::ConvertElementType(xla::ConstantR0(builder, 1), input_type);
+  xla::XlaOp scalar_half_op = xla::ConvertElementType(xla::ConstantR0(builder, 0.5), input_type);
+  xla::XlaOp scalar_zero_op = xla::ConvertElementType(xla::ConstantR0(builder, 0), input_type);
+
+  // Depth scaling
+  float d_scale;
+  if (align_corners && out_size[0] > 1) {
+    d_scale = (in_size[0] - 1) / static_cast<float>(out_size[0] - 1);
+  } else {
+    d_scale = in_size[0] / static_cast<float>(out_size[0]);
+  }
+  xla::XlaOp d_span_start = xla::Iota(builder, xla::ShapeUtil::MakeShape(input_type, {out_size[0]}), 0);
+  if (half_pixel_centers) {
+    d_span_start = xla::Add(d_span_start, scalar_half_op);
+  }
+  xla::XlaOp d_scale_op = xla::ConvertElementType(xla::ConstantR0(builder, d_scale), input_type);
+  xla::XlaOp d_sample_f = xla::Mul(d_span_start, d_scale_op);
+
+  d_span_start = align_corners ? xla::Round(d_sample_f) : xla::Floor(d_sample_f);
+  const int64_t d_span_size = 1;
+  xla::XlaOp d_upper_bound = xla::ConvertElementType(xla::ConstantR0(builder, in_size[0] - d_span_size), input_type);
+  d_span_start = xla::Min(d_span_start, d_upper_bound);
+  xla::XlaOp broadcasted_d_span_start = xla::BroadcastInDim(d_span_start, {out_size[0], out_size[1], out_size[2], 1}, {0});
+
+  // Height scaling
+  float h_scale;
+  if (align_corners && out_size[1] > 1) {
+    h_scale = (in_size[1] - 1) / static_cast<float>(out_size[1] - 1);
+  } else {
+    h_scale = in_size[1] / static_cast<float>(out_size[1]);
+  }
+  xla::XlaOp h_span_start = xla::Iota(builder, xla::ShapeUtil::MakeShape(input_type, {out_size[1]}), 0);
+  if (half_pixel_centers) {
+    h_span_start = xla::Add(h_span_start, scalar_half_op);
+  }
+  xla::XlaOp h_scale_op = xla::ConvertElementType(xla::ConstantR0(builder, h_scale), input_type);
+  xla::XlaOp h_sample_f = xla::Mul(h_span_start, h_scale_op);
+
+  h_span_start = align_corners ? xla::Round(h_sample_f) : xla::Floor(h_sample_f);
+  const int64_t h_span_size = 1;
+  xla::XlaOp h_upper_bound = xla::ConvertElementType(xla::ConstantR0(builder, in_size[1] - h_span_size), input_type);
+  h_span_start = xla::Min(h_span_start, h_upper_bound);
+  xla::XlaOp broadcasted_h_span_start = xla::BroadcastInDim(h_span_start, {out_size[0], out_size[1], out_size[2], 1}, {1});
+
+  // Width scaling
+  float w_scale;
+  if (align_corners && out_size[2] > 1) {
+    w_scale = (in_size[2] - 1) / static_cast<float>(out_size[2] - 1);
+  } else {
+    w_scale = in_size[2] / static_cast<float>(out_size[2]);
+  }
+  xla::XlaOp w_span_start = xla::Iota(builder, xla::ShapeUtil::MakeShape(input_type, {out_size[2]}), 0);
+  if (half_pixel_centers) {
+    w_span_start = xla::Add(w_span_start, scalar_half_op);
+  }
+  xla::XlaOp w_scale_op = xla::ConvertElementType(xla::ConstantR0(builder, w_scale), input_type);
+  xla::XlaOp w_sample_f = xla::Mul(w_span_start, w_scale_op);
+
+  w_span_start = align_corners ? xla::Round(w_sample_f) : xla::Floor(w_sample_f);
+  const int64_t w_span_size = 1;
+  xla::XlaOp w_upper_bound = xla::ConvertElementType(xla::ConstantR0(builder, in_size[2] - w_span_size), input_type);
+  w_span_start = xla::Min(w_span_start, w_upper_bound);
+  xla::XlaOp broadcasted_w_span_start = xla::BroadcastInDim(w_span_start, {out_size[0], out_size[1], out_size[2], 1}, {2});
+
+  xla::XlaOp concatted = xla::ConvertElementType(
+      xla::ConcatInDim(builder, {broadcasted_d_span_start, broadcasted_h_span_start, broadcasted_w_span_start}, 3), xla::S32);
+
+  absl::InlinedVector<int64_t, 5> slice_sizes = {batch, d_span_size, h_span_size, w_span_size, channels};
+  xla::GatherDimensionNumbers dimension_numbers;
+  dimension_numbers.add_offset_dims(0);
+  dimension_numbers.add_offset_dims(1);
+  dimension_numbers.add_offset_dims(2);
+  dimension_numbers.add_offset_dims(3);
+  dimension_numbers.add_offset_dims(4);
+  dimension_numbers.add_start_index_map(1);
+  dimension_numbers.add_start_index_map(2);
+  dimension_numbers.add_start_index_map(3);
+  dimension_numbers.set_index_vector_dim(3);
+  input = xla::Gather(input, concatted, dimension_numbers, slice_sizes, false);
+
+  if (original_input_type != input_type) {
+    input = xla::ConvertElementType(input, original_input_type);
+  }
+  return input;
+}
+
 std::string GetBackendConfig(bool align_corners, bool half_pixel_centers) {
   return absl::StrCat("\"", align_corners, half_pixel_centers, "\"");
 }
@@ -324,6 +437,59 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
                                        resized_shape, backend_config);
   return xla::Transpose(resised, inv_transpose_permute);
 }
+
+xla::XlaOp LowerForward3d(xla::XlaOp input, const xla::Shape& output_shape,
+                          bool align_corners, bool half_pixel_centers) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  if (input_shape.dimensions(1) == output_shape.dimensions(1) &&
+      input_shape.dimensions(2) == output_shape.dimensions(2) &&
+      input_shape.dimensions(3) == output_shape.dimensions(3)) {
+    return input;
+  }
+  if (input_shape.dimensions(1) == 1 && input_shape.dimensions(2) == 1 &&
+      input_shape.dimensions(3) == 1) {
+    return input + xla::Zeros(input.builder(), output_shape);
+  }
+
+  std::vector<int64_t> transpose_permute({0, 4, 1, 2, 3});
+  auto inv_transpose_permute = xla::InversePermutation(transpose_permute);
+  xla::Shape resized_shape = xla::ShapeUtil::PermuteDimensions(transpose_permute, output_shape);
+  xla::XlaOp tinput = xla::Transpose(input, transpose_permute);
+
+  xla::XlaOp resized = BuildResize3d(tinput, resized_shape, align_corners, half_pixel_centers);
+
+  return xla::Transpose(resized, inv_transpose_permute);
+}
+
+xla::XlaOp LowerBackward3d(xla::XlaOp input, const xla::Shape& output_shape,
+                           bool align_corners, bool half_pixel_centers) {
+  static double resize_split_factor =
+      torch_xla::runtime::sys_util::GetEnvDouble("XLA_RESIZE_SPLIT_FACTOR", 3.0);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  if (input_shape.dimensions(1) == output_shape.dimensions(1) &&
+      input_shape.dimensions(2) == output_shape.dimensions(2) &&
+      input_shape.dimensions(3) == output_shape.dimensions(3)) {
+    return input;
+  }
+
+  std::vector<int64_t> transpose_permute({0, 4, 1, 2, 3});
+  auto inv_transpose_permute = xla::InversePermutation(transpose_permute);
+  xla::Shape resized_shape = xla::ShapeUtil::PermuteDimensions(transpose_permute, output_shape);
+  xla::XlaOp tinput = xla::Transpose(input, transpose_permute);
+  std::string backend_config = GetBackendConfig(align_corners, half_pixel_centers);
+
+  if (ResizeFactor(input_shape, output_shape, 1) > resize_split_factor &&
+      ResizeFactor(input_shape, output_shape, 2) > resize_split_factor &&
+      ResizeFactor(input_shape, output_shape, 3) > resize_split_factor) {
+    // If the resize is too large, do one dimension at a time.
+    xla::Shape partial_shape = resized_shape;
+    partial_shape.mutable_dimensions()[1] = input_shape.dimensions(1);
+    tinput = xla::CustomCall(input.builder(), "ResizeNearest", {tinput}, partial_shape, backend_config);
+  }
+  xla::XlaOp resized = xla::CustomCall(input.builder(), "ResizeNearest", {tinput}, resized_shape, backend_config);
+  return xla::Transpose(resized, inv_transpose_permute);
+}
+
 
 }  // namespace resize
 }  // namespace torch_xla
