@@ -47,6 +47,8 @@ def bazel_options_from_env() -> Iterable[str]:
     bazel_flags.append('--config=cuda')
   if check_env_flag('XLA_CPU_USE_ACL'):
     bazel_flags.append('--config=acl')
+  if check_env_flag('XLA_ROCM'):
+    bazel_flags.append('--config=rocm')
 
   return bazel_flags
 

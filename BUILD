@@ -6,6 +6,11 @@ load(
 load("@python//:defs.bzl", "compile_pip_requirements")
 load("@python_version_repo//:py_version.bzl", "REQUIREMENTS")
 
+load(
+    "@local_config_rocm//rocm:build_defs.bzl",
+    "if_rocm_is_configured",
+)
+
 compile_pip_requirements(
     name = "requirements",
     extra_args = [
@@ -43,6 +48,8 @@ cc_binary(
         "@torch//:libtorch_python",
     ] + if_cuda_is_configured([
         "@xla//xla/stream_executor:cuda_platform",
+    ]) + if_rocm_is_configured([
+        "@xla//xla/stream_executor:rocm_platform",
     ]),
 )
 
