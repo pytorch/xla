@@ -249,16 +249,15 @@ def j2t_autograd(fn, call_jax=call_jax):
     """
     import jax
     from jax.tree_util import tree_flatten, tree_unflatten
-  
+
     def fn_wrapper(*tensors):
       # Reconstruct the original args and kwargs
       flat_inputs = util.merge(tensors, other)
       args, kwargs = tree_unflatten(tree_def, flat_inputs)
       return fn(*args, **kwargs)
-  
+
     return jax.vjp(fn_wrapper, *tensors)
-  
-  
+
   def _jax_backward(vjp_spec, saved_tensors, grad_out):
     """JAX function to compute input gradients.
   
@@ -267,7 +266,6 @@ def j2t_autograd(fn, call_jax=call_jax):
     from jax.tree_util import tree_unflatten
     fun_vjp = tree_unflatten(vjp_spec, saved_tensors)
     return fun_vjp(grad_out)
-
 
   @wraps(fn)
   def inner(*args, **kwargs):
