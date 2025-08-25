@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 from absl.testing import absltest, parameterized
@@ -30,7 +31,7 @@ def _test_spawn(fn, args):
 class TestGraphHash(parameterized.TestCase):
 
   def _test_num_graph_hash(self, use_dynamo, use_persistent):
-    xla_dev = xm.xla_device()
+    xla_dev = torch_xla.device()
     model = M().to(device=xla_dev)
     input_shape = (10, 5)
     if use_dynamo:
@@ -40,28 +41,28 @@ class TestGraphHash(parameterized.TestCase):
       tmpdir = tempfile.TemporaryDirectory()
       xr.initialize_cache(tmpdir)
     input1 = torch.rand(input_shape).to(xla_dev)
-    xm.mark_step()
+    torch_xla.sync()
     model(input1)
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     graph_cnt = xr.get_num_cached_compilation_graph()
     input2 = torch.rand(input_shape).to(xla_dev)
     model(input2)
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     new_graph_cnt = xr.get_num_cached_compilation_graph()
     # No compilation happening since same graph runs.
     self.assertEqual(graph_cnt, new_graph_cnt)
     graph_cnt = new_graph_cnt
     input3 = torch.concat([input1, input2], dim=0)
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     new_graph_cnt = xr.get_num_cached_compilation_graph()
     # Stacking the inputs creates a new graph.
     self.assertEqual(graph_cnt + 1, new_graph_cnt)
     graph_cnt = new_graph_cnt
     model(input3)
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     new_graph_cnt = xr.get_num_cached_compilation_graph()
     # New compilation with stacked inputs.

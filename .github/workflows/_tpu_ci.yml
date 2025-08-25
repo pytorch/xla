@@ -2,11 +2,15 @@ name: TPU Integration Test
 on:
   workflow_call:
     inputs:
+      torch-commit:
+        required: false
+        type: string
+        description: torch-commit
       timeout-minutes:
         required: false
         type: number
         description: Timeout in minutes for the job run
-        default: 120
+        default: 75  # Takes ~40m as of 2025/5/30.
       has_code_changes:
         required: false
         type: string
@@ -16,6 +20,15 @@ jobs:
   tpu-test:
     runs-on: v4-runner-set
     timeout-minutes: ${{ inputs.timeout-minutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        test_script:
+          - test/tpu/run_tests.sh
+          - test/tpu/run_expensive_test_1.sh
+          - test/tpu/run_expensive_test_2.sh
+          - test/tpu/run_pallas_test.sh
+          - test/tpu/run_training_tests.sh
     steps:
       - name: Checkout actions
         if: inputs.has_code_changes == 'true'
@@ -38,18 +51,20 @@ jobs:
           pip install --upgrade pip
           pip install fsspec
           pip install rich
-          # libtpu is needed for pallas tests.
-          pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
+          # jax and libtpu is needed for pallas tests.
+          pip install 'torch_xla[pallas]'
+          pip install 'torch_xla[tpu]' -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
           pip install --upgrade protobuf
-      - name: Run Tests
+      - name: Run Tests (${{ matrix.test_script }})
         if: inputs.has_code_changes == 'true'
         env:
           PJRT_DEVICE: TPU
-          TPU_LOG_DIR: tpu_logs
+          TPU_LOG_DIR: tpu_logs_${{ strategy.job-index }}
         run: |
           cd pytorch/xla
-          test/tpu/run_tests.sh
+          ${{ matrix.test_script }}
       - name: Report no code changes
-        if: inputs.has_code_changes == 'false'
+        # Only report the first instance
+        if: inputs.has_code_changes == 'false' && strategy.job-index == 0
         run: |
           echo "No code changes were detected that require running the full test suite."

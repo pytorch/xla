@@ -10,13 +10,14 @@ sys.argv = [sys.argv[0]] + leftovers
 import numpy as np
 import unittest
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 
 # It enables us to run python implementations of CompositeAutogradImplicit ops.
 # CompositeAutogradImplicit means we don't have an explicit backward formula for an op instead an op is composed of a bunch of ops that do have backward formulas and combines this formulas is equivalent to differentiating the op explicitly.
 pd = torch._C._EnablePythonDispatcher()
-xla_dev = xm.xla_device()
+xla_dev = torch_xla.device()
 
 
 class Feedforward(torch.nn.Module):
@@ -43,10 +44,7 @@ class Feedforward(torch.nn.Module):
 
 
 @unittest.skipIf(
-    # Currently a change break this test on CUDA. Another change is trying to
-    # roll back it. Will uncomment the line below once it is rolled back.
-    # not xm.get_xla_supported_devices("CUDA") and
-    not xm.get_xla_supported_devices("TPU"),
+    xm.xla_device_hw(torch_xla.device()) != 'TPU',
     f"The tests fail on CPU. See https://github.com/pytorch/xla/issues/4298 for more detail."
 )
 class TestDynamicShapeModels(unittest.TestCase):
@@ -66,7 +64,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       with torch.no_grad():
         y_pred = model(x_test)
         before_train = criterion(y_pred.squeeze(), y_test)
-        xm.mark_step()
+        torch_xla.sync()
         losses.append(before_train.item())
 
     np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
@@ -89,7 +87,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       with torch.no_grad():
         y_pred = model(x_test)
         criterion(y_pred.squeeze(), y_test)
-        xm.mark_step()
+        torch_xla.sync()
         if not num_compilation_recorded:
           num_compilation = met.metric_data('CompileTime')[0]
           num_compilation_recorded = True
@@ -124,7 +122,7 @@ class TestDynamicShapeModels(unittest.TestCase):
                                                      num_features, xla_dev)
       y_pred = model(x_test)
       criterion(y_pred.squeeze(), y_test).item()
-      xm.mark_step()
+      torch_xla.sync()
     print('Test passed.')
 
   def create_dynamic_test_data(self,

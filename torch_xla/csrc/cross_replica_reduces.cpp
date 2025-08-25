@@ -62,8 +62,8 @@ ReduceContext GetReduceContext(absl::Span<const xla::XlaOp> operands) {
   return redux;
 }
 
-xla::XlaComputation GetReduceComutation(AllReduceType reduce_type,
-                                        xla::PrimitiveType type) {
+xla::XlaComputation GetReduceComputation(AllReduceType reduce_type,
+                                         xla::PrimitiveType type) {
   switch (reduce_type) {
     case AllReduceType::kSum:
       return XlaHelpers::CreateAddComputation(type);
@@ -116,7 +116,7 @@ std::shared_ptr<torch::lazy::Value> CreateToken(
 at::Tensor all_reduce(const at::Tensor& self, std::string reduceOp,
                       std::string /*group_name*/) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto self_tensor = bridge::GetXlaTensor(self);
+  auto self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
   // TODO(alanwaketan): Use group_name to generate groups. Currently we just
   // use {} as a workaround. Scale is always 1.0 here, and we always pin
   // layout.
@@ -153,14 +153,14 @@ std::vector<xla::XlaOp> BuildAllReduce(
     if (pin_layout) {
       reduce = xla::AllReduce(
           xla::Tuple(operands[0].builder(), type_ctx.second.ops),
-          GetReduceComutation(reduce_type, type_ctx.first), reduce_groups,
+          GetReduceComputation(reduce_type, type_ctx.first), reduce_groups,
           /*channel_id=*/absl::nullopt,
           /*shape_with_layout=*/
           MakeReduceShape(type_ctx.second.operand_shapes));
     } else {
       reduce = xla::AllReduce(
           xla::Tuple(operands[0].builder(), type_ctx.second.ops),
-          GetReduceComutation(reduce_type, type_ctx.first), reduce_groups);
+          GetReduceComputation(reduce_type, type_ctx.first), reduce_groups);
     }
     for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
       size_t op_idx = type_ctx.second.indices[i];
@@ -192,7 +192,7 @@ xla::XlaOp BuildAllReduce(AllReduceType reduce_type, xla::XlaOp input,
   channel_handle.set_handle(1);
   channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
   auto reduce_result = xla::AllReduce(
-      input, GetReduceComutation(reduce_type, input_shape.element_type()),
+      input, GetReduceComputation(reduce_type, input_shape.element_type()),
       std::move(reduce_groups), std::move(channel_handle), std::nullopt, true);
   if (scale != 1.0) {
     xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
@@ -270,7 +270,7 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
 at::Tensor all_gather_into_tensor(const at::Tensor& self, int64_t group_size,
                                   std::string group_name) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto self_tensor = bridge::GetXlaTensor(self);
+  auto self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
   std::vector<int64_t> all_groups(group_size);
   std::iota(all_groups.begin(), all_groups.end(), 0);
   auto result = tensor_methods::all_gather(self_tensor, 0, group_size,
@@ -309,8 +309,9 @@ AllGatherResultCoalesced BuildAllGatherCoalesced(
           xla::AllGather(xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
                          dim, shard_count, cc_groups);
     }
-    if (ShapeHelper::ShapeOfXlaOp(all_gather_result).tuple_shapes().size() !=
-        0) {
+    if (ShapeHelper::ShapeOfXlaOp(all_gather_result).IsTuple() &&
+        ShapeHelper::ShapeOfXlaOp(all_gather_result).tuple_shapes().size() !=
+            0) {
       for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
         size_t op_idx = type_ctx.second.indices[i];
         result[op_idx] = xla::GetTupleElement(all_gather_result, i);
@@ -332,7 +333,8 @@ at::Tensor all_to_all_single(const at::Tensor& input,
   bool pin_layout = false;
   const torch::lazy::Value& token =
       GetAllReduceToken(bridge::GetCurrentDevice());
-  int64_t split_count = runtime::GetComputationClient()->GetAllDevices().size();
+  int64_t split_count =
+      runtime::GetComputationClientOrDie()->GetAllDevices().size();
   std::vector<int64_t> all_groups(split_count);
   std::iota(all_groups.begin(), all_groups.end(), 0);
 
@@ -347,9 +349,9 @@ at::Tensor all_to_all_single(const at::Tensor& input,
   }
   XLATensorPtr result_ptr;
   torch::lazy::Value new_token;
-  std::tie(result_ptr, new_token) =
-      tensor_methods::all_to_all(bridge::GetXlaTensor(input), token, 0, 0,
-                                 split_count, {all_groups}, pin_layout);
+  std::tie(result_ptr, new_token) = tensor_methods::all_to_all(
+      GetValueOrThrow(bridge::GetXlaTensor(input)), token, 0, 0, split_count,
+      {all_groups}, pin_layout);
   at::Tensor result = bridge::AtenFromXlaTensor(std::move(result_ptr));
 
   at::Tensor result_with_grad = torch::autograd::make_variable(
@@ -426,13 +428,13 @@ ReduceScatterResult BuildReduceScatter(
         static_cast<XlaDeviceType>(xla_device.type()));
     reduce_result = xla::ReduceScatter(
         token_handler.GetInput(input, &input_shape),
-        GetReduceComutation(reduce_type, input_shape.element_type()),
+        GetReduceComputation(reduce_type, input_shape.element_type()),
         scatter_dim, shard_count, reduce_groups, channel_handle,
         /*layout=*/reduce_shape.layout(), use_global_device_ids);
   } else {
     reduce_result = xla::ReduceScatter(
         token_handler.GetInput(input, &input_shape),
-        GetReduceComutation(reduce_type, input_shape.element_type()),
+        GetReduceComputation(reduce_type, input_shape.element_type()),
         scatter_dim, shard_count, reduce_groups, channel_handle,
         /*layout=*/std::nullopt, use_global_device_ids);
   }
@@ -459,7 +461,7 @@ xla::XlaOp BuildReduceScatter(AllReduceType reduce_type, xla::XlaOp input,
   channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
   xla::XlaOp reduce_result;
   reduce_result = xla::ReduceScatter(
-      input, GetReduceComutation(reduce_type, input_shape.element_type()),
+      input, GetReduceComputation(reduce_type, input_shape.element_type()),
       scatter_dim, shard_count, std::move(reduce_groups),
       std::move(channel_handle), std::nullopt, true);
   if (scale != 1.0) {
@@ -479,7 +481,7 @@ xla::XlaOp BuildReduceScatter(AllReduceType reduce_type, xla::XlaOp input,
 at::Tensor reduce_scatter_tensor(const at::Tensor& input, std::string reduce_op,
                                  int64_t group_size, std::string group_name) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto self = bridge::GetXlaTensor(input);
+  auto self = GetValueOrThrow(bridge::GetXlaTensor(input));
   std::vector<int64_t> all_groups(group_size);
   std::iota(all_groups.begin(), all_groups.end(), 0);
   int64_t shard_count = group_size;
@@ -528,20 +530,20 @@ ReduceScatterResultCoalesced BuildReduceScatterCoalesced(
     if (pin_layout) {
       reduce_result = xla::ReduceScatter(
           xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
-          GetReduceComutation(reduce_type, type_ctx.first), scatter_dim,
+          GetReduceComputation(reduce_type, type_ctx.first), scatter_dim,
           shard_count, cc_groups, /*channel_id=*/absl::nullopt,
           /*layout=*/
           MakeReduceShape(type_ctx.second.operand_shapes).layout());
     } else {
       reduce_result = xla::ReduceScatter(
           xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
-          GetReduceComutation(reduce_type, type_ctx.first), scatter_dim,
+          GetReduceComputation(reduce_type, type_ctx.first), scatter_dim,
           shard_count, cc_groups);
     }
     for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
       size_t op_idx = type_ctx.second.indices[i];
       xla::XlaOp gte;
-      if (ShapeHelper::ShapeOfXlaOp(reduce_result).dimensions_size() == 0) {
+      if (ShapeHelper::ShapeOfXlaOp(reduce_result).IsTuple()) {
         gte = xla::GetTupleElement(reduce_result, i);
       } else {
         gte = reduce_result;

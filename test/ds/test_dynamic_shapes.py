@@ -2,6 +2,7 @@ import os
 import sys
 import unittest
 import torch, torch_xla
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 
@@ -9,7 +10,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 import test_utils
 
 pd = torch._C._EnablePythonDispatcher()
-dev = xm.xla_device()
+dev = torch_xla.device()
 
 
 class TestDynamicShapes(test_utils.XlaTestCase):
@@ -163,7 +164,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t2_t.shape[1], 7)
 
   def test_nonzero_shape(self):
-    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device='xla')
     x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
         torch.nonzero(x, as_tuple=False), 0)
     self.assertEqual(x_dim0_shape.item(), 4)
@@ -176,22 +177,22 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t2.cpu(), t2_aten)
 
   def test_masked_select_shape(self):
-    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device='xla')
     mask = x.ge(2)
     x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
         torch.masked_select(x, mask), 0)
     self.assertEqual(x_dim0_shape.item(), 3)
 
   def test_nonzero_cast(self):
-    t1 = torch.ones(5, 2, device=xm.xla_device())
+    t1 = torch.ones(5, 2, device='xla')
     # Result of the nonzero should be the index type. Currently
     # index type is s64 on cpu and gpu, but s32 on TPU. We should be
     # able to cast it to any other type without error.
     t2 = torch.nonzero(t1.int()).float()
-    xm.mark_step()
+    torch_xla.sync()
 
   def test_expand_symint_correctness(self):
-    dev = xm.xla_device()
+    dev = torch_xla.device()
     size1 = 5
     size2 = 2
     t1 = torch.ones([size1, size2])
@@ -620,6 +621,24 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # TODO(ds): Uncomment the line above after we implement 0/1 specialization.
     # The extra compilation comes from the call `set_sizes_and_strides` in XLATensorImpl::XLATensorImpl when we compare a SymInt with 0.
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
+
+  def test_sizeMinMax(self):
+    met.clear_all()
+
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[3][0] = 1
+    # t2 has size [<=10, 2]
+    t2 = torch.nonzero(t1)
+    # test sym_max
+    dyn_size_max = torch.sym_max(t2.shape[0], t2.shape[1])
+    self.assertGreater(met.counter_value("xla::size_sym_max"), 0)
+    self.assertEqual(int(dyn_size_max), 2)
+    # test sym_min
+    dyn_size_min = torch.sym_min(t2.shape[0], t2.shape[1])
+    self.assertGreater(met.counter_value("xla::size_sym_min"), 0)
+    self.assertEqual(int(dyn_size_min), 1)
 
 
 if __name__ == '__main__':

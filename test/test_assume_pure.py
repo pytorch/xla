@@ -1,4 +1,7 @@
 from copy import deepcopy
+import functools
+import glob
+import os
 from absl.testing import absltest
 from absl import flags
 import time
@@ -164,6 +167,36 @@ class TestAssumePure(absltest.TestCase):
     for _ in range(5):
       a = torch.ones((3, 3), device='xla', requires_grad=True)
       o = simple_torch_function(a, a)
+      o.sum().backward()
+      torch_xla.sync()
+
+    # Assert
+    ending_lowerings = xb._jax_to_xla_computation_cache_elements()
+
+    # Check that we only trace once.
+    self.assertEqual(trace_counter, 1)
+
+    # Check that we only lower to HLO twice (once for forward, once for backward).
+    self.assertEqual(ending_lowerings - starting_lowerings, 2)
+
+  def test_assume_pure_avoid_retracing_avoid_rejit_rand(self):
+    """Tests that we avoid retracing and re-jitting when using assume_pure."""
+
+    # Arrange: first clear the cache to prevent contamination from other tests.
+    xb._JAX_TO_XLA_COMPUTATION_CACHE.clear()
+    starting_lowerings = xb._jax_to_xla_computation_cache_elements()
+    trace_counter = 0
+
+    @functools.partial(assume_pure, add_rng_seed_argument=True)
+    def simple_torch_function(a, b):
+      nonlocal trace_counter
+      trace_counter += 1
+      return torch.sin(a @ b)
+
+    # Act: simulate a training loop.
+    for i in range(5):
+      a = torch.ones((3, 3), device='xla', requires_grad=True)
+      o = simple_torch_function(a, a, rng_seed=i)
       o.sum().backward()
       torch_xla.sync()
 
@@ -369,7 +402,7 @@ class TestAssumePure(absltest.TestCase):
     self.assertIsNone(a_pure.grad)
     self.assertIsNone(b_pure.grad)
 
-  def test_composibility_with_call_jax(self):
+  def test_composability_with_call_jax(self):
 
     def jax_func(a, b):
       return jnp.dot(a, b)
@@ -406,6 +439,84 @@ class TestAssumePure(absltest.TestCase):
         a @ b + 1,
         msg="Forward outputs do not match",
         check_device=False)
+
+  def test_assume_pure_profile(self):
+    """Test that xp.Trace works inside assume_pure."""
+    import torch_xla.debug.profiler as xp
+
+    # Arrange
+    MAGIC_STRING = 'foobar123'
+
+    @assume_pure
+    def torch_func(a, b):
+      with xp.Trace(MAGIC_STRING):
+        return torch.matmul(a, b)
+
+    # Precompile it such that it won't be traced again on CPU.
+    # This way we exclusively test the device-side profiles.
+    a = torch.randn(3, 3, device='xla')
+    b = torch.randn(3, 3, device='xla')
+    _ = torch_func(a, b)
+
+    # Act
+    tempdir = self.create_tempdir().full_path
+    xp.start_trace(tempdir)
+    _ = torch_func(a, b)
+    torch_xla.sync(wait=True)
+    xp.stop_trace()
+
+    # Assert
+    files = glob.glob(
+        os.path.join(tempdir, '**', '*.xplane.pb'), recursive=True)
+    self.assertEqual(len(files), 1)
+
+    path = files[0]
+    with open(path, 'rb') as f:
+      proto_str = str(f.read())
+    self.assertTrue(MAGIC_STRING in proto_str,
+                    f'Expected "{MAGIC_STRING}" trace in: {path}')
+
+  def test_assume_pure_with_rng(self):
+
+    def add_randn(a):
+      return a + torch.rand_like(a)
+
+    add_randn_p = assume_pure(add_randn, add_rng_seed_argument=True)
+
+    a = torch.randn((2, 2), device='xla')
+    with self.assertRaises(AssertionError):
+      # did not pass rng key
+      add_randn_p(a)
+
+    res1 = add_randn_p(a, rng_seed=0)
+    res2 = add_randn_p(a, rng_seed=1)
+    # different keys yield different result
+    self.assertFalse(torch.allclose(res1, res2))
+
+    res1_again = add_randn_p(a, rng_seed=0)
+    # same key yields same result
+    self.assertTrue(torch.allclose(res1, res1_again))
+
+  def test_assume_pure_with_many_random(self):
+
+    def many_rand(a):
+      a = torch.rand_like(a)
+      b = torch.rand_like(a)
+      c = torch.rand_like(a)
+      return c
+
+    randn_p = assume_pure(many_rand, add_rng_seed_argument=True)
+
+    a = torch.randn((2, 2), device='xla')
+
+    res1 = randn_p(a, rng_seed=0)
+    res2 = randn_p(a, rng_seed=1)
+    # different keys yield different result
+    self.assertFalse(torch.allclose(res1, res2))
+
+    res1_again = randn_p(a, rng_seed=0)
+    # same key yields same result
+    self.assertTrue(torch.allclose(res1, res1_again))
 
 
 FLAGS = flags.FLAGS

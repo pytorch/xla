@@ -72,10 +72,10 @@ def is_xla_device_available(devkind, use_xla2: bool = False):
 
 def move_to_device(item, device, torch_xla2: bool = False):
   if torch_xla2:
-    import torch_xla2
+    import torchax
     import jax
     move_to_device_func = lambda t: jax.device_put(
-        torch_xla2.tensor.t2j(t), device)
+        torchax.default_env().t2j_copy(t), device)
   else:
 
     def move_to_device_func(tensor: torch.Tensor) -> torch.Tensor:

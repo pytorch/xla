@@ -13,14 +13,11 @@ skiplist = {
     "_segment_reduce",
     "bincount",  # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
-    "cat",
     "cholesky_solve",
-    "diagonal_copy",
     "geqrf",
     "histogram",  # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd",  # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
     "index_reduce",
-    "kthvalue",
     "linalg.ldl_solve",
     "max_pool2d_with_indices_backward",
     "nn.functional.adaptive_max_pool1d",
@@ -143,28 +140,30 @@ def run_export_and_compare(testcase,
     with testcase.subTest("torchax_eval"):
       input2, args2, kwargs2 = testcase.env.to_xla(
           (sample_input.input, sample_input.args, sample_input.kwargs))
+      if 'device' in kwargs2:
+        kwargs2['device'] = 'jax'
       with testcase.env:
         res2 = func(input2, *args2, **kwargs2)
-      res2 = pytree.tree_map_only(tensor.Tensor, lambda t: t.torch(), res2)
-      with testcase.subTest("torchax_diff:" + str(atol)):
-        if ignore_indices and isinstance(res, tuple) and len(res) == 2:
-          diff_output(
-              testcase,
-              res[0],
-              res2[0],
-              atol=atol,
-              rtol=rtol,
-              equal_nan=equal_nan,
-              check_output=check_output)
-        else:
-          diff_output(
-              testcase,
-              res,
-              res2,
-              atol=atol,
-              rtol=rtol,
-              equal_nan=equal_nan,
-              check_output=check_output)
+        res2 = pytree.tree_map_only(tensor.Tensor, lambda t: t.torch(), res2)
+        with testcase.subTest("torchax_diff:" + str(atol)):
+          if ignore_indices and isinstance(res, tuple) and len(res) == 2:
+            diff_output(
+                testcase,
+                res[0],
+                res2[0],
+                atol=atol,
+                rtol=rtol,
+                equal_nan=equal_nan,
+                check_output=check_output)
+          else:
+            diff_output(
+                testcase,
+                res,
+                res2,
+                atol=atol,
+                rtol=rtol,
+                equal_nan=equal_nan,
+                check_output=check_output)
 
 
 ops_to_test = [
@@ -176,7 +175,7 @@ ops_to_test = [
 # Sort related ops should ignore index;
 # For example: sort( [1, 0, 0]) -> [0, 0, 1]
 # the correct index can be [1, 2, 0] or [2, 1, 0]
-should_ignore_indexes = {"topk", "mode"}
+should_ignore_indexes = {"topk", "mode", "kthvalue"}
 
 
 class TestOpInfo(TestCase):
@@ -189,14 +188,8 @@ class TestOpInfo(TestCase):
     self.env = torchax.default_env()
     torchax.enable_accuracy_mode()
     #self.env.config.debug_accuracy_for_each_op = True
-    self.env.config.debug_print_each_op = True
-    self.env.config.debug_print_each_op_operands = True
+    self.env.config.debug_print_each_op = False
     torch.manual_seed(0)
-    self.old_var = self.env.config.use_torch_native_for_cpu_tensor
-    self.env.config.use_torch_native_for_cpu_tensor = False
-
-  def tearDown(self):
-    self.env.config.use_torch_native_for_cpu_tensor = self.old_var
 
   # Replaces all values in the input torch_tensor that are less than the given threshold
   # with the threshold value itself.

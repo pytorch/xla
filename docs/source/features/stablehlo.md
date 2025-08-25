@@ -17,8 +17,8 @@ There are 2 ways to accomplish this:
 from torch.export import export
 import torchvision
 import torch
-import torch_xla2 as tx
-import torch_xla2.export
+import torchax as tx
+import torchax.export
 
 resnet18 = torchvision.models.resnet18()
 # Sample input is a tuple
@@ -41,8 +41,8 @@ for more details on how to use the MLIR code generated from it.
 from torch.export import export
 import torchvision
 import torch
-import torch_xla2 as tx
-import torch_xla2.export
+import torchax as tx
+import torchax.export
 import jax
 import jax.numpy as jnp
 
@@ -63,6 +63,29 @@ print(stablehlo.mlir_module())
 
 The second to last line we used `jax.ShapedDtypeStruct` to specify the input shape.
 You can also pass a numpy array here.
+
+### Inline some weights in generated stablehlo
+
+You can inline some or all of your model's weights into the StableHLO graph as constants by exporting a separate function that calls your model.
+
+The convention used in `jax.jit` is all the input of the `jit`ed Python
+functions are exported as parameters, everything else are inlined as constants.
+
+So as above, the function we exported `jfunc` takes `weights` and `args` as input, so
+they appear as paramters.
+
+If you do this instead:
+
+```
+def jfunc_inlined(args):
+  return jfunc(weights, args)
+```
+and export / print out stablehlo for that:
+
+```
+print(jax.jit(jfunc_inlined).lower((jax.ShapedDtypeStruct((4, 3, 224, 224), jnp.float32.dtype, ))))
+```
+Then, you will see inlined constants.
 
 
 ## Preserving High-Level PyTorch Operations in StableHLO by generating `stablehlo.composite`
@@ -88,10 +111,10 @@ import unittest
 import torch
 import torch.nn.functional as F
 from torch.library import Library, impl, impl_abstract
-import torch_xla2
-import torch_xla2.export
-from torch_xla2.ops import jaten
-from torch_xla2.ops import jlibrary
+import torchax
+import torchax.export
+from torchax.ops import jaten
+from torchax.ops import jlibrary
 
 
 # Create a `mylib` library which has a basic SDPA op.
@@ -140,7 +163,7 @@ class LibraryTest(unittest.TestCase):
 
   def setUp(self):
     torch.manual_seed(0)
-    torch_xla2.default_env().config.use_torch_native_for_cpu_tensor = False
+    torchax.default_env().config.use_torch_native_for_cpu_tensor = False
 
   def test_basic_sdpa_library(self):
 
@@ -156,7 +179,7 @@ class LibraryTest(unittest.TestCase):
     args = (arg, arg, arg, )
 
     exported = torch.export.export(model, args=args)
-    stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
+    stablehlo = torchax.export.exported_program_to_stablehlo(exported)
     module_str = str(stablehlo.mlir_module())
 
     ## TODO Update this machinery from producing function calls to producing

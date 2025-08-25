@@ -40,6 +40,7 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:runtime",
         "//torch_xla/csrc/runtime:debug_macros",
         "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc:status",
         "//torch_xla/csrc:tensor",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest",
@@ -78,6 +79,7 @@ ptxla_cc_test(
         ":torch_xla_test",
         "//torch_xla/csrc/runtime:runtime",
         "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc:status",
         "//torch_xla/csrc:tensor",
         "//torch_xla/csrc:aten_cuda_functions",
         "//torch_xla/csrc:thread_pool",
@@ -109,6 +111,7 @@ ptxla_cc_test(
 #     srcs = ["test_xla_backend_intf.cpp"],
 #     deps = [
 #         ":cpp_test_util",
+#         "//torch_xla/csrc:status",
 #         "//torch_xla/csrc:tensor",
 #         "@com_google_googletest//:gtest_main",
 #     ],
@@ -122,6 +125,7 @@ ptxla_cc_test(
         ":torch_xla_test",
         "//torch_xla/csrc/runtime:env_vars",
         "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc:status",
         "//torch_xla/csrc:tensor",
         "//torch_xla/csrc:aten_cuda_functions",
         "@com_google_googletest//:gtest_main",
@@ -149,3 +153,52 @@ ptxla_cc_test(
     )
     for test in glob(["test_aten_xla_tensor*cpp"])
 ]
+
+ptxla_cc_test(
+    name = "test_runtime",
+    srcs = ["test_runtime.cpp"],
+    deps = [
+        "//torch_xla/csrc/runtime:runtime",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "test_status_common",
+    hdrs = ["test_status_common.h"],
+    deps = [
+        "//torch_xla/csrc:status",
+        "//torch_xla/csrc/runtime:env_vars",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+ptxla_cc_test(
+    name = "test_status_dont_show_cpp_stacktraces",
+    srcs = ["test_status_dont_show_cpp_stacktraces.cpp"],
+    deps = [
+        ":test_status_common",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+ptxla_cc_test(
+    name = "test_status_show_cpp_stacktraces",
+    srcs = ["test_status_show_cpp_stacktraces.cpp"],
+    deps = [
+        ":test_status_common",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+ptxla_cc_test(
+    name = "test_debug_macros",
+    srcs = ["test_debug_macros.cpp"],
+    deps = [
+        "//torch_xla/csrc:status",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:env_vars",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

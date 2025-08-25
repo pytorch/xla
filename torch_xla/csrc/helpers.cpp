@@ -6,7 +6,6 @@
 #include <iterator>
 #include <limits>
 
-#include "absl/status/status.h"
 #include "absl/strings/str_join.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/dtype.h"
@@ -14,6 +13,7 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "xla/hlo/builder/lib/constants.h"
 #include "xla/primitive_util.h"
@@ -41,7 +41,7 @@ xla::XlaComputation CreateComputation(
       xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
   xla::XlaOp y =
       xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
-  return ConsumeValue(builder.Build(op(x, y)));
+  return GetValueOrThrow(builder.Build(op(x, y)));
 }
 
 xla::XlaComputation CreateMinMaxComputation(const std::string& name,
@@ -66,7 +66,7 @@ xla::XlaComputation CreateMinMaxComputation(const std::string& name,
   xla::XlaOp tie_id = xla::Min(lhs_index, rhs_index);
   arg_max = xla::Select(eq, tie_id, arg_max);
   xla::Tuple(&builder, {max, arg_max});
-  return ConsumeValue(builder.Build());
+  return GetValueOrThrow(builder.Build());
 }
 
 }  // namespace
@@ -582,8 +582,8 @@ void ExtractDimensionSizesAndDynamicDimensionsFromShape(
 
 }  // namespace
 
-xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
-                                        const xla::Shape& shape2) {
+absl::StatusOr<xla::Shape> XlaHelpers::GetPromotedShape(
+    const xla::Shape& shape1, const xla::Shape& shape2) {
   std::vector<int64_t> dimensions;
   std::vector<bool> dynamic_dimensions;
 
@@ -606,20 +606,33 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
   size_t min_size =
       std::min(shape1.dimensions().size(), shape2.dimensions().size());
   for (size_t i = 0; i < min_size; i++) {
-    int64_t dim1 =
-        shape1.dimensions()[shape1.dimensions().size() - min_size + i];
+    int64_t dim_index1 = shape1.dimensions().size() - min_size + i;
+    int64_t dim_index2 = shape2.dimensions().size() - min_size + i;
+    int64_t dim1 = shape1.dimensions()[dim_index1];
+    int64_t dim2 = shape2.dimensions()[dim_index2];
+
     int64_t dynamic_dim1 =
         shape1.dynamic_dimensions()[shape1.dynamic_dimensions().size() -
                                     min_size + i];
-    int64_t dim2 =
-        shape2.dimensions()[shape2.dimensions().size() - min_size + i];
     int64_t dynamic_dim2 =
         shape2.dynamic_dimensions()[shape2.dynamic_dimensions().size() -
                                     min_size + i];
 
-    XLA_CHECK(dim1 == dim2 || dim1 == 1 || dim2 == 1 ||
-              dim1 == xla::Shape::kUnboundedSize ||
-              dim2 == xla::Shape::kUnboundedSize);
+    if (dim1 != dim2 && dim1 != 1 && dim2 != 1 &&
+        dim1 != xla::Shape::kUnboundedSize &&
+        dim2 != xla::Shape::kUnboundedSize) {
+      auto shape_str1 = shape1.ToString();
+      auto shape_str2 = shape2.ToString();
+      auto message = absl::StrCat(
+          "Shapes are not compatible for broadcasting: ", shape_str1, " vs. ",
+          shape_str2, ". Expected dimension ", dim_index1, " of shape ",
+          shape_str1, " (", dim1, ") ", "to match dimension ", dim_index2,
+          " of shape ", shape_str2, " (", dim2, "). ",
+          "Either that or that any of them is either 1 or unbounded. ",
+          "Try reshaping one of the tensors to match the "
+          "other.");
+      return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(message));
+    }
 
     // TODO: Consider replacing the broadcasting logic below with
     // 'xla::ShapeInference::InferDegenerateDimensionBroadcastShape' resuing the
@@ -684,7 +697,7 @@ std::vector<int64_t> XlaHelpers::getBroadcastDimensions(xla::XlaOp op1,
 xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
                                                 const xla::Shape& shape2) {
   if (!shape1.is_dynamic() && !shape2.is_dynamic()) {
-    auto promoted_shape = GetPromotedShape(shape1, shape2);
+    auto promoted_shape = GetValueOrThrow(GetPromotedShape(shape1, shape2));
     return xla::ShapeUtil::MakeShape(
         PromoteType(shape1.element_type(), shape2.element_type()),
         promoted_shape.dimensions());
@@ -763,7 +776,7 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
   const xla::Shape& shape1 = ShapeHelper::ShapeOfXlaOp(op1);
   const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
 
-  xla::Shape shape = GetPromotedShape(shape1, shape2);
+  xla::Shape shape = GetValueOrThrow(GetPromotedShape(shape1, shape2));
   if (shape1.is_unbounded_dynamic() || shape2.is_unbounded_dynamic()) {
     return ImplicitBroadcastWithUnboundedDynamicShapes(op1, op2, shape);
   }
@@ -1043,11 +1056,9 @@ absl::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   xla::XlaOp orig_result = xla::Call(&builder, computation, inner_params);
 
   // Rebuild aliasing.
-  if (buffer_donor_indices.size() > 0) {
-    for (size_t i : buffer_donor_indices) {
-      builder.AddBufferDonor(/*param_number=*/0,
-                             /*param_index=*/xla::ShapeIndex({i}));
-    }
+  for (const int64_t i : buffer_donor_indices) {
+    builder.AddBufferDonor(/*param_number=*/0,
+                           /*param_index=*/xla::ShapeIndex({i}));
   }
 
   return builder.Build(orig_result);

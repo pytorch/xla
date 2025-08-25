@@ -38,6 +38,10 @@ Tutorials
 
    learn/pytorch-on-xla-devices
    learn/xla-overview
+   learn/xla-quickstart
+   learn/xla-examples
+   learn/xla-profiling
+   learn/xla-advanced
 
 .. toctree::
    :glob:
@@ -45,7 +49,8 @@ Tutorials
    :caption: Distributed Training on TPU
 
    accelerators/tpu
-   perf/spmd_basic
+   tutorials/precision_tutorial
+   perf/spmd_basic      
    perf/spmd_advanced
    perf/spmd_distributed_checkpoint
    features/torch_distributed
@@ -73,8 +78,9 @@ Tutorials
    :maxdepth: 1
    :caption: Troubleshooting
 
-   learn/troubleshoot
    learn/eager
+   learn/trace-vs-execution-time
+   learn/troubleshoot
    notes/source_of_recompilation
    perf/recompilation
 

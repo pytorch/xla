@@ -41,7 +41,7 @@ mesh_shape = (num_devices, 1)
 device_ids = np.array(range(num_devices))
 mesh = Mesh(device_ids, mesh_shape, ('data', 'model'))
 
-t = torch.randn(8, 4).to(xm.xla_device())
+t = torch.randn(8, 4).to('xla')
 
 # Mesh partitioning, each device holds 1/8-th of the input
 partition_spec = ('data', 'model')
@@ -174,7 +174,7 @@ This assumes that `M` and `N` are divisible by `X` and `Y`, respectively. If not
 the last device may hold some padding.
 
 You can also visualize how a tensor is sharded over devices with our
-[SPMD debugging tool][debug-tool].
+SPMD debugging tool at {ref}`spmd-debugging-tool`.
 
 ## Further Reading
 

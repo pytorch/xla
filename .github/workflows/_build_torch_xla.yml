@@ -19,7 +19,7 @@ on:
         required: false
         type: number
         description: Timeout in minutes for the build job
-        default: 120
+        default: 45  # Takes ~20m as of 2025/5/30.
       has_code_changes:
         required: false
         type: string
@@ -38,7 +38,7 @@ jobs:
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
-      BAZEL_JOBS: 16
+      BAZEL_JOBS: ''  # Let bazel decide the parallelism based on the number of CPUs.
       BUILD_CPP_TESTS: 1
     steps:
       # Need to check out local composite actions before using them

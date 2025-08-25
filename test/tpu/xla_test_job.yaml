@@ -43,6 +43,7 @@ spec:
     - |
       pip install expecttest==0.1.6
       pip install rich
+      pip install 'torch_xla[pallas]'
 
       cd /src/pytorch/xla
     volumeMounts:

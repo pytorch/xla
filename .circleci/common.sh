@@ -112,6 +112,7 @@ function build_torch_xla() {
   # Need to uncomment the line below.
   # Currently it fails upstream XLA CI.
   # pip install plugins/cuda -v
+  pip install 'torch_xla[pallas]'
   popd
 }
 
@@ -202,7 +203,7 @@ function run_torch_xla_tests() {
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
   export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 
-  if [[ -z "$RUN_BENCHMARK_TESTS" && -z "$RUN_CPP_TESTS1" && -z "$RUN_CPP_TESTS2" && -z "$RUN_PYTHON_TESTS" ]]; then
+  if [[ -z "$RUN_BENCHMARK_TESTS" && -z "$RUN_CPP_TESTS" && -z "$RUN_PYTHON_TESTS" ]]; then
     run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     run_torch_xla_benchmark_tests $XLA_DIR

@@ -40,6 +40,7 @@
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
@@ -512,7 +513,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
     // XlaNode is available on the tensor.
     std::vector<at::Tensor> tensors =
-        XlaDataToTensors({GetXlaData()}, {dtype()});
+        GetValueOrThrow(XlaDataToTensors({GetXlaData()}, {dtype()}));
     tensor = std::move(tensors.front());
     if (!detached) {
       SetTensorData(tensor);
@@ -810,13 +811,21 @@ c10::SymNode XLASymNodeImpl::neg() {
 }
 
 c10::SymNode XLASymNodeImpl::sym_min(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
+  auto n_min = torch_xla::MakeNode<SizeMin>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_min, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
+  auto n_max = torch_xla::MakeNode<SizeMax>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_max, PyType::INT);
 }
 
 // Force guards when performing these logical operations

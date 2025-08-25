@@ -5,6 +5,7 @@ from typing import Union
 
 import torch_xla
 import torch_xla.core.xla_model as xm
+from torch_xla._internal.jax_workarounds import maybe_get_jax
 
 _TRACER_MARKED_STEP: bool = False
 
@@ -107,12 +108,8 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
 
   The traces generated can then be collected using the above profiling APIs.
   The profiling server first needs to be started up and then can be sampled
-  either using Tensorboard profiler plugin
-  (https://github.com/tensorflow/profiler) or the
+  either using xprof (https://github.com/openxla/xprof) or the
   :func:`~torch_xla.debug.profiler.trace` method.
-
-  Note: currently only supports PyTorch/XLA client side trace events. i.e.,
-  the namespace won't group TPU worker side trace.
 
   Example usage:
   ```python
@@ -120,7 +117,7 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
 
   with xp.Trace('fwd_context'):
     model(input)
-    xm.mark_step()
+    torch_xla.sync()
   ```
   """
 
@@ -132,7 +129,16 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
     self.scope = torch_xla._XLAC.profiler.scope_pusher(self.name)
     super().__enter__()
 
+    self._jax_scope = None
+    # Also enter the JAX named scope, to support torchax lowering.
+    if jax := maybe_get_jax():
+      self._jax_scope = jax.named_scope(self.name)
+      self._jax_scope.__enter__()
+
   def __exit__(self, type, value, traceback):
+    if self._jax_scope is not None:
+      self._jax_scope.__exit__(type, value, traceback)
+      self._jax_scope = None
     if getattr(self, 'scope', None):
       del self.scope
     super().__exit__(type, value, traceback)
@@ -170,7 +176,7 @@ class StepTrace(Trace):
       # In ir.cpp ResetScopeContext we ensure that we have no remaining scope
       # before marking step.
       del self.scope
-    xm.mark_step()
+    torch_xla.sync()
     super().__exit__(type, value, traceback)
 
 

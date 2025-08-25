@@ -14,14 +14,14 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-t = torch.randn(2, 2, device=xm.xla_device())
+t = torch.randn(2, 2, device='xla')
 print(t.device)
 print(t)
 ```
 
 This code should look familiar. PyTorch/XLA uses the same interface as
 regular PyTorch with a few additions. Importing `torch_xla` initializes
-PyTorch/XLA, and `xm.xla_device()` returns the current XLA device. This
+PyTorch/XLA, and `torch_xla.device()` returns the current XLA device. This
 may be a CPU or TPU depending on your environment.
 
 ## XLA Tensors are PyTorch Tensors
@@ -32,8 +32,8 @@ tensors.
 For example, XLA tensors can be added together:
 
 ``` python
-t0 = torch.randn(2, 2, device=xm.xla_device())
-t1 = torch.randn(2, 2, device=xm.xla_device())
+t0 = torch.randn(2, 2, device='xla')
+t1 = torch.randn(2, 2, device='xla')
 print(t0 + t1)
 ```
 
@@ -46,8 +46,8 @@ print(t0.mm(t1))
 Or used with neural network modules:
 
 ``` python
-l_in = torch.randn(10, device=xm.xla_device())
-linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+l_in = torch.randn(10, device='xla')
+linear = torch.nn.Linear(10, 20).to('xla')
 l_out = linear(l_in)
 print(l_out)
 ```
@@ -56,7 +56,7 @@ Like other device types, XLA tensors only work with other XLA tensors on
 the same device. So code like
 
 ``` python
-l_in = torch.randn(10, device=xm.xla_device())
+l_in = torch.randn(10, device='xla')
 linear = torch.nn.Linear(10, 20)
 l_out = linear(l_in)
 print(l_out)
@@ -72,6 +72,8 @@ XLA devices requires only a few lines of XLA-specific code. The
 following snippets highlight these lines when running on a single device
 and multiple devices with XLA multi-processing.
 
+(running-on-a-single-xla-device)=
+
 ### Running on a Single XLA Device
 
 The following snippet shows a network training on a single XLA device:
@@ -79,7 +81,7 @@ The following snippet shows a network training on a single XLA device:
 ``` python
 import torch_xla.core.xla_model as xm
 
-device = xm.xla_device()
+device = torch_xla.device()
 model = MNIST().train().to(device)
 loss_fn = nn.NLLLoss()
 optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
@@ -93,17 +95,19 @@ for data, target in train_loader:
   loss.backward()
 
   optimizer.step()
-  xm.mark_step()
+  torch_xla.sync()
 ```
 
 This snippet highlights how easy it is to switch your model to run on
 XLA. The model definition, dataloader, optimizer and training loop can
 work on any device. The only XLA-specific code is a couple lines that
-acquire the XLA device and mark the step. Calling `xm.mark_step()` at
-the end of each training iteration causes XLA to execute its current
-graph and update the model's parameters. See [XLA Tensor Deep
-Dive](#xla-tensor-deep-dive) for more on how XLA creates graphs and runs
+acquire the XLA device and materializing the tensors. Calling `torch_xla.sync()`
+at the end of each training iteration causes XLA to execute its current
+graph and update the model's parameters. See [](#xla-tensor-deep-dive)
+for more on how XLA creates graphs and runs
 operations.
+
+(running-on-multiple-xla-devices-with-multi-processing)=
 
 ### Running on Multiple XLA Devices with Multi-processing
 
@@ -116,7 +120,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
   mp_device_loader = pl.MpDeviceLoader(train_loader, device)
 
   model = MNIST().train().to(device)
@@ -144,7 +148,7 @@ previous single device snippet. Let's go over then one by one.
         will only be able to access the device assigned to the current
         process. For example on a TPU v4-8, there will be 4 processes
         being spawn up and each process will own a TPU device.
-    -   Note that if you print the `xm.xla_device()` on each process you
+    -   Note that if you print the `torch_xla.device()` on each process you
         will see `xla:0` on all devices. This is because each process
         can only see one device. This does not mean multi-process is not
         functioning. The only execution is with PJRT runtime on TPU v2
@@ -157,13 +161,13 @@ previous single device snippet. Let's go over then one by one.
     -   `MpDeviceLoader` can wrap on a torch dataloader. It can preload
         the data to the device and overlap the dataloading with device
         execution to improve the performance.
-    -   `MpDeviceLoader` also call `xm.mark_step` for you every
+    -   `MpDeviceLoader` also call `torch_xla.sync()` for you every
         `batches_per_execution`(default to 1) batch being yield.
 -   `xm.optimizer_step(optimizer)`
     -   Consolidates the gradients between devices and issues the XLA
         device step computation.
     -   It is pretty much a `all_reduce_gradients` +
-        `optimizer.step()` + `mark_step` and returns the loss being
+        `optimizer.step()` + `torch_xla.sync()` and returns the loss being
         reduced.
 
 The model definition, optimizer definition and training loop remain the
@@ -279,7 +283,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-device = xm.xla_device()
+device = torch_xla.device()
 
 t0 = torch.randn(2, 2, device=device)
 t1 = torch.randn(2, 2, device=device)
@@ -342,18 +346,88 @@ device is unavailable the load will fail. PyTorch/XLA, like all of
 PyTorch, is under active development and this behavior may change in the
 future.
 
+### Unexpected Tensor Materialization During AOT (ahead of time) Tracing
+
+While tensor materialization is normal for JIT workflow, it is not expected during traced inference (i.e. [AOT model tracing in AWS Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/frameworks/torch/torch-neuronx/programming-guide/inference/trace-vs-xla-lazytensor.html)).
+When working with traced inference, developers may encounter tensor materialization, which leads to graphs being compiled based on example input tensor value and unexpected program behavior.
+Therefore we need to take advantage of PyTorch/XLA's debugging flags to identify when unexpected tensor materialization happens and make appropriate code changes to avoid tensor materialization.
+
+
+A common issue occurs when tensor values are evaluated during model compilation (traced inference). Consider this example:
+```python
+def forward(self, tensor):
+    if tensor[0] == 1:
+        return tensor
+    else:
+        return tensor * 2
+```
+
+While this code can compile and run, it may lead to unexpected behavior because:
+
+* The tensor value is being accessed during tracing (``tensor[0]``). 
+* The resulting graph becomes fixed based on the tensor value available during tracing
+* Developers might incorrectly assume the condition will be evaluated dynamically during inference
+* The solution for the code above is to utilize the debugging flags below to catch the issue and modify the code. One example is to feed the flag through model configuration
+
+See the updated code without tensor materialization:
+```python
+class TestModel(torch.nn.Module):
+    def __init__(self, flag=1):
+        super().__init__()
+        # the flag should be pre-determined based on the model configuration
+        # it should not be an input of the model during runtime
+        self.flag = flag
+
+    def forward(self, tensor):
+        if self.flag:
+            return tensor
+        else:
+            return tensor * 2
+```
+
+
+#### Debugging Flags
+To help catch tensor materialization issues, PyTorch/XLA provides two useful approaches:
+
+1. Enable warning messages for tensor materialization:
+```
+import os
+os.environ['PT_XLA_DEBUG_LEVEL'] = '2'
+```
+
+2. Disable graph execution to catch issues during development:
+```
+import torch_xla
+torch_xla._XLAC._set_allow_execution(False)
+```
+
+#### Recommendations
+
+Using these flags during development can help identify potential issues early in the development cycle. The recommended approach is to:
+
+* Use ``PT_XLA_DEBUG_LEVEL=2`` during initial development to identify potential materialization points
+* Apply ``_set_allow_execution(False)`` when you want to ensure no tensor materialization occurs during tracing
+* When you see warnings or errors related the tensor materialization, look into the code path and make appropriate changes. The example above moved the flag to the `__init__` function which does not depend on the model input during runtime.
+
+For more detailed debugging information, refer to the [XLA troubleshoot](https://github.com/pytorch/xla/blob/master/docs/source/learn/troubleshoot.md#pytorchxla-debugging-tool).
+
+
 ## Compilation Caching
 
 The XLA compiler converts the traced HLO into an executable which runs
-on the devices. Compilation can be time consuming, and in cases where
+on the devices. Compilation can be time consuming. In case
 the HLO doesn't change across executions, the compilation result can be
 persisted to disk for reuse, significantly reducing development
 iteration time.
 
-Note that if the HLO changes between executions, a recompilation will
-still occur.
+NOTE:
 
-This is currently an experimental opt-in API, which must be activated
+* If the HLO changes between executions, a recompilation will still
+  occur.
+* When the version of `torch_xla` changes, a recompilation will occur
+  (so that we can generate the executables using the latest compiler).
+
+This is currently an opt-in API, which must be activated
 before any computations are executed. Initialization is done through the
 `initialize_cache` API:
 
@@ -367,9 +441,7 @@ path. The `readonly` parameter can be used to control whether the worker
 will be able to write to the cache, which can be useful when a shared
 cache mount is used for an SPMD workload.
 
-If you want to use persistent compilation cache in the multi process
-training(with `torch_xla.launch` or `xmp.spawn`), you should use the
-different path for different process.
+If you want to use the persistent compilation cache in multi-process training (with `torch_xla.launch` or `xmp.spawn`), you should use different paths for different processes.
 
 ``` python
 def _mp_fn(index):
@@ -381,9 +453,7 @@ if __name__ == '__main__':
   torch_xla.launch(_mp_fn, args=())
 ```
 
-If you don't have the access to the `index`, you can use
-`xr.global_ordinal()`. Check out the runnable example in
-[here](https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_xla_ddp.py).
+If you don't have access to `index`, you can use `xr.global_ordinal()`. Check out the runnable example in [here](https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_xla_ddp.py).
 
 ## Further Reading
 

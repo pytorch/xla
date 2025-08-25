@@ -109,7 +109,7 @@ class SpmdFullyShardedDataParallel(nn.Module):
 
     # Let's move the module to xla device in case it's not moved
     # by the caller already.
-    self._orig_module = module.to(xm.xla_device())
+    self._orig_module = module.to('xla')
     self._mesh = mesh
 
     # Only handle params which are not already sharded. This enables

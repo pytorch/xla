@@ -521,7 +521,7 @@ std::vector<torch::lazy::BackendDataPtr> ShardingUtil::CreateShardedPlaceholder(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        runtime::GetComputationClient()->CreateDataPlaceholder(
+        runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
             GetVirtualDevice().toString(), sharding_specs[i]->shape,
             sharding_specs[i]->sharding);
 
@@ -563,7 +563,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        runtime::GetComputationClient()->CreateDataPlaceholder(
+        runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
             GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
             (*sharding_specs)[i]->sharding);
 
@@ -609,7 +609,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
         local_shards[j], shard_shape, devices[j]));
   }
-  return runtime::GetComputationClient()->TransferShardsToDevice(
+  return runtime::GetComputationClientOrDie()->TransferShardsToDevice(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 
@@ -625,7 +625,7 @@ std::vector<int64_t> ShardingUtil::GetAutoShardingMesh() {
       total_devices *= i;
     }
     XLA_CHECK_EQ(total_devices,
-                 runtime::GetComputationClient()->GetAllDevices().size())
+                 runtime::GetComputationClientOrDie()->GetAllDevices().size())
         << "Invalid auto-sharding mesh_shape: "
         << absl::StrJoin(mesh_shape, ",");
   }
@@ -640,7 +640,8 @@ std::vector<int64_t> ShardingUtil::GetAutoShardingMeshIds(
   // as the auto-sharding pass takes only one arrangement for now.
   // TODO(yeounoh) this was not necessary before; replace if this can be done
   // during the auto-sharding pass.
-  int64_t n_devices = runtime::GetComputationClient()->GetAllDevices().size();
+  int64_t n_devices =
+      runtime::GetComputationClientOrDie()->GetAllDevices().size();
   std::vector<int64_t> device_mesh_ids = std::vector<int64_t>(n_devices);
   std::iota(device_mesh_ids.begin(), device_mesh_ids.end(), 0);
 
@@ -736,12 +737,13 @@ void ShardingUtil::ReshardParameters(
   bool group_sharding =
       runtime::sys_util::GetEnvBool("XLA_AUTO_USE_GROUP_SHARDING", true);
   if (group_sharding) {
-    outputs = WrapXlaData(runtime::GetComputationClient()->ReshardData(
+    outputs = WrapXlaData(runtime::GetComputationClientOrDie()->ReshardData(
         data_to_reshard, shardings_to_reshard));
   } else {
     for (int i = 0; i < data_to_reshard.size(); ++i) {
-      auto output = WrapXlaData(runtime::GetComputationClient()->ReshardData(
-          {data_to_reshard[i]}, {shardings_to_reshard[i]}));
+      auto output =
+          WrapXlaData(runtime::GetComputationClientOrDie()->ReshardData(
+              {data_to_reshard[i]}, {shardings_to_reshard[i]}));
       outputs.insert(outputs.end(), output.begin(), output.end());
     }
   }
@@ -765,23 +767,24 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
       << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
   XLA_CHECK(sharding.type() != xla::OpSharding::UNKNOWN)
       << "Can't explicilty annotate with UNKNOWN sharding type.";
-  XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+  XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(input));
+
+  // For Non DeviceData IR values, we directly attach the sharding spec to the
+  // xtensor.
+  const DeviceData* device_data_node = nullptr;
+  if (xtensor->CurrentIrValue()) {
+    device_data_node = DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+    if (!device_data_node) {
+      XlaAnnotateCustomSharding(xtensor, sharding);
+      return;
+    }
+  }
+
   XLATensor::ShardingSpecPtr new_sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(
           sharding, MakeShapeWithDeviceLayout(
                         xtensor->shape(), static_cast<XlaDeviceType>(
                                               xtensor->GetDevice().type())));
-
-  // For Non DeviceData IR values, we directly attach the sharding spec
-  // to the xtensor.
-  const DeviceData* device_data_node = nullptr;
-  if (xtensor->CurrentIrValue()) {
-    device_data_node = DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-    if (!device_data_node) {
-      tensor_methods::custom_sharding_(xtensor, new_sharding_spec);
-      return;
-    }
-  }
 
   // For data, we need to deal with the data transfers between
   // host and device.
@@ -820,7 +823,9 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
               device_data_node != nullptr)
         << "Cannot shard tensor. Data does not present on any device.";
     std::vector<XLATensorPtr> xla_tensors{xtensor};
-    cpu_tensor = XLAGraphExecutor::Get()->GetTensors(&xla_tensors)[0];
+    auto tensors = XLAGraphExecutor::Get()->GetTensors(&xla_tensors);
+    XLA_CHECK_EQ(tensors.size(), 1);
+    cpu_tensor = tensors[0];
   }
   auto xla_data = CreateTensorsData(
       std::vector<at::Tensor>{cpu_tensor},
@@ -831,6 +836,23 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
 
   // Register sharded tensor data.
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
+}
+
+void ShardingUtil::XlaAnnotateCustomSharding(const XLATensorPtr& input,
+                                             xla::OpSharding sharding) {
+  TORCH_LAZY_COUNTER("XlaAnnotateCustomSharding", 1);
+
+  XLA_CHECK(UseVirtualDevice())
+      << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
+  XLA_CHECK(sharding.type() != xla::OpSharding::UNKNOWN)
+      << "Can't explicilty annotate with UNKNOWN sharding type.";
+
+  XLATensor::ShardingSpecPtr sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(
+          sharding, MakeShapeWithDeviceLayout(
+                        input->shape(),
+                        static_cast<XlaDeviceType>(input->GetDevice().type())));
+  tensor_methods::custom_sharding_(input, sharding_spec);
 }
 
 void ShardingUtil::SetAutoSharding() {

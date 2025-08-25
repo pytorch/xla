@@ -321,9 +321,9 @@ def discover_master_worker_ip(use_localhost: bool = True) -> str:
   if xr.is_spmd():
     return _spmd_find_master_ip(worker_ips[current_worker_id])
 
-  t = torch.tensor([current_worker_id], device=xm.xla_device())
+  t = torch.tensor([current_worker_id], device='xla')
   xm.collective_broadcast([t])
-  xm.mark_step()
+  torch_xla.sync()
 
   master_worker_id = int(t.cpu())
   return worker_ips[master_worker_id]

@@ -52,6 +52,7 @@ import posixpath
 import contextlib
 import distutils.ccompiler
 import distutils.command.clean
+import importlib.util
 import os
 import re
 import requests
@@ -61,29 +62,77 @@ import sys
 import tempfile
 import zipfile
 
-import build_util
+# This gloop imports build_util.py such that it works in Python 3.12's isolated
+# build environment while also not contaminating sys.path which breaks bdist_wheel.
+_PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+_build_util_path = os.path.join(_PROJECT_DIR, 'build_util.py')
+spec = importlib.util.spec_from_file_location('build_util', _build_util_path)
+build_util = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(build_util)
+
+import platform
+
+platform_machine = platform.machine()
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
+# How to update libtpu and JAX to a new nightly build
+# ===================================================
+#
+# Most of the time, you can just run
+#   scripts/update_deps.py
+# to automatically update the versions of openxla, libtpu, and jax used in
+# torch_xla. In case the script doesn't work and you need to do it manually,
+# follow instructions below.
+#
+# Usually we update both at the same time to minimize their version skew.
+#
+# 1. Update libtpu to a new nightly build:
+#
+#    1. Find a new version of libtpu on https://storage.googleapis.com/libtpu-wheels/index.html.
+#       Usually we prefer the latest version.
+#       E.g. libtpu/libtpu-0.0.16.dev20250529+nightly-py3-none-manylinux_2_31_x86_64.whl
+#    2. Update _libtpu_version to the libtpu version. E.g. 0.0.16.
+#    3. Update _libtpu_date to the date of the version. E.g. 20250529.
+#
+# 2. Update JAX to a new nightly build:
+#
+#    1. Find a new version of jax and jaxlib on https://storage.googleapis.com/jax-releases/jax_nightly_releases.html.
+#       Usually we prefer the latest version.
+#       E.g. jax/jax-0.6.1.dev20250428-py3-none-any.whl and nocuda/jaxlib-0.6.1.dev20250428-*.whl
+#       Both jax and jaxlib should be on the same day. We prefer this date to be
+#       the same as the libtpu build date, but it's not strictly necessary.
+#    2. Update _jax_version and _jaxlib_version to the versions we found. E.g.
+#       0.6.1.
+#    3. Update _jax_date to the date of the new jax and jaxlib build. E.g. 20250428.
+#
+# 3. After updating libtpu and JAX, run
+#      scripts/build_developer.sh
+#    for a sanity check. Fix the build errors as needed.
+#
+# 4. After the local build succeeds, create a PR and wait for the CI result. Fix
+#    CI errors as needed until all required checks pass.
 
-_date = '20250424'
+USE_NIGHTLY = True  # Whether to use nightly or stable libtpu and JAX.
 
-_libtpu_version = '0.0.14'
-_jax_version = '0.6.1'
-_jaxlib_version = '0.6.1'
+_libtpu_version = '0.0.18'
+_libtpu_date = '20250617'
+
+_jax_version = '0.6.2'
+_jaxlib_version = '0.6.2'
+_jax_date = '20250617'  # Date for jax and jaxlib.
 
 if USE_NIGHTLY:
-  _libtpu_version += f".dev{_date}"
-  _jax_version += f'.dev{_date}'
-  _jaxlib_version += f'.dev{_date}'
-  _libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_date}+nightly-py3-none-manylinux_2_31_x86_64'
+  _libtpu_version += f".dev{_libtpu_date}"
+  _jax_version += f'.dev{_jax_date}'
+  _jaxlib_version += f'.dev{_jax_date}'
+  _libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_libtpu_date}+nightly-py3-none-manylinux_2_31_{platform_machine}'
   _libtpu_storage_directory = 'libtpu-nightly-releases'
 else:
   # The postfix can be changed when the version is updated. Check
   # https://storage.googleapis.com/libtpu-wheels/index.html for correct
   # versioning.
-  _libtpu_wheel_name = f'libtpu-{_libtpu_version}-py3-none-manylinux_2_31_x86_64'
+  _libtpu_wheel_name = f'libtpu-{_libtpu_version}-py3-none-manylinux_2_31_{platform_machine}'
   _libtpu_storage_directory = 'libtpu-lts-releases'
 
 _libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
@@ -109,7 +158,7 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.8.0')
+  version = os.getenv('TORCH_XLA_VERSION', '2.9.0')
   if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
       version += '+git' + xla_git_sha[:7]
@@ -228,15 +277,21 @@ class BazelExtension(Extension):
 class BuildBazelExtension(build_ext.build_ext):
   """A command that runs Bazel to build a C/C++ extension."""
 
-  def run(self):
-    for ext in self.extensions:
-      self.bazel_build(ext)
-    command.build_ext.build_ext.run(self)  # type: ignore
+  def build_extension(self, ext: Extension) -> None:
+    """
+    This method is called by setuptools to build a single extension.
+    We override it to implement our custom Bazel build logic.
+    """
+    if not isinstance(ext, BazelExtension):
+      # If it's not our custom extension type, let setuptools handle it.
+      super().build_extension(ext)
+      return
 
-  def bazel_build(self, ext):
+    # 1. Ensure the temporary build directory exists
     if not os.path.exists(self.build_temp):
       os.makedirs(self.build_temp)
 
+    # 2. Prepare the Bazel command
     bazel_argv = [
         'bazel', 'build', ext.bazel_target,
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
@@ -246,22 +301,31 @@ class BuildBazelExtension(build_ext.build_ext):
     if build_cpp_tests:
       bazel_argv.append('//:cpp_tests')
 
-    import torch
-    cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C,
-                                              '_GLIBCXX_USE_CXX11_ABI', None)
-    if cxx_abi is not None:
-      bazel_argv.append(f'--cxxopt=-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
+    cxx_abi = os.getenv('CXX_ABI')
+    if cxx_abi is None:
+      try:
+        import torch
+        cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
+      except:
+        pass
+    if cxx_abi is None:
+      # Default to building with C++11 ABI, which has been the case since PyTorch 2.7
+      cxx_abi = "1"
+    bazel_argv.append(f'--cxxopt=-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
 
     bazel_argv.extend(build_util.bazel_options_from_env())
 
+    # 3. Run the Bazel build
     self.spawn(bazel_argv)
 
+    # 4. Copy the output file to the location setuptools expects
     ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,
                                       ext.target_name)
     ext_dest_path = self.get_ext_fullpath(ext.name)
     ext_dest_dir = os.path.dirname(ext_dest_path)
     if not os.path.exists(ext_dest_dir):
       os.makedirs(ext_dest_dir)
+
     shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
 
 
@@ -271,17 +335,28 @@ with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
   long_description = f.read()
 
 # Finds torch_xla and its subpackages
-packages_to_include = find_packages(include=['torch_xla*'])
-# Explicitly add torchax
-packages_to_include.extend(find_packages(where='torchax', include=['torchax*']))
+# 1. Find `torch_xla` and its subpackages automatically from the root.
+packages_to_include = find_packages(include=['torch_xla', 'torch_xla.*'])
 
-# Map the top-level 'torchax' package name to its source location
-torchax_dir = os.path.join(cwd, 'torchax')
-package_dir_mapping = {'torch_xla': os.path.join(cwd, 'torch_xla')}
-package_dir_mapping['torchax'] = os.path.join(torchax_dir, 'torchax')
+# 2. Explicitly find the contents of the nested `torchax` package.
+#    Find all sub-packages within the torchax directory (e.g., 'ops').
+torchax_source_dir = 'torchax/torchax'
+torchax_subpackages = find_packages(where=torchax_source_dir)
+#    Construct the full list of packages, starting with the top-level
+#    'torchax' and adding all the discovered sub-packages.
+packages_to_include.extend(['torchax'] +
+                           ['torchax.' + pkg for pkg in torchax_subpackages])
+
+# 3. The package_dir mapping explicitly tells setuptools where the 'torchax'
+#    package's source code begins. `torch_xla` source code is inferred.
+package_dir_mapping = {'torchax': torchax_source_dir}
 
 
 class Develop(develop.develop):
+  """
+  Custom develop command to build C++ extensions and create a .pth file
+  for a multi-package editable install.
+  """
 
   def run(self):
     # Build the C++ extension
@@ -306,44 +381,42 @@ class Develop(develop.develop):
     (`python setup.py develop`). Nightly and release wheel builds work out of the box
     without egg-link/pth.
     """
+    import glob
+
     # Ensure paths like self.install_dir are set
     self.ensure_finalized()
 
-    # Get the site-packages directory
-    target_dir = self.install_dir
-
-    # Remove the standard .egg-link file
-    # It's usually named based on the distribution name
     dist_name = self.distribution.get_name()
-    egg_link_file = os.path.join(target_dir, dist_name + '.egg-link')
-    if os.path.exists(egg_link_file):
-      print(f"Removing default egg-link file: {egg_link_file}")
-      try:
-        os.remove(egg_link_file)
-      except OSError as e:
-        print(f"Warning: Could not remove {egg_link_file}: {e}")
+    install_cmd = self.get_finalized_command('install')
+    target_dir = install_cmd.install_lib
+    assert target_dir is not None
 
-    # Create our custom .pth file with specific paths
-    cwd = os.path.dirname(__file__)
-    # Path containing 'torch_xla' package source: ROOT
-    path_for_torch_xla = os.path.abspath(cwd)
-    # Path containing 'torchax' package source: ROOT/torchax
-    path_for_torchax = os.path.abspath(os.path.join(cwd, 'torchax'))
+    # Use glob to robustly find and remove the conflicting files.
+    # This is safer than trying to guess the exact sanitized filename.
+    safe_name_part = re.sub(r"[^a-zA-Z0-9]+", "_", dist_name)
 
-    paths_to_add = {path_for_torch_xla, path_for_torchax}
+    for pattern in [
+        # Remove `.pth` files generated in Python 3.12.
+        f"__editable__.*{safe_name_part}*.pth",
+        f"__editable___*{safe_name_part}*_finder.py",
+        # Also remove the legacy egg-link format.
+        f"{dist_name}.egg-link"
+    ]:
+      for filepath in glob.glob(os.path.join(target_dir, pattern)):
+        print(f"Cleaning up conflicting install file: {filepath}")
+        with contextlib.suppress(OSError):
+          os.remove(filepath)
 
-    # Construct a suitable .pth filename (PEP 660 style is good practice)
-    version = self.distribution.get_version()
-    # Sanitize name and version for filename (replace runs of non-alphanumeric chars with '-')
-    sanitized_name = re.sub(r"[^a-zA-Z0-9.]+", "_", dist_name)
-    sanitized_version = re.sub(r"[^a-zA-Z0-9.]+", "_", version)
-    pth_filename = os.path.join(
-        target_dir, f"__editable_{sanitized_name}_{sanitized_version}.pth")
+    # Finally, create our own simple, multi-path .pth file.
+    # We name it simply, e.g., "torch_xla.pth".
+    pth_filename = os.path.join(target_dir, f"{dist_name}.pth")
 
-    # Ensure site-packages exists
-    os.makedirs(target_dir, exist_ok=True)
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    paths_to_add = {
+        project_root,  # For `torch_xla`
+        os.path.abspath(os.path.join(project_root, 'torchax')),  # For `torchax`
+    }
 
-    # Write the paths to the .pth file, one per line
     with open(pth_filename, "w", encoding='utf-8') as f:
       for path in sorted(paths_to_add):
         f.write(path + "\n")
@@ -358,11 +431,12 @@ def _get_jax_install_requirements():
     ]
 
   # Install nightly JAX libraries from the JAX package registries.
-  jax = f'jax @ https://storage.googleapis.com/jax-releases/nightly/jax/jax-{_jax_version}-py3-none-any.whl'
+  jax = f'jax @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/jax/jax-{_jax_version}-py3-none-any.whl'
+
   jaxlib = []
-  for python_minor_version in [9, 10, 11]:
+  for python_minor_version in [9, 10, 11, 12]:
     jaxlib.append(
-        f'jaxlib @ https://storage.googleapis.com/jax-releases/nightly/nocuda/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
+        f'jaxlib @ https://us-python.pkg.dev/ml-oss-artifacts-published/jax-public-nightly-artifacts-registry/jaxlib/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
     )
   return [jax] + jaxlib
 
@@ -391,7 +465,7 @@ setup(
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",
     ],
-    python_requires=">=3.8.0",
+    python_requires=">=3.10.0",
     packages=packages_to_include,
     package_dir=package_dir_mapping,
     ext_modules=[
@@ -406,8 +480,6 @@ setup(
         # importlib.metadata backport required for PJRT plugin discovery prior
         # to Python 3.10
         'importlib_metadata>=4.6;python_version<"3.10"',
-        # Some torch operations are lowered to HLO via JAX.
-        *_get_jax_install_requirements(),
     ],
     package_data={
         'torch_xla': ['lib/*.so*',],
@@ -429,10 +501,8 @@ setup(
             f'libtpu=={_libtpu_version}',
             'tpu-info',
         ],
-        # As of https://github.com/pytorch/xla/pull/8895, jax is always a dependency of torch_xla.
-        # However, this no-op extras_require entrypoint is left here for backwards compatibility.
-        # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
-        'pallas': [f'jaxlib=={_jaxlib_version}', f'jax=={_jax_version}'],
+        # pip install torch_xla[pallas]
+        'pallas': [*_get_jax_install_requirements(),]
     },
     cmdclass={
         'build_ext': BuildBazelExtension,

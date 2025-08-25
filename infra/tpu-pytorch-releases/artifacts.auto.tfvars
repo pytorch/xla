@@ -3,7 +3,6 @@ manual_nightly_builds = [
 ]
 
 manual_versioned_builds = [
-
   {
     git_tag         = "v2.7.0"
     package_version = "2.7.0"

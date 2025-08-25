@@ -32,8 +32,8 @@ vm:~$ export PJRT_DEVICE=TPU
 vm:~$ python3
 >>> import torch
 >>> import torch_xla.core.xla_model as xm
->>> t1 = torch.tensor(100, device=xm.xla_device())
->>> t2 = torch.tensor(200, device=xm.xla_device())
+>>> t1 = torch.tensor(100, device='xla')
+>>> t2 = torch.tensor(200, device='xla')
 >>> print(t1 + t2)
 tensor(300, device='xla:0')
 ```
@@ -95,13 +95,13 @@ model. Some example output would be:
 ``` sh
 Compilation Analysis: ================================================================================
 Compilation Analysis: Compilation Cause
-Compilation Analysis:   mark_step in parallel loader at step end
+Compilation Analysis:   `torch_xla.sync()` in parallel loader at step end
 Compilation Analysis: Graph Info:
 Compilation Analysis:   Graph Hash: c74c3b91b855b2b123f833b0d5f86943
 Compilation Analysis:   Number of Graph Inputs: 35
 Compilation Analysis:   Number of Graph Outputs: 107
 Compilation Analysis: Python Frame Triggered Execution:
-Compilation Analysis:   mark_step (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
+Compilation Analysis:   sync (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
 Compilation Analysis:   next (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44)
 Compilation Analysis:   __next__ (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32)
 Compilation Analysis:   train_loop_fn (/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:48)
@@ -121,13 +121,13 @@ Post Compilation Analysis: =====================================================
 
 Execution Analysis: ================================================================================
 Execution Analysis: Execution Cause
-Execution Analysis:   mark_step in parallel loader at step end
+Execution Analysis:   `torch_xla.sync()` in parallel loader at step end
 Execution Analysis: Graph Info:
 Execution Analysis:   Graph Hash: c74c3b91b855b2b123f833b0d5f86943
 Execution Analysis:   Number of Graph Inputs: 35
 Execution Analysis:   Number of Graph Outputs: 107
 Execution Analysis: Python Frame Triggered Execution:
-Execution Analysis:   mark_step (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
+Execution Analysis:   sync (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
 Execution Analysis:   next (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44)
 Execution Analysis:   __next__ (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32)
 Execution Analysis:   train_loop_fn (/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:48)
@@ -137,19 +137,25 @@ Execution Analysis: ------------------------------------------------------------
 Execution Analysis: ================================================================================
 ```
 
-Some common causes of Compilation/Executation are 1. User manually call
-`mark_step`. 2. [Parallel
+Some common causes of compilation/executation are 
+1. User manually calls
+`torch_xla.sync()`. 
+2. [Parallel
 loader](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51)
-call `mark_step` for every x (configurable) batch. 3. Exiting a
+cals `torch_xla.sync()` for every x (configurable) batch. 
+3. Exit a
 [profiler StepTrace
 region](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/debug/profiler.py#L165-L171).
-4. Dynamo decide to compile/execute the graph. 5. User trying to
-access(often due to logging) the value of a tensor before the
-`mark_step`.
+4. Dynamo decides to compile/execute the graph. 
+5. User tries to
+access (often due to logging) the value of a tensor before the
+`torch_xla.sync()`.
+6. User tries to access a tensor value before calling `mark_step`. See [PyTorch on XLA Devices](https://github.com/pytorch/xla/blob/master/docs/source/learn/pytorch-on-xla-devices.md) for more details.
 
-The execution caused by 1-4 are expected, and we want to avoid 5 by
-either reduce the frequency of accessing tensor values or manually add a
-`mark_step` before accessing.
+The op executions caused by items 1-4 are expected, and we want to avoid item 5 by
+either reducing the frequency of accessing tensor values or manually adding a call to
+`torch_xla.sync()` before accessing them.
+
 
 Users should expect to see this `Compilation Cause` +
 `Executation Cause` pairs for first couple steps. After the model
@@ -158,7 +164,7 @@ disable execution analysis by `PT_XLA_DEBUG_LEVEL=1`). To use
 PyTorch/XLA efficiently, we expect the same models code to be run for
 every step and compilation only happen once for every graph. If you keep
 seeing `Compilation Cause`, you should try to dump the IR/HLO following
-[this section](#common-debugging-environment-variables-combinations) and
+[](#common-debugging-environment-variables-combinations) and
 compare the graphs for each step and understand the source of the
 differences.
 
@@ -307,7 +313,7 @@ If your model shows bad performance, keep in mind the following caveats:
     *Solution*:
 
     -   For most ops we can lower them to XLA to fix it. Checkout
-        [metrics report section](#metrics-report) to find out the
+        [](#get-a-metrics-report) to find out the
         missing ops and open a feature request on
         [GitHub](https://github.com/pytorch/xla/issues).
 
@@ -390,7 +396,7 @@ of lowered operations.
 -   `print(torch_xla._XLAC._get_xla_tensors_hlo([res]))` where `res` is
     the result tensor prints out the generated XLA HLO.
 
-Note these functions must be called prior to `mark_step()`, otherwise
+Note these functions must be called prior to `torch_xla.sync()`, otherwise
 the tensor will already be materialized.
 
 ### Environment Variables

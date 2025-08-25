@@ -7,6 +7,8 @@
 
 #include <vector>
 
+#include "absl/base/nullability.h"
+#include "absl/status/statusor.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
@@ -14,26 +16,65 @@
 namespace torch_xla {
 namespace bridge {
 
+// TODO(ysiraichi): remove this function once codegen does not need it.
+//
+// We still need this function because lazy codegen needs a function that
+// returns a value of type `T`, which can be:
+//
+//   1. cast to boolean; and
+//   2. accessed with "->"
+//
+// e.g. pointers and optional types
+//
+// A StatusOr type fulfills only (2), so we can't use it there. In order
+// to do so, we have to change upstream accordingly.
+//
+ABSL_DEPRECATED(
+    "Use GetXlaTensor(), instead. "
+    "This function returns an null-initialized `XLATensorPtr`, instead of "
+    "propagating errors with StatusOr values.")
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor);
 
+// Retrieves the underlying `XLATensorPtr` from `tensor`.
+//
+// This function does the following things in order to retrieve
+// (if exists) the underlying `XLATensorPtr`:
+//
+//   1. Synchronizes the tensor, if it's a tensor wrapped in a functional tensor
+//   2. Retrieves the inner `XLATensorImpl` instance
+//   3. Finally, retrieves the `XLATensor` that lives inside `XLATensorImpl`
+//
+// An error might ocurr if, after unwrapping the wrapper functional tensor
+// (if exists), the `TensorImpl` of the unwrapped tensor is not a
+// `XLATensorImpl`. This might happen if:
+//
+//   1. `tensor` lives in another device
+//   2. `tensor` wasn't created within this project
+//      (e.g. meta tensors whose device is XLA)
+//
+absl::StatusOr<absl_nonnull XLATensorPtr> GetXlaTensor(
+    const at::Tensor& tensor);
+
 // Same as above, applied to a list of tensors.
-std::vector<XLATensorPtr> TryGetXlaTensors(const at::ITensorListRef& tensors);
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> GetXlaTensors(
+    const at::ITensorListRef& tensors);
 
 bool IsXlaTensor(const at::Tensor& tensor);
 
-// Extracts the XLATensorPtr out of our version of at::Tensor. Throws an
-// exception if tensor is not an XLA tensor.
-XLATensorPtr GetXlaTensor(const at::Tensor& tensor);
+// Replaces the XLA tensor embedded within `tensor`'s XLA TensorImpl with
+// `new_xla_tensor`.
+//
+// Fails if `tensor` is not an XLA tensor.
+absl::Status ReplaceXlaTensor(const at::Tensor& tensor,
+                              XLATensorPtr new_xla_tensor);
 
-// Replaces the XLA tensor embedded within the XLA TensorImpl with the new
-// version.
-void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor);
-
-void ReplaceXlaTensor(const std::vector<at::Tensor>& tensor,
-                      const std::vector<XLATensorPtr> new_xla_tensor);
-
-// Same as above, applied to a list of tensors.
-std::vector<XLATensorPtr> GetXlaTensors(const at::ITensorListRef& tensors);
+// Replaces the XLA tensor embedded within the `tensors` XLA TensorImpl
+// with `new_xla_tensors`.
+//
+// Fails if any of `tensors` is not an XLA tensor, or if the number of `tensors`
+// does not match the number of `new_xla_tensors`.
+absl::Status ReplaceXlaTensor(const std::vector<at::Tensor>& tensors,
+                              const std::vector<XLATensorPtr> new_xla_tensors);
 
 torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device);

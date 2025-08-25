@@ -18,8 +18,8 @@ def scan_example_cumsum():
     return accumulated, accumulated
 
   # 2) Define an initial carry and the input tensor.
-  init_sum = torch.tensor([0.0], device=torch_xla.device())
-  xs = torch.tensor([1.0, 2.0, 3.0], device=torch_xla.device())
+  init_sum = torch.tensor([0.0], device='xla')
+  xs = torch.tensor([1.0, 2.0, 3.0], device='xla')
   torch_xla.sync()
 
   # 3) Call `scan` with our combine function, initial carry, and input tensor.
@@ -40,16 +40,13 @@ def scan_example_pytree():
   #    - 'sum' to accumulate the sum of all seen values
   #    - 'count' to count how many values have been seen
   carry = {
-      'sum': torch.tensor([0.0], device=torch_xla.device()),
-      'count': torch.tensor([0.0], device=torch_xla.device())
+      'sum': torch.tensor([0.0], device='xla'),
+      'count': torch.tensor([0.0], device='xla')
   }
 
   # 2) Define our input PyTree, which in this case is just a dictionary with one leaf:
   #    - 'values' is a 1D tensor representing data points we want to scan over.
-  xs = {
-      'values':
-          torch.arange(1, 6, dtype=torch.float32, device=torch_xla.device())
-  }
+  xs = {'values': torch.arange(1, 6, dtype=torch.float32, device='xla')}
 
   # Here, xs['values'] has shape [5]. The `scan` function will automatically slice
   # out one element (shape []) each iteration.

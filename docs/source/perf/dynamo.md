@@ -23,8 +23,8 @@ import torch
 import torch_xla.core.xla_model as xm
 
 def add(a, b):
-  a_xla = a.to(xm.xla_device())
-  b_xla = b.to(xm.xla_device())
+  a_xla = a.to('xla')
+  b_xla = b.to('xla')
   return a_xla + b_xla
 
 compiled_code = torch.compile(add, backend='openxla')
@@ -41,7 +41,7 @@ import torchvision
 import torch_xla.core.xla_model as xm
 
 def eval_model(loader):
-  device = xm.xla_device()
+  device = torch_xla.device()
   xla_resnet18 = torchvision.models.resnet18().to(device)
   xla_resnet18.eval()
   dynamo_resnet18 = torch.compile(
@@ -129,7 +129,7 @@ def train_model(model, data, target, optimizer):
   return pred
 
 def train_model_main(loader):
-  device = xm.xla_device()
+  device = torch_xla.device()
   xla_resnet18 = torchvision.models.resnet18().to(device)
   xla_resnet18.train()
   dynamo_train_model = torch.compile(

@@ -13,7 +13,7 @@ import torch_xla._internal.utils as _utils
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
-from torch_xla._internal.jax_workarounds import requires_jax, maybe_get_torchax
+from torch_xla._internal.jax_workarounds import requires_jax, maybe_get_torchax, maybe_get_jax
 
 import numpy as np
 import functools
@@ -185,7 +185,8 @@ class Mesh:
   def get_jax_mesh(self):
     # Construct a JAX mesh object with the same device ids shape and ordering
     # from torch_xla device mesh.
-    import jax
+    jax = maybe_get_jax()
+    assert jax is not None
     import numpy as np
     from jax._src import mesh as mesh_lib
 
@@ -334,7 +335,7 @@ class HybridMesh(Mesh):
         A np.ndarray of device logical ordinals with shape [global_x, global_y, global_z]. On
           v2 and v3, global_z is instead cores_per_chip (i.e., 2).
     """
-    assert xm.xla_device_hw(xm.xla_device()) == 'TPU'
+    assert xm.xla_device_hw(torch_xla.device()) == 'TPU'
     # coords is a 3-dims tuple representing the device in physical mesh
     device_coords = [self.device_attributes[d]['coords'] for d in devices]
     dims = tuple(d + 1 for d in max(device_coords))
@@ -543,7 +544,8 @@ def enable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   mesh = get_global_mesh() if mesh is None else mesh
   t = mark_sharding(unwrap_sharded_tensor(t), mesh, partition_spec)
   t = torch_xla._XLAC._spmd_full_to_shard_shape(unwrap_sharded_tensor(t))
-  return wrap_as_sharded_tensor(t)
+  return wrap_as_sharded_tensor(
+      t, mesh_shape=mesh.mesh_shape, partition_spec=partition_spec)
 
 
 def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
@@ -560,7 +562,43 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   t = torch_xla._XLAC._spmd_shard_to_full_shape(
       unwrap_sharded_tensor(t), mesh.get_op_sharding(partition_spec),
       full_shape, t.dtype)
-  return wrap_as_sharded_tensor(t)
+  return wrap_as_sharded_tensor(
+      t, mesh_shape=mesh.mesh_shape, partition_spec=partition_spec)
+
+
+def annotate_custom_sharding(t: Union[torch.Tensor,
+                                      XLAShardedTensor], mesh: Mesh,
+                             partition_spec: PartitionSpec) -> XLAShardedTensor:
+  """
+  Annotates an existing tensor with a custom sharding IR node without modifying its data layout.
+
+  Unlike `mark_sharding`, this function only adds a custom sharding annotation to the XLA IR
+  without explicitly setting a sharding spec tied to the DeviceData node or transferring any
+  sharded data to the device. This allows providing explicit XLA sharding annotations of tensors
+  that have already been sharded with `mark_sharding`.
+
+  Args:
+      t: The input tensor to be annotated with custom sharding.
+      mesh: The device mesh that specifies the logical device topology.
+      partition_spec: The partitioning specification for each dimension of the input tensor.
+
+  Returns:
+      XLAShardedTensor: The input tensor wrapped as a sharded tensor with the custom sharding annotation.
+
+  Example:
+      >>> # First shard the tensor with mark_sharding
+      >>> sharded_tensor = xs.mark_sharding(tensor, mesh1, (0, 1, 2, 3))
+      >>> # Later, annotate with a different sharding for the XLA SPMD partitioner
+      >>> custom_sharded = xs.annotate_custom_sharding(sharded_tensor, mesh2, (0, 1, 2, 3))
+  """
+  assert len(t.shape) == len(partition_spec), \
+    f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
+
+  op_sharding = mesh.get_op_sharding(partition_spec)
+  annotate_func = torch_xla._XLAC._xla_annotate_custom_sharding
+  annotate_func(unwrap_sharded_tensor(t), op_sharding)
+  return wrap_as_sharded_tensor(
+      t, mesh_shape=mesh.mesh_shape, partition_spec=partition_spec)
 
 
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
@@ -595,9 +633,9 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
       >>> num_devices = xr.global_runtime_device_count()
       >>> device_ids = np.array(range(num_devices))
       >>> mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
-      >>> input = torch.randn(8, 32).to(xm.xla_device())
+      >>> input = torch.randn(8, 32).to('xla')
       >>> xs.mark_sharding(input, mesh, (0, None)) # 4-way data parallel
-      >>> linear = nn.Linear(32, 10).to(xm.xla_device())
+      >>> linear = nn.Linear(32, 10).to('xla')
       >>> xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel
   """
   # We only allow fully specified `partition_spec` to be applicable, as opposed
@@ -608,17 +646,19 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
   tx = maybe_get_torchax()
-  if tx is not None and isinstance(t, tx.tensor.Tensor):
+  jax = maybe_get_jax()
+  if (jax is not None) and (tx is not None) and isinstance(t, tx.tensor.Tensor):
     from jax.sharding import PartitionSpec as P, NamedSharding
-    op_sharding = tuple(str(i) if i is not None else i for i in partition_spec)
     jmesh = mesh.get_jax_mesh()
-    t.shard_(NamedSharding(jmesh, P(*op_sharding)))
+    t.shard_(NamedSharding(jmesh, P(*partition_spec)))
     return t
 
   op_sharding = mesh.get_op_sharding(partition_spec)
   annotate_func = torch_xla._XLAC._xla_mark_sharding
   annotate_func(unwrap_sharded_tensor(t), op_sharding)
-  return wrap_as_sharded_tensor(t)
+  # Pass mesh and partition spec information for DTensor compatibility
+  return wrap_as_sharded_tensor(
+      t, mesh_shape=mesh.mesh_shape, partition_spec=partition_spec)
 
 
 def mark_sharding_with_gradients(
@@ -711,7 +751,7 @@ def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
 
     >>> import torch_xla.distributed.spmd as xs
     >>> torch_xla.runtime.use_spmd()
-    >>> t1 = torch.randn(8,8).to(torch_xla.device())
+    >>> t1 = torch.randn(8,8).to('xla')
     >>> mesh = xs.get_1d_mesh()
     >>> xs.mark_sharding(t1, mesh, (0, None))
     >>> xs.clear_sharding(t1)
@@ -722,10 +762,31 @@ def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   return t
 
 
-def wrap_as_sharded_tensor(
-    t: Union[torch.Tensor, XLAShardedTensor]) -> XLAShardedTensor:
+def wrap_as_sharded_tensor(t: Union[torch.Tensor, XLAShardedTensor],
+                           mesh_shape=None,
+                           partition_spec=None) -> XLAShardedTensor:
+  # pass along mesh and partition spec information
   if not isinstance(t, XLAShardedTensor):
-    return XLAShardedTensor(t)
+    # Create a new XLAShardedTensor
+    return XLAShardedTensor(
+        t, mesh_shape=mesh_shape, partition_spec=partition_spec)
+
+  # Update existing XLAShardedTensor if needed
+  needs_invalidate = False
+
+  # Always set mesh_shape and partition_spec if provided
+  if mesh_shape is not None:
+    t.mesh_shape = mesh_shape
+    needs_invalidate = True
+
+  if partition_spec is not None:
+    t.partition_spec = partition_spec
+    needs_invalidate = True
+
+  # Invalidate cached spec if resharding occurred
+  if needs_invalidate:
+    t.invalidate_spec_cache()
+
   return t
 
 
@@ -793,7 +854,7 @@ class ShardingSpec:
 
   def apply(self, t: torch.Tensor):
     # TODO(yeounoh) use virtual device interface when available.
-    assert (t.device == xm.xla_device())
+    assert (t.device == torch_xla.device())
     mark_sharding(t, self.mesh, self.partition_spec)
 
 
@@ -952,8 +1013,9 @@ def apply_xla_patch_to_nn_linear(module: torch.nn.Module):
   for name, child in module.named_children():
     if isinstance(child,
                   torch.nn.Linear) and not isinstance(child, EinsumLinear):
-      einsum_linear = EinsumLinear(
-          child.in_features, child.out_features, bias=child.bias is not None)
+      with torch.device('meta'):
+        einsum_linear = EinsumLinear(
+            child.in_features, child.out_features, bias=child.bias is not None)
       einsum_linear.load_state_dict(
           child.state_dict(), strict=True, assign=True)
       setattr(module, name, einsum_linear)

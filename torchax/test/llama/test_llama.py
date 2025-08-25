@@ -3,13 +3,13 @@ from torchax import tensor  # pylint: disable=unused-import
 import torchax
 import torchax.export
 
-from .. import test_base
+from .. import base_test_util
 from . import llama_model
 from . import model_exportable
 from torch.utils import _pytree as pytree
 
 
-class LlamaTest(test_base.TestCase):
+class LlamaTest(base_test_util.TestCase):
 
   def test_can_run(self):
     with torchax.default_env():
@@ -88,8 +88,8 @@ class LlamaTest(test_base.TestCase):
       m_prefill = torch.export.export(m, sample_input_prefill)
 
     weights, mj_prefill = torchax.export.exported_program_to_jax(m_prefill)
-    sample_inputs = pytree.tree_map_only(torch.Tensor, tensor.t2j,
-                                         sample_input_prefill)
+    env = torchax.default_env()
+    sample_inputs = env.t2j_copy(sample_input_prefill)
     print('Prefill', mj_prefill(weights, sample_inputs))
 
     sample_input_decode = (
@@ -103,10 +103,9 @@ class LlamaTest(test_base.TestCase):
     with torch.no_grad():
       m_decode = torch.export.export(m, sample_input_decode)
     weights, mj_decode = torchax.export.exported_program_to_jax(m_decode)
-    sample_inputs = pytree.tree_map_only(torch.Tensor, tensor.t2j,
-                                         sample_input_decode)
+    sample_inputs = env.t2j_copy(sample_input_decode)
     print('Decode', mj_decode(weights, sample_inputs))
 
 
 if __name__ == "__main__":
-  test_base.main()
+  base_test_util.main()

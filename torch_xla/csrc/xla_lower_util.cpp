@@ -17,6 +17,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "xla/hlo/builder/lib/arithmetic.h"
 #include "xla/hlo/builder/lib/comparators.h"
@@ -62,7 +63,7 @@ ConditionMaskData CreateConditionMaskData(xla::XlaOp condition) {
 xla::XlaOp GetPromotedMask(xla::XlaOp mask, const xla::Shape& input_shape) {
   const xla::Shape& mask_shape = ShapeHelper::ShapeOfXlaOp(mask);
   xla::Shape promoted_mask_shape =
-      XlaHelpers::GetPromotedShape(mask_shape, input_shape);
+      GetValueOrThrow(XlaHelpers::GetPromotedShape(mask_shape, input_shape));
   return XlaHelpers::ImplicitBroadcast(mask, mask_shape, promoted_mask_shape);
 }
 
@@ -149,7 +150,7 @@ xla::XlaComputation MakeScatterComputation(
   if (combiner != nullptr) {
     result = combiner(p0, result);
   }
-  return ConsumeValue(cb.Build(result));
+  return GetValueOrThrow(cb.Build(result));
 }
 
 xla::XlaOp CreateIndexAlongDim(
@@ -542,7 +543,8 @@ std::vector<xla::XlaOp> CreateBroadcastTensors(
   for (const xla::XlaOp operand : operands) {
     const xla::Shape& operand_shape = ShapeHelper::ShapeOfXlaOp(operand);
     operand_shapes.push_back(operand_shape);
-    result_shape = XlaHelpers::GetPromotedShape(result_shape, operand_shape);
+    result_shape = GetValueOrThrow(
+        XlaHelpers::GetPromotedShape(result_shape, operand_shape));
   }
   std::vector<xla::XlaOp> result;
   for (size_t i = 0; i < operands.size(); ++i) {
@@ -1364,7 +1366,7 @@ std::vector<xla::XlaOp> BuildBoxSelectionLoop(int64_t num_boxes,
   // 3. The actual IoU threshold matrix.
   init_values[2] = iou_threshold_mask;
 
-  return ConsumeValue(xla::WhileLoopHelper(
+  return GetValueOrThrow(xla::WhileLoopHelper(
       [=](absl::Span<const xla::XlaOp> values, xla::XlaBuilder* builder) {
         xla::XlaOp box_index = values[0];
         // Check: current loop counter is within bounds, i.e. has a

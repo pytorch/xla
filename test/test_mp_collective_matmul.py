@@ -8,7 +8,7 @@ import torch_xla.core.xla_model as xm
 
 def _mp_fn(index):
   os.environ["ENABLE_COLLECTIVE_MATMUL_IN_MP"] = "1"
-  device = xm.xla_device()
+  device = torch_xla.device()
   world_size = xr.world_size()
   groups = [[i for i in range(world_size)]]
   scale = 1 / world_size
@@ -24,7 +24,7 @@ def _mp_fn(index):
         groups=groups,
         channel_id=1,
         use_global_device_ids=True)
-    xm.mark_step()
+    torch_xla.sync()
 
     cpu_result = result.cpu()
     expected = torch.arange(0, world_size, dtype=torch.float)
@@ -43,7 +43,7 @@ def _mp_fn(index):
         channel_id=1,
         use_global_device_ids=True)
     expected_world = xm.all_reduce(xm.REDUCE_SUM, xrand, scale)
-    xm.mark_step()
+    torch_xla.sync()
 
     slice_idx = torch.tensor(
         list(range(index * shard_size, (index + 1) * shard_size)))

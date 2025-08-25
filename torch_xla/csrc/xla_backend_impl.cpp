@@ -10,6 +10,8 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/status.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace at {
 // This function is defined in the codegenerated RegisterDispatchKey.cpp file.
@@ -27,7 +29,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       // bridge::GetDefaultDevice will trigger the runtime device init, should
       // not do it during class init time.
       default_device_type_ = std::make_shared<DeviceType>(
-          runtime::GetComputationClient()->GetDeviceType());
+          runtime::GetComputationClientOrDie()->GetDeviceType());
       default_device_type_inited_ = true;
     }
     return true;
@@ -75,7 +77,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDevice& device,
       const torch::lazy::Shape& shape) const override {
     xla::Shape xla_shape = MakeXlaShapeFromLazyShape(shape, device);
-    return runtime::GetComputationClient()->CreateDataPlaceholder(
+    return runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
         device.toString(), std::move(xla_shape));
   }
 
@@ -92,7 +94,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDataPtr data,
       std::optional<at::ScalarType> logical_scalar_type) const override {
     // TODO(JackCaoG): handle the logical_scalar_type == nullptr case
-    return XlaDataToTensors({data}, {*logical_scalar_type})[0];
+    return GetValueOrThrow(XlaDataToTensors({data}, {*logical_scalar_type}))[0];
   }
 
   std::unique_ptr<torch::lazy::LoweringContext> CreateLoweringContext(
@@ -117,8 +119,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   std::vector<std::string> GetCompilationDevices(
       const std::string& device,
       c10::ArrayRef<std::string> devices) const override {
-    return runtime::GetComputationClient()->GetCompilationDevices(device,
-                                                                  devices);
+    return runtime::GetComputationClientOrDie()->GetCompilationDevices(device,
+                                                                       devices);
   }
 
   std::vector<torch::lazy::ComputationPtr> Compile(
@@ -152,7 +154,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
           {current_device.toString()}, &output_shapes.back()));
     }
     std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
-        client_computations = runtime::GetComputationClient()->Compile(
+        client_computations = runtime::GetComputationClientOrDie()->Compile(
             std::move(compile_instances));
     return {client_computations.begin(), client_computations.end()};
   }
@@ -161,11 +163,11 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       torch::lazy::ComputationPtr computation,
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
-    std::vector<runtime::ComputationClient::DataPtr> results =
-        runtime::GetComputationClient()->ExecuteComputation(
+    std::vector<runtime::ComputationClient::DataPtr> results = GetValueOrThrow(
+        runtime::GetComputationClientOrDie()->ExecuteComputation(
             *std::dynamic_pointer_cast<runtime::ComputationClient::Computation>(
                 computation),
-            UnwrapXlaData(arguments), device.toString());
+            UnwrapXlaData(arguments), device.toString()));
     return WrapXlaData(results);
   }
 

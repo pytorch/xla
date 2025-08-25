@@ -1,13 +1,16 @@
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
 
+#include <c10/util/Exception.h>
+
+#include "absl/log/absl_check.h"
 #include "absl/log/initialize.h"
-#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
+#include "torch_xla/csrc/status.h"
 #include "xla/pjrt/c/pjrt_c_api.h"
 #include "xla/pjrt/distributed/client.h"
 #include "xla/pjrt/distributed/distributed.h"
@@ -58,10 +61,21 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   return allocator_config;
 }
 
-std::shared_ptr<const PjRtPlugin> GetPjRtPlugin(
+absl::StatusOr<std::shared_ptr<const PjRtPlugin>> GetPjRtPlugin(
     const std::string& device_type) {
-  auto plugin_path = pjrt_plugins_.find(device_type);
-  return plugin_path != pjrt_plugins_.end() ? plugin_path->second : nullptr;
+  auto entry = pjrt_plugins_.find(device_type);
+  if (entry == pjrt_plugins_.end()) {
+    std::string message = absl::StrCat(
+        "No PjRtPlugin registered for: ", device_type,
+        ". Make sure the environment variable ", env::kEnvPjRtDevice,
+        " is set to a correct device name. See "
+        "https://github.com/pytorch/xla/blob/master/docs/source/"
+        "contribute/plugins.md for more information on "
+        "implementing and registering a new "
+        "plugin.");
+    return XLA_ERROR_WITH_LOCATION(absl::FailedPreconditionError(message));
+  }
+  return entry->second;
 }
 
 }  // namespace
@@ -72,17 +86,18 @@ void RegisterPjRtPlugin(std::string name,
   pjrt_plugins_[name] = plugin;
 }
 
-std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
+absl::StatusOr<std::tuple<absl_nonnull std::unique_ptr<xla::PjRtClient>,
+                          std::unique_ptr<XlaCoordinator>>>
 InitializePjRt(const std::string& device_type) {
   std::unique_ptr<xla::PjRtClient> client;
   std::unique_ptr<XlaCoordinator> coordinator;
 
   if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false) &&
       device_type != "CPU") {
-    std::shared_ptr<const PjRtPlugin> plugin = GetPjRtPlugin(device_type);
+    TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
+    XLA_ASSIGN_OR_RETURN(std::shared_ptr<const PjRtPlugin> plugin,
+                         GetPjRtPlugin(device_type));
     if (plugin) {
-      TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
-
       // Init the absl logging to avoid the log spam.
       absl::InitializeLog();
 
@@ -108,28 +123,34 @@ InitializePjRt(const std::string& device_type) {
                    << ", coordinator address=" << master_addr << ":" << port;
 
         // Use the XlaCoordinator as the distributed key-value store.
-        coordinator = std::make_unique<XlaCoordinator>(
-            global_process_rank, global_world_size, master_addr, port);
+        XLA_ASSIGN_OR_RETURN(
+            coordinator,
+            XlaCoordinator::Create(global_process_rank, global_world_size,
+                                   master_addr, port));
         std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
             coordinator->GetClient();
         kv_store = xla::GetDistributedKeyValueStore(distributed_client,
                                                     /*key_prefix=*/"pjrt:");
       }
-      const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(
-          absl::AsciiStrToLower(device_type), plugin->library_path());
-      XLA_CHECK_OK(pjrt::InitializePjrtPlugin(device_type));
+      XLA_ASSIGN_OR_RETURN(
+          const PJRT_Api* c_api,
+          pjrt::LoadPjrtPlugin(absl::AsciiStrToLower(device_type),
+                               plugin->library_path()));
+      XLA_RETURN_IF_ERROR(pjrt::InitializePjrtPlugin(device_type));
       auto create_options = plugin->client_create_options();
-      client = xla::GetCApiClient(
-                   absl::AsciiStrToUpper(device_type),
-                   {create_options.begin(), create_options.end()}, kv_store)
-                   .value();
+      XLA_ASSIGN_OR_RETURN(
+          client,
+          xla::GetCApiClient(absl::AsciiStrToUpper(device_type),
+                             {create_options.begin(), create_options.end()},
+                             kv_store));
       profiler::RegisterProfilerForPlugin(c_api);
     }
   } else if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
-    client = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
+    XLA_ASSIGN_OR_RETURN(client,
+                         xla::GetPjRtCpuClient(async, cpu_device_count));
   } else if (device_type == "TPU") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
     // Init the absl logging to avoid the log spam.
@@ -138,16 +159,18 @@ InitializePjRt(const std::string& device_type) {
     auto tpu_library_path = sys_util::GetEnvString(
         env::kEnvTpuLibraryPath,
         sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
-    XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
-    absl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
-    XLA_CHECK_OK(tpu_status);
-    client = std::move(xla::GetCApiClient("TPU").value());
-    const PJRT_Api* c_api =
-        static_cast<xla::PjRtCApiClient*>(client.get())->pjrt_c_api();
+    XLA_ASSIGN_OR_RETURN(const PJRT_Api* c_api,
+                         pjrt::LoadPjrtPlugin("tpu", tpu_library_path));
+    XLA_RETURN_IF_ERROR(pjrt::InitializePjrtPlugin("tpu"));
+    XLA_ASSIGN_OR_RETURN(client, xla::GetCApiClient("TPU"));
     profiler::RegisterProfilerForPlugin(c_api);
   } else if (device_type == "TPU_LEGACY") {
-    XLA_ERROR() << "TPU_LEGACY client is no longer available.";
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        "TPU_LEGACY client is no longer available."));
   } else if (device_type == "CUDA") {
+    TORCH_WARN("The XLA:CUDA device is deprecated in release 2.8. ",
+               "Future releases might remove XLA:CUDA support entirely. ",
+               "Use the PyTorch native CUDA backend, instead.")
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
@@ -178,8 +201,10 @@ InitializePjRt(const std::string& device_type) {
           runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
       std::string port = runtime::sys_util::GetEnvString(
           "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
-      coordinator = std::make_unique<XlaCoordinator>(
-          global_process_rank, global_world_size, master_addr, port);
+      XLA_ASSIGN_OR_RETURN(
+          coordinator,
+          XlaCoordinator::Create(global_process_rank, global_world_size,
+                                 master_addr, port));
       std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
           coordinator->GetClient();
       kv_store = xla::GetDistributedKeyValueStore(distributed_client,
@@ -194,27 +219,25 @@ InitializePjRt(const std::string& device_type) {
     options.platform_name = "gpu";
     options.should_stage_host_to_device_transfers = true;
     options.kv_store = kv_store;
-    client = std::move(xla::GetStreamExecutorGpuClient(options).value());
+    XLA_ASSIGN_OR_RETURN(client, xla::GetStreamExecutorGpuClient(options));
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
-    XLA_CHECK_OK(
-        pjrt::LoadPjrtPlugin(
-            "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so"))
-            .status());
-    client = std::move(xla::GetCApiClient("XPU").value());
+    XLA_RETURN_IF_ERROR(pjrt::LoadPjrtPlugin(
+        "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so")));
+    XLA_ASSIGN_OR_RETURN(client, xla::GetCApiClient("XPU"));
   } else if (device_type == "NEURON") {
     TF_VLOG(1) << "Initializing PjRt NEURON client...";
-    XLA_CHECK_OK(pjrt::LoadPjrtPlugin("NEURON", sys_util::GetEnvString(
-                                                    env::kEnvNeuronLibraryPath,
-                                                    "libneuronpjrt.so"))
-                     .status());
-    client = std::move(xla::GetCApiClient("NEURON").value());
+    XLA_RETURN_IF_ERROR(pjrt::LoadPjrtPlugin(
+        "NEURON", sys_util::GetEnvString(env::kEnvNeuronLibraryPath,
+                                         "libneuronpjrt.so")));
+    XLA_ASSIGN_OR_RETURN(client, xla::GetCApiClient("NEURON"));
+  } else {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "Unknown ", env::kEnvPjRtDevice, ": '", device_type, "'")));
   }
 
-  XLA_CHECK(client) << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
-                                       device_type);
-
-  return {std::move(client), std::move(coordinator)};
+  ABSL_CHECK(client);
+  return std::make_tuple(std::move(client), std::move(coordinator));
 }
 
 }  // namespace runtime

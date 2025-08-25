@@ -22,8 +22,7 @@ class BasicXMAPITest(test_xla_sharding_base.XlaShardingTest):
     super().setUpClass()
 
   def test_get_xla_supported_devices(self):
-    device_type = os.environ['PJRT_DEVICE']
-    devices = xm.get_xla_supported_devices(device_type)
+    devices = xm.get_xla_supported_devices()
     self.assertEqual(len(devices), 1)
 
   def test_world_size(self):
@@ -39,22 +38,22 @@ class BasicXMAPITest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(xm.is_master_ordinal())
 
   def test_xla_device(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     self.assertEqual(device, torch.device('xla:0'))
 
   def test_xla_real_devices(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     device_type = os.environ['PJRT_DEVICE']
     self.assertEqual(xm.xla_real_devices([device]), [device_type + ':0'])
 
   def test_xla_device_hw(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     device_type = os.environ['PJRT_DEVICE']
     replication_devices = xm.xla_replication_devices([device])
     self.assertEqual(xm.xla_device_hw(device), device_type)
 
   def test_xla_replication_devices(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     device_type = os.environ['PJRT_DEVICE']
     replication_devices = xm.xla_replication_devices([device])
     self.assertEqual(xm.xla_real_devices([device]), [device_type + ':0'])
@@ -127,7 +126,7 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
     # unittest process can persist XLA_USE_SPMD from other test suites,
     # so t may be on a SPMD or non-SPMD device. If this test is run independently
     # outside unittest, then it lives on a non-SPMD device.
-    t = torch.ones(2, 2).to(xm.xla_device())
+    t = torch.ones(2, 2).to('xla')
 
     # Should enable SPMD without crashing.
     xr.use_spmd()
@@ -136,7 +135,7 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
 
     # execute replicated
     t += 1
-    xm.mark_step(True)
+    torch_xla.sync(wait=True)
     self.assertEqual(met.counter_value("ExecuteReplicated"), 1)
 
 
@@ -149,7 +148,7 @@ class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
   @unittest.skipIf(xr.device_type() not in ['TPU', 'CUDA'],
                    f"TPU/GPU autocast test.")
   def test_xla_autocast_api(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     t1 = torch.ones([2, 3], device=device, dtype=torch.float32)
     t2 = torch.ones([3, 2], device=device, dtype=torch.float32)
     with autocast(device, dtype=torch.bfloat16):

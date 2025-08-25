@@ -17,6 +17,7 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "xla/hlo/builder/lib/constants.h"
 #include "xla/hlo/builder/lib/slicing.h"
@@ -196,7 +197,8 @@ xla::XlaOp BuildMaskedFillScalar(xla::XlaOp input, xla::XlaOp mask,
   const xla::Shape& mask_shape = ShapeHelper::ShapeOfXlaOp(mask);
 
   if (!xla::ShapeUtil::Compatible(input_shape, mask_shape)) {
-    xla::Shape shape = XlaHelpers::GetPromotedShape(input_shape, mask_shape);
+    xla::Shape shape =
+        GetValueOrThrow(XlaHelpers::GetPromotedShape(input_shape, mask_shape));
     input = BuildExpand(input, shape.dimensions());
     mask = BuildExpand(mask, shape.dimensions());
   }

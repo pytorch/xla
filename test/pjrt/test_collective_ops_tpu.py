@@ -17,12 +17,12 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
   @staticmethod
   def _broadcast(sync):
     torch.manual_seed(xr.global_ordinal())
-    device = xm.xla_device()
+    device = torch_xla.device()
     model = nn.Linear(5, 5).to(device)
     if sync:
       xm.broadcast_master_param(model)
 
-    xm.mark_step()
+    torch_xla.sync()
     return next(model.parameters()).detach().cpu().numpy()
 
   @absltest.skipUnless(tpu.num_tpu_workers() == 1,
@@ -41,7 +41,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _all_reduce(pin_layout):
-    device = xm.xla_device()
+    device = torch_xla.device()
     # Prevent 0 and 1 from being converted to constants
     ordinal = xm.send_cpu_data_to_device(
         torch.tensor(
@@ -49,7 +49,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
         device=device)
     out = xm.all_reduce(xm.REDUCE_SUM, ordinal, pin_layout=pin_layout)[0]
     assert out.requires_grad
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().detach().numpy()
 
@@ -63,10 +63,10 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _all_gather(pin_layout):
-    device = xm.xla_device()
+    device = torch_xla.device()
     ordinal = torch.tensor([xr.global_ordinal()], device=device)
     out = xm.all_gather(ordinal, pin_layout=pin_layout)
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().numpy()
 
@@ -80,7 +80,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _reduce_scatter(pin_layout):
-    device = xm.xla_device()
+    device = torch_xla.device()
     world_size = xr.world_size()
     tensor = -torch.arange(world_size, dtype=torch.float32).to(device)
 
@@ -92,7 +92,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
         shard_count=world_size,
         pin_layout=pin_layout,
     )
-    xm.mark_step()
+    torch_xla.sync()
 
     return out.cpu().numpy()
 
@@ -105,7 +105,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _all_to_all(pin_layout):
-    device = xm.xla_device()
+    device = torch_xla.device()
     world_size = xr.world_size()
 
     tensor = torch.cat(
@@ -115,7 +115,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
         ],
         dim=1,
     ).to(device)
-    xm.mark_step()
+    torch_xla.sync()
 
     out = xm.all_to_all(
         tensor,
@@ -151,7 +151,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       return input
 
     dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
     input = torch.tensor([xr.global_ordinal()],
                          dtype=torch.float,
                          device=device)
@@ -167,19 +167,25 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     return input.cpu()
 
   @staticmethod
-  def _all_gather_into_tensor(use_dynamo: bool):
+  def _all_gather_into_tensor(use_dynamo: bool, mode: str):
     met.clear_all()
 
     def callable(output, input):
-      dist.all_gather_into_tensor(output_tensor, input, None)
-      return output_tensor
+      dist.all_gather_into_tensor(output, input, None)
+      return output
 
     dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
     input = torch.tensor([xr.global_ordinal()],
                          dtype=torch.float,
                          device=device)
-    output_tensor = torch.empty((1, xr.world_size()), device=device)
+    if mode == "stack":
+      output_tensor = torch.empty((xr.world_size(), 1), device=device)
+    elif mode == "concat":
+      output_tensor = torch.empty((xr.world_size(),), device=device)
+    else:
+      raise ValueError(f"mode must be either 'stack' or 'concat'")
+
     f = torch.compile(callable, backend='openxla') if use_dynamo else callable
     f(output_tensor, input)
     torch_xla.sync()
@@ -194,7 +200,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _all_gather(use_dynamo: bool):
     met.clear_all()
     dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     def callable(input):
       output_tensor = [
@@ -223,7 +229,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _reduce_scatter(use_dynamo: bool):
     met.clear_all()
     dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     def callable(output, input):
       dist.reduce_scatter_tensor(output, input)
@@ -248,7 +254,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _all_to_all_single(use_dynamo: bool, split_size: int = 1):
     met.clear_all()
     dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     def callable(output, input):
       dist.all_to_all_single(output, input)
@@ -278,13 +284,17 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     for index, val in results.items():
       torch.testing.assert_close(val, expected)
 
-  @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
-  def test_all_gather_into_tensor(self, use_dynamo):
+  @parameterized.product(dynamo=[True, False], mode=["stack", "concat"])
+  def test_all_gather_into_tensor(self, dynamo, mode):
+    if dynamo and mode == "stack":
+      self.skipTest("https://github.com/pytorch/pytorch/issues/155632")
     results = pjrt.run_multiprocess(
-        self._all_gather_into_tensor, use_dynamo=use_dynamo)
+        self._all_gather_into_tensor, use_dynamo=dynamo, mode=mode)
     expected = torch.arange(
-        tpu.num_expected_global_devices(), dtype=torch.float).unsqueeze(0)
-    for index, val in results.items():
+        tpu.num_expected_global_devices(), dtype=torch.float)
+    if mode == "stack":
+      expected = expected.unsqueeze(1)
+    for _, val in results.items():
       torch.testing.assert_close(val, expected)
 
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
@@ -325,6 +335,132 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
           torch.allclose(val.sort().values,
                          expected.sort().values),
           f"Got {val}, expected {expected}")
+
+  @staticmethod
+  def _all_to_all():
+    dist.init_process_group("xla", init_method='xla://')
+    device = torch_xla.device()
+    world_size = xr.world_size()
+    rank = xr.global_ordinal()
+
+    input_tensors = list(
+        torch.full([world_size * 2],
+                   fill_value=rank,
+                   dtype=torch.float,
+                   device=device).chunk(world_size))
+    output_tensors = list(
+        torch.empty([world_size * 2], dtype=torch.float,
+                    device=device).chunk(world_size))
+    dist.all_to_all(output_tensors, input_tensors)
+
+    return [t.cpu() for t in output_tensors]
+
+  def test_all_to_all(self):
+    # Input on device i is ([i, i], [i, i], ...). After all_to_all,
+    # output on every device is ([0, 0], [1, 1], ...).
+    results = pjrt.run_multiprocess(self._all_to_all)
+    expected = [
+        torch.tensor([i, i], dtype=torch.float)
+        for i in range(tpu.num_expected_global_devices())
+    ]
+    for _, value in results.items():
+      torch.testing.assert_close(value, expected)
+
+  @staticmethod
+  def _scatter():
+    dist.init_process_group("xla", init_method='xla://')
+    device = torch_xla.device()
+    world_size = xr.world_size()
+    tensors = None
+    if xr.global_ordinal() == 0:
+      tensors = [
+          torch.tensor([i], device=device, dtype=torch.float)
+          for i in range(world_size)
+      ]
+
+    output_tensor = torch.tensor([-1], dtype=torch.float, device=device)
+    dist.scatter(output_tensor, tensors, src=0)
+    return output_tensor.cpu()
+
+  def test_scatter(self):
+    """self._scatter instantiates a list of tensors [[0], [1], ..., [n-1]]
+    on device 0, then scatters it. Device i should therefore receive [i]."""
+    results = pjrt.run_multiprocess(self._scatter)
+    for ordinal, value in results.items():
+      np.testing.assert_array_equal(value, [ordinal])
+
+  @staticmethod
+  def _gather(scalar: bool = False):
+    dist.init_process_group("xla", init_method='xla://')
+    device = torch_xla.device()
+    world_size = xr.world_size()
+
+    # If scalar, tensors are tensor(i). Otherwise they are tensor([i]).
+    # The two cases follow different and should be tested separately.
+    if scalar:
+      item = xr.global_ordinal()
+      dummy = -1.0
+    else:
+      item = [xr.global_ordinal()]
+      dummy = [-1.0]
+
+    tensor = torch.tensor(item, device=device, dtype=torch.float)
+
+    # Instantiate tensors on device 0 to receive the results
+    output_tensors = None
+    if xr.global_ordinal() == 0:
+      output_tensors = [
+          torch.tensor(dummy, device=device, dtype=torch.float)
+          for _ in range(world_size)
+      ]
+
+    dist.gather(tensor, output_tensors, dst=0)
+    if not output_tensors:
+      return None
+    else:
+      return [t.cpu() for t in output_tensors]
+
+  @parameterized.named_parameters(('scalar', True), ('tensor', False))
+  def test_gather(self, scalar):
+    # self._gather instantiates tensor i or [i], depending on the value of
+    # `scalar`, on device i. The results are gathered on device 0.
+    # All other devices get None.
+    results = pjrt.run_multiprocess(self._gather, scalar)
+    if scalar:
+      expected = [
+          torch.tensor(i, dtype=torch.float)
+          for i in range(tpu.num_expected_global_devices())
+      ]
+    else:
+      expected = [
+          torch.tensor([i], dtype=torch.float)
+          for i in range(tpu.num_expected_global_devices())
+      ]
+    for ordinal, value in results.items():
+      if ordinal == 0:
+        torch.testing.assert_close(value, expected)
+      else:
+        assert value is None
+
+  @staticmethod
+  def _reduce():
+    dist.init_process_group("xla", init_method='xla://')
+    device = torch_xla.device()
+    input = torch.tensor([xr.global_ordinal()],
+                         dtype=torch.float,
+                         device=device)
+    dist.reduce(input, dst=0, op=dist.ReduceOp.SUM)
+
+    return input.cpu()
+
+  def test_reduce(self):
+    results = pjrt.run_multiprocess(self._reduce)
+    for ordinal, value in results.items():
+      if ordinal == 0:
+        expected = sum(range(tpu.num_expected_global_devices()))
+      else:
+        expected = ordinal
+      np.testing.assert_array_equal(value, [expected])
 
 
 if __name__ == '__main__':

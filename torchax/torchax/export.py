@@ -4,8 +4,9 @@ import copy
 from typing import Any, Dict, Tuple
 import torch
 from torch.utils import _pytree as pytree
+import torchax
 from torchax import tensor
-from torchax.ops import ops_registry
+from torchax.ops import ops_registry, mappings
 from torchax import decompositions
 import jax
 import jax.export
@@ -108,8 +109,8 @@ def exported_program_to_jax(exported_program, export_raw: bool = False):
 
   if export_raw:
     return names, states, func
-
-  states = pytree.tree_map_only(torch.Tensor, tensor.t2j, states)
+  env = torchax.default_env()
+  states = env.t2j_copy(states)
   return states, func
 
 
@@ -135,7 +136,7 @@ def extract_avals(exported):
 
     tensor_meta = arg_meta['tensor_meta']
     shape = [_get_dim(d) for d in tensor_meta.shape]
-    return jax.ShapeDtypeStruct(shape, tensor.t2j_dtype(tensor_meta.dtype))
+    return jax.ShapeDtypeStruct(shape, mappings.t2j_dtype(tensor_meta.dtype))
 
   def _get_inputs(exported):
     """Return placeholders with input metadata"""

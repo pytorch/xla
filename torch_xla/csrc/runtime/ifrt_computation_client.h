@@ -27,8 +27,17 @@ namespace torch_xla {
 namespace runtime {
 
 class IfrtComputationClient : public ComputationClient {
+ private:
+  // Private struct for making the constructor private, but still callable
+  // as: `std::make_unique<IfrtComputationClient>(PrivateUse())`.
+  struct PrivateUse {
+    // Constructor needs to be explicit for disallowing implicit construction
+    // from `{}`.
+    explicit PrivateUse() = default;
+  };
+
  public:
-  IfrtComputationClient();
+  IfrtComputationClient(PrivateUse);
   ~IfrtComputationClient();
 
   DataPtr CreateDataPlaceholder(
@@ -53,7 +62,7 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
-  std::vector<xla::Literal> TransferFromDevice(
+  absl::StatusOr<std::vector<xla::Literal>> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
 
   std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;
@@ -69,15 +78,17 @@ class IfrtComputationClient : public ComputationClient {
   std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) override;
 
-  std::vector<DataPtr> ExecuteComputation(
+  absl::StatusOr<std::vector<DataPtr>> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
       const std::string& device,
       const ExecuteComputationOptions& options) override;
 
-  std::vector<DataPtr> ExecuteReplicated(
+  absl::StatusOr<std::vector<DataPtr>> ExecuteReplicated(
       const Computation& computation, const absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
+
+  size_t GetNumLocalDevices() const override;
 
   size_t GetNumDevices() const override;
 
@@ -106,6 +117,8 @@ class IfrtComputationClient : public ComputationClient {
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
+
+  std::string_view GetPlatformVersion() const override;
 
   int GetProcessIndex() const override { return client_->process_index(); };
 
@@ -163,7 +176,15 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
+  // Creates a new instance of IfrtComputationClient and initializes it.
+  static absl::StatusOr<absl_nonnull std::unique_ptr<IfrtComputationClient>>
+  Create();
+
  private:
+  // Convenience function called by `Create()` that initializes the current
+  // IfrtComputationClient.
+  absl::Status Initialize();
+
   std::shared_ptr<xla::ifrt::PjRtClient> client_;
   std::unique_ptr<XlaCoordinator> coordinator_;
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's

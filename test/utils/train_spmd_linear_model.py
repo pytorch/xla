@@ -69,7 +69,7 @@ class SimpleLinear(nn.Module):
 
 
 def train():
-  device = xm.xla_device()
+  device = torch_xla.device()
   torch.manual_seed(42)
   model = SimpleLinear().to(device)
   print('===> Preparing data..')
@@ -122,7 +122,7 @@ def train():
           losses.append(loss.clone().detach())
           loss.backward()
         optimizer.step()
-      xm.mark_step()
+      torch_xla.sync()
       if step % FLAGS.log_steps == 0:
         print(f"Epoch {epoch} step {step} loss {loss}")
 
@@ -148,5 +148,5 @@ def train_and_evaluate():
   xr.use_spmd(auto=FLAGS.auto_spmd)
   print('Start training loop...')
   losses, m = train()
-  t = torch.randn(10, FLAGS.input_dim).to(xm.xla_device())
+  t = torch.randn(10, FLAGS.input_dim).to('xla')
   return [loss.cpu() for loss in losses], m(t).cpu()

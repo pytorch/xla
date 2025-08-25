@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # PJRT Runtime
 
 PyTorch/XLA has migrated from the TensorFlow-based XRT runtime to the
@@ -39,7 +43,7 @@ the `runtime` tag.
     per device. On TPU v2 and v3 in PJRT, workloads are multiprocess and
     multithreaded (4 processes with 2 threads each), so your workload
     should be thread-safe. See [Multithreading on TPU
-    v2/v3](#multithreading-on-tpu-v2v3) and the [Multiprocessing section
+    v2/v3](multithreading-on-tpu-v2v3) and the [Multiprocessing section
     of the API
     guide](https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing)
     for more information. Key differences to keep in mind:
@@ -73,7 +77,7 @@ import torch_xla.distributed.xla_backend
 
 
 def _mp_fn(index):
-  device = xm.xla_device()
+  device = torch_xla.device()
 -  dist.init_process_group('xla', rank=xr.global_ordinal(), world_size=xr.world_size())
 +  dist.init_process_group('xla', init_method='xla://')
 
@@ -96,7 +100,7 @@ def _mp_fn(index):
     loss.backward()
 
     optimizer.step()
-    xm.mark_step()
+    torch_xla.sync()
 
   # Print mean parameters so we can confirm they're the same across replicas
   print([p.mean() for p in model.parameters()])
@@ -267,7 +271,7 @@ for more information about TPU architecture.
     from .
 -   Under XRT, the server process is the only process that interacts
     with the TPU devices, and client processes don't have direct access
-    to the TPU devices. When profiling a single-host TPU (e.g. v3-8 or
+    to the TPU devices. When profiling a single-host TPU (e.g. v3-8 or
     v4-8), you would normally see 8 device traces (one for each TPU
     core). With PJRT, each process has one chip, and a profile from that
     process will show only 2 TPU cores.
@@ -282,11 +286,12 @@ for more information about TPU architecture.
     each TPU host
     (`[gcloud compute tpus tpu-vm   scp](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/scp)`)
     and run the code on each host in parallel
-    (e.g. `[gcloud compute tpus tpu-vm   ssh --workers=all --command="PJRT_DEVICE=TPU python   run.py"](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/ssh)`)
+    (e.g. `[gcloud compute tpus tpu-vm   ssh --workers=all --command="PJRT_DEVICE=TPU python   run.py"](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/ssh)`)
 -   `xm.rendezvous` has been reimplemented using XLA-native collective
     communication to enhance stability on large TPU pods. See below for
     more details.
 
+(multithreading-on-tpu-v2v3)=
 ### Multithreading on TPU v2/v3
 
 On TPU v2 and v3, **distributed workloads always run multithreaded**,
@@ -325,14 +330,14 @@ communication, which is much more stable and well-tested on large TPU
 pods. This imposes two new constraints compared to the XRT
 implementation:
 
--   Because the payload has to become part of the XLA graph,
-    `xm.mark_step` is called both before and after the data is
-    transferred. Calling `xm.rendezvous` in the middle of model code may
-    force an unwanted compilation.
+-   Because the payload has to become part of the XLA graph, `torch_xla.sync()`
+    is called both before and after the data is transferred. Calling
+    `xm.rendezvous` in the middle of model code may force an unwanted
+    compilation.
 -   Because XLA does not permit collective operations to run on a subset
     of workers, all workers must participate in the `rendezvous`.
 
-If you require the old behavior of `xm.rendezvous` (i.e. communicating
+If you require the old behavior of `xm.rendezvous` (i.e. communicating
 data without altering the XLA graph and/or synchronizing a subset of
 workers), consider using `` `torch.distributed.barrier ``
 \<<https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier>\>[\_\_
@@ -358,7 +363,7 @@ from the PyTorch documentation. Keep in mind these constraints:
 *New in PyTorch/XLA r2.0*
 
 When using PJRT with `torch.distributed` and
-`[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/ddp.md)`
+`[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/source/perf/ddp.md)`
 we strongly recommend using the new `xla://` `init_method`, which
 automatically finds the replica IDs, world size, and master IP by
 querying the runtime. For example:
@@ -377,11 +382,11 @@ def _all_gather(index: int):
   # No need to pass in `rank` or `world_size`
   dist.init_process_group('xla', init_method='xla://')
 
-  t = torch.tensor([index], dtype=torch.int32, device=xm.xla_device())
+  t = torch.tensor([index], dtype=torch.int32, device='xla')
   output = [torch.zeros_like(t) for _ in range(dist.get_world_size())]
   dist.all_gather(output, t)
 
-  xm.mark_step()
+  torch_xla.sync()
   print(output)
 
 if __name__ == '__main__':
@@ -398,9 +403,9 @@ Note: For TPU v2/v3, you still need to import
 `torch.distributed` is still experimental.
 
 For more information about using `DistributedDataParallel` on
-PyTorch/XLA, see [ddp.md](./ddp.md) on TPU V4. For an example that uses
+PyTorch/XLA, see [ddp.md](../perf/ddp.md) on TPU V4. For an example that uses
 DDP and PJRT together, run the following [example
-script](../test/test_train_mp_imagenet.py) on a TPU:
+script](../../../test/test_train_mp_imagenet.py) on a TPU:
 
 ``` bash
 PJRT_DEVICE=TPU python xla/test/test_train_mp_mnist.py --ddp --pjrt_distributed --fake_data --num_epochs 1

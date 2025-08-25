@@ -11,6 +11,7 @@ from jax import tree_util as pytree
 from jax.experimental.shard_map import shard_map
 from torchax import tensor
 from torchax import util
+from torchax.ops import mappings
 import torchax
 
 from torchax.types import JaxValue, TorchValue, JaxCallable, TorchCallable
@@ -81,10 +82,16 @@ class JittableModule(torch.nn.Module):
           for extra_keys in v[1:]:
             del self.params[extra_keys]
 
+  @property
+  def __class__(self):
+    # Lie about the class type so that
+    # isinstance(jittable_module, self._model.__class__) works
+    return self._model.__class__
+
   def __call__(self, *args, **kwargs):
     return self.forward(*args, **kwargs)
 
-  def functional_call(self, method_name, params, buffers, *args, **kwargs):
+  def functional_call(self, method_or_name, params, buffers, *args, **kwargs):
     kwargs = kwargs or {}
     params_copy = copy.copy(params)
     params_copy.update(buffers)
@@ -92,22 +99,35 @@ class JittableModule(torch.nn.Module):
     for k, v in self._extra_dumped_weights.items():
       for new_key in v:
         params_copy[new_key] = params_copy[k]
+
+    if isinstance(method_or_name, str):
+      method = getattr(self._model, method_or_name)
+    else:
+      if not callable(method_or_name):
+        raise TypeError(
+            f"method_or_name should be a callable or a string, got {type(method_or_name)}"
+        )
+      method = method_or_name
+      args = (self._model,) + args
     with torch_stateless._reparametrize_module(self._model, params_copy):
-      res = getattr(self._model, method_name)(*args, **kwargs)
+      res = method(*args, **kwargs)
     return res
 
-  def forward(self, *args, **kwargs):
-    if 'forward' not in self._jitted:
+  def jittable_call(self, method_name: str, *args, **kwargs):
+    if method_name not in self._jitted:
       jitted = jax_jit(
-          functools.partial(self.functional_call, 'forward'),
+          functools.partial(self.functional_call, method_name),
           kwargs_for_jax_jit=self._extra_jit_args,
       )
 
       def jitted_forward(*args, **kwargs):
         return jitted(self.params, self.buffers, *args, **kwargs)
 
-      self._jitted['forward'] = jitted_forward
-    return self._jitted['forward'](*args, **kwargs)
+      self._jitted[method_name] = jitted_forward
+    return self._jitted[method_name](*args, **kwargs)
+
+  def forward(self, *args, **kwargs):
+    return self.jittable_call('forward', *args, **kwargs)
 
   def __getattr__(self, key):
     if key == '_model':
@@ -164,8 +184,8 @@ def _torch_view(t: JaxValue) -> TorchValue:
   if isinstance(t, jax.Array):
     # TODO
     return tensor.Tensor(t, torchax.default_env())
-  if isinstance(t, type(jnp.int32)):
-    return tensor.t2j_type(t)
+  if isinstance(t, jnp.dtype):
+    return mappings.j2t_dtype(t)
   if callable(t):  # t is a JaxCallable
     return functools.partial(call_jax, t)
   # regular types are not changed
@@ -179,10 +199,10 @@ def _jax_view(t: TorchValue) -> JaxValue:
   # t is an object from torch land
   # view it as-if it's a jax land object
   if isinstance(t, torch.Tensor):
-    assert isinstance(t, tensor.Tensor), type(t)
+    assert isinstance(t, tensor.Tensor) or isinstance(t, tensor.View), type(t)
     return t.jax()
   if isinstance(t, type(torch.int32)):
-    return tensor.t2j_dtype(t)
+    return mappings.t2j_dtype(t)
 
   # torch.nn.Module needs special handling
   if not isinstance(t, torch.nn.Module) and callable(t):  # t is a TorchCallable
@@ -219,8 +239,7 @@ def j2t_autograd(fn, call_jax=call_jax):
 
   @wraps(fn)
   def inner(*args, **kwargs):
-    from jax.tree_util import tree_flatten, tree_unflatten
-    from jax.util import safe_zip
+    from jax.tree_util import tree_flatten
 
     class JaxFun(torch.autograd.Function):
 
@@ -255,8 +274,8 @@ def j2t_autograd(fn, call_jax=call_jax):
         # The subsequent gradients correspond to flat_inputs.
         # We need to put a None for inputs that did not require gradients.
         final_grads = [None]
-        for needs_grad, grad in safe_zip(ctx.needs_input_grad[1:],
-                                         input_grads_structured):
+        for needs_grad, grad in zip(
+            ctx.needs_input_grad[1:], input_grads_structured, strict=True):
           final_grads.append(grad if needs_grad else None)
 
         return tuple(final_grads)

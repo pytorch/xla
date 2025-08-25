@@ -24,17 +24,27 @@ started:
 ### TPU
 
 To install PyTorch/XLA stable build in a new TPU VM:
+Note: Builds are available for Python 3.8 to 3.11; please use one of the supported versions.
 
 ```sh
-pip install torch==2.7.0 'torch_xla[tpu]==2.7.0'
-```
+# - for venv
+# python3.11 -m venv py311
+# - for conda
+# conda create -n py311 python=3.11
 
+pip install torch==2.7.0 'torch_xla[tpu]==2.7.0'
+
+# Optional: if you're using custom kernels, install pallas dependencies
+pip install 'torch_xla[pallas]'
+```
+**As of 07/16/2025 and starting from Pytorch/XLA 2.8 release, PyTorch/XLA will 
+provide nightly and release wheels for Python 3.11 to 3.13**
 To install PyTorch/XLA nightly build in a new TPU VM:
 
 ```sh
 pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
 # Edit `cp310-cp310` to fit your desired Python version as needed
-pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp310-cp310-linux_x86_64.whl' \
+pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0.dev-cp312-cp312-linux_x86_64.whl' \
   -f https://storage.googleapis.com/libtpu-wheels/index.html
 ```
 
@@ -152,12 +162,12 @@ To update your existing training loop, make the following changes:
    ...
 
 +  # Move the model paramters to your XLA device
-+  model.to(torch_xla.device())
++  model.to('xla')
 
    for inputs, labels in train_loader:
 +    with torch_xla.step():
 +      # Transfer data to the XLA device. This happens asynchronously.
-+      inputs, labels = inputs.to(torch_xla.device()), labels.to(torch_xla.device())
++      inputs, labels = inputs.to('xla'), labels.to('xla')
        optimizer.zero_grad()
        outputs = model(inputs)
        loss = loss_fn(outputs, labels)
@@ -178,7 +188,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 ```diff
  import torch.distributed as dist
 -import torch.multiprocessing as mp
-+import torch_xla as xla
++import torch_xla
 +import torch_xla.distributed.xla_backend
 
  def _mp_fn(rank):
@@ -190,15 +200,15 @@ If you're using `DistributedDataParallel`, make the following changes:
 +  # Rank and world size are inferred from the XLA device runtime
 +  dist.init_process_group("xla", init_method='xla://')
 +
-+  model.to(xm.xla_device())
++  model.to('xla')
 +  ddp_model = DDP(model, gradient_as_bucket_view=True)
 
 -  model = model.to(rank)
 -  ddp_model = DDP(model, device_ids=[rank])
 
    for inputs, labels in train_loader:
-+    with xla.step():
-+      inputs, labels = inputs.to(xla.device()), labels.to(xla.device())
++    with torch_xla.step():
++      inputs, labels = inputs.to('xla'), labels.to('xla')
        optimizer.zero_grad()
        outputs = ddp_model(inputs)
        loss = loss_fn(outputs, labels)
@@ -207,7 +217,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 
  if __name__ == '__main__':
 -  mp.spawn(_mp_fn, args=(), nprocs=world_size)
-+  xla.launch(_mp_fn, args=())
++  torch_xla.launch(_mp_fn, args=())
 ```
 
 Additional information on PyTorch/XLA, including a description of its semantics
@@ -253,25 +263,23 @@ GPU release builds and GPU/TPU nightly builds are available in our public GCS bu
 
 | Version | Cloud GPU VM Wheels |
 | --- | ----------- |
-| 2.7 (CUDA 12.6 + Python 3.9) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla-2.7.0-cp39-cp39-manylinux_2_28_x86_64.whl` |
 | 2.7 (CUDA 12.6 + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla-2.7.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
-| 2.7 (CUDA 12.6 + Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.5.0-cp311-cp311-manylinux_2_28_x86_64.whl` |
-| nightly (Python 3.9) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp39-cp39-linux_x86_64.whl` |
-| nightly (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp310-cp310-linux_x86_64.whl` |
-| nightly (Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp311-cp311-linux_x86_64.whl` |
-| nightly (CUDA 12.6 + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla-2.8.0.dev-cp310-cp310-linux_x86_64.whl` |
+| 2.7 (CUDA 12.6 + Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.6/torch_xla-2.7.0-cp311-cp311-manylinux_2_28_x86_64.whl` |
+| nightly (Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0.dev-cp311-cp311-linux_x86_64.whl` |
+| nightly (Python 3.12) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0.dev-cp312-cp312-linux_x86_64.whl` |
+| nightly (Python 3.13) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0.dev-cp312-cp312-linux_x86_64.whl` |
 
 #### Use nightly build
 
-You can also add `yyyymmdd` like `torch_xla-2.8.0.devyyyymmdd` (or the latest dev version)
+You can also add `yyyymmdd` like `torch_xla-2.9.0.devyyyymmdd` (or the latest dev version)
 to get the nightly wheel of a specified date. Here is an example:
 
 ```
-pip3 install torch==2.8.0.dev20250423+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev20250423-cp310-cp310-linux_x86_64.whl
+pip3 install torch==2.9.0.dev20250423+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0.dev20250423-cp310-cp310-linux_x86_64.whl
 ```
 
-The torch wheel version `2.8.0.dev20250423+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
+The torch wheel version `2.9.0.dev20250423+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
 
 <details>
 
@@ -279,6 +287,7 @@ The torch wheel version `2.8.0.dev20250423+cpu` can be found at https://download
 
 | Version | Cloud TPU VMs Wheel |
 |---------|-------------------|
+| 2.7 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.6 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.5 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.4 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.4.0-cp310-cp310-manylinux_2_28_x86_64.whl` |

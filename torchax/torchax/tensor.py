@@ -1,4 +1,4 @@
-import random
+import threading
 import logging
 import sys
 import contextlib
@@ -6,47 +6,23 @@ from typing import Optional, Any
 import jax
 import jax.numpy as jnp
 import numpy
+import itertools
 import torch
 import torch.distributed._functional_collectives
 import torch.func
 import torch.utils._mode_utils as mode_utils
 import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
-from torchax.view import View, NarrowInfo
+from torchax.view import View
 from torchax import config
 from torchax.ops import mappings, ops_registry
+from torchax import amp
 
 logger = logging.getLogger(__name__)
 
 
 class OperatorNotFound(Exception):
   pass
-
-
-def wrap(jaxarray):
-  return torch_pytree.tree_map_only(jnp.ndarray, Tensor, jaxarray)
-
-
-def unwrap(torchtensors):
-  return torch_pytree.tree_map_only(Tensor, lambda x: x._elem, torchtensors)
-
-
-def t2j(t):
-  if isinstance(t, Tensor):
-    return t._elem
-  return mappings.t2j(t)
-
-
-def j2t(x):
-  return mappings.j2t(x)
-
-
-def t2j_dtype(dtype):
-  return mappings.t2j_dtype(dtype)
-
-
-def j2t_dtype(dtype):
-  return mappings.j2t_dtype(dtype)
 
 
 @contextlib.contextmanager
@@ -64,23 +40,27 @@ log_nested.level = 0
 class Tensor(torch.Tensor):
 
   @staticmethod
-  def __new__(cls, elem, env):
-    dtype = j2t_dtype(elem.dtype)
+  def __new__(cls, elem, env, requires_grad=False):
+    dtype = mappings.j2t_dtype(elem.dtype)
     shape = list(elem.shape)
     for i, s in enumerate(shape):
       if not isinstance(s, int):
         shape[i] = 1
     if dtype is None:
       dtype = torch.float32
+    #dispatch_keys = torch.DispatchKeySet(torch._C.DispatchKey.PrivateUse1).add(torch._C.DispatchKey.AutogradPrivateUse1)
+    if not (dtype.is_floating_point or dtype.is_complex):
+      requires_grad = False
+
     return torch.Tensor._make_wrapper_subclass(
         cls,
         shape,
         dtype=dtype,
-        device="meta",
-        requires_grad=False,
+        device='meta',
+        requires_grad=requires_grad,
     )
 
-  def __init__(self, elem: jax.Array, env: "Environment"):
+  def __init__(self, elem: jax.Array, env: "Environment", requires_grad=False):
     super().__init__()
     self._elem = elem
     self._env = env
@@ -95,7 +75,7 @@ class Tensor(torch.Tensor):
 
   @property
   def shape(self):
-    return self._elem.shape
+    return torch.Size(self._elem.shape)
 
   @property
   def ndim(self):
@@ -122,14 +102,15 @@ class Tensor(torch.Tensor):
 
   @classmethod
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
-    env = None
-    for arg in torch_pytree.arg_tree_leaves(*args, **kwargs):
-      if isinstance(arg, Tensor) or isinstance(arg, View):
-        env = arg._env
-        break
-
-    with env:
-      return func(*args, **(kwargs or {}))
+    # TODO(hanq): figure out why is dispatch mode not sufficient
+    if func == torch.ops._c10d_functional.wait_tensor.default:
+      return args[0]._env.dispatch(func, types, args, kwargs)
+    if func == torch.ops.prim.device.default:
+      return torch.device('privateuseone', 0)
+    raise AssertionError(
+        'torchax Tensors can only do math within the torchax environment.'
+        'Please wrap your code with `with torchax.default_env()` or '
+        'call torchax.enable_globally() before.')
 
   def detach(self):
     return Tensor(jax.lax.stop_gradient(self.jax()), self._env)
@@ -143,11 +124,11 @@ class Tensor(torch.Tensor):
     return self._elem
 
   def torch(self) -> torch.Tensor:
-    return j2t(self.jax())
+    return self._env.j2t_copy(self.jax())
 
   @property
   def dtype(self):
-    return j2t_dtype(self._elem.dtype)
+    return mappings.j2t_dtype(self._elem.dtype)
 
   def dim(self):
     return self.ndim
@@ -162,7 +143,8 @@ class Tensor(torch.Tensor):
 
   @property
   def data(self):
-    logger.warn("In-place to .data modifications still results a copy on TPU")
+    logger.warning(
+        "In-place to .data modifications still results a copy on TPU")
     return self
 
   @data.setter
@@ -188,7 +170,7 @@ class Tensor(torch.Tensor):
 
 def debug_accuracy(func, args, kwargs, current_output):
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(
-      torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output))
+      torch.Tensor, lambda x: x.torch(), (args, kwargs, current_output))
 
   with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
     if "device" in kwargs_torch:
@@ -310,6 +292,41 @@ TENSOR_CONSTRUCTORS = {
     torch.as_tensor,
 }
 
+# TODO(wen): use existing types, either from torch or jax
+SUPPORTED_JAX_PLATFROM = ["cpu", "tpu"]
+
+
+class RuntimeProperty:
+  mesh: Any
+  prng: Any
+  autocast_dtype: Any
+
+  def __init__(self, mesh, prng, autocast_dtype):
+    self.mesh = mesh
+    self.prng = prng
+    self.autocast_dtype = autocast_dtype
+
+  def override(self, **kwargs):
+    return OverrideProperty(self, kwargs)
+
+  def get_and_rotate_prng_key(self):
+    old_key = self.prng
+    new_prng_key, next_key = jax.random.split(old_key)
+    self.prng = new_prng_key
+    return next_key
+
+
+class OverrideProperty(RuntimeProperty):
+
+  def __init__(self, parent, override):
+    self.parent = parent
+    self._override = dict(override)
+
+  def __getattr__(self, name):
+    if name in self._override:
+      return self._override[name]
+    return getattr(self.parent, name)
+
 
 class Environment(contextlib.ContextDecorator):
   """This class holds a set of configurations and "globals" needed
@@ -330,48 +347,75 @@ class Environment(contextlib.ContextDecorator):
 
     # name is torch callable
     self._ops = {}
+    self._decomps = {}
+
     self.load_ops()
 
-    self._mesh = None
+    _mesh = None
     self.config = configuration or config.Configuration()
 
-    self._manually_entered = False
     self.enabled = False
-    self._jax_devices = set(["jax", "jax_cpu", "xla"])
-    self.prng_key = jax.random.key(torch.initial_seed() % (1 << 63))
+
+    autocast_dtype = None
+
+    _prng_key = jax.random.key(torch.initial_seed() % (1 << 63))
+    self._property = threading.local()
+    self._property.content = [
+        RuntimeProperty(
+            mesh=_mesh, prng=_prng_key, autocast_dtype=autocast_dtype)
+    ]
+
+  @property
+  def param(self):
+    return self._property.content[-1]
 
   def manual_seed(self, key):
-    self.prng_key = jax.random.key(key)
+    jax_key = jax.random.PRNGKey(key)
+    new_prop = self.param.override(prng=jax_key)
+    self._property.content.append(new_prop)
 
-  def get_as_jax_device(self, device: Any):
+  @property
+  def prng_key(self):
+    return self.param.prng
+
+  def _should_use_torchax_tensor(self, device):
     if device is None:
       device = torch.get_default_device()
 
     if isinstance(device, torch.device):
-      device = str(device)
+      device = device.type
 
-    if not self.config.use_torch_native_for_cpu_tensor and device.startswith(
-        "cpu"):
-      return jax.devices("cpu")[0]
+    if ':' in device:
+      device = device.split(':')[0]
 
-    if self.config.treat_cuda_as_jax_device and device.startswith("cuda"):
-      return jax.local_devices()[0]
-
-    if device.startswith("jax") or device.startswith("xla"):
-      return jax.local_devices()[0]
-
-    return None  # fallback to torch
+    match device:
+      case 'cpu':
+        return False
+      case 'cuda':
+        return self.config.treat_cuda_as_jax_device
+      case 'jax':
+        return True
+      case 'privateuseone':
+        return True
+      case 'meta':
+        return self.enabled
+    return False
 
   def load_ops(self):
     from torchax.ops import jaten, jtorch, jc10d, jtorchvision_nms
 
-    self._ops.update(ops_registry.all_aten_ops)
-    self._ops.update(ops_registry.all_torch_functions)
+    for k, v in itertools.chain(ops_registry.all_aten_ops.items(),
+                                ops_registry.all_torch_functions.items()):
+      if v.is_jax_function:
+        self._ops[k] = v
+      else:
+        self._decomps[k] = v
+
     from torchax.decompositions import DECOMPOSITIONS, MUTABLE_DECOMPOSITION
 
     for k, v in DECOMPOSITIONS.items():
-      if k not in self._ops:
-        self._ops[k] = ops_registry.Operator(
+      if k not in self._decomps:
+        self._decomps[k] = ops_registry.Operator(
             k,
             v,
             is_jax_function=False,
@@ -380,60 +424,83 @@ class Environment(contextlib.ContextDecorator):
             is_view_op=k in MUTABLE_DECOMPOSITION,
         )
 
+  def _get_op_or_decomp(self, func):
+
+    def _get_from_dict(op_dict, op):
+      op = op_dict.get(func)
+      if op is None and isinstance(func, torch._ops.OpOverloadPacket):
+        op = op_dict.get(func.default)
+      if op is None and isinstance(func, torch._ops.OpOverload):
+        op = op_dict.get(func.overloadpacket)
+      return op
+
+    op = _get_from_dict(self._ops, func)
+
+    if op is None:
+      # fallback to decompose
+      op = _get_from_dict(self._decomps, func)
+
+    if op is None:
+      raise OperatorNotFound(
+          f"Operator with name {_name_of_func(func)} has no lowering")
+
+    return op
+
+  def _is_same_device(self, the_tensor, new_device):
+    if new_device is None:
+      return True
+    if new_device == 'meta' and the_tensor.device.type == 'jax':
+      return True
+    if the_tensor.device.type != new_device:
+      if the_tensor.device.type == 'cuda':
+        return self.config.treat_cuda_as_jax_device
+      return False
+    return True
+
   def _to_copy(self, the_tensor, new_dtype, new_device):
-    if isinstance(the_tensor, Tensor):
-      arr = the_tensor.jax()
-      if new_dtype is not None and new_dtype != arr.dtype:
-        arr = arr.astype(mappings.t2j_dtype(new_dtype))
-      if new_device is not None:
-        # convert xla tensor to other device
-        # only supported is CPU
-        if str(new_device).startswith("cpu"):
-          # converting to a non-jax device: let torch native handle it
-          torch_tensor = j2t(arr) if isinstance(the_tensor, Tensor) else arr
-          with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-            return torch_tensor.to(new_device)
-    else:
-      if new_dtype is not None and new_dtype != the_tensor.dtype:
+    if isinstance(the_tensor, View):
+      the_tensor = the_tensor.torch()
+    if isinstance(new_device, torch.device):
+      new_device = new_device.type
+    res = the_tensor
+    if not self._is_same_device(the_tensor, new_device):
+      if isinstance(the_tensor, Tensor):
+        torch_tensor = self.j2t_copy(the_tensor._elem)
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-          the_tensor = the_tensor.to(new_dtype)
-      jax_device = self.get_as_jax_device(new_device)
-      if jax_device:
-        arr = t2j(the_tensor)
-        arr = jax.device_put(arr, jax_device)
+          return torch_tensor.to(device=new_device, dtype=new_dtype)
+      else:
+        arr = self.t2j_copy(the_tensor)
+        res = Tensor(arr, self, the_tensor.requires_grad)
+
+    if new_dtype is not None and new_dtype != the_tensor.dtype:
+      if isinstance(the_tensor, Tensor):
+        res = res.apply_jax(jnp.astype, mappings.t2j_dtype(new_dtype))
       else:
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-          return the_tensor.to(new_device)
-
-    return Tensor(arr, self)
+          return the_tensor.to(device=new_device, dtype=new_dtype)
+    return res
 
   def get_and_rotate_prng_key(self,
                               generator: Optional[torch.Generator] = None):
     if generator is not None:
-      with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-        self.prng_key = jax.random.key(generator.initial_seed() % (2**63))
-    self.prng_key, next_key = jax.random.split(self.prng_key)
-    return next_key
+      return jax.random.PRNGKey(generator.initial_seed() % (2**63))
+    return self.param.get_and_rotate_prng_key()
 
   def _handle_tensor_constructor(self, func, args, kwargs):
     device = kwargs.get("device")
-    jax_device = self.get_as_jax_device(device)
-    # TODO(qihqi) figure out better ways for device propagation
-    if not self._manually_entered and jax_device is None:
-      # let torch handle it
-      with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-        return func(*args, **kwargs)
-    with jax.default_device(jax_device):
+    if self._should_use_torchax_tensor(device):
+      # don't set default device, let caller set it
       requires_grad = kwargs.get("requires_grad", False)
-      op = self._ops.get(func)
-      if op is None and isinstance(func, torch._ops.OpOverload):
-        op = self._ops.get(func.overloadpacket)
+      op = self._get_op_or_decomp(func)
+      if op.needs_env:
+        kwargs['env'] = self
       res = op.func(*args, **kwargs)
       if isinstance(res, jax.Array):
-        res = Tensor(res, self)
-      if requires_grad:
-        res.requires_grad = True
+        res = Tensor(res, self, requires_grad)
       return res
+    else:
+      with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+        return func(*args, **kwargs)
 
   def _torch_Tensor_to(self, args, kwargs):
     the_tensor = args[0]
@@ -482,46 +549,51 @@ class Environment(contextlib.ContextDecorator):
       return res
 
     with jax.named_scope(_name_of_func(func)):
-      op = self._ops.get(func)
-
-      if op is None and isinstance(func, torch._ops.OpOverloadPacket):
-        op = self._ops.get(func.default)
-
-      if op is None and isinstance(func, torch._ops.OpOverload):
-        op = self._ops.get(func.overloadpacket)
-
-      if op is None:
-        raise OperatorNotFound(
-            f"Operator with name {_name_of_func(func)} has no lowering")
+      op = self._get_op_or_decomp(func)
 
       old_args, old_kwargs = args, kwargs
-      args, kwargs = torch_pytree.tree_map_only(
-          torch.distributed._functional_collectives.AsyncCollectiveTensor,
-          torch.distributed._functional_collectives.wait_tensor,
-          (args, kwargs),
-      )
-      if not op.is_view_op:
-        args, kwargs = self.v2t_iso((args, kwargs))
+      with self._dispatch_mode:
+        args, kwargs = torch_pytree.tree_map_only(
+            torch.distributed._functional_collectives.AsyncCollectiveTensor,
+            torch.distributed._functional_collectives.wait_tensor,
+            (args, kwargs),
+        )
 
       try:
+        if not op.is_view_op:
+          args, kwargs = self.v2t_iso((args, kwargs))
+
+        with self:
+          if self.param.autocast_dtype is not None:
+            autocast_policy = amp.autocast_policy.get(func)
+            if autocast_policy is not None:
+              args, kwargs = amp.execute_policy(autocast_policy, args, kwargs,
+                                                self.param.autocast_dtype)
+
         if op.is_jax_function:
           args, kwargs = self.t2j_iso((args, kwargs))
       except AssertionError:
         if self.config.debug_mixed_tensor:
-          import pdb
-
-          pdb.set_trace()
+          breakpoint()
         else:
           raise
 
       if op.needs_env:
         kwargs["env"] = self
 
-      with self:
+      if op.is_jax_function:
         res = op.func(*args, **kwargs)
+      else:
+        # enable dispatch mode because this op could be a composite autograd op
+        # meaning, it will decompose in C++
+        with self._dispatch_mode:
+          res = op.func(*args, **kwargs)
 
       if op.is_jax_function:
         res = self.j2t_iso(res)
+
+      if self.config.force_materialize_views and isinstance(res, View):
+        res = res.torch()
 
       if self.config.debug_accuracy_for_each_op:
         debug_accuracy(func, old_args, old_kwargs, res)
@@ -541,11 +613,9 @@ class Environment(contextlib.ContextDecorator):
 
   def __enter__(self):
     self.enable_torch_modes()
-    self._manually_entered = True
     return self
 
   def __exit__(self, *exc):
-    self._manually_entered = False
     self.disable_torch_modes(*exc)
 
   def _move_one_value(self, val):
@@ -555,7 +625,7 @@ class Environment(contextlib.ContextDecorator):
     if isinstance(val, Tensor):
       return val
     if isinstance(val, torch.Tensor):
-      return Tensor(t2j(val), self)
+      return Tensor(self.t2j_copy(val), self)
     return val
 
   def to_xla(self, torchvalues):
@@ -564,8 +634,17 @@ class Environment(contextlib.ContextDecorator):
     return res
 
   def t2j_iso(self, torchtensors):
+    """Convert torchax Tensor to jax array.
+    
+    This function will not copy, will just unwrap the inner jax array out.
+    Note: iso is short for "isomorphic"
+    """
 
     def to_jax(x):
+      if self.config.allow_mixed_math_with_scalar_tensor and not isinstance(
+          x, Tensor):
+        if x.squeeze().ndim == 0:
+          return x.item()
       if isinstance(
           x, torch.distributed._functional_collectives.AsyncCollectiveTensor):
         x = x.wait()
@@ -588,11 +667,33 @@ class Environment(contextlib.ContextDecorator):
     return res
 
   def j2t_iso(self, jaxarray):
-    return torch_pytree.tree_map_only(jnp.ndarray, lambda x: Tensor(x, self),
+    """Convert jax array to torchax Tensor.
+    
+    This function will not copy, will just wrap the jax array with a torchax Tensor
+    Note: iso is short for "isomorphic"
+    """
+    return torch_pytree.tree_map_only(jax.Array, lambda x: Tensor(x, self),
                                       jaxarray)
 
   def j2t_copy(self, args):
-    pass
+    """Convert torch.Tensor in cpu to a jax array
+    
+    This might involves copying the data (depending if dlpack is enabled)
+    """
+    return torch_pytree.tree_map_only(
+        jax.Array,
+        lambda x: mappings.j2t(x, self.config.use_dlpack_for_data_conversion),
+        args)
+
+  def t2j_copy(self, args):
+    """Convert jax array to torch.Tensor in cpu.
+    
+    This might involves copying the data (depending if dlpack is enabled)
+    """
+    return torch_pytree.tree_map_only(
+        torch.Tensor,
+        lambda x: mappings.t2j(x, self.config.use_dlpack_for_data_conversion),
+        args)
 
   def override_op_definition(self, op_to_override, op_impl):
     self._ops[op_to_override] = ops_registry.Operator(
@@ -602,3 +703,10 @@ class Environment(contextlib.ContextDecorator):
         is_user_defined=True,
         needs_env=False,
     )
+
+  @contextlib.contextmanager
+  def override_property(self, **kwargs):
+    new_prop = self.param.override(**kwargs)
+    self._property.content.append(new_prop)
+    yield
+    self._property.content.pop()

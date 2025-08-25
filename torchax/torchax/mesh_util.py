@@ -199,7 +199,8 @@ class Mesh:
     }
 
     def model_initializer():
-      model = model_class(*init_args, **init_kwargs)
+      with torchax.default_env(), torch.device('meta'):
+        model = model_class(*init_args, **init_kwargs)
       return dict(model.state_dict())
 
     jitted = interop.jax_jit(
@@ -208,3 +209,12 @@ class Mesh:
 
     model.load_state_dict(weights_dict, assign=True)
     return model
+
+  def shard_model(self, model, override_sharder=None):
+    sharder = override_sharder or self._sharder
+    states = model.state_dict()
+    output_shards = {
+        name: NamedSharding(self.jax_mesh, sharder(name, tensor))
+        for name, tensor in states.items()
+    }
+    model.load_state_dict(output_shards, assign=True)

@@ -25,9 +25,18 @@ namespace torch_xla {
 namespace runtime {
 
 class PjRtComputationClient : public ComputationClient {
+ private:
+  // Private struct for making the constructor private, but still callable
+  // as: `std::make_unique<PjRtComputationClient>(PrivateUse())`.
+  struct PrivateUse {
+    // Constructor needs to be explicit for disallowing implicit construction
+    // from `{}`.
+    explicit PrivateUse() = default;
+  };
+
  public:
-  PjRtComputationClient();
-  ~PjRtComputationClient();
+  PjRtComputationClient(PrivateUse);
+  ~PjRtComputationClient() override;
 
   DataPtr CreateDataPlaceholder(
       std::string device, xla::Shape shape,
@@ -56,7 +65,7 @@ class PjRtComputationClient : public ComputationClient {
       absl::Span<const DataPtr> handles,
       absl::Span<const xla::OpSharding> shardings) override;
 
-  std::vector<xla::Literal> TransferFromDevice(
+  absl::StatusOr<std::vector<xla::Literal>> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
 
   std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;
@@ -76,15 +85,17 @@ class PjRtComputationClient : public ComputationClient {
 
   ComputationPtr DeserializeComputation(const std::string& serialized) override;
 
-  std::vector<DataPtr> ExecuteComputation(
+  absl::StatusOr<std::vector<DataPtr>> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
       const std::string& device,
       const ExecuteComputationOptions& options) override;
 
-  std::vector<DataPtr> ExecuteReplicated(
+  absl::StatusOr<std::vector<DataPtr>> ExecuteReplicated(
       const Computation& computation, absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
+
+  size_t GetNumLocalDevices() const override;
 
   size_t GetNumDevices() const override;
 
@@ -121,6 +132,8 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
+
+  std::string_view GetPlatformVersion() const override;
 
   torch::lazy::hash_t HashCompilationEnv() override;
 
@@ -161,7 +174,23 @@ class PjRtComputationClient : public ComputationClient {
   void OnReadyCallback(DataPtr data,
                        const std::function<void()>& callback) override;
 
+  // Creates a new instance of PjRtComputationClient and initializes it.
+  static absl::StatusOr<absl_nonnull std::unique_ptr<PjRtComputationClient>>
+  Create();
+
  private:
+  friend class PjRtComputationClientTest;
+
+  // If `function` is not nullptr, makes the client call it instead of the real
+  // XLA compiler when compiling. Used for injecting fault for testing.
+  void FakeXlaCompileForTesting(std::function<absl::Status()> function) {
+    fake_xla_compile_ = std::move(function);
+  }
+
+  // Convenience function called by `Create()` that initializes the current
+  // PjRtComputationClient.
+  absl::Status Initialize();
+
   std::unique_ptr<xla::PjRtClient> client_;
   std::unique_ptr<XlaCoordinator> coordinator_;
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's
@@ -173,6 +202,10 @@ class PjRtComputationClient : public ComputationClient {
   tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(
       tsl::Env::Default(), "pjrt", std::thread::hardware_concurrency());
   torch::lazy::hash_t comp_env_hash_;
+
+  // If not nullptr, invoke this instead of the actual XLA compilation. Used
+  // only for testing.
+  std::function<absl::Status()> fake_xla_compile_ = nullptr;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 

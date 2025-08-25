@@ -241,7 +241,7 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  device = xm.xla_device()
+  device = torch_xla.device()
   model = get_model_property('model_fn')()
   # Automatic wrapping sub-modules with inner FSDP
   auto_wrap_policy = None

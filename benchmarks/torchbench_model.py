@@ -373,6 +373,10 @@ class TorchBenchModel(BenchmarkModel):
     return self.benchmark_experiment.accelerator == "tpu"
 
   def use_amp(self):
+    # AMP is only supported on cuda and tpu, not on cpu.
+    if self.benchmark_experiment.accelerator == "cpu":
+      logger.warning("AMP is not used due to running on CPU.")
+      return False
     return self.is_training() or self.model_name in config(
     ).dtype.force_amp_for_fp16_bf16_models
 

@@ -77,7 +77,7 @@ bool UseOpenXLAFallbackOnCUDA(const c10::OperatorHandle& op) {
   //      support running OpenXLA fallback operations on CUDA if the current
   //      PyTorch/XLA DeviceType is not CUDA.
   bool device_is_cuda =
-      runtime::GetComputationClient()->GetDeviceType().getType() ==
+      runtime::GetComputationClientOrDie()->GetDeviceType().getType() ==
       XlaDeviceType::CUDA;
 
   //   3. PyTorch must have been compiled with CUDA support. Otherwise, our
@@ -137,7 +137,7 @@ static bool validate_tensor_list(const c10::List<at::Tensor>& tensorlist) {
 
 // Retrieve the inner XLATensorPtr, and check it lives inside CUDA.
 static XLATensorPtr get_xla_cuda_tensor(const at::Tensor& tensor) {
-  XLATensorPtr xla_tensor = bridge::GetXlaTensor(tensor);
+  XLATensorPtr xla_tensor = GetValueOrThrow(bridge::GetXlaTensor(tensor));
   const torch::lazy::BackendDevice& device = xla_tensor->GetDevice();
   TORCH_CHECK(device.type() == static_cast<int8_t>(XlaDeviceType::CUDA),
               "OpenXLA CUDA fallback only supports XLA:CUDA tensors. Found a "

@@ -11,6 +11,7 @@ import torch.nn as nn
 from torch.distributed import DeviceMesh
 from torch.distributed.tensor.placement_types import Placement, Replicate
 
+import torch_xla
 import torch_xla.core.xla_model as xm  # type:ignore[import]  # noqa: F401
 import torch_xla.runtime as xr  # type:ignore[import]
 from torch_xla.distributed.spmd import (  # type:ignore[import]
@@ -215,10 +216,10 @@ def xla_distribute_module(
   if partition_fn:
     if getattr(partition_fn, '__name__', 'unknown') == "auto_policy":
       # TODO(yeounoh) allow pre-loading to xla device in the future.
-      assert next(module.parameters()).device != xm.xla_device(), \
+      assert next(module.parameters()).device != torch_xla.device(), \
         f"Currently requires module to be on cpu, before xla_distribute_module."
       xr.use_spmd(auto=True)
-      module = module.to(xm.xla_device())
+      module = module.to('xla')
     else:
       # apply partition_fun to submodules
       for name, submod in module.named_modules():

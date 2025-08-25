@@ -49,7 +49,7 @@ class DynamoInPlaceTest(parameterized.TestCase):
   def test_inplace_update_correctness(self, backend):
     dynamo_inplace = torch.compile(
         self.inplace_update, backend=backend, fullgraph=True)
-    t = torch.tensor([0, 1, 2], device=xm.xla_device())
+    t = torch.tensor([0, 1, 2], device='xla')
     for i in range(10):
       t = dynamo_inplace(t)
     self.assertTrue(torch.all(torch.eq(t.cpu(), torch.tensor([10, 11, 12]))))
@@ -66,7 +66,7 @@ class DynamRandomOpTest(parameterized.TestCase):
     met.clear_all()
     dynamo_random_op = torch.compile(
         self.random_op, backend=backend, fullgraph=True)
-    t = torch.randn(5, 5).to(xm.xla_device())
+    t = torch.randn(5, 5).to('xla')
     dynamo_res_1 = dynamo_random_op(t)
     dynamo_res_2 = dynamo_random_op(t)
     dynamo_res_3 = dynamo_random_op(t)
@@ -83,13 +83,13 @@ class DynamoLTCInteractionTest(parameterized.TestCase):
   def index_copy_inplace(self, cache, update_indices, xk):
     cache.index_copy_(0, update_indices, xk)
 
-  def test_mark_step_after_dynamo(self):
+  def test_sync_after_dynamo(self):
     cache_len = 512
     kv_heads = 8
     head_dim = 128
     running = 16
 
-    device = xm.xla_device()
+    device = torch_xla.device()
     cache = torch.rand((cache_len, kv_heads, head_dim)).to(device)
     update_indices = torch.randint(
         0, cache_len, (running,), dtype=torch.long).to(device)
@@ -102,8 +102,9 @@ class DynamoLTCInteractionTest(parameterized.TestCase):
       dynamo_index_copy_inplace(cache, update_indices, xk)
       xm.wait_device_ops()
       current_execute_time = met.metric_data('ExecuteTime')[0]
-      # This mark_step should be a no-op and don't trigger additional execution.
-      xm.mark_step()
+      # This `torch_xla.sync()` should be a no-op and don't trigger additional
+      # execution.
+      torch_xla.sync()
       xm.wait_device_ops()
       self.assertEqual(current_execute_time, met.metric_data('ExecuteTime')[0])
 
@@ -130,7 +131,7 @@ class DynamoProfilerTest(parameterized.TestCase):
   def test_dynamo_with_trace(self):
     dynamo_dummy = torch.compile(
         self.dummy_fn, backend="openxla", fullgraph=True)
-    t = torch.randn(2, 3, 4, device=xm.xla_device())
+    t = torch.randn(2, 3, 4, device='xla')
     for i in range(10):
       with xp.Trace('build_graph'):
         t = dynamo_dummy(t)
@@ -149,7 +150,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
 
   def _choose_proper_device(self, initialize_on_cuda):
     if not initialize_on_cuda:
-      return xm.xla_device()
+      return torch_xla.device()
 
     assert initialize_on_cuda
     if xr.device_type() != "CUDA" or not torch.cuda.is_available():
@@ -163,7 +164,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
 
   @skipOnNeuron
   def test_simple_model(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     x = torch.tensor(100.0)
     y = torch.tensor(200.0)
     xla_x = x.to(device)
@@ -325,7 +326,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     device = self._choose_proper_device(initialize_on_cuda)
     a = torch.randn(4, 4, 4, 4).to(device)
     b = torch.randn(4, 4, 4, 4).to(device)
-    xm.mark_step()
+    torch_xla.sync()
 
     dynamo_einsum_mm = torch.compile(einsum_mm, backend=backend)
     res_device_dynamo = dynamo_einsum_mm(a, b)
@@ -390,7 +391,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     device_resnet18.to(device)
     device_resnet18.eval()
     # materalize the fake data for test purpose
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
     dynamo_resnet18 = torch.compile(device_resnet18, backend=backend)
@@ -422,7 +423,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     xla_resnet18.eval()
     resnet18_base.to(device)
     # materalize the fake data for test purpose
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
     dynamo_resnet18 = torch.compile(xla_resnet18, backend='openxla')
@@ -447,7 +448,7 @@ class DynamoCpuFallbackTest(parameterized.TestCase):
 
     torch._dynamo.reset()
     met.clear_all()
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     # Initial tracing
     dynamo_fn = torch.compile(fn_fallback, backend="openxla")
@@ -487,7 +488,7 @@ class DynamoCpuFallbackTest(parameterized.TestCase):
 
     torch._dynamo.reset()
     met.clear_all()
-    device = xm.xla_device()
+    device = torch_xla.device()
 
     # Initial tracing
     dynamo_fn = torch.compile(fn_fallback, backend="openxla")
@@ -540,7 +541,7 @@ class DynamoTrainingBasicTest(parameterized.TestCase):
 
   def test_simple_model(self):
     torch._dynamo.reset()
-    device = xm.xla_device()
+    device = torch_xla.device()
     input = torch.randn(3, 5, requires_grad=True)
     xla_input = input.detach().to(device)
     xla_input.requires_grad = True
@@ -576,7 +577,7 @@ class DynamoTrainingBasicTest(parameterized.TestCase):
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
-    device = xm.xla_device()
+    device = torch_xla.device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
@@ -591,7 +592,7 @@ class DynamoTrainingBasicTest(parameterized.TestCase):
     xla_resnet18.to(device)
     xla_resnet18.train()
     # materalize the fake data
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
 
@@ -649,7 +650,7 @@ class DynamoTrainingOptimizerTest(parameterized.TestCase):
 
   def test_simple_model(self):
     torch._dynamo.reset()
-    device = xm.xla_device()
+    device = torch_xla.device()
     input = torch.randn(3, 5, requires_grad=True)
     saved_input = input.detach().to(device).cpu()
     xla_input = input.detach().to(device)
@@ -672,7 +673,7 @@ class DynamoTrainingOptimizerTest(parameterized.TestCase):
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
-    device = xm.xla_device()
+    device = torch_xla.device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
@@ -691,7 +692,7 @@ class DynamoTrainingOptimizerTest(parameterized.TestCase):
     optimizer = optim.SGD(resnet18.parameters(), lr=0.1, weight_decay=1e-2)
 
     # materalize the fake data
-    xm.mark_step()
+    torch_xla.sync()
     xm.wait_device_ops()
     met.clear_all()
 
@@ -731,7 +732,7 @@ class DynamoTrainingOptimizerTest(parameterized.TestCase):
 class DynamoErrorMessageTest(parameterized.TestCase):
 
   def test_mixed_cpu_tensor(self):
-    device = xm.xla_device()
+    device = torch_xla.device()
     input = torch.randn(4, 3, 224, 224)
     input_xla = input.clone().to(device)
     resnet18 = torchvision.models.resnet18()
@@ -763,7 +764,8 @@ class DynamoErrorMessageTest(parameterized.TestCase):
       res = dynamo_resnet18_cpu(input)
       # there should be 18 paramters + 1 input
       self.assertGreater(len(w), 15)
-      self.assertIn('Found tensor with shape torch.Size', str(w[0].message))
+      # TODO(gunhyun): revert back when mark_step deprecation is complete
+      self.assertIn('Found tensor with shape torch.Size', str(w[1].message))
     self.assertLessEqual(len(met.counter_names()), 1)
 
 
@@ -781,7 +783,7 @@ class DynamoOperationsTest(test_utils.XlaTestCase, parameterized.TestCase):
     optfoo = torch.compile(backend=backend)(foo)
 
     t = torch.arange(9)
-    Xt = t.to(xm.xla_device())
+    Xt = t.to('xla')
 
     expected = foo(t)
     actual = optfoo(Xt).cpu()
@@ -801,7 +803,7 @@ class DynamoOperationsTest(test_utils.XlaTestCase, parameterized.TestCase):
     optfoo = torch.compile(backend=backend)(foo)
 
     t = torch.arange(10)
-    Xt = t.to(xm.xla_device())
+    Xt = t.to('xla')
 
     expected = foo(t)
     actual = optfoo(Xt)

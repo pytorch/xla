@@ -8,7 +8,7 @@
   ],
   "containerEnv": {
     "BAZEL_REMOTE_CACHE": "1",
-    "SILO_NAME": "cache-silo-${localEnv:USER}-tpuvm"
+    "SILO_NAME": "cache-silo-${localEnv:USER}-tpuvm-312"
   },
   "initializeCommand": "docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu",
   "customizations": {

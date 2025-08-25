@@ -21,7 +21,7 @@ pip:
       - oauth2client
       - pyyaml
       - requests
-      - setuptools
+      - setuptools>=80.0.0
       - six
       - tensorboard
       - tensorboardX
@@ -44,7 +44,7 @@ pip:
       - mkl-include
 
     release_tpu:
-      - torch_xla[tpu]
+      - libtpu
 
   # Packages that will be installed with the `--nodeps` flag.
   pkgs_nodeps:

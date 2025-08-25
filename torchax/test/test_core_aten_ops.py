@@ -4,7 +4,7 @@ import unittest
 import torch
 from torchax import tensor
 
-from . import test_base
+from . import base_test_util
 from torch.utils import _pytree as pytree
 
 
@@ -90,11 +90,6 @@ class TestCoreAtenOps(unittest.TestCase):
     super().setUp()
     torch.manual_seed(0)
     self.env = tensor.Environment()
-    self.old_var = self.env.config.use_torch_native_for_cpu_tensor
-    self.env.config.use_torch_native_for_cpu_tensor = False
-
-  def tearDown(self):
-    self.env.config.use_torch_native_for_cpu_tensor = self.old_var
 
   def test_aten_abs_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
@@ -4524,6 +4519,16 @@ class TestCoreAtenOps(unittest.TestCase):
         rtol=1e-2,
         check_dtype=True)
 
+  def test_aten_copy_different_device(self):
+    cpu_tensor = torch.tensor([1, 2, 3])
+
+    with self.env:
+      xla_tensor = torch.tensor([0, 0, 0], device='jax')
+      xla_tensor.copy_(cpu_tensor)
+      self.assertEqual(xla_tensor.tolist(), cpu_tensor.tolist())
+      self.assertIsInstance(xla_tensor, tensor.Tensor)
+      self.assertEqual(xla_tensor.device.type, 'jax')
+
 
 if __name__ == "__main__":
-  test_base.main()
+  base_test_util.main()

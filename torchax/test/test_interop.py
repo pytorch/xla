@@ -4,6 +4,20 @@ import unittest
 import torchax
 from torchax import interop
 import torchax
+import jax
+import jax.numpy as jnp
+
+
+def is_tpu_available():
+  """Checks if any TPU devices are available to JAX."""
+  try:
+    # jax.devices('tpu') will return a list of TPU devices if available.
+    # If no TPUs are found or JAX is not configured for TPU,
+    # it will raise a RuntimeError.
+    tpu_devices = jax.devices('tpu')
+    return len(tpu_devices) > 0
+  except RuntimeError:
+    return False
 
 
 class InteropTest(unittest.TestCase):
@@ -115,6 +129,43 @@ class InteropTest(unittest.TestCase):
     actual = functional_forward(m_jitted.params, m_jitted.buffers, x)
     # assert
     torch.testing.assert_allclose(actual, expected)
+
+  def test_to_jax_device(self):
+    a = torch.ones(3, 3)
+
+    if is_tpu_available():
+      # by default if tpu is available, to jax will be to tpu
+      e = a.to("jax")
+      self.assertEqual(e.jax_device.platform, "tpu")
+      self.assertEqual(e.device.type, "jax")
+    else:
+      e = a.to("jax")
+      self.assertEqual(e.jax_device.platform, "cpu")
+      self.assertEqual(e.device.type, "jax")
+
+    with jax.default_device(jax.devices("cpu")[0]):
+      # move torch.tensor to torchax.tensor CPU
+      b = a.to("jax")
+      self.assertEqual(b.jax_device.platform, "cpu")
+      self.assertEqual(b.device.type, "jax")
+
+    if is_tpu_available():
+      # move torch.tensor to torchax.tensor TPU
+      with jax.default_device(jax.local_devices("tpu")[0]):
+        c = a.to("jax")
+        self.assertEqual(c.jax_device.platform, "tpu")
+        self.assertEqual(c.device.type, "jax")
+
+  def test_torch_jax_view_dtype(self):
+    dtype = torch.float32
+    self.assertEqual(interop.jax_view(dtype), jnp.float32.dtype)
+    self.assertEqual(interop.torch_view(interop.jax_view(dtype)), dtype)
+    dtype = torch.bfloat16
+    self.assertEqual(interop.jax_view(dtype), jnp.bfloat16.dtype)
+    self.assertEqual(interop.torch_view(interop.jax_view(dtype)), dtype)
+    dtype = torch.int32
+    self.assertEqual(interop.jax_view(dtype), jnp.int32.dtype)
+    self.assertEqual(interop.torch_view(interop.jax_view(dtype)), dtype)
 
 
 if __name__ == '__main__':

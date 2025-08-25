@@ -131,7 +131,7 @@ _try_register(aten.rand_like, rand_like)
 
 
 def bernoulli_float(self, p=0.5):
-  return self.bernoulli_(torch.tensor(p))
+  return self.bernoulli_(p)
 
 
 _try_register(aten.bernoulli_.float, bernoulli_float)
@@ -761,6 +761,13 @@ DECOMPOSITIONS = decomp.get_decompositions([
     torch.ops.aten._chunk_cat.out,
     torch.ops.aten._weight_norm_interface.default,
     torch.ops.aten._weight_norm_interface.out,
+    torch.ops.aten.__iand__.Tensor,
+    torch.ops.aten.__ixor__.Tensor,
+    torch.ops.aten.__ilshift__.Tensor,
+    torch.ops.aten.__ilshift__.Scalar,
+    torch.ops.aten.__irshift__.Tensor,
+    torch.ops.aten.__irshift__.Scalar,
+    torch.ops.aten.__ior__.Tensor,
 ])
 
 MUTABLE_DECOMPOSITION = [

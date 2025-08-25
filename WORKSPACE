@@ -46,7 +46,7 @@ new_local_repository(
 
 # To build PyTorch/XLA with a new revison of OpenXLA, update the xla_hash to
 # the openxla git commit hash and note the date of the commit.
-xla_hash = '37b580d0dd7b52e611430d33424159719e363ffc'  # Committed on 2025/5/13.
+xla_hash = '3d5ece64321630dade7ff733ae1353fc3c83d9cc'  # Committed on 2025-06-17.
 
 http_archive(
     name = "xla",
@@ -94,6 +94,8 @@ python_init_repositories(
         "3.9": "//:requirements_lock_3_9.txt",
         "3.10": "//:requirements_lock_3_10.txt",
         "3.11": "//:requirements_lock_3_11.txt",
+        "3.12": "//:requirements_lock_3_12.txt",
+        "3.13": "//:requirements_lock_3_13.txt"
     },
     local_wheel_workspaces = ["@torch//:WORKSPACE"],
     default_python_version = "system",

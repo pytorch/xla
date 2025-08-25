@@ -29,7 +29,7 @@ class BaseBench(object):
 
   def __init__(self, args):
     self.args = args
-    self.device = xm.xla_device()
+    self.device = torch_xla.device()
     self.test_time = xu.getenv_as('BENCH_TEST_TIME', float, 5.0)
     torch.manual_seed(42)
 

@@ -6,9 +6,9 @@ import os
 import torch
 from torch.utils import _pytree as pytree
 from torchax import tensor
-from torchax import distributed  # noqa: F401
+from contextlib import contextmanager
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 VERSION = __version__
 
 __all__ = [
@@ -43,15 +43,17 @@ def extract_jax(mod: torch.nn.Module, env=None):
   """Returns a pytree of jax.ndarray and a jax callable."""
   if env is None:
     env = default_env()
-  states = mod.state_dict()
+  states = dict(mod.named_buffers())
+  states.update(mod.named_parameters())
 
-  states = pytree.tree_map_only(torch.Tensor, tensor.t2j, states)
+  states = env.t2j_copy(states)
 
   #@jax.jit
-  def jax_func(states, inputs):
-    (states, inputs) = env.j2t_iso((states, inputs))
+  def jax_func(states, args, kwargs=None):
+    (states, args, kwargs) = env.j2t_iso((states, args, kwargs))
     with env:
-      res = torch.func.functional_call(mod, states, inputs, tie_weights=False)
+      res = torch.func.functional_call(
+          mod, states, args, kwargs, tie_weights=False)
     return env.t2j_iso(res)
 
   return states, jax_func
@@ -79,11 +81,6 @@ def disable_temporarily():
 
 torch.utils.rename_privateuse1_backend('jax')
 unsupported_dtype = [torch.quint8]
-torch.utils.generate_methods_for_privateuse1_backend(
-    for_tensor=True,
-    for_module=True,
-    for_storage=True,
-    unsupported_dtype=unsupported_dtype)
 
 import jax
 import torchax.device_module

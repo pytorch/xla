@@ -13,27 +13,40 @@ from typing import Callable, Optional, ParamSpec, Concatenate
 
 class InplaceOp:
 
-  def __init__(self, functional_op, replace=False, position_to_mutate=0):
+  def __init__(self,
+               functional_op,
+               replace=False,
+               position_to_mutate=0,
+               is_jax_func=False):
     self.functional = functional_op
     self.replace = replace
     self.position_to_mutate = position_to_mutate
+    self.is_jax_func = is_jax_func
 
   def __call__(self, *args, **kwargs):
-    to_mutate = args[0]
+    to_mutate = args[self.position_to_mutate]
+    view_value = to_mutate
     if isinstance(to_mutate, View):
       view_value = to_mutate.torch()
       # Convert the target View to a Tensor, and
       # leave the rest args as is. If other args are
       # also View, they will be converted to tensors
       # in the self.functional dispatch.
+    env = view_value._env
+    if self.is_jax_func:
+      view_value, args, kwargs = env.t2j_iso((view_value, args, kwargs))
+      new_value_jax = self.functional(view_value, *args[1:], **kwargs)
+      new_value = env.j2t_iso(new_value_jax)
+    else:
       new_value = self.functional(view_value, *args[1:], **kwargs)
+
+    if isinstance(to_mutate, View):
       to_mutate.update(new_value)
-      return to_mutate
     else:
       if self.replace:
-        to_mutate._elem = self.functional(*args, **kwargs)._elem
+        to_mutate._elem = new_value._elem
       else:
-        to_mutate.copy_(self.functional(*args, **kwargs))
+        to_mutate.copy_(new_value)
     return to_mutate
 
 

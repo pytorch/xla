@@ -50,7 +50,7 @@ class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
     # Return a sharded SimpleLinear model with fc1.weight sharded and
     # fc2.weight explicitly replicated
     mesh_shape = mesh_shape or (1, self.n_devices)
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to('xla')
     mesh = self._get_mesh(mesh_shape)
     xs.mark_sharding(model.fc1.weight, mesh, (0, 1))
     xs.mark_sharding(model.fc2.weight, mesh, (None, None))
@@ -76,7 +76,7 @@ class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
 
     if isinstance(sd1, torch.Tensor):
       assert sd1.device == sd2.device, f"Tensors on different devices at {keypath}: {sd1} vs {sd2}"
-      if sd1.device == xm.xla_device():
+      if sd1.device == torch_xla.device():
         sharding1 = torch_xla._XLAC._get_xla_sharding_spec(sd1)
         sharding2 = torch_xla._XLAC._get_xla_sharding_spec(sd2)
         assert sharding1 == sharding2, f"Different sharding on tensors at {keypath}: {sharding1} vs {sharding2}"
@@ -145,14 +145,14 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
   def test_resharding_unsharded_to_sharded(self):
     # Save an unsharded model using the DefaultSavePlanner and load into a
     # sharded model using the SPMDLoadPlanner
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to('xla')
     sharded_model = self._get_sharded_model()
     self._save_and_restore(model, sharded_model, load_planner=SPMDLoadPlanner())
 
   def test_resharding_sharded_to_unsharded(self):
     for chkpt_on_cpu in [True, False]:
       with self.subTest(chkpt_on_cpu):
-        model = self.SimpleLinear().to(xm.xla_device())
+        model = self.SimpleLinear().to('xla')
         sharded_model = self._get_sharded_model()
         self._save_and_restore(
             sharded_model,
@@ -338,7 +338,7 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
   def test_cpu_state_dict_flattening(self):
     # In the case of a nested state_dict with fully sharded parameters,
     # _CpuShards should be treated as terminal nodes.
-    t = torch.randn(128, 128).to(xm.xla_device())
+    t = torch.randn(128, 128).to('xla')
     mesh = self._get_mesh((self.n_devices, 1))
     xs.mark_sharding(t, mesh, (0, 1))
     state_dict = _sharded_cpu_state_dict({'model': {'weight': t}})
@@ -395,7 +395,7 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
 class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
 
   def test_sharded_cpu_state_dict(self):
-    model = self.SimpleLinear().to(xm.xla_device())
+    model = self.SimpleLinear().to('xla')
     state_dict = model.state_dict()
     sharded_cpu_state_dict = _sharded_cpu_state_dict(state_dict)
     self.assertCountEqual(sharded_cpu_state_dict,
@@ -649,7 +649,7 @@ class OptimizerCheckpointTest(DistributedCheckpointTestBase):
     torch.manual_seed(42)
     model(torch.ones(10, 128).to('xla')).square().sum().backward()
     optim.step()
-    xm.mark_step()
+    torch_xla.sync()
 
   def _test_optimizer(self, tmpdir, optim_cls):
     model, optim = self._get_model_and_optimizer(optim_cls)

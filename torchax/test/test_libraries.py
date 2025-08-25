@@ -6,7 +6,6 @@ import torchax
 import torchax.export
 from torchax.ops import jaten
 from torchax.ops import jlibrary
-
 # Create a `mylib` library which has a basic SDPA op.
 m = Library("mylib", "DEF")
 m.define("scaled_dot_product_attention(Tensor q, Tensor k, Tensor v) -> Tensor")
@@ -55,7 +54,6 @@ class LibraryTest(unittest.TestCase):
 
   def setUp(self):
     torch.manual_seed(0)
-    torchax.default_env().config.use_torch_native_for_cpu_tensor = False
 
   def test_basic_sdpa_library(self):
 

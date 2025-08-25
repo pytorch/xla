@@ -12,6 +12,13 @@ torch_xla
 .. autofunction:: compile
 .. autofunction:: manual_seed
 
+backends
+----------------------------------
+.. automodule:: torch_xla.backends
+.. autofunction:: set_mat_mul_precision
+.. autofunction:: get_mat_mul_precision
+
+
 runtime
 ----------------------------------
 .. automodule:: torch_xla.runtime
