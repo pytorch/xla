@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitabf18e4 )
+                  master (2.9.0+git5522c69 )
                 </div>
               
             
@@ -1197,9 +1197,6 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
                        <span class="n">pairs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs a XLA `CollectivePermute()` operation on the input tensor.</span>
-
-<span class="sd">  WARNING: This function is not very reliable, may produce wrong results under</span>
-<span class="sd">           certain inputs. Use it at your own risk.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#collectivepermute</span>
 
