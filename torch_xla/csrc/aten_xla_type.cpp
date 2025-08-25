@@ -3122,7 +3122,7 @@ at::Tensor& XLANativeFunctions::random_(
                                                                      generator);
   }
   XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  at::ScalarType dtype = self_tensor->dtype();
+  at::ScalarType dtype = xla_self->dtype();
 
   XLA_THROW_IF_ERROR(CheckValueWithinTypeRange("random_", "to", dtype, to - 1));
   XLA_THROW_IF_ERROR(tensor_methods::random_(xla_self, 0, to));
@@ -4135,8 +4135,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
   if (!compute_uv) {
     // When compute_uv is false, torch::_linalg_svd returns an empty tensor for
     // u and vh.
-    XLA_ASSIGN_OR_THROW(u, tensor_methods::full({0}, 0, xla_self->GetDevice(), xla_self->dtype());
-    XLA_ASSIGN_OR_THROW(vh, tensor_methods::full({0}, 0, xla_self->GetDevice(), xla_self->dtype());
+    XLA_ASSIGN_OR_THROW(u, tensor_methods::full({0}, 0, xla_self->GetDevice(),
+                                                xla_self->dtype()));
+    XLA_ASSIGN_OR_THROW(vh, tensor_methods::full({0}, 0, xla_self->GetDevice(),
+                                                 xla_self->dtype()));
   }
   return std::make_tuple(bridge::AtenFromXlaTensor(u),
                          bridge::AtenFromXlaTensor(s),
