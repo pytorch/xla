@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/runtime/profiler.h"
 
+#include <variant>
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
@@ -76,10 +78,23 @@ absl::Status Trace(
     int num_tracing_attempts,
     const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
         options) {
+  // by 20250815 Upstream CaptureRemoteTrace changed signature of options to
+  // include bool option. For backward compatibility we don't change signature
+  // of Trace, but instead we make an adaptor to adapt the new function
+  // signature.
+  absl::flat_hash_map<std::string, std::variant<bool, int, std::string>>
+      updated_options;
+  for (const auto& item : options) {
+    if (std::holds_alternative<int>(item.second)) {
+      updated_options[item.first] = std::get<int>(item.second);
+    } else {
+      updated_options[item.first] = std::get<std::string>(item.second);
+    }
+  }
   return tsl::profiler::CaptureRemoteTrace(
       service_addr, logdir, /*worker_list=*/"",
       /*include_dataset_ops=*/false, duration_ms, num_tracing_attempts,
-      options);
+      updated_options);
 }
 
 void RegisterProfilerForPlugin(const PJRT_Api* c_api) {

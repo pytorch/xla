@@ -46,22 +46,6 @@ cc_binary(
     ]),
 )
 
-cc_binary(
-    name = "_XLAC_cuda_functions.so",
-    copts = [
-        "-fopenmp",
-        "-fPIC",
-    ],
-    linkopts = [
-        "-Wl,-soname,_XLAC_cuda_functions.so",
-    ],
-    linkshared = 1,
-    visibility = ["//visibility:public"],
-    deps = [
-        "//torch_xla/csrc:aten_cuda_functions",
-    ],
-)
-
 test_suite(
     name = "cpp_tests",
     # testonly = True,
@@ -72,15 +56,16 @@ test_suite(
         "//test/cpp:test_aten_xla_tensor_4",
         "//test/cpp:test_aten_xla_tensor_5",
         "//test/cpp:test_aten_xla_tensor_6",
+        "//test/cpp:test_debug_macros",
         "//test/cpp:test_ir",
         "//test/cpp:test_lazy",
         "//test/cpp:test_replication",
-        "//test/cpp:test_tensor",
-        "//test/cpp:test_xla_sharding",
         "//test/cpp:test_runtime",
         "//test/cpp:test_status_dont_show_cpp_stacktraces",
         "//test/cpp:test_status_show_cpp_stacktraces",
-        "//test/cpp:test_debug_macros",
+        "//test/cpp:test_tensor",
+        "//test/cpp:test_xla_generator",
+        "//test/cpp:test_xla_sharding",
         "//torch_xla/csrc/runtime:pjrt_computation_client_test",
         # "//torch_xla/csrc/runtime:ifrt_computation_client_test",
     ],

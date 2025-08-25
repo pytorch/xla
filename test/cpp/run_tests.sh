@@ -78,9 +78,6 @@ if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
     EXTRA_FLAGS="$EXTRA_FLAGS --remote_default_exec_properties=cache-silo-key=$SILO_NAME"
   fi
 fi
-if [[ "$XLA_CUDA" == "1" ]]; then
-  EXTRA_FLAGS="$EXTRA_FLAGS --config=cuda"
-fi
 if [[ "$BAZEL_VERB" == "coverage" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --remote_download_outputs=all" # for lcov symlink
 fi
@@ -100,6 +97,7 @@ if [[ "$RUN_CPP_TESTS" == "cpp_tests" ]]; then
               # disable test_xla_backend_intf since it is flaky on upstream
               #"test_xla_backend_intf"
               "test_xla_sharding"
+              "test_xla_generator"
               "test_runtime"
               "test_status_dont_show_cpp_stacktraces"
               "test_status_show_cpp_stacktraces"

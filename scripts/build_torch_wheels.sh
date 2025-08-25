@@ -56,28 +56,6 @@ function install_cudnn {
   rm -f "$CUDNN_FILE"
 }
 
-function maybe_install_cuda {
-  if [ "$XLA_CUDA" == "1" ]; then
-    if [ ! -d "/usr/local/cuda" ]; then
-      local CUDA_VER="10.2"
-      local CUDA_SUBVER="89_440.33.01"
-      local CUDA_FILE="cuda_${CUDA_VER}.${CUDA_SUBVER}_linux.run"
-      wget "http://developer.download.nvidia.com/compute/cuda/${CUDA_VER}/Prod/local_installers/${CUDA_FILE}"
-      sudo sh "${CUDA_FILE}" --silent --toolkit
-      rm -f "${CUDA_FILE}"
-    fi
-    if [ ! -f "/usr/local/cuda/include/cudnn.h" ] && [ ! -f "/usr/include/cudnn.h" ]; then
-      install_cudnn
-    fi
-    export TF_CUDA_PATHS="/usr/local/cuda,/usr/include,/usr"
-    maybe_append 'export TF_CUDA_PATHS="/usr/local/cuda,/usr/include,/usr"' ~/.bashrc
-    if [ "$TF_CUDA_COMPUTE_CAPABILITIES" == "" ]; then
-      export TF_CUDA_COMPUTE_CAPABILITIES="7.0"
-    fi
-    maybe_append "export TF_CUDA_COMPUTE_CAPABILITIES=\"$TF_CUDA_COMPUTE_CAPABILITIES\"" ~/.bashrc
-  fi
-}
-
 function maybe_install_sources {
   if [[ $(uname -m) == "aarch64" && ! -d "$HOME/ComputeLibrary" ]]; then
     # install arm compute library
@@ -139,16 +117,15 @@ function install_llvm_clang() {
   sudo update-alternatives --install /usr/bin/clang++ clang++ $(which clang++-8) 70
 }
 
-function install_gcc10() {
-  sudo apt-get -y install gcc-10 g++-10
-  export CC=/usr/bin/gcc-10 export CXX=/usr/bin/g++-10
+function install_gcc() {
+  sudo apt-get -y install gcc-11 g++-11
+  export CC=/usr/bin/gcc-10 export CXX=/usr/bin/g++-11
   sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100
   sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
 }
 
 function install_req_packages() {
   sudo apt-get -y install python3-pip git curl libopenblas-dev vim apt-transport-https ca-certificates wget procps
-  maybe_install_cuda
   install_bazel
   install_ninja
 }
@@ -332,7 +309,7 @@ function main() {
   if [[ $(uname -m) == "x86_64" ]]; then
     install_llvm_clang
   elif [[ $(uname -m) == "aarch64" ]]; then
-    install_gcc10
+    install_gcc
   fi
   install_and_setup_conda
   build_and_install_torch

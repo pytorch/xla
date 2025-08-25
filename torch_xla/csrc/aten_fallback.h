@@ -1,7 +1,7 @@
-#ifndef XLA_TORCH_XLA_CSRC_ATEN_CPU_FALLBACK_H_
-#define XLA_TORCH_XLA_CSRC_ATEN_CPU_FALLBACK_H_
+#ifndef XLA_TORCH_XLA_CSRC_ATEN_FALLBACK_H_
+#define XLA_TORCH_XLA_CSRC_ATEN_FALLBACK_H_
 
-#include <ATen/native/CPUFallback.h>
+#include <ATen/core/stack.h>
 
 namespace torch_xla {
 
@@ -11,4 +11,4 @@ std::vector<std::string> GetFallbackOperations();
 
 }  // namespace torch_xla
 
-#endif  // XLA_TORCH_XLA_CSRC_ATEN_CPU_FALLBACK_H_
+#endif  // XLA_TORCH_XLA_CSRC_ATEN_FALLBACK_H_

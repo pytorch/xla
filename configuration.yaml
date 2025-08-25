@@ -4,7 +4,7 @@ variables:
     PJRT_DEVICE:
       description:
         - Indicates which device is being used with PJRT. It can be either CPU,
-          TPU, or CUDA
+          or TPU
       type: string
     PJRT_SELECT_DEFAULT_DEVICE:
       description:
@@ -36,11 +36,6 @@ variables:
         - Verbosity level for GRPC, e.g. INFO, ERROR, etc.
       type: string
       default_value: "ERROR"
-    XLA_CUDA:
-      description:
-        - Build the xla client with CUDA enabled.
-      type: bool
-      default_value: false
     GIT_VERSIONED_XLA_BUILD:
       description:
         - Creates a versioned build. In particular, appends a git sha to the
@@ -402,8 +397,3 @@ variables:
           your code.
       type: bool
       default_value: false
-    XLA_FALLBACK_CPU:
-      description:
-        - Forces CPU OpenXLA fallback. By default, PyTorch/XLA will run any operation
-          that doesn't have a lowering using PyTorch CUDA as fallback. Setting this
-          flag will force PyTorch/XLA to use PyTorch CPU as fallback.

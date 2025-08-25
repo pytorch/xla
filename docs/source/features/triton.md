@@ -49,8 +49,8 @@ block_size = 8
 grid = (triton.cdiv(size, block_size),)
 
 # triton_call takes the same arguments as the triton.jit function, in addition
-to the kernel itself and the grid that is used to execute the kernel.
-All the tl.constexpr terms are passed as kwargs at the end.
+# to the kernel itself and the grid that is used to execute the kernel.
+# All the tl.constexpr terms are passed as kwargs at the end.
 payload = xla_triton.triton_call(
     x, y, output, size, kernel=add_kernel, grid=grid, BLOCK_SIZE=block_size)
 
