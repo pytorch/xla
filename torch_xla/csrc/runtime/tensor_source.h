@@ -4,10 +4,13 @@
 #include <ATen/Tensor.h>
 #include <torch/csrc/lazy/core/metrics.h>
 
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/status.h"
 #include "xla/literal.h"
 #include "xla/shape.h"
 #include "xla/shape_util.h"
@@ -18,7 +21,7 @@ namespace runtime {
 // Owns a contiguous block of data with the shape and layout matching `shape()`.
 class TensorSource {
  public:
-  TensorSource(std::string device) : device_(std::move(device)){};
+  TensorSource(std::string device) : device_(std::move(device)) {}
 
   virtual const void* data() const = 0;
 
@@ -28,7 +31,7 @@ class TensorSource {
 
   virtual std::vector<int64_t> byte_strides() const {
     std::vector<int64_t> byte_strides(shape().dimensions_size());
-    XLA_CHECK_OK(
+    OkOrThrow(
         xla::ShapeUtil::ByteStrides(shape(), absl::MakeSpan(byte_strides)));
     return byte_strides;
   }

@@ -95,6 +95,7 @@ output = torch.ops.xla.paged_attention(
 )
 ```
 
+(pallas-integration-example)=
 #### Integration Example
 
 The vLLM TPU integration utilizes [PagedAttention

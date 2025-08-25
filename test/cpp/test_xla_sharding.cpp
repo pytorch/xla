@@ -14,6 +14,7 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -28,7 +29,7 @@ bool XlaDataValuesEqual(torch::lazy::BackendDataPtr a,
                         torch::lazy::BackendDataPtr b,
                         at::ScalarType element_type) {
   std::vector<at::Tensor> tensors =
-      XlaDataToTensors({a, b}, {element_type, element_type});
+      GetValueOrThrow(XlaDataToTensors({a, b}, {element_type, element_type}));
   return TensorCompare(tensors[0], tensors[1]);
 }
 }  // namespace
@@ -385,7 +386,7 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
   b.ClearSharding();
   auto y = xla::Add(x, xla::ConstantR0<float>(&b, 3));
   xla::XlaComputation xla_computation =
-      ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
+      GetValueOrThrow(b.Build(/*remove_dynamic_dimensions=*/false));
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(xla_computation),
                        bridge::GetDefaultDevice()->toString(),

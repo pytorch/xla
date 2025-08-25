@@ -140,6 +140,8 @@ def run_export_and_compare(testcase,
     with testcase.subTest("torchax_eval"):
       input2, args2, kwargs2 = testcase.env.to_xla(
           (sample_input.input, sample_input.args, sample_input.kwargs))
+      if 'device' in kwargs2:
+        kwargs2['device'] = 'jax'
       with testcase.env:
         res2 = func(input2, *args2, **kwargs2)
         res2 = pytree.tree_map_only(tensor.Tensor, lambda t: t.torch(), res2)
@@ -186,13 +188,8 @@ class TestOpInfo(TestCase):
     self.env = torchax.default_env()
     torchax.enable_accuracy_mode()
     #self.env.config.debug_accuracy_for_each_op = True
-    self.env.config.debug_print_each_op = True
+    self.env.config.debug_print_each_op = False
     torch.manual_seed(0)
-    self.old_var = self.env.config.use_torch_native_for_cpu_tensor
-    self.env.config.use_torch_native_for_cpu_tensor = False
-
-  def tearDown(self):
-    self.env.config.use_torch_native_for_cpu_tensor = self.old_var
 
   # Replaces all values in the input torch_tensor that are less than the given threshold
   # with the threshold value itself.

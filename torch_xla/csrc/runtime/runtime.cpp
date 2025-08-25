@@ -7,6 +7,7 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/ifrt_computation_client.h"
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
+#include "torch_xla/csrc/status.h"
 #include "tsl/platform/stacktrace_handler.h"
 
 namespace torch_xla::runtime {
@@ -18,10 +19,6 @@ static std::atomic<bool> g_computation_client_initialized(false);
 // Can only be called when g_computation_client_initialized is false.
 static absl::StatusOr<ComputationClient * absl_nonnull>
 InitializeComputationClient() {
-  ABSL_CHECK(!g_computation_client_initialized)
-      << "InitializeComputationClient() can only be called once.";
-  g_computation_client_initialized = true;
-
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
     tsl::testing::InstallStacktraceHandler();
   }
@@ -32,13 +29,24 @@ InitializeComputationClient() {
   // static bool use_ifrt = sys_util::GetEnvBool("XLA_USE_IFRT", false);
   const bool use_ifrt = false;
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") == "") {
-    return absl::FailedPreconditionError("$PJRT_DEVICE is not set.");
+    return XLA_ERROR_WITH_LOCATION(
+        absl::FailedPreconditionError("$PJRT_DEVICE is not set."));
   }
 
+  ABSL_CHECK(!g_computation_client_initialized)
+      << "ComputationClient can only be initialized once.";
+
+  std::unique_ptr<ComputationClient> client;
   if (use_ifrt) {
-    return new IfrtComputationClient();
+    XLA_ASSIGN_OR_RETURN(client, IfrtComputationClient::Create());
+  } else {
+    XLA_ASSIGN_OR_RETURN(client, PjRtComputationClient::Create());
   }
-  return new PjRtComputationClient();
+
+  // Set only if we actually successfully initialized a client.
+  g_computation_client_initialized = true;
+
+  return client.release();
 }
 
 const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient() {
@@ -53,7 +61,7 @@ const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient() {
 }
 
 ComputationClient* absl_nonnull GetComputationClientOrDie() {
-  return GetComputationClient().value();
+  return GetValueOrThrow(GetComputationClient());
 }
 
 ComputationClient* GetComputationClientIfInitialized() {

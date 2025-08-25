@@ -6,7 +6,7 @@ import torch_xla.runtime as xr
 from torch_xla._internal import rendezvous
 import logging
 import os
-from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions
+from torch._C._distributed_c10d import ProcessGroup, ScatterOptions, ReduceScatterOptions, AllgatherOptions, AllToAllOptions, ReduceOptions, GatherOptions
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
@@ -225,17 +225,46 @@ class ProcessGroupXla(ProcessGroup):
   def barrier(self, opts):
     return _ret_work([])
 
-  # Call site:
-  # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L1417
-  # `reduce` is not needed by DeepSpeed for now.
-  def reduce(self, *args):
-    raise NotImplementedError
+  # Called by torch.distributed.reduce. Call site example:
+  # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L2925
+  # Tensors are reduced but result is only saved on dst device.
+  # Input tensor is unchanged on all other devices.
+  # This is an inefficient operation. In order to avoid XLA deadlocks it
+  # performs redundant reductions on all devices and materializes the result.
+  def reduce(self, tensors: list[torch.Tensor], opts: ReduceOptions):
+    rank = xr.global_ordinal()
+    dst = opts.rootRank
+    reduce_type = self._get_reduce_type(opts.reduceOp)
+    for tensor in tensors:
+      result = xm.all_reduce(reduce_type, inputs=tensor)
+      torch_xla.sync()
+
+      if rank == dst:
+        tensor.copy_(result)
+
+    return _ret_work(tensors)
 
   def allreduce_coalesced(self, *args):
     raise NotImplementedError
 
-  def alltoall(self, *args):
-    raise NotImplementedError
+  # Called by torch.distributed.all_to_all. Call site example:
+  # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L4577
+  # The difference between this and all_to_all_single is that this works
+  #  on a list of tensors while all_to_all_single works on a single tensor
+  #  and splits/concats along dimension 0.
+  def alltoall(self, output_tensor_list: list[torch.Tensor],
+               input_tensor_list: list[torch.Tensor], opts: AllToAllOptions):
+    stacked_inputs = torch.stack(input_tensor_list, dim=0)
+    split_count = len(input_tensor_list)
+    stacked_results = xm.all_to_all(
+        stacked_inputs,
+        split_dimension=0,
+        concat_dimension=0,
+        split_count=split_count)
+    results = torch.chunk(stacked_results, split_count, dim=0)
+    for result, output_tensor in zip(results, output_tensor_list):
+      output_tensor.copy_(result.squeeze(dim=0))
+    return _ret_work(output_tensor_list)
 
   # handle the nondynamo path when call torch.distributed.all_to_all_single
   # call from https://github.com/pytorch/pytorch/blob/758d78790164bfb041555daed380de96e06f78a3/torch/distributed/distributed_c10d.py#L3996
@@ -251,8 +280,45 @@ class ProcessGroupXla(ProcessGroup):
     output.copy_(result)
     return _ret_work(output)
 
-  def gather(self, *args):
-    raise NotImplementedError
+  # Called by torch.distributed.gather. Call site example:
+  # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L4043
+  # Input tensors are gathered into list of output tensors on the dst device.
+  # Output tensors list is None for all non-dst devices.
+  # This is an inefficient operation. In order to avoid XLA deadlocks it
+  # performs redundant gathers on non-dst devices and materializes the result.
+  def gather(self, output_tensors_list: list[list[torch.Tensor]],
+             input_tensor_list: list[torch.Tensor], opts: GatherOptions):
+    rank = xr.global_ordinal()
+
+    for i, input_tensor in enumerate(input_tensor_list):
+      is_scalar = input_tensor.dim() == 0
+      input_for_all_gather = (
+          input_tensor.clone().reshape(1) if is_scalar else input_tensor)
+
+      gathered_tensor = xm.all_gather(
+          input_for_all_gather, dim=0, groups=self._mesh, pin_layout=False)
+
+      # Syncing is required to keep the heterogeneous copying below at the
+      # Python layer, avoiding deadlocks due to mismatched HLO.
+      torch_xla.sync()
+
+      if rank == opts.rootRank:
+        output_tensors = output_tensors_list[i]
+        if is_scalar:
+          for j in range(xr.world_size()):
+            output_tensors[j].copy_(gathered_tensor[j])
+        else:
+          chunk_size = input_tensor.shape[0]
+          gathered_chunks = torch.split(gathered_tensor, chunk_size, dim=0)
+          for j, chunk in enumerate(gathered_chunks):
+            if chunk.shape != output_tensors[j].shape:
+              chunk = chunk.reshape(output_tensors[j].shape)
+            output_tensors[j].copy_(chunk)
+
+    if rank == opts.rootRank:
+      return _ret_work(output_tensors_list)
+    else:
+      return _ret_work([[]])
 
   # Called by torch.distributed.scatter. Call site example:
   # https://github.com/pytorch/pytorch/blob/v2.7.1/torch/distributed/distributed_c10d.py#L4146

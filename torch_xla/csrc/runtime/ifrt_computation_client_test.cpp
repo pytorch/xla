@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
+#include "torch_xla/csrc/status.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/logging.h"
 #include "tsl/platform/statusor.h"
@@ -36,7 +36,7 @@ absl::StatusOr<xla::XlaComputation> MakeComputation() {
 TEST(PjRtComputationClientTest, Init) {
   // Get a CPU client.
   tsl::setenv("PJRT_DEVICE", "CPU", true);
-  auto client = std::make_unique<IfrtComputationClient>();
+  auto client = GetValueOrThrow(IfrtComputationClient::Create());
   std::string device = client->GetDefaultDevice();
 
   // Compose a computation.
@@ -64,13 +64,14 @@ TEST(PjRtComputationClientTest, Init) {
       std::make_shared<LiteralSource>(std::move(literal_y), device)};
 
   // Execute the graph.
-  std::vector<ComputationClient::DataPtr> results = client->ExecuteReplicated(
-      *computations[0], client->TransferToDevice(absl::MakeConstSpan(args)),
-      {device}, options);
+  std::vector<ComputationClient::DataPtr> results =
+      GetValueOrThrow(client->ExecuteReplicated(
+          *computations[0], client->TransferToDevice(absl::MakeConstSpan(args)),
+          {device}, options));
 
   // Copy the output from device back to host and assert correctness..
   ASSERT_EQ(results.size(), 1);
-  auto result_literals = client->TransferFromDevice(results);
+  auto result_literals = GetValueOrThrow(client->TransferFromDevice(results));
   ASSERT_THAT(result_literals, ::testing::SizeIs(1));
   EXPECT_TRUE(xla::LiteralTestUtil::Equal(
       xla::LiteralUtil::CreateR2<float>({{6.0f, 8.0f}, {10.0f, 12.0f}}),

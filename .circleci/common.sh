@@ -112,6 +112,8 @@ function build_torch_xla() {
   # Need to uncomment the line below.
   # Currently it fails upstream XLA CI.
   # pip install plugins/cuda -v
+  pip install --pre torch_xla[pallas] --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
+
   popd
 }
 

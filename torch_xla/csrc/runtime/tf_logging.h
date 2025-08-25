@@ -53,7 +53,7 @@ class ErrorGenerator {
 
 #define TF_CHECK(condition)              \
   while (TF_PREDICT_FALSE(!(condition))) \
-  TF_ERROR_STREAM() << "Check failed: " #condition " "
+  TF_ERROR_STREAM() << "Check failed: " #condition ": "
 
 #define TF_CHECK_OP_LOG(name, op, val1, val2)                                  \
   while (::tsl::internal::CheckOpString _result{::tsl::internal::name##Impl(   \
@@ -68,8 +68,12 @@ class ErrorGenerator {
 #define TF_CHECK_NE(val1, val2) TF_CHECK_OP(Check_NE, !=, val1, val2)
 #define TF_CHECK_LE(val1, val2) TF_CHECK_OP(Check_LE, <=, val1, val2)
 #define TF_CHECK_LT(val1, val2) TF_CHECK_OP(Check_LT, <, val1, val2)
-#define TF_CHECK_GE(val1, val2) TF_CHECK_OP(Check_GE, >=, val1, val2)
-#define TF_CHECK_GT(val1, val2) TF_CHECK_OP(Check_GT, >, val1, val2)
+
+// Check_GEImpl and Check_GTImpl are actually implemented in terms of their
+// less-than versions. So, here, we do the same so that the error message
+// is consistent.
+#define TF_CHECK_GE(val1, val2) TF_CHECK_LE(val2, val1)
+#define TF_CHECK_GT(val1, val2) TF_CHECK_LT(val2, val1)
 
 #undef TF_CHECK_OK
 #define TF_CHECK_OK(val) TF_DO_CHECK_OK(val, FATAL)

@@ -36,7 +36,7 @@ Debugging options are described in [setup.py on GitHub](https://github.com/pytor
 
 When defined, the `DEBUG` will cause the build process to generate debug symbols
 for all source files. It will also prevent the compiler from performing any
-optimizations, which will cause the geenrated binary to run too slow to perform
+optimizations, which will cause the generated binary to run too slow to perform
 meaningful work. We recommend using the `USE_CUSTOM_DEBINFO` environment variable
 to specify a semicolon separated list of source files for which you want to
 generate debug symbols. This lets you generate debug symbols for only the source
@@ -54,7 +54,7 @@ We suggest the following steps:
 
 At this point, your PyTorch is built with debugging symbols and ready to debug
 with GDB. However, we recommend debugging with VSCode. For more information, see
-{ref}`Debug with VSCode`.
+[](#debug-with-vscode)
 
 ### Verify your file is built
 

@@ -38,6 +38,10 @@ Tutorials
 
    learn/pytorch-on-xla-devices
    learn/xla-overview
+   learn/xla-quickstart
+   learn/xla-examples
+   learn/xla-profiling
+   learn/xla-advanced
 
 .. toctree::
    :glob:

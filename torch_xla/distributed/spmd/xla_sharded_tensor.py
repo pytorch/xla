@@ -6,6 +6,12 @@ from dataclasses import dataclass
 from typing import List, Tuple, Iterator, Union
 import contextlib
 import collections
+import torch_xla.runtime as xr
+from torch.distributed.tensor._dtensor_spec import DTensorSpec, TensorMeta
+from torch.distributed.device_mesh import DeviceMesh
+from torch.distributed.tensor.placement_types import Placement, Shard, Replicate, Partial
+from torch.utils._pytree import tree_map_only
+from torch.distributed.tensor import DTensor
 
 
 @dataclass
@@ -58,7 +64,7 @@ def no_dispatch() -> Iterator[None]:
     del guard
 
 
-class XLAShardedTensor(torch.Tensor):
+class XLAShardedTensor(DTensor):
   """
     A wrapper around `torch.Tensor` with sharding annotation
     for XLA SPMD auto-sharding. The wrapped tensors are unwrapped
@@ -91,10 +97,15 @@ class XLAShardedTensor(torch.Tensor):
   # >> assert len(input.shape) == len(partition_spec)
   partition_spec: Tuple[int, None]
 
-  __slots__ = ['global_tensor']
+  __slots__ = ['global_tensor', 'mesh_shape', 'partition_spec', '_cached_spec']
 
   @staticmethod
-  def __new__(cls, elem: torch.Tensor, *args, **kwargs):
+  def __new__(cls,
+              elem: torch.Tensor,
+              mesh_shape=None,
+              partition_spec=None,
+              *args,
+              **kwargs):
     # TODO(yeounoh) wrapper can take different arguments
     r = torch.Tensor._make_wrapper_subclass(  # type: ignore[attr-defined]
         cls,
@@ -106,6 +117,13 @@ class XLAShardedTensor(torch.Tensor):
         device=elem.device,
         requires_grad=kwargs.get("requires_grad", False))
     r.global_tensor = elem.detach() if r.requires_grad else elem
+
+    # Initialize mesh, partition, and spec information
+    r.mesh_shape = mesh_shape or (elem.mesh_shape if isinstance(
+        elem, XLAShardedTensor) else None)
+    r.partition_spec = partition_spec or (elem.partition_spec if isinstance(
+        elem, XLAShardedTensor) else None)
+    r._cached_spec = None
     return r
 
   # Shards on the devices are materialized/available after the lazy
@@ -129,6 +147,9 @@ class XLAShardedTensor(torch.Tensor):
     data = [s.data for s in shards]
     devices = [s.shard_device for s in shards]
     torch_xla._XLAC._load_local_shards(self.global_tensor, data, devices)
+
+    # Invalidate cached spec since the global_tensor data has changed
+    self.invalidate_spec_cache()
 
   @property
   def sharding_spec(self):
@@ -169,6 +190,115 @@ class XLAShardedTensor(torch.Tensor):
                     func(*tree_map(unwrap, args), **tree_map(unwrap, kwargs)))
     return rs
 
+  @property
+  def _spec(self):
+    """
+    Convert XLA sharding information to DTensorSpec for DTensor interface compatibility.
+    """
+    # Return cached spec if available
+    if self._cached_spec is not None:
+      return self._cached_spec
+
+    # use existing mesh_shape
+    if self.mesh_shape is not None:
+      device_count = xr.global_runtime_device_count()
+      device_list = list(range(device_count))
+      mesh = DeviceMesh("xla",
+                        torch.tensor(device_list).reshape(self.mesh_shape))
+    else:
+      raise ValueError(
+          "mesh_shape must be specified to create DTensorSpec. "
+          "If this tensor was created through torch operations, it may be auto-wrapped. "
+          "Use wrap_as_sharded_tensor() to set mesh_shape before accessing _spec. "
+      )
+
+    # use existing partition_spec
+    if self.partition_spec is not None:
+      placements = []
+      for mesh_dim in range(len(self.mesh_shape)):
+        # find tensor dimension sharded on this mesh dimension
+        tensor_dim = None
+        for t_dim, m_dim in enumerate(self.partition_spec):
+          if m_dim == mesh_dim:
+            tensor_dim = t_dim
+            break
+        placements.append(
+            Shard(tensor_dim) if tensor_dim is not None else Replicate())
+    else:
+      raise ValueError(
+          "partition_spec must be specified to create DTensorSpec. "
+          "If this tensor was created through torch operations, it may be auto-wrapped. "
+          "Use wrap_as_sharded_tensor() to set partition_spec before accessing _spec. "
+      )
+
+    # tensor metadata
+    tensor_meta = TensorMeta(
+        shape=self.global_tensor.shape,
+        stride=self.global_tensor.stride(),
+        dtype=self.global_tensor.dtype)
+
+    # Create and cache the spec
+    self._cached_spec = DTensorSpec(
+        mesh=mesh, placements=tuple(placements), tensor_meta=tensor_meta)
+    return self._cached_spec
+
+  @property
+  def placements(self) -> tuple[Placement, ...]:
+    """
+    Get the placements of this XLAShardedTensor.
+    
+    Returns:
+        tuple[Placement, ...]: The placements that describe how this tensor is distributed.
+        
+    Raises:
+        ValueError: If _spec cannot be created due to missing mesh_shape or partition_spec.
+    """
+    try:
+      return self._spec.placements
+    except:
+      raise ValueError(
+          "Placements not available: XLAShardedTensor requires mesh_shape and "
+          "partition_spec to be set. Use mark_sharding() to properly initialize sharding information."
+      )
+
+  def invalidate_spec_cache(self):
+    """Invalidate the cached DTensorSpec."""
+    self._cached_spec = None
+
+  def redistribute(self, device_mesh, placements, *, async_op: bool = False):
+    # Validate inputs
+    if len(placements) != len(device_mesh.mesh_shape):
+      raise ValueError(
+          f"Number of placements ({len(placements)}) must match mesh dimensions ({len(device_mesh.mesh_shape)})"
+      )
+
+    # Check for unsupported placement types
+    for placement in placements:
+      if isinstance(placement, Partial):
+        raise NotImplementedError(
+            "Partial placement is not yet implemented and may have unexpected behavior. "
+            "Use Shard or Replicate placements instead.")
+
+    # Convert placements to partition spec
+    partition_spec = [None] * len(self.global_tensor.shape)
+    for mesh_dim, placement in enumerate(placements):
+      if isinstance(placement, Shard):
+        if placement.dim >= len(self.global_tensor.shape):
+          raise IndexError(
+              f"Shard dimension {placement.dim} is out of bounds for tensor with {len(self.global_tensor.shape)} dimensions"
+          )
+        partition_spec[placement.dim] = mesh_dim
+
+    result_tensor = self.global_tensor.clone(
+    ) if async_op else self.global_tensor
+    op_sharding = device_mesh.get_op_sharding(tuple(partition_spec))
+    torch_xla._XLAC._xla_annotate_custom_sharding(result_tensor, op_sharding)
+
+    return XLAShardedTensor(
+        result_tensor,
+        mesh_shape=device_mesh.mesh_shape,
+        partition_spec=tuple(partition_spec))
+
   @classmethod
   def __torch_function__(cls, func, types, args=(), kwargs=None):
-    return super().__torch_function__(func, types, args, kwargs)
+    return super(DTensor, cls).__torch_function__(func, types, args, kwargs)

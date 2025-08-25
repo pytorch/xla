@@ -63,16 +63,6 @@ def _maybe_select_default_device():
   if torch_xla._found_libtpu and tpu.num_available_chips() > 0:
     logging.warning('libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.')
     os.environ[xenv.PJRT_DEVICE] = 'TPU'
-  elif xu.getenv_as(xenv.GPU_NUM_DEVICES, int, 0) > 0:
-    logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=CUDA')
-    os.environ[xenv.PJRT_DEVICE] = 'CUDA'
-  elif torch.cuda.is_available() and torch.cuda.device_count() > 0:
-    num_devices_str = str(torch.cuda.device_count())
-    logging.warning(
-        'Found CUDA without GPU_NUM_DEVICES. Defaulting to PJRT_DEVICE=CUDA with GPU_NUM_DEVICES='
-        + num_devices_str)
-    os.environ[xenv.PJRT_DEVICE] = 'CUDA'
-    os.environ[xenv.GPU_NUM_DEVICES] = num_devices_str
   elif torch_xla._found_libneuronxla:
     logging.warning('Found libneuronpjrt.so. Setting PJRT_DEVICE=NEURON.')
     os.environ[xenv.PJRT_DEVICE] = 'NEURON'

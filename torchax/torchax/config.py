@@ -10,6 +10,11 @@ class Configuration:
 
   use_int32_for_index: bool = False
 
+  # normally, math between CPU torch.Tensor with torchax.Tensor is not
+  # allowed. However, if that torch.Tensor happens to be scalar, then we
+  # can use scalar * tensor math to handle it
+  allow_mixed_math_with_scalar_tensor: bool = True
+
   # If true, we will convert Views into torchax.Tensors eagerly
   force_materialize_views: bool = False
 
@@ -22,5 +27,4 @@ class Configuration:
 
   # device
   treat_cuda_as_jax_device: bool = True
-  use_torch_native_for_cpu_tensor: bool = True
   internal_respect_torch_return_dtypes: bool = False

@@ -160,6 +160,9 @@ commands on your Linux machine directly, outside of the container.
     pip install torch_xla[tpu] \
       -f https://storage.googleapis.com/libtpu-wheels/index.html \
       -f https://storage.googleapis.com/libtpu-releases/index.html
+
+    # Optional: if you're using custom kernels, install pallas dependencies
+    pip install --pre torch_xla[pallas] --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
     ```
 
 1.  If you are running on a TPU VM, ensure `torch` and `torch_xla` were built and

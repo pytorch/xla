@@ -13,7 +13,7 @@ import torch_xla._internal.utils as _utils
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
-from torch_xla._internal.jax_workarounds import requires_jax, maybe_get_torchax
+from torch_xla._internal.jax_workarounds import requires_jax, maybe_get_torchax, maybe_get_jax
 
 import numpy as np
 import functools
@@ -185,7 +185,8 @@ class Mesh:
   def get_jax_mesh(self):
     # Construct a JAX mesh object with the same device ids shape and ordering
     # from torch_xla device mesh.
-    import jax
+    jax = maybe_get_jax()
+    assert jax is not None
     import numpy as np
     from jax._src import mesh as mesh_lib
 
@@ -543,7 +544,8 @@ def enable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   mesh = get_global_mesh() if mesh is None else mesh
   t = mark_sharding(unwrap_sharded_tensor(t), mesh, partition_spec)
   t = torch_xla._XLAC._spmd_full_to_shard_shape(unwrap_sharded_tensor(t))
-  return wrap_as_sharded_tensor(t)
+  return wrap_as_sharded_tensor(
+      t, mesh_shape=mesh.mesh_shape, partition_spec=partition_spec)
 
 
 def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
@@ -560,7 +562,8 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   t = torch_xla._XLAC._spmd_shard_to_full_shape(
       unwrap_sharded_tensor(t), mesh.get_op_sharding(partition_spec),
       full_shape, t.dtype)
-  return wrap_as_sharded_tensor(t)
+  return wrap_as_sharded_tensor(
+      t, mesh_shape=mesh.mesh_shape, partition_spec=partition_spec)
 
 
 def annotate_custom_sharding(t: Union[torch.Tensor,
@@ -594,7 +597,8 @@ def annotate_custom_sharding(t: Union[torch.Tensor,
   op_sharding = mesh.get_op_sharding(partition_spec)
   annotate_func = torch_xla._XLAC._xla_annotate_custom_sharding
   annotate_func(unwrap_sharded_tensor(t), op_sharding)
-  return wrap_as_sharded_tensor(t)
+  return wrap_as_sharded_tensor(
+      t, mesh_shape=mesh.mesh_shape, partition_spec=partition_spec)
 
 
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
@@ -642,7 +646,8 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
   tx = maybe_get_torchax()
-  if tx is not None and isinstance(t, tx.tensor.Tensor):
+  jax = maybe_get_jax()
+  if (jax is not None) and (tx is not None) and isinstance(t, tx.tensor.Tensor):
     from jax.sharding import PartitionSpec as P, NamedSharding
     jmesh = mesh.get_jax_mesh()
     t.shard_(NamedSharding(jmesh, P(*partition_spec)))
@@ -651,7 +656,9 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   op_sharding = mesh.get_op_sharding(partition_spec)
   annotate_func = torch_xla._XLAC._xla_mark_sharding
   annotate_func(unwrap_sharded_tensor(t), op_sharding)
-  return wrap_as_sharded_tensor(t)
+  # Pass mesh and partition spec information for DTensor compatibility
+  return wrap_as_sharded_tensor(
+      t, mesh_shape=mesh.mesh_shape, partition_spec=partition_spec)
 
 
 def mark_sharding_with_gradients(
@@ -755,10 +762,31 @@ def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   return t
 
 
-def wrap_as_sharded_tensor(
-    t: Union[torch.Tensor, XLAShardedTensor]) -> XLAShardedTensor:
+def wrap_as_sharded_tensor(t: Union[torch.Tensor, XLAShardedTensor],
+                           mesh_shape=None,
+                           partition_spec=None) -> XLAShardedTensor:
+  # pass along mesh and partition spec information
   if not isinstance(t, XLAShardedTensor):
-    return XLAShardedTensor(t)
+    # Create a new XLAShardedTensor
+    return XLAShardedTensor(
+        t, mesh_shape=mesh_shape, partition_spec=partition_spec)
+
+  # Update existing XLAShardedTensor if needed
+  needs_invalidate = False
+
+  # Always set mesh_shape and partition_spec if provided
+  if mesh_shape is not None:
+    t.mesh_shape = mesh_shape
+    needs_invalidate = True
+
+  if partition_spec is not None:
+    t.partition_spec = partition_spec
+    needs_invalidate = True
+
+  # Invalidate cached spec if resharding occurred
+  if needs_invalidate:
+    t.invalidate_spec_cache()
+
   return t
 
 

@@ -2,6 +2,7 @@
 
 #include "test/cpp/cpp_test_util.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 
@@ -52,7 +53,7 @@ xla::XlaComputation CreateAddComputation(const xla::Shape& shape) {
   xla::XlaOp x = xla::Parameter(&builder, 0, shape, "x");
   xla::XlaOp y = xla::Parameter(&builder, 1, shape, "y");
   xla::XlaOp sum = xla::Add(x, y);
-  return ConsumeValue(builder.Build());
+  return GetValueOrThrow(builder.Build());
 }
 
 TEST(XLABackendTest, TestE2E) {

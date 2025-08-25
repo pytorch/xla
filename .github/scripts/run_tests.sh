@@ -55,11 +55,12 @@ function run_torch_xla_cpp_tests() {
                "test_tensor"
                # disable test_xla_backend_intf since it is flaky on upstream
                #"test_xla_backend_intf"
+               "test_xla_generator"
                "test_xla_sharding"
                "test_runtime"
-               "test_status"
-               "test_status_dont_show_cpp_error_context"
-               "test_status_show_cpp_error_context")
+               "test_status_dont_show_cpp_stacktraces"
+               "test_status_show_cpp_stacktraces"
+               "test_debug_macros")
   for name in "${test_names[@]}"; do
     echo "Running $name cpp test..."
     /tmp/test/bin/${name}

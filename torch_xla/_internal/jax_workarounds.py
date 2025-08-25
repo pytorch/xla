@@ -2,6 +2,7 @@ import os
 from contextlib import contextmanager
 from typing import Callable, Any
 import functools
+import logging
 
 
 # TODO(https://github.com/pytorch/xla/issues/8793): Get rid of this hack.
@@ -53,5 +54,19 @@ def maybe_get_torchax():
       import torchax.interop
       import torchax.ops.mappings
       return torchax
-  except ImportError:
+  except (ModuleNotFoundError, ImportError):
+    return None
+
+
+def maybe_get_jax():
+  try:
+    jax_import_guard()
+    with jax_env_context():
+      import jax
+      # TorchXLA still expects SPMD style sharding
+      jax.config.update('jax_use_shardy_partitioner', False)
+      return jax
+  except (ModuleNotFoundError, ImportError):
+    logging.warn('You are trying to use a feature that requires jax/pallas.'
+                 'You can install Jax/Pallas via pip install torch_xla[pallas]')
     return None

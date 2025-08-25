@@ -6,10 +6,9 @@ import os
 import torch
 from torch.utils import _pytree as pytree
 from torchax import tensor
-from torchax import distributed  # noqa: F401
 from contextlib import contextmanager
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 VERSION = __version__
 
 __all__ = [
@@ -50,10 +49,11 @@ def extract_jax(mod: torch.nn.Module, env=None):
   states = env.t2j_copy(states)
 
   #@jax.jit
-  def jax_func(states, inputs):
-    (states, inputs) = env.j2t_iso((states, inputs))
+  def jax_func(states, args, kwargs=None):
+    (states, args, kwargs) = env.j2t_iso((states, args, kwargs))
     with env:
-      res = torch.func.functional_call(mod, states, inputs, tie_weights=False)
+      res = torch.func.functional_call(
+          mod, states, args, kwargs, tie_weights=False)
     return env.t2j_iso(res)
 
   return states, jax_func
@@ -81,11 +81,6 @@ def disable_temporarily():
 
 torch.utils.rename_privateuse1_backend('jax')
 unsupported_dtype = [torch.quint8]
-torch.utils.generate_methods_for_privateuse1_backend(
-    for_tensor=True,
-    for_module=True,
-    for_storage=True,
-    unsupported_dtype=unsupported_dtype)
 
 import jax
 import torchax.device_module
@@ -129,34 +124,3 @@ def compile(fn, options: Optional[CompileOptions] = None):
     raise RuntimeError('dynamo mode is not supported yet')
   elif options.mode == 'export':
     raise RuntimeError('export mode is not supported yet')
-
-
-@contextmanager
-def jax_device(target_device: str, env: tensor.Environment | None = None):
-  """
-  to("jax") cannot differentiate the device/platform (cpu vs tpu). 
-  Use this context manager to control jax array's storage device
-  
-  Examples:
-
-  a = torch.ones(3, 3)
-
-  with jax_device("cpu"):
-    b = a.to("jax") 
-  
-  with jax_device("tpu"):
-    c = a.to("jax") 
-  
-  with jax_device("tpu"):
-    c = b.to("jax") 
-
-  """
-  if env is None:
-    env = default_env()
-
-  prev_target_device = env.target_device
-  try:
-    env.target_device = target_device
-    yield env
-  finally:
-    env.target_device = prev_target_device

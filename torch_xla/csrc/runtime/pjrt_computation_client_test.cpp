@@ -8,10 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
+#include "torch_xla/csrc/status.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
@@ -26,7 +25,7 @@ class PjRtComputationClientTest : public ::testing::Test {
   PjRtComputationClientTest() {
     // Get a CPU client.
     tsl::setenv("PJRT_DEVICE", "CPU", true);
-    client_ = std::make_unique<PjRtComputationClient>();
+    client_ = GetValueOrThrow(PjRtComputationClient::Create());
     device_ = client_->GetDefaultDevice();
   }
 
@@ -115,13 +114,15 @@ TEST_F(PjRtComputationClientTest, Init) {
       std::make_shared<LiteralSource>(std::move(literal_y), device_)};
 
   // Execute the graph.
-  std::vector<ComputationClient::DataPtr> results = client_->ExecuteComputation(
-      *computations[0], client_->TransferToDevice(absl::MakeConstSpan(args)),
-      device_, options);
+  std::vector<ComputationClient::DataPtr> results =
+      GetValueOrThrow(client_->ExecuteComputation(
+          *computations[0],
+          client_->TransferToDevice(absl::MakeConstSpan(args)), device_,
+          options));
 
   // Copy the output from device back to host and assert correctness.
   ASSERT_EQ(results.size(), 1);
-  auto result_literals = client_->TransferFromDevice(results);
+  auto result_literals = GetValueOrThrow(client_->TransferFromDevice(results));
   ASSERT_THAT(result_literals, ::testing::SizeIs(1));
   EXPECT_TRUE(xla::LiteralTestUtil::Equal(
       xla::LiteralUtil::CreateR2<float>({{6.0f, 8.0f}, {10.0f, 12.0f}}),

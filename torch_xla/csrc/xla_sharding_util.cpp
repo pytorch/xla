@@ -767,7 +767,7 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
       << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
   XLA_CHECK(sharding.type() != xla::OpSharding::UNKNOWN)
       << "Can't explicilty annotate with UNKNOWN sharding type.";
-  XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+  XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(input));
 
   // For Non DeviceData IR values, we directly attach the sharding spec to the
   // xtensor.

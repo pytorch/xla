@@ -4,7 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-# This file is copied from https://github.com/pytorch-labs/gpt-fast
+# This file is copied from https://github.com/meta-pytorch/gpt-fast
 # This is used for unit test purposes
 from dataclasses import dataclass
 import math
