@@ -56,28 +56,6 @@ function install_cudnn {
   rm -f "$CUDNN_FILE"
 }
 
-function maybe_install_cuda {
-  if [ "$XLA_CUDA" == "1" ]; then
-    if [ ! -d "/usr/local/cuda" ]; then
-      local CUDA_VER="10.2"
-      local CUDA_SUBVER="89_440.33.01"
-      local CUDA_FILE="cuda_${CUDA_VER}.${CUDA_SUBVER}_linux.run"
-      wget "http://developer.download.nvidia.com/compute/cuda/${CUDA_VER}/Prod/local_installers/${CUDA_FILE}"
-      sudo sh "${CUDA_FILE}" --silent --toolkit
-      rm -f "${CUDA_FILE}"
-    fi
-    if [ ! -f "/usr/local/cuda/include/cudnn.h" ] && [ ! -f "/usr/include/cudnn.h" ]; then
-      install_cudnn
-    fi
-    export TF_CUDA_PATHS="/usr/local/cuda,/usr/include,/usr"
-    maybe_append 'export TF_CUDA_PATHS="/usr/local/cuda,/usr/include,/usr"' ~/.bashrc
-    if [ "$TF_CUDA_COMPUTE_CAPABILITIES" == "" ]; then
-      export TF_CUDA_COMPUTE_CAPABILITIES="7.0"
-    fi
-    maybe_append "export TF_CUDA_COMPUTE_CAPABILITIES=\"$TF_CUDA_COMPUTE_CAPABILITIES\"" ~/.bashrc
-  fi
-}
-
 function maybe_install_sources {
   if [[ $(uname -m) == "aarch64" && ! -d "$HOME/ComputeLibrary" ]]; then
     # install arm compute library
@@ -148,7 +126,6 @@ function install_gcc() {
 
 function install_req_packages() {
   sudo apt-get -y install python3-pip git curl libopenblas-dev vim apt-transport-https ca-certificates wget procps
-  maybe_install_cuda
   install_bazel
   install_ninja
 }

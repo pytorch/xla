@@ -164,8 +164,8 @@ function run_xla_op_tests1 {
   run_test "$_TEST_DIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$_TEST_DIR/pjrt/test_internal_tpu.py"
 
-  PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/pjrt/test_ddp.py"
-  PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/pjrt/test_mesh_service.py"
+  PJRT_DEVICE=CPU run_test "$_TEST_DIR/pjrt/test_ddp.py"
+  PJRT_DEVICE=CPU run_test "$_TEST_DIR/pjrt/test_mesh_service.py"
 
   run_test "$_TEST_DIR/test_python_ops.py"
   run_test "$_TEST_DIR/test_ops.py"
@@ -199,7 +199,7 @@ function run_xla_op_tests2 {
   run_test "$_TEST_DIR/eager/test_eager_with_xla_compile.py"
   run_test "$_TEST_DIR/eager/test_eager_with_torch_compile.py"
 
-  PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/eager/test_eager_all_reduce_in_place.py"
+  PJRT_DEVICE=CPU run_test "$_TEST_DIR/eager/test_eager_all_reduce_in_place.py"
 
   run_test "$_TEST_DIR/eager/test_eager_spmd.py"
   run_test "$_TEST_DIR/test_callback.py"
@@ -332,7 +332,7 @@ function run_tests {
   elif [[ "$RUN_TORCH_MP_OP_TESTS" == "torch_mp_op" ]]; then
     echo "Running torch op tests..."
 
-    PJRT_DEVICE=CPU XLA_CUDA=0 run_mp_op_tests
+    PJRT_DEVICE=CPU run_mp_op_tests
   else
     # Run full tests without sharding, respects XLA_SKIP_*
     if [[ "$XLA_SKIP_XLA_OP_TESTS" != "1" ]]; then

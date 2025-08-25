@@ -19,9 +19,6 @@
 #   BAZEL_VERBOSE=0
 #     turn on verbose messages during the bazel build of the xla/xrt client
 #
-#   XLA_CUDA=0
-#     build the xla/xrt client with CUDA enabled
-#
 #   XLA_CPU_USE_ACL=0
 #     whether to use ACL
 #
