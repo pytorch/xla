@@ -18,6 +18,7 @@
 #include <optional>
 
 #include "absl/log/absl_check.h"
+#include "status.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/shape_inference.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
@@ -317,18 +318,27 @@ int64_t GetIntegerUpperLimitForType(torch::ScalarType dtype) {
   }
 }
 
-void CheckRangeValues(torch::ScalarType dtype, int64_t from, int64_t to) {
-  XlaHelpers::MinMax min_max;
-  // Bound the min_max by int64_t since types of "from" and "to" are int64.
-  if (IsTypeWithLargerRangeThanLong(dtype)) {
-    min_max = XlaHelpers::MinMaxValues(xla::PrimitiveType::S64);
-  } else {
-    min_max = XlaHelpers::MinMaxValues(XlaTypeFromTorchType(dtype));
+absl::Status CheckValueWithinTypeRange(const std::string_view op,
+                                       const std::string_view arg,
+                                       torch::ScalarType dtype, int64_t value) {
+  xla::PrimitiveType type = IsTypeWithLargerRangeThanLong(dtype)
+                                ? xla::PrimitiveType::S64
+                                : XlaTypeFromTorchType(dtype);
+
+  XlaHelpers::MinMax mm = XlaHelpers::MinMaxValues(type);
+  int64_t min = mm.min.toLong();
+  int64_t max = mm.max.toLong();
+
+  if (value < min || value > max) {
+    const std::string_view comparison = value < min ? "lower" : "greater";
+    const std::string_view bound = value < min ? "lower bound" : "upper bound";
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat(op, "(): expected `", arg, "` to be within the range [",
+                     min, ", ", max, "]. However got value ", value,
+                     ", which is ", comparison, " than the ", bound, ".")));
   }
-  XLA_CHECK_GE(from, min_max.min.toLong());
-  XLA_CHECK_LE(from, min_max.max.toLong());
-  XLA_CHECK_GE(to, min_max.min.toLong());
-  XLA_CHECK_LE(to, min_max.max.toLong());
+
+  return absl::OkStatus();
 }
 
 std::pair<XLATensorPtr, XLATensorPtr> GetBinaryOperands(
@@ -3025,12 +3035,14 @@ at::Tensor& XLANativeFunctions::random_(
   }
   XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
   at::ScalarType dtype = self_tensor->dtype();
+
   // Prevent "to_val" from overflowing with at::ScalarType::Long.
   int64_t inc = (dtype == at::ScalarType::Long) ? 0 : 1;
   int64_t to_val = (to) ? *to : GetIntegerUpperLimitForType(dtype) + inc;
-  XLA_CHECK_LE(from, to_val);
-  CheckRangeValues(self_tensor->dtype(), from, to_val - 1);
-  tensor_methods::random_(self_tensor, from, to_val);
+
+  OkOrThrow(CheckValueWithinTypeRange("random_", "from", dtype, from));
+  OkOrThrow(CheckValueWithinTypeRange("random_", "to", dtype, to_val - 1));
+  OkOrThrow(tensor_methods::random_(self_tensor, from, to_val));
   return self;
 }
 
@@ -3043,10 +3055,12 @@ at::Tensor& XLANativeFunctions::random_(
                                         ATEN_OP2(random_, to)>::call(self, to,
                                                                      generator);
   }
+
   XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLA_CHECK_GT(to, 0);
-  CheckRangeValues(self_tensor->dtype(), 0, to - 1);
-  tensor_methods::random_(self_tensor, 0, to);
+  at::ScalarType dtype = self_tensor->dtype();
+
+  OkOrThrow(CheckValueWithinTypeRange("random_", "to", dtype, to - 1));
+  OkOrThrow(tensor_methods::random_(self_tensor, 0, to));
   return self;
 }
 
@@ -3060,10 +3074,12 @@ at::Tensor& XLANativeFunctions::random_(
   }
   XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
   at::ScalarType dtype = self_tensor->dtype();
+
   // Prevent "to_val" from overflowing with at::ScalarType::Long.
   int64_t inc = (dtype == at::ScalarType::Long) ? 0 : 1;
-  tensor_methods::random_(self_tensor, 0,
-                          GetIntegerUpperLimitForType(dtype) + inc);
+  int64_t to_val = GetIntegerUpperLimitForType(dtype) + inc;
+
+  OkOrThrow(tensor_methods::random_(self_tensor, 0, to_val));
   return self;
 }
 

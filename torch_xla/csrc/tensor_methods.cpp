@@ -2922,8 +2922,12 @@ XLATensorPtr dynamic_view(const XLATensorPtr& input,
 
 //////////////////////////////////////////////////////////////////////////////
 
-void random_(XLATensorPtr& input, int64_t from, int64_t to) {
-  XLA_CHECK_LE(from, to);
+absl::Status random_(XLATensorPtr& input, int64_t from, int64_t to) {
+  if (from >= to) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("random_(): expected `from` (", from,
+                     ") to be smaller than `to` (", to, ").")));
+  }
   auto input_shape = input->shape();
   input->SetInPlaceIrValue(torch_xla::MakeNode<DiscreteUniform>(
       XLAGraphExecutor::Get()->GetIrValueForScalar(
@@ -2931,6 +2935,7 @@ void random_(XLATensorPtr& input, int64_t from, int64_t to) {
       XLAGraphExecutor::Get()->GetIrValueForScalar(to, xla::PrimitiveType::S64,
                                                    input->GetDevice()),
       XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape));
+  return absl::OkStatus();
 }
 
 XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,

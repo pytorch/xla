@@ -776,7 +776,7 @@ void put_(XLATensorPtr& input, const XLATensorPtr& index,
 
 std::tuple<XLATensorPtr, XLATensorPtr> qr(const XLATensorPtr& input, bool some);
 
-void random_(XLATensorPtr& input, int64_t from, int64_t to);
+absl::Status random_(XLATensorPtr& input, int64_t from, int64_t to);
 
 XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,
                       at::ScalarType scalar_type);
