@@ -278,10 +278,9 @@ def configure_topology(local_rank: int,
   process_bounds_str = ','.join(str(dim) for dim in process_bounds)
   if tpu_version == 7:
     process_bounds_str += ',2'
-    # os.environ[xenv.TPU_PROCESS_BOUNDS] = process_bounds_str
 
   os.environ.setdefault(xenv.TPU_PROCESS_BOUNDS, process_bounds_str)
-  print(os.environ[xenv.TPU_PROCESS_BOUNDS])
+
   # Assume each TPU has the same number of local processes with the same ports
   worker_id = int(tpu_env[xenv.WORKER_ID])
   os.environ.setdefault(xenv.CLOUD_TPU_TASK_ID,
