@@ -141,10 +141,10 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
   DLTensor& dt = pack->tensor.dl_tensor;
   {
     // AcquireExternalReference may block
-    pack->external_reference =
-        GetValueOrThrow(pjrt_buffer->AcquireExternalReference());
+    XLA_ASSIGN_OR_THROW(pack->external_reference,
+                        pjrt_buffer->AcquireExternalReference());
     xla::PjRtFuture<> future = pjrt_buffer->GetReadyFuture();
-    OkOrThrow(future.Await());
+    XLA_THROW_IF_ERROR(future.Await());
   }
   pack->buffer_reference = pjrt_buffer;
 
@@ -329,8 +329,9 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
   if (dlmt->deleter) {
     on_delete_callback = [dlmt]() { dlmt->deleter(dlmt); };
   }
-  std::unique_ptr<xla::PjRtBuffer> pjrt_buffer =
-      GetValueOrThrow(device->client()->CreateViewOfDeviceBuffer(
+  XLA_ASSIGN_OR_THROW(
+      std::unique_ptr<xla::PjRtBuffer> pjrt_buffer,
+      device->client()->CreateViewOfDeviceBuffer(
           static_cast<char*>(dlmt->dl_tensor.data) +
               dlmt->dl_tensor.byte_offset,
           shape, *device->default_memory_space(), on_delete_callback));

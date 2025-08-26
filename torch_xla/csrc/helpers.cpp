@@ -41,7 +41,8 @@ xla::XlaComputation CreateComputation(
       xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
   xla::XlaOp y =
       xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
-  return GetValueOrThrow(builder.Build(op(x, y)));
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation computation, builder.Build(op(x, y)));
+  return computation;
 }
 
 xla::XlaComputation CreateMinMaxComputation(const std::string& name,
@@ -66,7 +67,8 @@ xla::XlaComputation CreateMinMaxComputation(const std::string& name,
   xla::XlaOp tie_id = xla::Min(lhs_index, rhs_index);
   arg_max = xla::Select(eq, tie_id, arg_max);
   xla::Tuple(&builder, {max, arg_max});
-  return GetValueOrThrow(builder.Build());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation min_max_computation, builder.Build());
+  return min_max_computation;
 }
 
 }  // namespace
@@ -697,7 +699,8 @@ std::vector<int64_t> XlaHelpers::getBroadcastDimensions(xla::XlaOp op1,
 xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
                                                 const xla::Shape& shape2) {
   if (!shape1.is_dynamic() && !shape2.is_dynamic()) {
-    auto promoted_shape = GetValueOrThrow(GetPromotedShape(shape1, shape2));
+    XLA_ASSIGN_OR_THROW(xla::Shape promoted_shape,
+                        GetPromotedShape(shape1, shape2));
     return xla::ShapeUtil::MakeShape(
         PromoteType(shape1.element_type(), shape2.element_type()),
         promoted_shape.dimensions());
@@ -776,7 +779,7 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
   const xla::Shape& shape1 = ShapeHelper::ShapeOfXlaOp(op1);
   const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
 
-  xla::Shape shape = GetValueOrThrow(GetPromotedShape(shape1, shape2));
+  XLA_ASSIGN_OR_THROW(xla::Shape shape, GetPromotedShape(shape1, shape2));
   if (shape1.is_unbounded_dynamic() || shape2.is_unbounded_dynamic()) {
     return ImplicitBroadcastWithUnboundedDynamicShapes(op1, op2, shape);
   }
