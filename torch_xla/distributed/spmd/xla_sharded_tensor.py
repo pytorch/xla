@@ -11,6 +11,7 @@ from torch.distributed.tensor._dtensor_spec import DTensorSpec, TensorMeta
 from torch.distributed.device_mesh import DeviceMesh
 from torch.distributed.tensor.placement_types import Placement, Shard, Replicate, Partial
 from torch.utils._pytree import tree_map_only
+from torch.distributed.tensor import DTensor
 
 
 @dataclass
@@ -63,7 +64,7 @@ def no_dispatch() -> Iterator[None]:
     del guard
 
 
-class XLAShardedTensor(torch.Tensor):
+class XLAShardedTensor(DTensor):
   """
     A wrapper around `torch.Tensor` with sharding annotation
     for XLA SPMD auto-sharding. The wrapped tensors are unwrapped
@@ -300,4 +301,4 @@ class XLAShardedTensor(torch.Tensor):
 
   @classmethod
   def __torch_function__(cls, func, types, args=(), kwargs=None):
-    return super().__torch_function__(func, types, args, kwargs)
+    return super(DTensor, cls).__torch_function__(func, types, args, kwargs)

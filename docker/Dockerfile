@@ -29,10 +29,6 @@ RUN git clone https://github.com/pytorch/pytorch
 ENV USE_CUDA "0"
 ENV USE_MPI "0"
 
-# Enable CUDA for XLA
-ENV XLA_CUDA "${cuda}"
-ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
-
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 ENV BUNDLE_LIBTPU "${tpuvm}"

@@ -218,7 +218,8 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::GetDataShards(
     std::vector<tsl::RCReference<xla::ifrt::Array>> arrays =
         ifrt_data->buffer
             ->DisassembleIntoSingleDeviceArrays(
-                xla::ifrt::ArrayCopySemantics::kAlwaysCopy)
+                xla::ifrt::ArrayCopySemantics::kAlwaysCopy,
+                xla::ifrt::SingleDeviceShardSemantics::kAddressableShards)
             .value();
 
     for (auto array : arrays) {
@@ -308,8 +309,7 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToDevice(
                     ifrt_device, xla::ifrt::MemoryKind()),
                 xla::ifrt::Client::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
-                [tensor, timed]() { /* frees tensor and timer */ },
-                client_->CreateUserContext())
+                [tensor, timed]() { /* frees tensor and timer */ })
             .value();
 
     ComputationClient::DataPtr data =

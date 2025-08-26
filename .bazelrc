@@ -79,18 +79,6 @@ build:native_arch_posix --host_copt=-march=native
 
 build:mkl_open_source_only --define=tensorflow_mkldnn_contraction_kernel=1
 
-build:cuda --repo_env TF_NEED_CUDA=1
-# "sm" means we emit only cubin, which is forward compatible within a GPU generation.
-# "compute" means we emit both cubin and PTX, which is larger but also forward compatible to future GPU generations.
-build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain
-build:cuda --@local_config_cuda//:enable_cuda
-build:cuda --define=xla_python_enable_gpu=true
-build:cuda --cxxopt=-DXLA_CUDA=1
-
-# Coverage with cuda/gcc/nvcc requires manually setting coverage flags.
-coverage:cuda --per_file_copt=third_party/.*,torch_xla/.*@--coverage
-coverage:cuda --linkopt=-lgcov
-
 build:acl --define==build_with_acl=true
 
 build:nonccl --define=no_nccl_support=true
@@ -105,7 +93,6 @@ build:tpu --define=with_tpu_support=true
 
 # Run tests serially with TPU and GPU (only 1 device is available).
 test:tpu --local_test_jobs=1
-test:cuda --local_test_jobs=1
 
 #########################################################################
 # RBE config options below.

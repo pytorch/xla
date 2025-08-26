@@ -469,12 +469,12 @@ class Environment(contextlib.ContextDecorator):
         arr = self.t2j_copy(the_tensor)
         res = Tensor(arr, self, the_tensor.requires_grad)
 
-    if new_dtype is not None and new_dtype != the_tensor.dtype:
-      if isinstance(the_tensor, Tensor):
+    if new_dtype is not None and new_dtype != res.dtype:
+      if isinstance(res, Tensor):
         res = res.apply_jax(jnp.astype, mappings.t2j_dtype(new_dtype))
       else:
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-          return the_tensor.to(device=new_device, dtype=new_dtype)
+          return res.to(device=new_device, dtype=new_dtype)
     return res
 
   def get_and_rotate_prng_key(self,

@@ -2511,6 +2511,76 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
           f"from {dims} to {dims_suggestion}.")
       self.assertEqual(str(e), expected_error)
 
+  def test_full_raises_error_on_negative_size(self):
+    shape = [2, -2, 2]
+    try:
+      torch.full(shape, 1.5, device="xla")
+    except RuntimeError as e:
+      expected_error = (
+          "full(): expected concrete sizes (i.e. non-symbolic) to be "
+          f"positive values. However found negative ones: {shape}.")
+      self.assertEqual(str(e), expected_error)
+
+  def test_gather_raises_error_on_rank_mismatch(self):
+    S = 2
+
+    input = torch.arange(4, device=torch_xla.device()).view(S, S)
+    index = torch.randint(0, S, (S, S, S), device=torch_xla.device())
+    dim = 1
+
+    try:
+      torch.gather(input, dim, index)
+    except RuntimeError as e:
+      expected_error = (
+          "gather(): expected rank of input (2) and index (3) tensors "
+          "to be the same.")
+      self.assertEqual(str(e), expected_error)
+
+  def test_gather_raises_error_on_invalid_index_size(self):
+    S = 2
+    X = S + 2
+
+    input = torch.arange(16, device=torch_xla.device()).view(S, S, S, S)
+    index = torch.randint(0, S, (X, S, X, S), device=torch_xla.device())
+    dim = 1
+
+    try:
+      torch.gather(input, dim, index)
+    except RuntimeError as e:
+      expected_error = (
+          f"gather(): expected sizes of index [{X}, {S}, {X}, {S}] to be "
+          f"smaller or equal those of input [{S}, {S}, {S}, {S}] on all "
+          f"dimensions, except on dimension {dim}. "
+          "However, that's not true on dimensions [0, 2].")
+      self.assertEqual(str(e), expected_error)
+
+  def test_random__raises_error_on_empty_interval(self):
+    a = torch.empty(10, device=torch_xla.device())
+    from_ = 3
+    to_ = 1
+
+    try:
+      a.random_(from_, to_)
+    except RuntimeError as e:
+      expected_error = (
+          f"random_(): expected `from` ({from_}) to be smaller than "
+          f"`to` ({to_}).")
+      self.assertEqual(str(e), expected_error)
+
+  def test_random__raises_error_on_value_out_of_type_value_range(self):
+    a = torch.empty(10, device=torch_xla.device(), dtype=torch.float16)
+    from_ = 3
+    to_ = 65504 + 1
+
+    try:
+      a.random_(from_, to_)
+    except RuntimeError as e:
+      expected_error = (
+          f"random_(): expected `to` to be within the range "
+          f"[-65504, 65504]. However got value {to_}, which is greater "
+          "than the upper bound.")
+      self.assertEqual(str(e), expected_error)
+
 
 class MNISTComparator(nn.Module):
 

@@ -77,7 +77,6 @@ ptxla_cc_library(
     hdrs = [
         "aten_autograd_ops.h",
         "aten_fallback.h",
-        "aten_cuda_functions.h",
         "aten_xla_bridge.h",
         "batch_norm.h",
         "convert_ops.h",
@@ -363,16 +362,6 @@ ptxla_cc_library(
     deps = [
         "//torch_xla/csrc/runtime:computation_client",
         "@com_google_absl//absl/types:span",
-    ],
-)
-
-ptxla_cc_library(
-    name = "aten_cuda_functions",
-    srcs = ["aten_cuda_functions.cpp"],
-    hdrs = ["aten_cuda_functions.h"],
-    deps = [
-        "@local_config_python//:python_headers",
-        "@pybind11//:pybind11_embed",
     ],
 )
 
