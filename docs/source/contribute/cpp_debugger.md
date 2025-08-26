@@ -45,11 +45,13 @@ files you want to debug. All other source files are built and optimized as usual
 We suggest the following steps:
 
 1. Identify the source file you want to debug.
-1. Build that file with debug symbols using a command similar to `USE_CUSTOM_DEBINFO="aten/src/ATen/native/Linear.cpp" python -m pip install --no-build-isolation -v -e .`.
+1. Build that file with debug symbols using a command similar to 
+   `USE_CUSTOM_DEBINFO="aten/src/ATen/native/Linear.cpp" python -m pip install --no-build-isolation -v -e .`
 1. Set a breakpoint and start a debugger session. As you debug you will discover
    additional files you want to debug.
 1. Add those files to the `USE_CUSTOM_DEBINFO` environment variable.
-1. Rebuild with a command similar to `USE_CUSTOM_DEBINFO="aten/src/ATen/native/Linear.cpp;newfile.cpp" python -m pip install --no-build-isolation -v -e .`.
+1. Rebuild with a command similar to
+   `USE_CUSTOM_DEBINFO="aten/src/ATen/native/Linear.cpp;newfile.cpp" python -m pip install --no-build-isolation -v -e .`
 1. Start your debugger session again.
 
 At this point, your PyTorch is built with debugging symbols and ready to debug
