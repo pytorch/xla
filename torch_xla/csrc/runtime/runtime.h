@@ -11,7 +11,7 @@ namespace torch_xla::runtime {
 const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient();
 
 ABSL_DEPRECATED(
-    "Use status::GetComputationClient(), instead. "
+    "Use GetComputationClient(), instead. "
     "This function throws an exception on error, instead of "
     "actually handling the StatusOr return value, which is "
     "safer.")

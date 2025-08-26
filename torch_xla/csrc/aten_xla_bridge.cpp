@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "absl/status/status.h"
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -80,8 +80,12 @@ static absl::StatusOr<XLATensorImpl * absl_nonnull> GetXlaTensorImpl(
   XLATensorImpl* impl =
       dynamic_cast<XLATensorImpl*>(inner_tensor.unsafeGetTensorImpl());
   if (impl == nullptr) {
-    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
-        "Input tensor is not an XLA tensor: ", tensor.toString())));
+    auto error_message =
+        absl::StrCat("Failed retrieving the inner XLATensorImpl* from ",
+                     tensor.toString(), ". ",
+                     "It's likely that `tensor` is not an actual XLA tensor, "
+                     "i.e. it wasn't created inside PyTorch/XLA.");
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(error_message));
   }
   return impl;
 }
@@ -99,7 +103,9 @@ absl::StatusOr<absl_nonnull XLATensorPtr> GetXlaTensor(
     // To make sure we have the most updated version of tensor.
     at::functionalization::impl::sync(tensor);
   }
-  XLA_ASSIGN_OR_RETURN(XLATensorImpl * impl, GetXlaTensorImpl(tensor));
+  XLA_ASSIGN_OR_RETURN(
+      XLATensorImpl * impl, GetXlaTensorImpl(tensor),
+      absl::StrCat("Expected XLA tensor. Got: ", tensor.toString()));
   return impl->tensor();
 }
 
@@ -107,11 +113,27 @@ absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> GetXlaTensors(
     const at::ITensorListRef& tensors) {
   std::vector<absl_nonnull XLATensorPtr> xla_tensors;
   xla_tensors.reserve(tensors.size());
+  std::size_t index = 0;
   for (const auto& tensor : tensors) {
-    XLA_ASSIGN_OR_RETURN(XLATensorPtr ptr, bridge::GetXlaTensor(tensor));
+    XLA_ASSIGN_OR_RETURN(
+        XLATensorPtr ptr, bridge::GetXlaTensor(tensor),
+        absl::StrCat("Expected all tensors in the given list to be XLA "
+                     "tensors. Element at index ",
+                     index, " is not an XLA tensor. Got: ", tensor.toString()));
     xla_tensors.push_back(std::move(ptr));
+    index += 1;
   }
   return xla_tensors;
+}
+
+absl::StatusOr<absl_nonnull XLATensorPtr> GetInputXlaTensor(
+    const at::Tensor& tensor, const std::string_view param) {
+  XLA_ASSIGN_OR_RETURN(
+      XLATensorPtr ptr, GetXlaTensor(tensor),
+      absl::StrCat("Expected input tensor (", param,
+                   ") to be an actual XLA tensor. Got: ", tensor.toString(),
+                   ". Consider moving it (", param, ") to XLA."));
+  return ptr;
 }
 
 bool IsXlaTensor(const at::Tensor& tensor) {
@@ -120,20 +142,24 @@ bool IsXlaTensor(const at::Tensor& tensor) {
 
 absl::Status ReplaceXlaTensor(const at::Tensor& tensor,
                               XLATensorPtr new_xla_tensor) {
-  XLA_ASSIGN_OR_RETURN(XLATensorImpl * impl, GetXlaTensorImpl(tensor));
+  XLA_ASSIGN_OR_RETURN(XLATensorImpl * impl, GetXlaTensorImpl(tensor),
+                       "Failed replacing the XLA tensor in the given tensor.");
   impl->set_tensor(std::move(new_xla_tensor));
   return absl::OkStatus();
 }
 
 absl::Status ReplaceXlaTensor(const std::vector<at::Tensor>& tensors,
                               const std::vector<XLATensorPtr> new_xla_tensors) {
-  if (tensors.size() != new_xla_tensors.size()) {
-    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
-        absl::StrCat("The size of tensors and new_xla_tensors are not equal: ",
-                     tensors.size(), " vs. ", new_xla_tensors.size())));
-  }
+  ABSL_CHECK(tensors.size() == new_xla_tensors.size())
+      << "Expected the size of the list of tensors (" << tensors.size()
+      << ") to match the size of the list of XLATensorPtr ("
+      << new_xla_tensors.size() << ")";
   for (size_t i = 0; i < tensors.size(); ++i) {
-    XLA_RETURN_IF_ERROR(ReplaceXlaTensor(tensors[i], new_xla_tensors[i]));
+    XLA_RETURN_IF_ERROR(
+        ReplaceXlaTensor(tensors[i], new_xla_tensors[i]),
+        absl::StrCat(
+            "Failed replacing the XLA tensor at index ", i,
+            ". The reason being that that tensor is not an XLA tensor."));
   }
   return absl::OkStatus();
 }
@@ -160,8 +186,9 @@ XLATensorPtr GetOrCreateXlaTensor(const at::Tensor& tensor,
   }
 
   auto xtensor = GetXlaTensor(tensor);
-  return xtensor.ok() ? xtensor.value()
-                      : XLATensor::Create(inner_tensor, device);
+  return xtensor.ok()
+             ? xtensor.value()
+             : GetValueOrThrow(XLATensor::Create(inner_tensor, device));
 }
 
 XLATensorPtr GetOrCreateXlaTensor(const std::optional<at::Tensor>& tensor,
@@ -452,7 +479,8 @@ at::Tensor CreateXlaTensor(
     at::Tensor tensor,
     const std::optional<torch::lazy::BackendDevice>& device) {
   if (tensor.defined() && device) {
-    XLATensorPtr xla_tensor = XLATensor::Create(std::move(tensor), *device);
+    XLATensorPtr xla_tensor =
+        GetValueOrThrow(XLATensor::Create(std::move(tensor), *device));
     tensor = AtenFromXlaTensor(xla_tensor);
   }
   return tensor;

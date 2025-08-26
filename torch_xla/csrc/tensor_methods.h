@@ -1,6 +1,7 @@
 #ifndef XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 #define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
+#include "absl/base/nullability.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -307,8 +308,8 @@ XLATensorPtr bmm(const XLATensorPtr& batch1, const XLATensorPtr& batch2);
 std::vector<XLATensorPtr> broadcast_tensors(
     absl::Span<const XLATensorPtr> tensors);
 
-XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
-                 at::ScalarType dtype);
+absl::StatusOr<absl_nonnull XLATensorPtr> cat(
+    absl::Span<const XLATensorPtr> tensors, int64_t dim, at::ScalarType dtype);
 
 XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
                            double p);
@@ -388,7 +389,7 @@ XLATensorPtr diag(const XLATensorPtr& input, int64_t offset);
 XLATensorPtr diagonal(const XLATensorPtr& input, int64_t offset, int64_t dim1,
                       int64_t dim2);
 
-XLATensorPtr div(
+absl::StatusOr<absl_nonnull XLATensorPtr> div(
     const XLATensorPtr& input, const XLATensorPtr& other,
     const std::optional<std::string_view>& rounding_mode = std::nullopt,
     std::optional<at::ScalarType> logical_element_type = std::nullopt);
@@ -449,7 +450,8 @@ void eye_out(XLATensorPtr& out, int64_t lines, int64_t cols);
 void fill_(XLATensorPtr& input, const at::Scalar& value);
 
 // Flips (reverses) the values in the dimensions of the input tensor.
-XLATensorPtr flip(const XLATensorPtr& input, absl::Span<const int64_t> dims);
+absl::StatusOr<absl_nonnull XLATensorPtr> flip(const XLATensorPtr& input,
+                                               absl::Span<const int64_t> dims);
 
 XLATensorPtr fmod(
     const XLATensorPtr& input, const XLATensorPtr& other,
@@ -458,19 +460,19 @@ XLATensorPtr fmod(
     const XLATensorPtr& input, const at::Scalar& other,
     std::optional<at::ScalarType> logical_element_type = std::nullopt);
 
-XLATensorPtr full(absl::Span<const int64_t> size, const at::Scalar& fill_value,
-                  const torch::lazy::BackendDevice& device,
-                  at::ScalarType scalar_type);
+absl::StatusOr<absl_nonnull XLATensorPtr> full(
+    absl::Span<const int64_t> size, const at::Scalar& fill_value,
+    const torch::lazy::BackendDevice& device, at::ScalarType scalar_type);
 XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                        const torch::lazy::BackendDevice& device,
                        std::optional<at::ScalarType> scalar_type);
-XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
-                         const at::Scalar& fill_value,
-                         const torch::lazy::BackendDevice& device,
-                         at::ScalarType scalar_type);
+absl::StatusOr<absl_nonnull XLATensorPtr> full_symint(
+    at::SymIntArrayRef sym_size, const at::Scalar& fill_value,
+    const torch::lazy::BackendDevice& device, at::ScalarType scalar_type);
 
-XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
-                    const XLATensorPtr& index);
+absl::StatusOr<absl_nonnull XLATensorPtr> gather(const XLATensorPtr& input,
+                                                 int64_t dim,
+                                                 const XLATensorPtr& index);
 
 XLATensorPtr ge(const XLATensorPtr& input, const at::Scalar& other);
 
@@ -774,7 +776,7 @@ void put_(XLATensorPtr& input, const XLATensorPtr& index,
 
 std::tuple<XLATensorPtr, XLATensorPtr> qr(const XLATensorPtr& input, bool some);
 
-void random_(XLATensorPtr& input, int64_t from, int64_t to);
+absl::Status random_(XLATensorPtr& input, int64_t from, int64_t to);
 
 XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,
                       at::ScalarType scalar_type);

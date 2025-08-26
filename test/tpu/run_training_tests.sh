@@ -32,8 +32,3 @@ if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
     python3 "$_TEST_DIR/../examples/eager/train_decoder_only_eager_multi_process.py"
     XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 "$_TEST_DIR/ds/test_dynamic_shapes.py" -v
 fi
-
-if [[ -n "$TPU_VERSION" && "$TPU_VERSION" != "6" ]]; then
-    # Test `tpu-info` CLI compatibility
-    python3 "$_TPU_DIR/tpu_info/test_cli.py"
-fi

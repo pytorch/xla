@@ -43,8 +43,6 @@ def bazel_options_from_env() -> Iterable[str]:
   # Build configuration.
   if check_env_flag('BAZEL_VERBOSE'):
     bazel_flags.append('-s')
-  if check_env_flag('XLA_CUDA'):
-    bazel_flags.append('--config=cuda')
   if check_env_flag('XLA_CPU_USE_ACL'):
     bazel_flags.append('--config=acl')
 

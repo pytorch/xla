@@ -148,9 +148,9 @@ XLATensorPtr SmoothL1LossBackward(const XLATensorPtr& grad_output,
       XLATensorPtr grad_scale = tensor_methods::get_dimensions_size(
           broadcasted_input,
           XlaHelpers::GetAllDimensions(broadcasted_input->shape()));
-      return tensor_methods::mul(
-          tensor_methods::div(elementwise_loss_backward, grad_scale),
-          grad_output);
+      XLATensorPtr div_result = GetValueOrThrow(
+          tensor_methods::div(elementwise_loss_backward, grad_scale));
+      return tensor_methods::mul(div_result, grad_output);
     }
     default:
       XLA_ERROR() << "Invalid reduction type: "
@@ -174,12 +174,12 @@ XLATensorPtr SoftplusBackward(const XLATensorPtr& grad_output,
   XLATensorPtr z = tensor_methods::exp(scaled_input);
   XLATensorPtr one_vec =
       tensor_methods::full_like(z, 1, z->GetDevice(), z->dtype());
+  XLATensorPtr div = GetValueOrThrow(
+      tensor_methods::div(z, tensor_methods::add(z, one_vec, 1)));
 
-  return tensor_methods::where(
-      tensor_methods::gt(scaled_input, threshold), grad_output,
-      tensor_methods::mul(
-          grad_output,
-          tensor_methods::div(z, tensor_methods::add(z, one_vec, 1))));
+  return tensor_methods::where(tensor_methods::gt(scaled_input, threshold),
+                               grad_output,
+                               tensor_methods::mul(grad_output, div));
 }
 
 XLATensorPtr Select(const XLATensorPtr& input, int64_t dim, int64_t index) {
@@ -207,24 +207,24 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
   int64_t numel = xla::ShapeUtil::ElementsIn(indices_shape_ref.get());
   XLATensorPtr grad =
       tensor_methods::view(grad_output, {numel, grad_output->size(-1)});
-  XLATensorPtr grad_weight =
+  XLATensorPtr grad_weight = GetValueOrThrow(
       tensor_methods::full({num_weights, grad_output->size(-1)}, 0,
-                           grad_output->GetDevice(), grad_output->dtype());
+                           grad_output->GetDevice(), grad_output->dtype()));
   XLATensorPtr indices_rank1 = tensor_methods::view(indices, {numel});
   if (scale_grad_by_freq) {
     // Compute the histogram of index values.
-    XLATensorPtr counts = tensor_methods::full(
-        {num_weights}, 0, indices->GetDevice(), indices->dtype());
-    XLATensorPtr ones = tensor_methods::full({numel}, 1, indices->GetDevice(),
-                                             indices->dtype());
+    XLATensorPtr counts = GetValueOrThrow(tensor_methods::full(
+        {num_weights}, 0, indices->GetDevice(), indices->dtype()));
+    XLATensorPtr ones = GetValueOrThrow(tensor_methods::full(
+        {numel}, 1, indices->GetDevice(), indices->dtype()));
     tensor_methods::index_put_(counts, counts, {indices_rank1}, /*start_dim=*/0,
                                /*values=*/ones,
                                /*accumulate=*/true, /*result_permutation=*/{0});
     XLATensorPtr grad_weights_scale =
         tensor_methods::index(counts, {indices_rank1}, 0);
     // Scale the value of the gradient by the histogram.
-    grad = tensor_methods::div(
-        grad, tensor_methods::unsqueeze(grad_weights_scale, 1));
+    grad = GetValueOrThrow(tensor_methods::div(
+        grad, tensor_methods::unsqueeze(grad_weights_scale, 1)));
   }
   // Don't accumulate gradients for indices which are equal with the given
   // padding_idx.

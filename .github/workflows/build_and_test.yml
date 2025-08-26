@@ -83,7 +83,7 @@ jobs:
     with:
       timeout-minutes: 100
       has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: contains(github.event.pull_request.labels.*.name, 'torchprimeci')
     secrets: inherit
 
   push-docs:

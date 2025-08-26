@@ -70,9 +70,6 @@ class Tensor(torch.Tensor):
 
   __repr__ = __str__
 
-  def __jax_array__(self):
-    return self._elem
-
   @property
   def shape(self):
     return torch.Size(self._elem.shape)
@@ -472,12 +469,12 @@ class Environment(contextlib.ContextDecorator):
         arr = self.t2j_copy(the_tensor)
         res = Tensor(arr, self, the_tensor.requires_grad)
 
-    if new_dtype is not None and new_dtype != the_tensor.dtype:
-      if isinstance(the_tensor, Tensor):
+    if new_dtype is not None and new_dtype != res.dtype:
+      if isinstance(res, Tensor):
         res = res.apply_jax(jnp.astype, mappings.t2j_dtype(new_dtype))
       else:
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-          return the_tensor.to(device=new_device, dtype=new_dtype)
+          return res.to(device=new_device, dtype=new_dtype)
     return res
 
   def get_and_rotate_prng_key(self,
@@ -494,6 +491,8 @@ class Environment(contextlib.ContextDecorator):
       op = self._get_op_or_decomp(func)
       if op.needs_env:
         kwargs['env'] = self
+      if op.is_jax_function:
+        (args, kwargs) = self.t2j_iso((args, kwargs))
       res = op.func(*args, **kwargs)
       if isinstance(res, jax.Array):
         res = Tensor(res, self, requires_grad)

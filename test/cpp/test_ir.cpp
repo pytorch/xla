@@ -358,7 +358,7 @@ TEST_F(IrTest, TestSizeDivNodeDynamicByZero) {
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_div =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(node_div);
 
-  EXPECT_THROW(dim_node_div->getDynamicValue(), std::runtime_error);
+  EXPECT_THROW(dim_node_div->getDynamicValue(), c10::Error);
 }
 
 }  // namespace cpp_test

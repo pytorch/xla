@@ -43,7 +43,7 @@ spec:
     - |
       pip install expecttest==0.1.6
       pip install rich
-      pip install 'torch_xla[pallas]'
+      pip install --pre torch_xla[pallas] --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
 
       cd /src/pytorch/xla
     volumeMounts:
