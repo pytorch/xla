@@ -15,11 +15,6 @@ ARG tpuvm=""
 # Disable CUDA for PyTorch
 ENV USE_CUDA "0"
 
-# Enable CUDA for XLA
-ENV XLA_CUDA "${cuda}"
-ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
-ENV TF_CUDA_PATHS "/usr/local/cuda,/usr/include,/usr"
-
 # CUDA build guidance
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility

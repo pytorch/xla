@@ -337,41 +337,34 @@ class ProcessGroupXla(ProcessGroup):
     rs_opts.reduceOp = dist.ReduceOp.SUM
     return self.reduce_scatter(output_tensor_list, inputs, rs_opts)
 
-  # Dummy channel id maker. Different backend (TPU, GPU, etc) should replace
-  # the maker with their specific one. See unit test in
-  # test/test_torch_distributed_xla_backend.py for an example.
-  def make_send_channel_id(self, dst_rank, tag):
-    raise NotImplementedError
-
   # Call site e.g.
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L877
   def send(self, tensors, dst_rank, tag=0):
+    logging.warning(
+        "Individual send/recv ops are inefficient on an XLA device. Consider using xla_model.collective_permute() and specifying all source-target pairs."
+    )
     results = []
     for t in tensors:
-      channel_id = self.make_send_channel_id(dst_rank, tag)
-      # The input will be returned as result.
-      input_as_result = xm.send(t, channel_id)
-      # Make the sent tensor depend on the token, such that the `send`
-      # op can actually be built into the computation graph.
-      with torch.no_grad():
-        t.copy_(input_as_result)
-      results.append(input_as_result)
+      result_t = xm.collective_permute(
+          t, pairs=[[xr.global_ordinal(), dst_rank]])
+      torch_xla.sync()
+      results.append(result_t)
     return _ret_work(results)
-
-  # Dummy channel id maker. Different backend (TPU, GPU, etc) should replace
-  # the maker with their specific one. See unit test in
-  # test/test_torch_distributed_xla_backend.py for an example.
-  def make_recv_channel_id(self, src_rank, tag):
-    raise NotImplementedError
 
   # Call site e.g.
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L913
   def recv(self, out_tensors, src_rank, tag=0):
+    logging.warning(
+        "Individual send/recv ops are inefficient on an XLA device. Consider using xla_model.collective_permute() and specifying all source-target pairs."
+    )
     results = []
     for ot in out_tensors:
-      channel_id = self.make_recv_channel_id(src_rank, tag)
-      result = xm.recv(ot, channel_id)
-      results.append(result)
+      result_t = xm.collective_permute(
+          ot, pairs=[[src_rank, xr.global_ordinal()]])
+      torch_xla.sync()
+      with torch.no_grad():
+        ot.copy_(result_t)
+      results.append(result_t)
     return _ret_work(results)
 
   def recv_anysource(self, *args):

@@ -460,19 +460,19 @@ XLATensorPtr fmod(
     const XLATensorPtr& input, const at::Scalar& other,
     std::optional<at::ScalarType> logical_element_type = std::nullopt);
 
-XLATensorPtr full(absl::Span<const int64_t> size, const at::Scalar& fill_value,
-                  const torch::lazy::BackendDevice& device,
-                  at::ScalarType scalar_type);
+absl::StatusOr<absl_nonnull XLATensorPtr> full(
+    absl::Span<const int64_t> size, const at::Scalar& fill_value,
+    const torch::lazy::BackendDevice& device, at::ScalarType scalar_type);
 XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                        const torch::lazy::BackendDevice& device,
                        std::optional<at::ScalarType> scalar_type);
-XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
-                         const at::Scalar& fill_value,
-                         const torch::lazy::BackendDevice& device,
-                         at::ScalarType scalar_type);
+absl::StatusOr<absl_nonnull XLATensorPtr> full_symint(
+    at::SymIntArrayRef sym_size, const at::Scalar& fill_value,
+    const torch::lazy::BackendDevice& device, at::ScalarType scalar_type);
 
-XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
-                    const XLATensorPtr& index);
+absl::StatusOr<absl_nonnull XLATensorPtr> gather(const XLATensorPtr& input,
+                                                 int64_t dim,
+                                                 const XLATensorPtr& index);
 
 XLATensorPtr ge(const XLATensorPtr& input, const at::Scalar& other);
 
@@ -776,7 +776,7 @@ void put_(XLATensorPtr& input, const XLATensorPtr& index,
 
 std::tuple<XLATensorPtr, XLATensorPtr> qr(const XLATensorPtr& input, bool some);
 
-void random_(XLATensorPtr& input, int64_t from, int64_t to);
+absl::Status random_(XLATensorPtr& input, int64_t from, int64_t to);
 
 XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,
                       at::ScalarType scalar_type);
