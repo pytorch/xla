@@ -60,7 +60,8 @@ xla::XlaComputation CreateAllComputation(xla::PrimitiveType type) {
   xla::XlaOp zero = xla::Zero(&builder, type);
   xla::XlaOp one = xla::One(&builder, type);
   xla::Select(xla::And(xla::Ne(x, zero), xla::Ne(y, zero)), one, zero);
-  return GetValueOrThrow(builder.Build());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation all_computation, builder.Build());
+  return all_computation;
 }
 
 xla::XlaComputation CreateAnyComputation(xla::PrimitiveType type) {
@@ -72,7 +73,8 @@ xla::XlaComputation CreateAnyComputation(xla::PrimitiveType type) {
   xla::XlaOp zero = xla::Zero(&builder, type);
   xla::XlaOp one = xla::One(&builder, type);
   xla::Select(xla::Or(xla::Ne(x, zero), xla::Ne(y, zero)), one, zero);
-  return GetValueOrThrow(builder.Build());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation any_computation, builder.Build());
+  return any_computation;
 }
 
 xla::XlaOp GetScaleValue(xla::XlaOp input, xla::XlaOp count,
