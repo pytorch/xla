@@ -157,9 +157,6 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
       self.skipTest(
           "Skip this test because it requires xr.device_type()=='CUDA' and torch.cuda.is_available()."
       )
-    os.environ.update({
-        xenv.ZERO_COPY_ENABLED: "1",
-    })
     return "cuda:0"
 
   @skipOnNeuron
@@ -205,9 +202,6 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
       "1",
   )
   def test_simple_model_automoves_tensors(self, zero_copy_enabled):
-    os.environ.update({
-        xenv.ZERO_COPY_ENABLED: zero_copy_enabled,
-    })
     x = torch.tensor(100.0, requires_grad=True, device="cuda:0")
     y = torch.tensor(200.0, requires_grad=True, device="cuda:0")
     original_device = x.device

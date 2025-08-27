@@ -161,8 +161,6 @@ IfrtComputationClient::Create() {
 }
 
 IfrtComputationClient::~IfrtComputationClient() {
-  // In the GPU case, the PjRtClient depends on the DistributedRuntimeClient
-  // tracked in XlaCoordinator, so the PjRtClient must be destroyed first.
   client_ = nullptr;
   coordinator_ = nullptr;
 }
