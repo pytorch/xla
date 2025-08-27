@@ -15,7 +15,8 @@ def from_dlpack(ext_tensor: Any):
       ext_tensor, '__dlpack__'):
     device_type, _ = ext_tensor.__dlpack_device__()
     if device_type != DLDeviceType.kDLCPU:
-        raise ValueError("PyTorch/XLA DLPack implementation currently only supports CPU.")
+      raise ValueError(
+          "PyTorch/XLA DLPack implementation currently only supports CPU.")
     dlpack = ext_tensor.__dlpack__()
   else:
     dlpack = ext_tensor
