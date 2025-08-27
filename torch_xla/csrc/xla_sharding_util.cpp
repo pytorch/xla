@@ -221,9 +221,11 @@ bool ShardingUtil::EqualOpShardings(const xla::OpSharding& a,
 xla::OpSharding ShardingUtil::CreateIotaOpSharding(
     const py::list& dims, const py::list& reshape_dims,
     const py::list& transpose_perm) {
+  TORCH_LAZY_COUNTER("CreateIotaOpSharding", 1);
   auto dims_vec = dims.cast<std::vector<int64_t>>();
   auto reshape_dims_vec = reshape_dims.cast<std::vector<int64_t>>();
   auto transpose_perm_vec = transpose_perm.cast<std::vector<int>>();
+  CHECK_EQ(reshape_dims_vec.size(), transpose_perm_vec.size());
   std::vector<xla::OpSharding::Type> subgroup_types;
   if (dims_vec.size() > transpose_perm.size()) {
     subgroup_types.push_back(xla::OpSharding::REPLICATED);
