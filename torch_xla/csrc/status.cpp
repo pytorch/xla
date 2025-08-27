@@ -8,6 +8,7 @@
 #include <stdexcept>
 
 #include "absl/log/absl_check.h"
+#include "absl/strings/str_cat.h"
 #include "tsl/platform/stacktrace.h"
 
 namespace torch_xla {
@@ -115,6 +116,17 @@ std::string BuildStatusErrorMessage(const absl::Status& status) {
 // Return a line break if torch::get_cpp_stacktraces_enabled() is true.
 static std::string LineBreakIfCppStacktracesEnabled() {
   return torch::get_cpp_stacktraces_enabled() ? "\n" : "";
+}
+
+void status_internal::ThrowStatusError(const absl::Status& status,
+                                       const char* file, const int32_t line,
+                                       const char* function,
+                                       std::string_view message) {
+  ABSL_CHECK(!status.ok());
+  absl::Status new_status = status_internal::MaybeWithNewMessage(
+      status, file, line, function, message);
+  TORCH_CHECK(false, absl::StrCat(BuildStatusErrorMessage(new_status),
+                                  LineBreakIfCppStacktracesEnabled()));
 }
 
 void OkOrThrow(const absl::Status& status) {

@@ -35,7 +35,7 @@ Note: Builds are available for Python 3.8 to 3.11; please use one of the support
 pip install torch==2.8.0 'torch_xla[tpu]==2.8.0'
 
 # Optional: if you're using custom kernels, install pallas dependencies
-pip install 'torch_xla[pallas]'
+pip install --pre torch_xla[pallas] --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
 ```
 **As of 07/16/2025 and starting from Pytorch/XLA 2.8 release, PyTorch/XLA will 
 provide nightly and release wheels for Python 3.11 to 3.13**

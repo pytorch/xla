@@ -207,16 +207,16 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
   int64_t numel = xla::ShapeUtil::ElementsIn(indices_shape_ref.get());
   XLATensorPtr grad =
       tensor_methods::view(grad_output, {numel, grad_output->size(-1)});
-  XLATensorPtr grad_weight =
+  XLATensorPtr grad_weight = GetValueOrThrow(
       tensor_methods::full({num_weights, grad_output->size(-1)}, 0,
-                           grad_output->GetDevice(), grad_output->dtype());
+                           grad_output->GetDevice(), grad_output->dtype()));
   XLATensorPtr indices_rank1 = tensor_methods::view(indices, {numel});
   if (scale_grad_by_freq) {
     // Compute the histogram of index values.
-    XLATensorPtr counts = tensor_methods::full(
-        {num_weights}, 0, indices->GetDevice(), indices->dtype());
-    XLATensorPtr ones = tensor_methods::full({numel}, 1, indices->GetDevice(),
-                                             indices->dtype());
+    XLATensorPtr counts = GetValueOrThrow(tensor_methods::full(
+        {num_weights}, 0, indices->GetDevice(), indices->dtype()));
+    XLATensorPtr ones = GetValueOrThrow(tensor_methods::full(
+        {numel}, 1, indices->GetDevice(), indices->dtype()));
     tensor_methods::index_put_(counts, counts, {indices_rank1}, /*start_dim=*/0,
                                /*values=*/ones,
                                /*accumulate=*/true, /*result_permutation=*/{0});

@@ -46,7 +46,7 @@ new_local_repository(
 
 # To build PyTorch/XLA with a new revison of OpenXLA, update the xla_hash to
 # the openxla git commit hash and note the date of the commit.
-xla_hash = '3d5ece64321630dade7ff733ae1353fc3c83d9cc'  # Committed on 2025-06-17.
+xla_hash = '92f7b5952dd585c5be17c9a5caad27407005b513'  # Committed on 2025-08-15.
 
 http_archive(
     name = "xla",
@@ -58,7 +58,7 @@ http_archive(
     patches = [
         "//openxla_patches:gpu_nvml.diff",
         "//openxla_patches:gpu_race_condition.diff",
-        "//openxla_patches:count_down.diff",
+        "//openxla_patches:no_fortify.diff",
     ],
     strip_prefix = "xla-" + xla_hash,
     urls = [
@@ -80,6 +80,19 @@ http_archive(
 #    name = "xla",
 #    path = "/path/to/openxla",
 # )
+
+# Initialize OpenXLA's external dependencies. There is an specific order
+# which those dependencies are initialized, because for bazel it's the
+# first definition that takes precedence.
+# We follow what openxla/xla does exactly: 
+# https://github.com/openxla/xla/blob/main/WORKSPACE#L37
+load("@xla//:workspace4.bzl", "xla_workspace4")
+
+xla_workspace4()
+
+load("@xla//:workspace3.bzl", "xla_workspace3")
+
+xla_workspace3()
 
 # Initialize hermetic Python
 load("@xla//third_party/py:python_init_rules.bzl", "python_init_rules")
@@ -115,14 +128,6 @@ install_deps()
 
 
 
-# Initialize OpenXLA's external dependencies.
-load("@xla//:workspace4.bzl", "xla_workspace4")
-
-xla_workspace4()
-
-load("@xla//:workspace3.bzl", "xla_workspace3")
-
-xla_workspace3()
 
 load("@xla//:workspace2.bzl", "xla_workspace2")
 

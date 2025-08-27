@@ -162,8 +162,8 @@ def get_latest_stable_jax_info() -> tuple[str, str, str] | None:
   published_at = data['published_at']  # e.g., "2024-04-26T22:58:34Z"
   release_date = published_at.split('T')[0]  # e.g., "2024-04-26"
 
-  # The XLA commit is in third_party/xla/workspace.bzl in the JAX repo.
-  workspace_bzl_url = f'https://raw.githubusercontent.com/google/jax/{tag_name}/third_party/xla/workspace.bzl'
+  # The XLA commit is in third_party/xla/revision.bzl in the JAX repo.
+  workspace_bzl_url = f'https://raw.githubusercontent.com/google/jax/{tag_name}/third_party/xla/revision.bzl'
   try:
     with urllib.request.urlopen(workspace_bzl_url) as response:
       workspace_content = response.read().decode()
