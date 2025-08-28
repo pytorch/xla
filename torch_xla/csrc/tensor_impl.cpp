@@ -9,6 +9,7 @@
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/util.h>
 
+#include "absl/log/absl_check.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir_builder.h"
@@ -71,16 +72,11 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
                       GetTypeMeta(tensor),
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
-  // Update the Autocast key based off the backend device.
-  // Upstream TensorImpl cannot differentiate between XLA:TPU and XLA:GPU
-  // so we must manually update Autocast to AutocastCUDA on XLA:GPU.
-  torch::lazy::BackendDevice current_device = bridge::GetCurrentDevice();
-  auto dev_type = static_cast<XlaDeviceType>(current_device.type());
-  if (dev_type == XlaDeviceType::CUDA) {
-    auto autocast_cuda_ks = c10::DispatchKeySet(c10::DispatchKey::AutocastCUDA);
-    auto autocast_xla_ks = c10::DispatchKeySet(c10::DispatchKey::AutocastXLA);
-    key_set_ = (key_set_ - autocast_xla_ks) | autocast_cuda_ks;
-  }
+  auto dev_type = static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
+  ABSL_CHECK(dev_type == XlaDeviceType::CUDA)
+      << "XLA:CUDA is not supported anymore. "
+         "If you are seeing this error, report a bug to the PyTorch/XLA GitHub "
+         "repository: https://github.com/pytorch/xla";
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   set_sizes_and_strides(sym_sizes_, c10::fromIntArrayRefSlow(
                                         sizes_and_strides_.strides_arrayref()));
