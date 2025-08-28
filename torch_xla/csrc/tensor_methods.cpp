@@ -1479,9 +1479,11 @@ std::tuple<XLATensorPtr, XLATensorPtr> cummax(const XLATensorPtr& input,
     at::Tensor val =
         at::empty(shape_, at::TensorOptions().dtype(input->dtype()));
     at::Tensor idx = at::empty(shape_, at::TensorOptions().dtype(at::kLong));
-    return std::make_tuple(
-        GetValueOrThrow(XLATensor::Create(val, input->GetDevice())),
-        GetValueOrThrow(XLATensor::Create(idx, input->GetDevice())));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_val,
+                        XLATensor::Create(val, input->GetDevice()));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_idx,
+                        XLATensor::Create(idx, input->GetDevice()));
+    return std::make_tuple(xla_val, xla_idx);
   }
   torch::lazy::NodePtr node =
       torch_xla::MakeNode<CumMax>(input->GetIrValue(), canonical_dim);
@@ -2533,10 +2535,10 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm(
     }
   } else {
     at::Tensor at_input = bridge::AtenFromXlaTensor(input);
-    mean = GetValueOrThrow(
-        bridge::GetXlaTensor(at::empty({0}, at_input.options())));
-    variance_inverse = GetValueOrThrow(
-        bridge::GetXlaTensor(at::empty({0}, at_input.options())));
+    XLA_ASSIGN_OR_THROW(
+        mean, bridge::GetXlaTensor(at::empty({0}, at_input.options())));
+    XLA_ASSIGN_OR_THROW(variance_inverse, bridge::GetXlaTensor(at::empty(
+                                              {0}, at_input.options())));
   }
 
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();

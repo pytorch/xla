@@ -53,7 +53,8 @@ xla::XlaComputation CreateAddComputation(const xla::Shape& shape) {
   xla::XlaOp x = xla::Parameter(&builder, 0, shape, "x");
   xla::XlaOp y = xla::Parameter(&builder, 1, shape, "y");
   xla::XlaOp sum = xla::Add(x, y);
-  return GetValueOrThrow(builder.Build());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation add_computation, builder.Build());
+  return add_computation;
 }
 
 TEST(XLABackendTest, TestE2E) {
