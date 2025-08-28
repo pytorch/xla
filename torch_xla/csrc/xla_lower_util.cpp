@@ -1279,31 +1279,6 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input, const std::string& type,
                          output_shape);
 }
 
-std::vector<xla::XlaOp> BuildGpuCustomCall(
-    const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
-    const std::string& payload) {
-  std::vector<xla::Shape> input_shapes;
-  input_shapes.reserve(inputs.size());
-  for (const auto& input : inputs) {
-    input_shapes.push_back(ShapeHelper::ShapeOfXlaOp(input));
-  }
-
-  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
-  xla::XlaOp outputs = xla::CustomCallWithLayout(
-      inputs[0].builder(),
-      /*call_target_name=*/"triton_kernel_call", inputs, output_shape,
-      input_shapes, payload, false, {}, nullptr,
-      xla::CustomCallSchedule::SCHEDULE_NONE,
-      xla::CustomCallApiVersion::API_VERSION_STATUS_RETURNING);
-  std::vector<xla::XlaOp> result;
-  int num_outputs = output_shape.tuple_shapes_size();
-  result.reserve(num_outputs);
-  for (int i = 0; i < num_outputs; ++i) {
-    result.push_back(xla::GetTupleElement(outputs, i));
-  }
-  return result;
-}
-
 std::vector<xla::XlaOp> BuildTpuCustomCall(
     const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
     const std::string& payload) {
