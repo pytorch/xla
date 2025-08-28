@@ -90,7 +90,6 @@ Tutorials
    :caption: Training on GPU
 
    accelerators/gpu
-   features/triton
    perf/spmd_gpu
 
 .. toctree::

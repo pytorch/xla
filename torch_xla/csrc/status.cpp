@@ -118,6 +118,17 @@ static std::string LineBreakIfCppStacktracesEnabled() {
   return torch::get_cpp_stacktraces_enabled() ? "\n" : "";
 }
 
+void status_internal::ThrowStatusError(const absl::Status& status,
+                                       const char* file, const int32_t line,
+                                       const char* function,
+                                       std::string_view message) {
+  ABSL_CHECK(!status.ok());
+  absl::Status new_status = status_internal::MaybeWithNewMessage(
+      status, file, line, function, message);
+  TORCH_CHECK(false, absl::StrCat(BuildStatusErrorMessage(new_status),
+                                  LineBreakIfCppStacktracesEnabled()));
+}
+
 void OkOrThrow(const absl::Status& status) {
   TORCH_CHECK(status.ok(), absl::StrCat(BuildStatusErrorMessage(status),
                                         LineBreakIfCppStacktracesEnabled()));

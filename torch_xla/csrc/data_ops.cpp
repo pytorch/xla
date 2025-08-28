@@ -197,8 +197,8 @@ xla::XlaOp BuildMaskedFillScalar(xla::XlaOp input, xla::XlaOp mask,
   const xla::Shape& mask_shape = ShapeHelper::ShapeOfXlaOp(mask);
 
   if (!xla::ShapeUtil::Compatible(input_shape, mask_shape)) {
-    xla::Shape shape =
-        GetValueOrThrow(XlaHelpers::GetPromotedShape(input_shape, mask_shape));
+    XLA_ASSIGN_OR_THROW(xla::Shape shape,
+                        XlaHelpers::GetPromotedShape(input_shape, mask_shape));
     input = BuildExpand(input, shape.dimensions());
     mask = BuildExpand(mask, shape.dimensions());
   }

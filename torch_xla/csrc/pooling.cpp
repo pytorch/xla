@@ -49,7 +49,9 @@ xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
   xla::XlaOp y = xla::Parameter(&reduction_builder, 1,
                                 xla::ShapeUtil::MakeShape(type, {}), "y");
   xla::Ge(x, y);
-  return GetValueOrThrow(reduction_builder.Build());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation ge_computation,
+                      reduction_builder.Build());
+  return ge_computation;
 }
 
 xla::TensorFormat MakeNCHWFormat(int64_t spatial_dim_count) {
@@ -367,7 +369,8 @@ xla::XlaOp ComputeMaxPoolIndices(
     return results;
   };
 
-  std::vector<xla::XlaOp> results = GetValueOrThrow(
+  XLA_ASSIGN_OR_THROW(
+      std::vector<xla::XlaOp> results,
       xla::WhileLoopHelper(cond_fn, body_fn, initial_values.values,
                            "ComputeMaxPoolIndices", padded_input.builder()));
 
