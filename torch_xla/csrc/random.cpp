@@ -16,9 +16,7 @@
 namespace torch_xla {
 namespace {
 
-std::string GetDefaultGitGeneratorName() {
-  return "default";
-}
+std::string GetDefaultGitGeneratorName() { return "default"; }
 
 xla::BitGeneratorTy GetBitGenerator() {
   static const std::string* bit_generator =
