@@ -6,7 +6,8 @@
 namespace torch_xla {
 
 const xla::Shape& ShapeHelper::ShapeOfXlaOp(xla::XlaOp op) {
-  return *GetValueOrThrow(GetShape(op));
+  XLA_ASSIGN_OR_THROW(const xla::Shape* shape, GetShape(op));
+  return *shape;
 }
 
 absl::StatusOr<const xla::Shape * absl_nonnull> GetShape(xla::XlaOp op) {
