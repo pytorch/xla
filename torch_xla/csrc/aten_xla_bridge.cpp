@@ -190,11 +190,11 @@ XLATensorPtr GetOrCreateXlaTensor(const at::Tensor& tensor,
   auto xtensor = GetXlaTensor(tensor);
   if (xtensor.ok()) {
     return xtensor.value();
-  } else {
-    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor,
-                        XLATensor::Create(inner_tensor, device));
-    return xla_tensor;
   }
+
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor,
+                      XLATensor::Create(inner_tensor, device));
+  return xla_tensor;
 }
 
 XLATensorPtr GetOrCreateXlaTensor(const std::optional<at::Tensor>& tensor,
