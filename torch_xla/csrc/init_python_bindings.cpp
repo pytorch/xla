@@ -83,6 +83,8 @@
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
 
+#define PYBIND11_DETAILED_ERROR_MESSAGES
+
 namespace torch_xla {
 namespace {
 
@@ -1543,12 +1545,12 @@ void InitXlaModuleBindings(py::module m) {
       })
       .def_init([](at::Tensor tensor, const py::list& dims,
                    const py::list& reshape_dims, const py::list& transpose_perm,
-                   bool minibatch) {
+                   const py::list& types, bool minibatch, bool use_v2) {
         xla::Shape global_shape =
             ShardingUtil::GetAdjustedGlobalShape(tensor, minibatch);
         return std::make_shared<XLATensor::ShardingSpec>(
             ShardingUtil::CreateIotaOpSharding(dims, reshape_dims,
-                                               transpose_perm),
+                                               transpose_perm, types),
             global_shape, minibatch);
       });
 
@@ -1578,9 +1580,9 @@ void InitXlaModuleBindings(py::module m) {
       })
       // Constructor for V2 shardings.
       .def_init([](const py::list& dims, const py::list& reshape_dims,
-                   const py::list& transpose_perm) {
+                   const py::list& transpose_perm, const py::list& types, bool use_v2) {
         return ShardingUtil::CreateIotaOpSharding(dims, reshape_dims,
-                                                  transpose_perm);
+                                                  transpose_perm, types);
       });
 
   // Define the _XLAC.PjRtPlugin class.

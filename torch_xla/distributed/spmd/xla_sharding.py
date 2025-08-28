@@ -131,12 +131,6 @@ class Mesh:
   def _get_op_sharding_args(self, partition_spec: PartitionSpec):
     partition_spec = _translate_named_partition_spec(self, partition_spec)
     self._validate_translated_partition_spec(partition_spec)
-    flat_specs = np.hstack([d for d in partition_spec])
-    specs = [d for d in flat_specs if d is not None]
-    assert all(d >= 0 and d < len(self.mesh_shape) for d in specs), \
-      f"partition_spec ({partition_spec}) contains out of bound index into mesh_shape."
-    assert len(specs) == len(np.unique(specs)), \
-    f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
     tile_assignment = _get_tile_assignment(self, partition_spec)
     if len(tile_assignment.shape) > len(partition_spec):
@@ -151,47 +145,108 @@ class Mesh:
     tile_assignment = tile_assignment.tolist()
     sharding_type = int(sharding_type)
     return tile_assignment, group_assignment, replication_groups, sharding_type
-
+  
   @functools.lru_cache(maxsize=None)
   def _get_op_sharding_args_v2(self, partition_spec: PartitionSpec):
     partition_spec = _translate_named_partition_spec(self, partition_spec)
+    # print("TRANSLATED PARTITION SPEC: ", partition_spec)
     self._validate_translated_partition_spec(partition_spec)
 
-    # 1. Calculate the initial part of dims based on the partition_spec.
-    dims = []
-    used_axes = OrderedDict()
-    for axis in partition_spec:
-      if isinstance(axis, tuple):
-        dim_size = 1
-        for i in axis:
-          assert i is not None, "None not allowed within tuple"
-          dim_size *= self.mesh_shape[i]
-          used_axes[i] = True
-        dims.append(dim_size)
-      elif axis is not None:
-        assert isinstance(axis, int), "Axis must be an int or a tuple of ints"
-        dims.append(self.mesh_shape[axis])
-        used_axes[axis] = True
+    # 1. Process dimension shardings
+    tile_assignment_dims = [1] * len(partition_spec)
+    axisRefToShardedPos = {}
+    types = []
+    shardedPos = 0
+
+    for idx, axes in enumerate(partition_spec):
+      if axes is None:
+        # Tensor dim is being replicated
+        continue
+      elif isinstance(axes, tuple):
+        # Tensor dim is being sharded over multiple axes
+        for axis in axes:
+          tile_assignment_dims[idx] *= self.mesh_shape[axis]
+          axisRefToShardedPos[axis] = shardedPos
+          shardedPos += 1
       else:
-        dims.append(1)
+        # Tensor dim is being sharded over just 1 axis
+        tile_assignment_dims[idx] *= self.mesh_shape[axes]
+        axisRefToShardedPos[axes] = shardedPos
+        shardedPos += 1
 
-    # 2. If the product of dims is less than the total number of devices,
-    #    append the sizes of the unused mesh axes.
-    if math.prod(dims) < math.prod(self.mesh_shape):
-      for i in range(len(self.mesh_shape)):
-        if i not in used_axes:
-          dims.append(self.mesh_shape[i])
+    tiled_dims = [x for x in partition_spec if x is not None]
+    used_axes = np.hstack(tiled_dims).tolist() if tiled_dims else []
+    missing_axes = sorted(set(range(len(self.mesh_shape))) - set(used_axes))
+    all_axes_ordered = used_axes + missing_axes
+    reshape_dims = [0] * len(all_axes_ordered)
+    transpose_perm = [0] * len(all_axes_ordered)
 
-    # 3. Calculate transpose_perm (sharded axes first, then unused axes).
-    transpose_perm = list(used_axes.keys())
-    for i in range(len(self.mesh_shape)):
-      if i not in used_axes:
-        transpose_perm.append(i)
+    totalReplicatedSize = 1
+    replicatedPos = shardedPos
+    for idx, axis in enumerate(all_axes_ordered):
+      reshape_dims[idx] = self.mesh_shape[axis]
+      if axis in axisRefToShardedPos:
+        # Axis is sharded
+        transpose_perm[axisRefToShardedPos[axis]] = idx
+      else:
+        # Axis is replicated
+        transpose_perm[replicatedPos] = idx
+        replicatedPos += 1
+        totalReplicatedSize *= self.mesh_shape[axis]
+    
+    if totalReplicatedSize > 1:
+      tile_assignment_dims.append(totalReplicatedSize)
+      types.append(ShardingType.REPLICATED)
 
-    # 4. reshape_dims is always the physical mesh shape.
-    reshape_dims = list(self.mesh_shape)
+    return tile_assignment_dims, reshape_dims, transpose_perm, types
 
-    return dims, reshape_dims, transpose_perm
+    
+
+
+  # @functools.lru_cache(maxsize=None)
+  # def _get_op_sharding_args_v2(self, partition_spec: PartitionSpec):
+  #   '''
+  #   Returns the sharding arguments needed to produce V2 shardings for TILED and PARTIAL
+  #   sharding types.
+  #   '''
+  #   partition_spec = _translate_named_partition_spec(self, partition_spec)
+  #   self._validate_translated_partition_spec(partition_spec)
+
+  #   # 1. Calculate the initial part of dims based on the partition_spec.
+  #   dims = []
+  #   used_axes = OrderedDict()
+  #   for axis in partition_spec:
+  #     if isinstance(axis, tuple):
+  #       dim_size = 1
+  #       for i in axis:
+  #         assert i is not None, "None not allowed within tuple"
+  #         dim_size *= self.mesh_shape[i]
+  #         used_axes[i] = True
+  #       dims.append(dim_size)
+  #     elif axis is not None:
+  #       assert isinstance(axis, int), "Axis must be an int or a tuple of ints"
+  #       dims.append(self.mesh_shape[axis])
+  #       used_axes[axis] = True
+  #     else:
+  #       dims.append(1)
+
+  #   # 2. If the product of dims is less than the total number of devices,
+  #   #    append the sizes of the unused mesh axes.
+  #   if math.prod(dims) < math.prod(self.mesh_shape):
+  #     for i in range(len(self.mesh_shape)):
+  #       if i not in used_axes:
+  #         dims.append(self.mesh_shape[i])
+
+  #   # 3. Calculate transpose_perm (sharded axes first, then unused axes).
+  #   transpose_perm = list(used_axes.keys())
+  #   for i in range(len(self.mesh_shape)):
+  #     if i not in used_axes:
+  #       transpose_perm.append(i)
+
+  #   # 4. reshape_dims is always the physical mesh shape.
+  #   reshape_dims = list(self.mesh_shape)
+
+  #   return dims, reshape_dims, transpose_perm
 
   @functools.lru_cache(maxsize=None)
   def get_op_sharding_v2(
@@ -199,15 +254,33 @@ class Mesh:
     """
     Return the OpSharding for the given partition spec using V2 annotations.
     """
+    # print("MESH SHAPE: ", self.mesh_shape)
+    # print("MESH: ")
+    # for i in range(len(self.mesh_shape)):
+    #   print(f"AXIS {i}: ", self.mesh_shape[i])
+    # print("PARTITION SPEC: ", partition_spec)
     if len(partition_spec) == 0:
       return torch_xla._XLAC.OpSharding([], [], [], ShardingType.REPLICATED)
     sharding_type = _get_sharding_type(partition_spec, self.size())
     if sharding_type not in (ShardingType.TILED, ShardingType.PARTIAL):
-      return torch_xla._XLAC.OpSharding([], [], [0], sharding_type)
+      return torch_xla._XLAC.OpSharding([], [], [], sharding_type)
 
-    dims, reshape_dims, transpose_perm = self._get_op_sharding_args_v2(
+    # OLD
+    # dims, reshape_dims, transpose_perm = self._get_op_sharding_args_v2(
+    #     partition_spec)
+    dims, reshape_dims, transpose_perm, types = self._get_op_sharding_args_v2(
         partition_spec)
-    return torch_xla._XLAC.OpSharding(dims, reshape_dims, transpose_perm)
+    # OLD
+    # return torch_xla._XLAC.OpSharding(dims, reshape_dims, transpose_perm)
+    print("TYPE OF DIMS", type(dims))
+    print("DIMS: ", dims)
+    print("TYPE OF RESHAPE DIMS", type(reshape_dims))
+    print("RESHAPE DIMS: ", reshape_dims)
+    print("TYPE OF TRANSPOSE PERM: ", type(transpose_perm))
+    print("TRANSPOSE PERM: ", transpose_perm)
+    print("TYPE OF TYPES: ", type(types))
+    print("TYPES: ", types)
+    return torch_xla._XLAC.OpSharding(dims, reshape_dims, transpose_perm, types, True)
 
   @functools.lru_cache(maxsize=None)
   def get_op_sharding(
@@ -910,7 +983,10 @@ class ShardingSpec:
         self._sharding_type, tile_assignment, len(partition_spec),
         replicate_dims)
     if _use_shlo_to_shardy():
-      self.dims, self.reshape_dims, self.transpose_dims = mesh._get_op_sharding_args_v2(
+      # OLD
+      # self.dims, self.reshape_dims, self.transpose_perm = mesh._get_op_sharding_args_v2(
+      #     partition_spec)
+      self.dims, self.reshape_dims, self.transpose_perm, self.types = mesh._get_op_sharding_args_v2(
           partition_spec)
 
   def xla_spec(self, t: torch.Tensor) -> Union['XlaShardingSpec', None]:
@@ -923,9 +999,15 @@ class ShardingSpec:
 
     if _use_shlo_to_shardy():
       # Convert to Shardy spec if the environment variable is set.
+      # OLD
+      # return torch_xla._XLAC.XlaShardingSpec(t, self.dims, self.reshape_dims,
+      #                                        self.transpose_perm,
+      #                                        self.minibatch)
+      # NEW
       return torch_xla._XLAC.XlaShardingSpec(t, self.dims, self.reshape_dims,
-                                             self.transpose_dims,
-                                             self.minibatch)
+                                             self.transpose_perm, self.types,
+                                             self.minibatch, True)
+
 
     return torch_xla._XLAC.XlaShardingSpec(t, self._tile_assignment,
                                            self._group_assignment,
