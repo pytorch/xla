@@ -129,13 +129,6 @@ void status_internal::ThrowStatusError(const absl::Status& status,
                                   LineBreakIfCppStacktracesEnabled()));
 }
 
-void OkOrThrow(const absl::Status& status) {
-  TORCH_CHECK(status.ok(), absl::StrCat(BuildStatusErrorMessage(status),
-                                        LineBreakIfCppStacktracesEnabled()));
-}
-
-void GetValueOrThrow(const absl::Status& status) { OkOrThrow(status); }
-
 void status_internal::OkOrDie(const absl::Status& status, const char* file,
                               const int32_t line, const char* function,
                               std::string_view message) {
