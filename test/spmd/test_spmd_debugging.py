@@ -17,6 +17,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
 from torch_xla.distributed.spmd import XLAShardedTensor
 from torch_xla.distributed.spmd import Mesh
+from torch_xla.distributed.spmd.debugging import construct_v1_sharding_str
 
 import test_xla_sharding_base
 
@@ -821,6 +822,77 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
+
+
+class ConvertV2ShardingToV1Test(test_xla_sharding_base.XlaShardingTest):
+
+  @classmethod
+  def setUpClass(cls):
+    super().setUpClass()
+    os.environ["CONVERT_SHLO_TO_SHARDY"] = "1"
+
+  def run_test(self):
+    mesh = self._get_mesh(self.device_mesh_shape)
+    t = torch.randn(self.tensor_shape).to(torch_xla.device())
+    xs.mark_sharding(t, mesh, self.partition_spec)
+    actual_str = construct_v1_sharding_str(t)
+    self.assertEqual(self.expected_str, actual_str)
+
+  def test_tiled_sharding(self):
+    self.device_mesh_shape = (1, self.n_devices)
+    self.tensor_shape = (1, 128)
+    self.partition_spec = (0, 1)
+    self.expected_str = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
+        [str(i) for i in range(self.n_devices)]))
+    self.run_test()
+
+  @unittest.skipIf(xr.global_runtime_device_count() < 2,
+                   f"Requires at least 2 devices.")
+  def test_tupled_tiled_sharding(self):
+    self.device_mesh_shape = (2, self.n_devices // 2)
+    self.tensor_shape = (16,)
+    self.partition_spec = ((0, 1),)
+    self.expected_str = "{devices=[%d]%s}" % (self.n_devices, ','.join(
+        str(x) for x in range(self.n_devices)))
+    self.run_test()
+
+  def test_replicated_sharding(self):
+    self.device_mesh_shape = (1, self.n_devices)
+    self.tensor_shape = (4, 4)
+    self.partition_spec = (None, None)
+    self.expected_str = '{replicated}'
+    self.run_test()
+
+  @unittest.skipIf(xr.global_runtime_device_count() < 4,
+                   f"Requires at least 4 devices.")
+  def test_partial_replication_sharding(self):
+    self.device_mesh_shape = (2, self.n_devices // 2)
+    self.tensor_shape = (4, 4)
+    self.partition_spec = (0, None)
+    self.expected_str = '{devices=[2,1,%d]%s last_tile_dim_replicate}' % (
+        self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices)))
+    self.run_test()
+
+  @unittest.skipIf(xr.global_runtime_device_count() < 4,
+                   f"Requires at least 4 devices.")
+  def test_tupled_partial_replication_sharding(self):
+    self.device_mesh_shape = (1, 2, self.n_devices // 2)
+    self.tensor_shape = (16, 16)
+    self.partition_spec = ((0, 1), None)
+    self.expected_str = "{devices=[2,1,%d]%s last_tile_dim_replicate}" % (
+        self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices)))
+    self.run_test()
+
+  def test_tupled_partial_replication_sharding_with_transpose(self):
+    self.device_mesh_shape = (1, 2, self.n_devices // 2)
+    self.tensor_shape = (16, 16)
+    self.partition_spec = (None, (2, 1))
+    device_order = self.device_ids.reshape(self.device_mesh_shape).transpose(
+        (2, 1, 0)).flatten()
+    self.expected_str = "{devices=[1,%d]%s}" % (self.n_devices, ','.join(
+        str(x) for x in device_order))
+    self.run_test()
+
 
 if __name__ == '__main__':
   test = unittest.main()

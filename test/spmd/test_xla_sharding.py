@@ -6,7 +6,6 @@ import numpy as np
 import unittest
 from unittest.mock import patch
 import sys
-import os
 
 import torch
 from torch import nn
@@ -27,16 +26,12 @@ import torch_xla.utils.utils as xu
 from torch_xla._internal import tpu
 
 
-def should_convert_to_shardy():
-  return os.environ.get("CONVERT_SHLO_TO_SHARDY",
-                        "").lower() in ("1", "true", "yes")
-
-
 class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
+    cls.convert_to_shardy = xu.check_env_flag("CONVERT_SHLO_TO_SHARDY")
 
   def test_xla_sharded_tensor(self):
     partition_spec = (0, 1)
@@ -244,7 +239,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     if self.n_devices > 1:
       annotation = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
           [str(i) for i in reversed(range(self.n_devices))]))
-      if should_convert_to_shardy():
+      if self.convert_to_shardy:
         annotation = '{devices=[1,%d]<=[%d]}' % (self.n_devices, self.n_devices)
       self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
@@ -260,7 +255,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     if self.n_devices > 1:
       annotation = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
           [str(i) for i in range(self.n_devices)]))
-      if should_convert_to_shardy():
+      if self.convert_to_shardy:
         annotation = '{devices=[1,%d]<=[%d]}' % (self.n_devices, self.n_devices)
       self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(xt1))
 
@@ -281,7 +276,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       annotation = '{devices=[1,1,%d,%d]%s}' % (
           z_dim, self.n_devices // z_dim, ','.join(
               [str(i) for i in range(self.n_devices)]))
-      if should_convert_to_shardy():
+      if self.convert_to_shardy:
         annotation = '{devices=[1,1,%d,%d]<=[%d]}' % (z_dim, self.n_devices //
                                                       z_dim, self.n_devices)
       self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(xt))
@@ -418,7 +413,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(t, mesh, ((0, 1),))
     annotation = "{devices=[%d]%s}" % (self.n_devices, ','.join(
         str(x) for x in range(self.n_devices)))
-    if should_convert_to_shardy():
+    if self.convert_to_shardy:
       annotation = "{devices=[%d]<=[%d]}" % (self.n_devices, self.n_devices)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(t), annotation)
 
@@ -432,7 +427,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(t, mesh, (('r', 'b'), None))
     annotation = "{devices=[2,1,%d]%s last_tile_dim_replicate}" % (
         self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices)))
-    if should_convert_to_shardy():
+    if self.convert_to_shardy:
       annotation = "{devices=[2,1,%d]<=[%d] last_tile_dim_replicate}" % (
           self.n_devices // 2, self.n_devices)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(t), annotation)
@@ -442,7 +437,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(u, mesh, (None, ('b', 'm')))
     annotation = "{devices=[1,%d]%s}" % (self.n_devices, ','.join(
         str(x) for x in range(self.n_devices)))
-    if should_convert_to_shardy():
+    if self.convert_to_shardy:
       annotation = "{devices=[1,%d]<=[%d]}" % (self.n_devices, self.n_devices)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(u), annotation)
 
@@ -452,7 +447,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     device_order = mesh.get_logical_mesh().transpose((0, 2, 1)).flatten()
     annotation = "{devices=[1,%d,2]%s last_tile_dim_replicate}" % (
         self.n_devices // 2, ','.join(str(x) for x in device_order))
-    if should_convert_to_shardy():
+    if self.convert_to_shardy:
       annotation = "{devices=[1,%d,2]<=[2,%d]T(1,0) last_tile_dim_replicate}" % (
           self.n_devices // 2, self.n_devices // 2)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(v), annotation)
@@ -463,7 +458,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     device_order = mesh.get_logical_mesh().transpose((2, 1, 0)).flatten()
     annotation = "{devices=[1,%d]%s}" % (self.n_devices, ','.join(
         str(x) for x in device_order))
-    if should_convert_to_shardy():
+    if self.convert_to_shardy:
       annotation = "{devices=[1,%d]<=[2,%d]T(1,0)}" % (self.n_devices,
                                                        self.n_devices // 2)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(v), annotation)
@@ -478,7 +473,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(t, mesh, (('a', 'b'), ('c', 'd')))
     annotation = "{devices=[2,%d]%s}" % (self.n_devices // 2, ','.join(
         str(x) for x in range(self.n_devices)))
-    if should_convert_to_shardy():
+    if self.convert_to_shardy:
       annotation = "{devices=[2,%d]<=[%d]}" % (self.n_devices // 2,
                                                self.n_devices)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(t), annotation)
@@ -491,7 +486,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(t, mesh, (None, 0, 1))
     annotation = '{devices=[1,2,%d]%s}' % (self.n_devices // 2, ','.join(
         str(x) for x in range(self.n_devices)))
-    if should_convert_to_shardy():
+    if self.convert_to_shardy:
       annotation = '{devices=[1,2,%d]<=[%d]}' % (self.n_devices // 2,
                                                  self.n_devices)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(t), annotation)
@@ -1013,8 +1008,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     t = torch.randn(1, self.n_devices).to('xla')
     xs.mark_sharding(t, mesh, (0, 1))
-    counter_name = "CreateIotaOpSharding" if should_convert_to_shardy(
-    ) else "CreateOpSharding"
+    counter_name = "CreateIotaOpSharding" if self.convert_to_shardy else "CreateOpSharding"
     self.assertIn(counter_name, met.counter_names())
     self.assertEqual(met.counter_value(counter_name), 1)
 
@@ -1435,7 +1429,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     data, _ = iter(train_device_loader).__next__()
     self.assertEqual(data.size(), torch.Size([8, 3, 64, 64]))
     annotation = f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
-    if should_convert_to_shardy():
+    if self.convert_to_shardy:
       annotation = f"{{devices=[{mesh.size()},1,1,1]<=[{mesh.size()}]}}"
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(data), annotation)
 
@@ -1458,7 +1452,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     data, _ = iter(train_device_loader).__next__()
     self.assertEqual(data.size(), torch.Size([mesh.size() - 1, 3, 64, 64]))
     annotation = f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
-    if should_convert_to_shardy():
+    if self.convert_to_shardy:
       annotation = f"{{devices=[{mesh.size()},1,1,1]<=[{mesh.size()}]}}"
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(data), annotation)
 

@@ -82,8 +82,6 @@
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
 
-#define PYBIND11_DETAILED_ERROR_MESSAGES
-
 namespace torch_xla {
 namespace {
 
@@ -752,6 +750,16 @@ std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors,
                                EmitMode mode) {
   std::vector<XLATensorPtr> xtensors = CollectXlaTensors(tensors);
   return XLAGraphExecutor::Get()->DumpHloComputation(xtensors, mode);
+}
+
+std::optional<xla::OpSharding> GetXLAOpSharding(const at::Tensor& input) {
+  XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+  XLATensor::ShardingSpecPtr sharding_spec =
+      xtensor ? xtensor->sharding_spec() : nullptr;
+  if (sharding_spec != nullptr) {
+    return sharding_spec->sharding;
+  }
+  return std::nullopt;
 }
 
 std::string GetXLAShardingSpec(const XLATensorPtr xtensor) {
@@ -1519,6 +1527,10 @@ at::Tensor tensor_fromDLPack(PyObject* data) {
 void InitXlaModuleBindings(py::module m) {
   PythonScope<py::module> module(m);
 
+  using TileAssignmentDims = std::vector<int64_t>;
+  using ReshapeDims = std::vector<int64_t>;
+  using TransposePerm = std::vector<int>;
+
   // Define the _XLAC.XlaShardingSpec class.
   PythonScope<py::class_<XLATensor::ShardingSpec, XLATensor::ShardingSpecPtr>>(
       m, "XlaShardingSpec")
@@ -1799,7 +1811,8 @@ void InitXlaModuleBindings(py::module m) {
             }
            })
       .def("_xla_get_runtime_devices",
-           []() { return runtime::GetComputationClientOrDie()->GetLocalDevices(); })
+           []() {
+            return runtime::GetComputationClientOrDie()->GetLocalDevices(); })
       .def("_xla_num_runtime_devices",
            []() -> int64_t {
             return runtime::GetComputationClientOrDie()->GetNumLocalDevices();
@@ -2219,9 +2232,11 @@ void InitXlaModuleBindings(py::module m) {
             return device.ordinal();
            })
       .def("_xla_get_process_index",
-           []() { return runtime::GetComputationClientOrDie()->GetProcessIndex(); })
+           []() {
+            return runtime::GetComputationClientOrDie()->GetProcessIndex(); })
       .def("_xla_get_num_processes",
-           []() { return runtime::GetComputationClientOrDie()->GetNumProcesses(); })
+           []() {
+            return runtime::GetComputationClientOrDie()->GetNumProcesses(); })
       .def("_xla_get_num_cached_compilation_graph",
            []() -> int64_t {
             return XLAGraphExecutor::Get()->GetNumGraphHash();
@@ -2653,13 +2668,26 @@ void InitXlaModuleBindings(py::module m) {
            })
       .def("_get_xla_op_sharding",
            [](const at::Tensor& input) -> std::optional<xla::OpSharding> {
-            XLA_ASSIGN_OR_THROW(XLATensorPtr xtensor, bridge::GetXlaTensor(input));
-            XLATensor::ShardingSpecPtr sharding_spec =
-                xtensor ? xtensor->sharding_spec() : nullptr;
-            if (sharding_spec != nullptr) {
-              return sharding_spec->sharding;
+            return GetXLAOpSharding(input);
+           })
+      .def("_get_xla_op_sharding_v2_params",
+           [](const at::Tensor& input) -> std::optional<std::tuple<TileAssignmentDims, ReshapeDims, TransposePerm, bool>> {
+            std::optional<xla::OpSharding> maybe_sharding =
+                GetXLAOpSharding(input);
+            if (!maybe_sharding) {
+              return std::nullopt;
             }
-            return std::nullopt;
+            const xla::OpSharding& sharding = maybe_sharding.value();
+            TileAssignmentDims tile_assignment_dims(
+                sharding.tile_assignment_dimensions().begin(),
+                sharding.tile_assignment_dimensions().end());
+            ReshapeDims reshape_dims(sharding.iota_reshape_dims().begin(),
+                                     sharding.iota_reshape_dims().end());
+            TransposePerm transpose_perm(sharding.iota_transpose_perm().begin(),
+                                         sharding.iota_transpose_perm().end());
+            return std::make_tuple(tile_assignment_dims, reshape_dims,
+                                   transpose_perm,
+                                   sharding.replicate_on_last_tile_dim());
            })
       .def("_get_xla_sharding_specs",
            [](const std::vector<at::Tensor>& tensors)
