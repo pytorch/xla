@@ -73,7 +73,7 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   auto dev_type = static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
-  ABSL_CHECK(dev_type == XlaDeviceType::CUDA)
+  ABSL_CHECK(dev_type != XlaDeviceType::CUDA)
       << "XLA:CUDA is not supported anymore. "
          "If you are seeing this error, report a bug to the PyTorch/XLA GitHub "
          "repository: https://github.com/pytorch/xla";
