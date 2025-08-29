@@ -259,8 +259,7 @@ from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
 from .experimental import plugins
 from ._internal import neuron, xpu  # Additional built-in plugins
 
-if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS',
-             '0' if _XLAC._has_cuda_support() else '1') == '1':
+if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS', '1') == '1':
   plugins.use_dynamic_plugins()
   plugins.register_installed_plugins()
 

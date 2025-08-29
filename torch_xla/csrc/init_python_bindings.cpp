@@ -3055,14 +3055,6 @@ void InitXlaModuleBindings(py::module m) {
                -> std::vector<at::Tensor> {
             return TpuCustomCall(inputs, payload, output_shapes, output_dtypes);
            })
-      .def("_has_cuda_support",
-           []() {
-#ifdef GOOGLE_CUDA
-             return true;
-#else
-            return false;
-#endif
-           })
       .def("_xla_register_custom_call_target",
            [](const std::string& fn_name, const py::capsule& function_ptr,
               const std::string& platform) {

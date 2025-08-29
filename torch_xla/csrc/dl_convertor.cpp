@@ -51,8 +51,6 @@ void DLPackTensorDeleter(DLManagedTensor* t) {
 DLDeviceType DLDeviceTypeForDevice(const xla::PjRtDevice& device) {
   if (device.client()->platform_id() == xla::CpuId()) {
     return DLDeviceType::kDLCPU;
-  } else if (device.client()->platform_id() == xla::CudaId()) {
-    return DLDeviceType::kDLCUDA;
   }
   XLA_ERROR() << "Device " << device.DebugString()
               << " cannot be used as a DLPack device.";
@@ -174,11 +172,6 @@ absl::StatusOr<xla::PjRtDevice*> DeviceForDLDevice(const DLDevice& context) {
     case DLDeviceType::kDLCPU:
       XLA_CHECK_EQ(runtime::GetComputationClientOrDie()->GetPlatformID(),
                    xla::CpuId());
-      return runtime::GetComputationClientOrDie()->LookupAddressableDevice(
-          context.device_id);
-    case DLDeviceType::kDLCUDA:
-      XLA_CHECK_EQ(runtime::GetComputationClientOrDie()->GetPlatformID(),
-                   xla::CudaId());
       return runtime::GetComputationClientOrDie()->LookupAddressableDevice(
           context.device_id);
     default:
