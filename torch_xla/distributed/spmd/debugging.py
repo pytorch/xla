@@ -2,7 +2,7 @@ from collections.abc import Sequence
 import functools
 import string
 import sys
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, Tuple
 import weakref
 
 import numpy as np
@@ -157,6 +157,27 @@ def visualize_sharding(sharding: str,
   return table
 
 
+def construct_v1_sharding_str(t: torch.Tensor) -> str:
+  """
+    Returns the corresponding HLO V1 sharding string from the tensor
+    """
+  sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+  if "<=" not in sharding:
+    # This is already in the V1 format
+    return sharding
+  sharding_params = torch_xla._XLAC._get_xla_op_sharding_v2_params(t)
+  assert sharding_params is not None
+  tile_assignment_dims, reshape_dims, transpose_perm, replicate_on_last_dim = sharding_params
+  num_devices = np.prod(reshape_dims)
+  device_list = np.arange(num_devices).reshape(reshape_dims).transpose(
+      transpose_perm).reshape(num_devices)
+
+  tile_assignment_str = ",".join(str(dim) for dim in tile_assignment_dims)
+  device_list_str = ",".join(str(i) for i in device_list)
+  replicate_str = " last_tile_dim_replicate" if replicate_on_last_dim else ""
+  return f"{{devices=[{tile_assignment_str}]{device_list_str}{replicate_str}}}"
+
+
 def visualize_tensor_sharding(t, **kwargs):
   """Visualizes an array's sharding."""
 
@@ -164,5 +185,7 @@ def visualize_tensor_sharding(t, **kwargs):
   def maybe_unwrap(t: torch.Tensor) -> torch.Tensor:
     return t.global_tensor if isinstance(t, XLAShardedTensor) else t
 
-  sharding = torch_xla._XLAC._get_xla_sharding_spec(maybe_unwrap(t))
+  t = maybe_unwrap(t)
+  sharding = construct_v1_sharding_str(t)
+
   return visualize_sharding(sharding, **kwargs)
