@@ -20,6 +20,8 @@ build --define=no_ignite_support=true
 
 build --define=grpc_no_ares=true
 
+build -c opt
+
 build --config=short_logs
 
 # PyTorch/XLA uses exceptions to communicate with Python.
@@ -250,13 +252,6 @@ build:linux --copt="-Wswitch"
 build:linux --copt="-Werror=switch"
 # Required for building with clang
 build:linux --copt="-Wno-error=unused-but-set-variable"
-build:linux --copt="-Os"
-build:linux --copt="-falign-functions"
-build:linux --copt="-falign-jumps"
-build:linux --copt="-falign-labels"
-build:linux --copt="-falign-loops"
-build:linux --copt="-freorder-blocks-algorithm=stc"
-build:linux --copt="-DNDEBUG"
 
 # Only include debug info for files not under XLA.
 build:dbg -c dbg
