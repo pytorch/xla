@@ -149,8 +149,6 @@ def run_multiprocess(fn: Callable[..., R],
     num_processes = plugins.default().physical_chip_count()
   elif runtime.device_type() == 'TPU':
     num_processes = tpu.num_local_processes()
-  elif runtime.device_type() == 'CUDA':
-    num_processes = gpu.num_local_processes()
   elif runtime.device_type() == 'NEURON':
     num_processes = neuron.num_local_processes()
   else:
@@ -220,8 +218,6 @@ def _initialize_single_process(local_rank: int, local_world_size: int):
 
 def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
   """Run function in one process with one thread per addressable device."""
-  assert runtime.device_type() not in (
-      'CUDA'), "spawn_threads does not support GPU device"
   spawn_fn = _SpawnFn(fn, *args)
   _run_thread_per_device(
       local_rank=0,
