@@ -33,6 +33,7 @@ export TORCH_TEST_DEVICES="$_TEST_DIR/pytorch_test_base.py"
 export PYTORCH_TEST_WITH_SLOW=1
 export XLA_DUMP_FATAL_STACK=1
 export CPU_NUM_DEVICES=4
+export XLA_STABLEHLO_COMPILE=1
 
 _TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
 COVERAGE_FILE="$_TEST_DIR/../.coverage"
