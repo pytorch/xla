@@ -8,10 +8,8 @@ from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP
 
 def _mp_fn(index):
   dev = torch_xla.device()
-  if xm.xla_device_hw(dev) not in ('TPU', 'CUDA'):
-    print(
-        'Default device {} is not a TPU or CUDA device'.format(dev),
-        file=sys.stderr)
+  if xm.xla_device_hw(dev) not in ('TPU',):
+    print('Default device {} is not a TPU device'.format(dev), file=sys.stderr)
     return
 
   model = nn.Linear(1024, 1024)
