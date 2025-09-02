@@ -291,12 +291,6 @@ To run the tests, follow __one__ of the options below:
   export PJRT_DEVICE=TPU
   ```
 
-* Run on GPU:
-
-  ```shell
-  export PJRT_DEVICE=CUDA GPU_NUM_DEVICES=${NUM_GPU}
-  ```
-
 For more detail on configuring the runtime, please refer to [this doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#quickstart)
 
 If you are planning to be building from source and hence using the latest _PyTorch/TPU_ code base,
