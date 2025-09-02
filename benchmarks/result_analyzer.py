@@ -174,36 +174,21 @@ class ResultAnalyzer:
       timestamp = dataline[
           "timestamp"] if "timestamp" in dataline else self.timestamp
       d = {
-          "timestamp":
-              timestamp,
-          "suite_name":
-              dataline["model"]["suite_name"],
-          "model_name":
-              dataline["model"]["model_name"],
-          "accelerator":
-              dataline["experiment"]["accelerator"],
-          "accelerator_model":
-              dataline["experiment"]["accelerator_model"],
-          "xla":
-              dataline["experiment"]["xla"],
-          "xla_flags":
-              dataline["experiment"]["xla_flags"],
-          "dynamo":
-              dataline["experiment"]["dynamo"],
-          "torch_xla2":
-              dataline["experiment"]["torch_xla2"],
-          "test":
-              dataline["experiment"]["test"],
-          "batch_size":
-              dataline["experiment"]["batch_size"],
-          "repeat":
-              dataline["repeat"],
-          "iterations_per_run":
-              dataline["iterations_per_run"],
-          "error_message":
-              None,
-          "outputs_file":
-              dataline["experiment"].get("outputs_file", ""),
+          "timestamp": timestamp,
+          "suite_name": dataline["model"]["suite_name"],
+          "model_name": dataline["model"]["model_name"],
+          "accelerator": dataline["experiment"]["accelerator"],
+          "accelerator_model": dataline["experiment"]["accelerator_model"],
+          "xla": dataline["experiment"]["xla"],
+          "xla_flags": dataline["experiment"]["xla_flags"],
+          "dynamo": dataline["experiment"]["dynamo"],
+          "torch_xla2": dataline["experiment"]["torch_xla2"],
+          "test": dataline["experiment"]["test"],
+          "batch_size": dataline["experiment"]["batch_size"],
+          "repeat": dataline["repeat"],
+          "iterations_per_run": dataline["iterations_per_run"],
+          "error_message": None,
+          "outputs_file": dataline["experiment"].get("outputs_file", ""),
       }
 
       if "error" in dataline["metrics"] and not self._args.hide_errors:
