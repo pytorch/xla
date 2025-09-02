@@ -288,7 +288,7 @@ cc_library(
     deps = [
         "@xla//xla/backends/profiler/cpu:host_tracer",
         "@xla//xla/backends/profiler/cpu:metadata_collector",
-    ]),
+    ),
     alwayslink = True,
 )
 

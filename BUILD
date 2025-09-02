@@ -36,7 +36,7 @@ cc_binary(
         "@torch//:libtorch",
         "@torch//:libtorch_cpu",
         "@torch//:libtorch_python",
-    ]),
+    ],
 )
 
 test_suite(
