@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+git89f929b )
+                  master (2.9.0+git647804c )
                 </div>
               
             
@@ -537,59 +537,6 @@ unlisted ops run if they’re downstream from autocasted ops.</p>
 <p><code class="docutils literal notranslate"><span class="pre">stack</span></code>, <code class="docutils literal notranslate"><span class="pre">cat</span></code>, <code class="docutils literal notranslate"><span class="pre">index_copy</span></code></p>
 </section>
 </section>
-<section id="amp-for-xla-gpu">
-<h2>AMP for XLA:GPU<a class="headerlink" href="#amp-for-xla-gpu" title="Permalink to this heading">¶</a></h2>
-<p>AMP on XLA:GPU devices reuse Pytorch’s AMP rules. See <a class="reference external" href="https://pytorch.org/docs/stable/amp.html">Pytorch’s AMP
-documentation</a> for CUDA
-specific behavior. A simple CUDA AMP example is below:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.amp</span><span class="w"> </span><span class="kn">import</span> <span class="n">syncfree</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
-
-<span class="c1"># Creates model and optimizer in default precision</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">Net</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
-<span class="c1"># Pytorch/XLA provides sync-free optimizers for improved performance</span>
-<span class="n">optimizer</span> <span class="o">=</span> <span class="n">syncfree</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="o">...</span><span class="p">)</span>
-<span class="n">scaler</span> <span class="o">=</span> <span class="n">GradScaler</span><span class="p">()</span>
-
-<span class="k">for</span> <span class="nb">input</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-    <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
-
-    <span class="c1"># Enables autocasting for the forward pass</span>
-    <span class="k">with</span> <span class="n">autocast</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()):</span>
-        <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
-        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
-
-    <span class="c1"># Exits the context manager before backward pass</span>
-    <span class="n">scaler</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
-    <span class="n">gradients</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">_fetch_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
-    <span class="n">xm</span><span class="o">.</span><span class="n">all_reduce</span><span class="p">(</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span> <span class="n">gradients</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">xr</span><span class="o">.</span><span class="n">world_size</span><span class="p">())</span>
-    <span class="n">scaler</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
-    <span class="n">scaler</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">autocast(torch_xla.device())</span></code> aliases <code class="docutils literal notranslate"><span class="pre">torch.cuda.amp.autocast()</span></code> when the
-XLA Device is a CUDA device (XLA:GPU). Alternatively, if a script is
-only used with CUDA devices, then <code class="docutils literal notranslate"><span class="pre">torch.cuda.amp.autocast</span></code> can be
-directly used, but requires <code class="docutils literal notranslate"><span class="pre">torch</span></code> is compiled with <code class="docutils literal notranslate"><span class="pre">cuda</span></code> support for
-datatype of <code class="docutils literal notranslate"><span class="pre">torch.bfloat16</span></code>. We recommend using
-<code class="docutils literal notranslate"><span class="pre">autocast(torch_xla.device())</span></code> on XLA:GPU as it does not require
-<code class="docutils literal notranslate"><span class="pre">torch.cuda</span></code> support for any datatypes, including <code class="docutils literal notranslate"><span class="pre">torch.bfloat16</span></code>.</p>
-<section id="amp-for-xla-gpu-best-practices">
-<h3>AMP for XLA:GPU Best Practices<a class="headerlink" href="#amp-for-xla-gpu-best-practices" title="Permalink to this heading">¶</a></h3>
-<ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">autocast</span></code> should wrap only the forward pass(es) and loss
-computation(s) of the network. Backward ops run in the same type
-that autocast used for the corresponding forward ops.</p></li>
-<li><p>Do not set <code class="docutils literal notranslate"><span class="pre">XLA_USE_F16</span></code> flag when using AMP on Cuda devices. This
-will override the per-operator precision settings provided by AMP
-and cause all operators to execute in float16.</p></li>
-<li><p>Use gradient scaling to prevent float16 gradients from underflowing.</p></li>
-<li><p>Pytorch/XLA provides modified version of
-<a class="reference external" href="https://github.com/pytorch/xla/tree/master/torch_xla/amp/syncfree">optimizers</a>
-that avoid the additional sync between device and host.</p></li>
-</ol>
-</section>
-</section>
 <section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">¶</a></h2>
 <p>Our <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_amp.py">mnist training script</a>
@@ -645,10 +592,6 @@ demonstrate how AMP is used on both TPUs and GPUs.</p>
 <li><a class="reference internal" href="#amp-for-xla-tpu">AMP for XLA:TPU</a><ul>
 <li><a class="reference internal" href="#amp-for-xla-tpu-best-practices">AMP for XLA:TPU Best Practices</a></li>
 <li><a class="reference internal" href="#supported-operators">Supported Operators</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#amp-for-xla-gpu">AMP for XLA:GPU</a><ul>
-<li><a class="reference internal" href="#amp-for-xla-gpu-best-practices">AMP for XLA:GPU Best Practices</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#examples">Examples</a></li>

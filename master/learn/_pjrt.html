@@ -289,7 +289,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+git89f929b )
+                  master (2.9.0+git647804c )
                 </div>
               
             
@@ -643,71 +643,6 @@ documentation</a> for
 more information.</p>
 </section>
 </section>
-<section id="gpu">
-<h3>GPU<a class="headerlink" href="#gpu" title="Permalink to this heading">¶</a></h3>
-</section>
-<section id="single-node-gpu-training">
-<h3>Single-node GPU training<a class="headerlink" href="#single-node-gpu-training" title="Permalink to this heading">¶</a></h3>
-<p>To use GPUs with PJRT, simply set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=CUDA</span></code> and configure
-<code class="docutils literal notranslate"><span class="pre">GPU_NUM_DEVICES</span></code> to the number of devices on the host. For example:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
-</pre></div>
-</div>
-<p>You can also use <code class="docutils literal notranslate"><span class="pre">torchrun</span></code> to initiate the single-node multi-GPU
-training. For example,</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
-</pre></div>
-</div>
-<p>In the above example, <code class="docutils literal notranslate"><span class="pre">--nnodes</span></code> means how many machines (physical
-machines or VMs) to be used (it is 1 since we do single-node training).
-<code class="docutils literal notranslate"><span class="pre">--nproc-per-node</span></code> means how many GPU devices to be used.</p>
-</section>
-<section id="multi-node-gpu-training">
-<h3>Multi-node GPU training<a class="headerlink" href="#multi-node-gpu-training" title="Permalink to this heading">¶</a></h3>
-<p><strong>Note that this feature only works for cuda 12+</strong>. Similar to how
-PyTorch uses multi-node training, you can run the command as below:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun \
---nnodes=${NUMBER_GPU_VM} \
---node_rank=${CURRENT_NODE_RANK} \
---nproc_per_node=${NUMBER_LOCAL_GPU_DEVICES} \
---rdzv_endpoint=&lt;internal_ip_address:port&gt; multinode_training.py
-</pre></div>
-</div>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">--nnodes</span></code>: how many GPU machines to be used.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--node_rank</span></code>: the index of the current GPU machines. The value can
-be 0, 1, …, ${NUMBER_GPU_VM}-1.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--nproc_per_node</span></code>: the number of GPU devices to be used on the
-current machine.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--rdzv_endpoint</span></code>: the endpoint of the GPU machine with
-node_rank==0, in the form <code class="docutils literal notranslate"><span class="pre">host:port</span></code>. The <code class="docutils literal notranslate"><span class="pre">host</span></code> will be the
-internal IP address. The <code class="docutils literal notranslate"><span class="pre">port</span></code> can be any available port on the
-machine. For single-node training/inference, this parameter can be
-omitted.</p></li>
-</ul>
-<p>For example, if you want to train on 2 GPU machines: machine_0 and
-machine_1, on the first GPU machine machine_0, run</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># PJRT_DEVICE=CUDA torchrun \
---nnodes=2 \
---node_rank=0 \
---nproc_per_node=4 \
---rdzv_endpoint=&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot; pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
-</pre></div>
-</div>
-<p>On the second GPU machine, run</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># PJRT_DEVICE=CUDA torchrun \
---nnodes=2 \
---node_rank=1 \
---nproc_per_node=4 \
---rdzv_endpoint=&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot; pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
-</pre></div>
-</div>
-<p>the difference between the 2 commands above are <code class="docutils literal notranslate"><span class="pre">--node_rank</span></code> and
-potentially <code class="docutils literal notranslate"><span class="pre">--nproc_per_node</span></code> if you want to use different number of
-GPU devices on each machine. All the rest are identical. For more
-information about <code class="docutils literal notranslate"><span class="pre">torchrun</span></code>, please refer to this
-<a class="reference external" href="https://pytorch.org/docs/stable/elastic/run.html">page</a>.</p>
-</section>
 </section>
 <section id="differences-from-xrt">
 <h2>Differences from XRT<a class="headerlink" href="#differences-from-xrt" title="Permalink to this heading">¶</a></h2>
@@ -934,9 +869,6 @@ vs XRT comparison.</p>
 <li><a class="reference internal" href="#docker">Docker</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#gpu">GPU</a></li>
-<li><a class="reference internal" href="#single-node-gpu-training">Single-node GPU training</a></li>
-<li><a class="reference internal" href="#multi-node-gpu-training">Multi-node GPU training</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#differences-from-xrt">Differences from XRT</a><ul>
