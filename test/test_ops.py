@@ -126,6 +126,7 @@ allowed_opinfo = get_allowed_ops_map(
     AllowedOpInfoEntry('gt'),
     AllowedOpInfoEntry('imag'),
     AllowedOpInfoEntry('inverse'),
+    AllowedOpInfoEntry('index_put'),
     AllowedOpInfoEntry('isin'),
     AllowedOpInfoEntry('isneginf'),
     AllowedOpInfoEntry('le'),
@@ -365,11 +366,7 @@ allowed_opinfo = get_allowed_ops_map(
     # AllowedOpInfoEntry('logdet'), xla::lodget does not handle empty input
     # AllowedOpInfoEntry('qr'),  # Slice dim size 1 greater than dynamic slice dimension: 0
 
-    # Failed on CUDA CI only (investigate)
-    # app.circleci.com/pipelines/github/pytorch/xla/9088/workflows/2d59c649-db2b-4384-921e-5e43eba1b51a/jobs/17875
-    # AllowedOpInfoEntry('index_put'),
-
-    # Worked locally (but failing on CI both CPU and CUDA)
+    # Worked locally (but failing on CI both CPU)
     # app.circleci.com/pipelines/github/pytorch/xla/9130/workflows/71c74f3d-1735-4328-81b5-784d6e6744da/jobs/17998
     # AllowedOpInfoEntry('var_mean'),
     # AllowedOpInfoEntry('pow'), # for int64 don't work, likely rounding issue

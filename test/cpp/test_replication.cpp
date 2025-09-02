@@ -98,9 +98,7 @@ void TestSingleReplication(
 
 class ReplicationTest : public AtenXlaTensorTestBase {};
 
-// Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU
-// device per process instead of relying on threads so we will not run the test
-// on GPU.
+// Parallelism for DataParallel uses multi-threads.
 TEST_F(ReplicationTest, TestNSingleReplication) {
   WithAllDevices(
       {XlaDeviceType::TPU},
