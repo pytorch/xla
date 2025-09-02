@@ -1555,20 +1555,18 @@ TEST_F(AtenXlaTensorTest, TestGroupNormBackward) {
             /*cudnn_enabled=*/false);
       };
       torch::Tensor undef;
-      ForEachDevice({XlaDeviceType::TPU},
-                    [&](const torch::Device& device) {
-                      TestBackward({input, undef_weight ? undef : weight,
-                                    undef_weight ? undef : bias},
-                                   device, testfn,
-                                   /*rtol=*/1e-3, /*atol=*/1e-3,
-                                   /*derivative_level=*/2);
-                      ExpectCounterNotChanged("aten::.*",
-                                              cpp_test::GetIgnoredCounters());
-                      ExpectCounterChanged("xla::native_batch_norm",
-                                           cpp_test::GetIgnoredCounters());
-                      ExpectCounterChanged("xla::native_batch_norm_backward",
-                                           cpp_test::GetIgnoredCounters());
-                    });
+      ForEachDevice({XlaDeviceType::TPU}, [&](const torch::Device& device) {
+        TestBackward(
+            {input, undef_weight ? undef : weight, undef_weight ? undef : bias},
+            device, testfn,
+            /*rtol=*/1e-3, /*atol=*/1e-3,
+            /*derivative_level=*/2);
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::native_batch_norm",
+                             cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::native_batch_norm_backward",
+                             cpp_test::GetIgnoredCounters());
+      });
     }
   }
 }
