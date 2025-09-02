@@ -12,7 +12,7 @@ import torch_xla.core.xla_model as xm
 import collections
 import unittest
 from torch.testing._internal.autocast_test_lists import AutocastTestLists
-from torch_xla.amp import autocast, GradScaler
+from torch_xla.amp import autocast
 
 
 class AutocastTPUTestLists:

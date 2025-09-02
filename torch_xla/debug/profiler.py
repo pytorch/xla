@@ -72,7 +72,7 @@ def trace(service_addr: str,
       in case of failures.
     host_tracer_level (int): CPU tracing level. Values are: 1 - critical info
       only, 2 - info, 3 - verbose.
-      device_tracer_level (int): Device (TPU/GPU) tracing level. Values are: 1 -
+      device_tracer_level (int): Device (TPU) tracing level. Values are: 1 -
       enabled, 0 - disabled.
     delay_ms (int): Specifies the services to start profiling delay_ms
       milliseconds after the current time.
@@ -218,7 +218,7 @@ _profile_state = _ProfileState()
 def start_trace(log_dir: Union[os.PathLike, str]) -> None:
   """Starts a profiler trace.
 
-  The trace will capture CPU, GPU, and/or TPU activity, including Python
+  The trace will capture CPU, and/or TPU activity, including Python
   functions and PyTorch/XLA on-device operations. Use :func:`stop_trace` to end
   the trace and save the results to ``log_dir``.
 
