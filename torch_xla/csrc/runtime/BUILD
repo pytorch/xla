@@ -211,6 +211,7 @@ cc_library(
         "@torch//:headers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:initialize",
+        "@xla//xla/pjrt/distributed:in_memory_key_value_store",
         "@xla//xla/pjrt:pjrt_c_api_client",
         "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
     ],

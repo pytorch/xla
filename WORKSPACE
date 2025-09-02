@@ -138,3 +138,18 @@ xla_workspace1()
 load("@xla//:workspace0.bzl", "xla_workspace0")
 
 xla_workspace0()
+
+
+# Even though we don't support XLA:CUDA anymore, we still need to keep the
+# following. The reason being that `pjrt_computation_client_test` depends on
+# `@xla//xla/tools`, which calls:
+#
+# ```
+# load("@local_config_cuda//cuda:build_defs.bzl", "if_cuda")`
+# ```
+load(
+    "@xla//third_party/gpus:cuda_configure.bzl",
+    "cuda_configure",
+)
+
+cuda_configure(name = "local_config_cuda")
