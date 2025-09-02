@@ -67,7 +67,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.test.test_utils as test_utils
-from torch_xla.amp import autocast, GradScaler
+from torch_xla.amp import autocast
 try:
   from torch_xla.amp import syncfree
 except ImportError:
@@ -220,8 +220,6 @@ def train_imagenet():
   if FLAGS.amp:
     if device_hw == 'TPU':
       scaler = None
-    elif device_hw == 'CUDA':
-      scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
