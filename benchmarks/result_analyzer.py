@@ -57,7 +57,6 @@ class ResultAnalyzer:
         "xla_flags": pd.Series(dtype="str"),
         "dynamo": pd.Series(dtype="str"),
         "torch_xla2": pd.Series(dtype="str"),
-        "keep_model_data_on_cuda": pd.Series(dtype="bool"),
         "test": pd.Series(dtype="str"),
         "batch_size": pd.Series(dtype="int"),
         "repeat": pd.Series(dtype="int"),
@@ -122,10 +121,6 @@ class ResultAnalyzer:
       dynamo_value = "None" if dynamo is None else dynamo
       torch_xla2 = dataline["experiment"]["torch_xla2"]
       torch_xla2_value = "None" if torch_xla2 is None else torch_xla2
-      keep_model_data_on_cuda = dataline["experiment"][
-          "keep_model_data_on_cuda"]
-      keep_model_data_on_cuda_value = "None" if keep_model_data_on_cuda is None else str(
-          keep_model_data_on_cuda)
       test = dataline["experiment"]["test"]
       test_value = "None" if test is None else test
       outputs_file = dataline["experiment"].get("outputs_file", None)
@@ -146,7 +141,6 @@ class ResultAnalyzer:
               "xla": xla_value,
               "dynamo": dynamo_value,
               "torch_xla2": torch_xla2_value,
-              "keep_model_data_on_cuda": keep_model_data_on_cuda_value,
               "test": test_value,
               "outputs_file": outputs_file_value
           }
@@ -198,8 +192,6 @@ class ResultAnalyzer:
               dataline["experiment"]["dynamo"],
           "torch_xla2":
               dataline["experiment"]["torch_xla2"],
-          "keep_model_data_on_cuda":
-              dataline["experiment"]["keep_model_data_on_cuda"],
           "test":
               dataline["experiment"]["test"],
           "batch_size":

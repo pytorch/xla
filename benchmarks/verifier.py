@@ -152,7 +152,7 @@ def _run(
       # Delete the model for saving up memory.
       del model
       # Clean-up CUDA as well.
-      cleanup(cuda=True)
+      cleanup(cuda=experiment_config["accelerator"] == "cuda")
 
 
 def _apply_eager_config(experiment):
