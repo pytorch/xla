@@ -2,7 +2,7 @@ from collections.abc import Sequence
 import functools
 import string
 import sys
-from typing import Any, Callable, Optional, Union, Tuple
+from typing import Any, Callable, Optional, Union
 import weakref
 
 import numpy as np
