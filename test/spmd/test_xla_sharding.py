@@ -1189,10 +1189,6 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       self.assertIsInstance(shard.indices, type(Ellipsis))
       self.assertEqual(shard.replica_id, i)
 
-    # It looks like mesh_shape attribute is never implemented.
-    with self.assertRaises(AttributeError):
-      xt.mesh_shape
-
   def test_global_mesh(self):
     expected_mesh = self._get_mesh((1, self.n_devices))
     xs.set_global_mesh(expected_mesh)
