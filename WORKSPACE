@@ -56,8 +56,6 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
-        "//openxla_patches:gpu_nvml.diff",
-        "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:no_fortify.diff",
     ],
     strip_prefix = "xla-" + xla_hash,
@@ -140,18 +138,3 @@ xla_workspace1()
 load("@xla//:workspace0.bzl", "xla_workspace0")
 
 xla_workspace0()
-
-
-load(
-    "@xla//third_party/gpus:cuda_configure.bzl",
-    "cuda_configure",
-)
-
-cuda_configure(name = "local_config_cuda")
-
-load(
-    "@xla//third_party/nccl:nccl_configure.bzl",
-    "nccl_configure",
-)
-
-nccl_configure(name = "local_config_nccl")
