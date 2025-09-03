@@ -65,7 +65,6 @@
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/generic_slice.h"
 #include "torch_xla/csrc/ops/get_dimensions_size.h"
-#include "torch_xla/csrc/ops/gpu_custom_call.h"
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/ops/index_select.h"
@@ -765,45 +764,6 @@ void custom_sharding_(
   xla_node->SetSharding(sharding_spec->sharding, 0);
   input->SetInPlaceIrValue(customShardingNode);
   input->SetShardingSpec(*sharding_spec);
-}
-
-std::vector<XLATensorPtr> gpu_custom_call(
-    const std::vector<XLATensorPtr>& inputs, const std::string& payload,
-    const std::vector<std::vector<int64_t>>& output_shapes,
-    const std::vector<at::ScalarType>& output_dtypes) {
-  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
-
-  std::vector<torch::lazy::Value> values;
-  values.reserve(inputs.size());
-  for (const auto& input : inputs) {
-    values.push_back(input->GetIrValue());
-  }
-
-  XLA_CHECK_EQ(output_shapes.size(), output_dtypes.size());
-  std::vector<xla::Shape> output_xla_shapes;
-  output_xla_shapes.reserve(output_shapes.size());
-  for (size_t i = 0; i < output_shapes.size(); ++i) {
-    output_xla_shapes.push_back(xla::ShapeUtil::MakeShape(
-        MakeXlaPrimitiveType(output_dtypes[i], &(inputs[0]->GetDevice())),
-        output_shapes[i]));
-  }
-
-  auto node = torch_xla::MakeNode<GpuCustomCall>(
-      values, xla::ShapeUtil::MakeTupleShape(output_xla_shapes), payload);
-
-  std::vector<XLATensorPtr> outputs;
-  outputs.reserve(output_shapes.size());
-  for (size_t i = 0; i < output_shapes.size(); ++i) {
-    outputs.push_back(inputs[0]->CreateFrom(torch::lazy::Value(node, i),
-                                            output_dtypes[i],
-                                            /*delay_eager_execution=*/true));
-  }
-  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
-  if (graph_executor->UseEagerMode()) {
-    // Execute the HLO that will run the `custom` and in one hlo
-    graph_executor->ApplyEagerSync(outputs);
-  }
-  return outputs;
 }
 
 std::vector<XLATensorPtr> tpu_custom_call(

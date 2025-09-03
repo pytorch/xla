@@ -30,10 +30,6 @@ class TestNoBackwardModule(test_utils.XlaTestCase):
       hidden2 = self.fc2(x)
       return hidden1, hidden2
 
-  @unittest.skipIf(
-      xr.device_type() == 'CUDA',
-      "This test fails only on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)"
-  )
   def test(self):
     dev = torch_xla.device()
     input = torch.zeros([16, 16], device=dev)
@@ -49,13 +45,12 @@ class TestNoBackwardModule(test_utils.XlaTestCase):
 
 def _mp_fn(index):
   device = torch_xla.device()
-  if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
+  if xm.xla_device_hw(device) in ('TPU',):
     test = unittest.main(exit=False)
     sys.exit(0 if test.result.wasSuccessful() else 1)
   else:
     print(
-        'Default device {} is not a TPU or CUDA device'.format(device),
-        file=sys.stderr)
+        'Default device {} is not a TPU device'.format(device), file=sys.stderr)
 
 
 if __name__ == '__main__':

@@ -280,7 +280,7 @@ class XlaFullyShardedDataParallel(nn.Module):
                 >>>     # responsible for initializing a module, such as with reset_parameters
                 >>>     ...
                 >>> fsdp_model = FSDP(module, param_init_fn=my_init_fn, auto_wrap_policy=size_based_auto_wrap_policy)
-                >>> print(next(fsdp_model.parameters()).device) # current CUDA device
+                >>> print(next(fsdp_model.parameters()).device)
                 >>> # With torchdistX
                 >>> module = deferred_init.deferred_init(MyModule, device="cuda")
                 >>> # Will initialize via deferred_init.materialize_module().

@@ -94,7 +94,9 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDataPtr data,
       std::optional<at::ScalarType> logical_scalar_type) const override {
     // TODO(JackCaoG): handle the logical_scalar_type == nullptr case
-    return GetValueOrThrow(XlaDataToTensors({data}, {*logical_scalar_type}))[0];
+    XLA_ASSIGN_OR_THROW(std::vector<at::Tensor> tensors,
+                        XlaDataToTensors({data}, {*logical_scalar_type}));
+    return tensors[0];
   }
 
   std::unique_ptr<torch::lazy::LoweringContext> CreateLoweringContext(
@@ -163,7 +165,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       torch::lazy::ComputationPtr computation,
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
-    std::vector<runtime::ComputationClient::DataPtr> results = GetValueOrThrow(
+    XLA_ASSIGN_OR_THROW(
+        std::vector<runtime::ComputationClient::DataPtr> results,
         runtime::GetComputationClientOrDie()->ExecuteComputation(
             *std::dynamic_pointer_cast<runtime::ComputationClient::Computation>(
                 computation),

@@ -12,7 +12,7 @@ def _mp_fn(index):
 
   device = torch_xla.device()
 
-  if xm.xla_device_hw(device) not in ('TPU', 'CUDA', 'NEURON'):
+  if xm.xla_device_hw(device) not in ('TPU', 'NEURON'):
     return
 
   ordinal_tensor_1 = torch.tensor([index], dtype=torch.float).to(device)

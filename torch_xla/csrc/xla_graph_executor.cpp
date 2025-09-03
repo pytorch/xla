@@ -497,8 +497,8 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
       async != nullptr ? async->tensors_data
                        : absl::Span<const torch::lazy::BackendDataPtr>());
 
-  std::vector<xla::Literal> literals =
-      GetValueOrThrow(ReleaseGilAndTransferData(tensors_data));
+  XLA_ASSIGN_OR_THROW(std::vector<xla::Literal> literals,
+                      ReleaseGilAndTransferData(tensors_data));
 
   return FetchTensors(tensors, literals,
                       async != nullptr ? &async->indices : nullptr);
@@ -846,12 +846,12 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
         // OutputHandler creates sharded data for sharded
         // tensor results. Both sharded and unsharded results should be
         // "Assign"ed to the corresponding data placeholders.
-        std::vector<runtime::ComputationClient::DataPtr> outputs =
-            GetValueOrThrow(
-                runtime::GetComputationClientOrDie()->ExecuteReplicated(
-                    *async->cached_computation->computation,
-                    UnwrapXlaData(async->parameters_data), devices,
-                    execute_options));
+        XLA_ASSIGN_OR_THROW(
+            std::vector<runtime::ComputationClient::DataPtr> outputs,
+            runtime::GetComputationClientOrDie()->ExecuteReplicated(
+                *async->cached_computation->computation,
+                UnwrapXlaData(async->parameters_data), devices,
+                execute_options));
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing Dynamo IR sharded graph hash "
                    << torch::lazy::HashToString(hash) << " on devices "
@@ -913,8 +913,8 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
 
   // Get program output shape.
   // TODO(lsy323): Get shape info from MLIR Module.
-  xla::ProgramShape program_shape =
-      GetValueOrThrow(computation.GetProgramShape());
+  XLA_ASSIGN_OR_THROW(xla::ProgramShape program_shape,
+                      computation.GetProgramShape());
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
 
@@ -946,8 +946,9 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
     }
   }
 
-  std::vector<runtime::ComputationClient::DataPtr> result_data =
-      GetValueOrThrow(runtime::GetComputationClientOrDie()->ExecuteComputation(
+  XLA_ASSIGN_OR_THROW(
+      std::vector<runtime::ComputationClient::DataPtr> result_data,
+      runtime::GetComputationClientOrDie()->ExecuteComputation(
           *computations[0], UnwrapXlaData(arguments), device.toString()));
 
   return WrapXlaData(result_data);
@@ -1123,12 +1124,12 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         // OutputHandler creates sharded data for sharded
         // tensor results. Both sharded and unsharded results should be
         // "Assign"ed to the corresponding data placeholders.
-        std::vector<runtime::ComputationClient::DataPtr> outputs =
-            GetValueOrThrow(
-                runtime::GetComputationClientOrDie()->ExecuteReplicated(
-                    *async->cached_computation->computation,
-                    UnwrapXlaData(async->parameters_data), devices,
-                    execute_options));
+        XLA_ASSIGN_OR_THROW(
+            std::vector<runtime::ComputationClient::DataPtr> outputs,
+            runtime::GetComputationClientOrDie()->ExecuteReplicated(
+                *async->cached_computation->computation,
+                UnwrapXlaData(async->parameters_data), devices,
+                execute_options));
         results = WrapXlaData(outputs);
         TORCH_LAZY_COUNTER("ExecuteReplicated", 1);
         TF_VLOG(3) << "Executing IR graph hash "
@@ -1139,14 +1140,13 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " ...";
-        std::vector<runtime::ComputationClient::DataPtr> outputs =
-            GetValueOrThrow(
-                runtime::GetComputationClientOrDie()->ExecuteComputation(
-                    *async->cached_computation->computation,
-                    UnwrapXlaData(async->parameters_data),
-                    async->device.toString(),
-                    {/*explode_tuple=*/true,
-                     /*eager_mode=*/use_eager_mode}));
+        XLA_ASSIGN_OR_THROW(
+            std::vector<runtime::ComputationClient::DataPtr> outputs,
+            runtime::GetComputationClientOrDie()->ExecuteComputation(
+                *async->cached_computation->computation,
+                UnwrapXlaData(async->parameters_data), async->device.toString(),
+                {/*explode_tuple=*/true,
+                 /*eager_mode=*/use_eager_mode}));
         results = WrapXlaData(outputs);
         TORCH_LAZY_COUNTER("ExecuteComputation", 1);
         TF_VLOG(3) << "Executing IR graph hash "
@@ -1446,9 +1446,9 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   SetBufferDonors(&lowering_ctx, buffer_donor_indices);
 
-  xla::XlaComputation computation = GetValueOrThrow(lowering_ctx.BuildXla());
-  xla::ProgramShape program_shape =
-      GetValueOrThrow(computation.GetProgramShape());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation computation, lowering_ctx.BuildXla());
+  XLA_ASSIGN_OR_THROW(xla::ProgramShape program_shape,
+                      computation.GetProgramShape());
 
   // TODO(yeounoh) enable wrapping with auto-sharding.
   bool should_wrap_parameter =
@@ -1465,10 +1465,11 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       param_shardings = XlaHelpers::ExtractInputShardings(computation);
     }
 
-    computation = GetValueOrThrow(
+    XLA_ASSIGN_OR_THROW(
+        computation,
         XlaHelpers::WrapXlaComputation(computation, program_shape.parameters(),
                                        param_shardings, buffer_donor_indices));
-    program_shape = GetValueOrThrow(computation.GetProgramShape());
+    XLA_ASSIGN_OR_THROW(program_shape, computation.GetProgramShape());
   }
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));

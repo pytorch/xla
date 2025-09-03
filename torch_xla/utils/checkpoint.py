@@ -54,7 +54,7 @@ def set_device_states(devices: List[torch.device],
   assert all(isinstance(v, state_0_type)
              for v in states), f"all device states should have the same type"
 
-  device_module = xm if state_0_type == int else get_device_module(*states)
+  device_module = xm if state_0_type == int else _get_device_module(*states)
   for device, state in zip(devices, states):
     device_module.set_rng_state(state, device=device)
 

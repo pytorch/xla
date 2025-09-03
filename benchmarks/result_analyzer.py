@@ -57,7 +57,6 @@ class ResultAnalyzer:
         "xla_flags": pd.Series(dtype="str"),
         "dynamo": pd.Series(dtype="str"),
         "torch_xla2": pd.Series(dtype="str"),
-        "keep_model_data_on_cuda": pd.Series(dtype="bool"),
         "test": pd.Series(dtype="str"),
         "batch_size": pd.Series(dtype="int"),
         "repeat": pd.Series(dtype="int"),
@@ -122,10 +121,6 @@ class ResultAnalyzer:
       dynamo_value = "None" if dynamo is None else dynamo
       torch_xla2 = dataline["experiment"]["torch_xla2"]
       torch_xla2_value = "None" if torch_xla2 is None else torch_xla2
-      keep_model_data_on_cuda = dataline["experiment"][
-          "keep_model_data_on_cuda"]
-      keep_model_data_on_cuda_value = "None" if keep_model_data_on_cuda is None else str(
-          keep_model_data_on_cuda)
       test = dataline["experiment"]["test"]
       test_value = "None" if test is None else test
       outputs_file = dataline["experiment"].get("outputs_file", None)
@@ -146,7 +141,6 @@ class ResultAnalyzer:
               "xla": xla_value,
               "dynamo": dynamo_value,
               "torch_xla2": torch_xla2_value,
-              "keep_model_data_on_cuda": keep_model_data_on_cuda_value,
               "test": test_value,
               "outputs_file": outputs_file_value
           }
@@ -180,38 +174,21 @@ class ResultAnalyzer:
       timestamp = dataline[
           "timestamp"] if "timestamp" in dataline else self.timestamp
       d = {
-          "timestamp":
-              timestamp,
-          "suite_name":
-              dataline["model"]["suite_name"],
-          "model_name":
-              dataline["model"]["model_name"],
-          "accelerator":
-              dataline["experiment"]["accelerator"],
-          "accelerator_model":
-              dataline["experiment"]["accelerator_model"],
-          "xla":
-              dataline["experiment"]["xla"],
-          "xla_flags":
-              dataline["experiment"]["xla_flags"],
-          "dynamo":
-              dataline["experiment"]["dynamo"],
-          "torch_xla2":
-              dataline["experiment"]["torch_xla2"],
-          "keep_model_data_on_cuda":
-              dataline["experiment"]["keep_model_data_on_cuda"],
-          "test":
-              dataline["experiment"]["test"],
-          "batch_size":
-              dataline["experiment"]["batch_size"],
-          "repeat":
-              dataline["repeat"],
-          "iterations_per_run":
-              dataline["iterations_per_run"],
-          "error_message":
-              None,
-          "outputs_file":
-              dataline["experiment"].get("outputs_file", ""),
+          "timestamp": timestamp,
+          "suite_name": dataline["model"]["suite_name"],
+          "model_name": dataline["model"]["model_name"],
+          "accelerator": dataline["experiment"]["accelerator"],
+          "accelerator_model": dataline["experiment"]["accelerator_model"],
+          "xla": dataline["experiment"]["xla"],
+          "xla_flags": dataline["experiment"]["xla_flags"],
+          "dynamo": dataline["experiment"]["dynamo"],
+          "torch_xla2": dataline["experiment"]["torch_xla2"],
+          "test": dataline["experiment"]["test"],
+          "batch_size": dataline["experiment"]["batch_size"],
+          "repeat": dataline["repeat"],
+          "iterations_per_run": dataline["iterations_per_run"],
+          "error_message": None,
+          "outputs_file": dataline["experiment"].get("outputs_file", ""),
       }
 
       if "error" in dataline["metrics"] and not self._args.hide_errors:

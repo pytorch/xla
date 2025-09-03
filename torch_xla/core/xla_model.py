@@ -128,7 +128,7 @@ def xla_device(n: Optional[int] = None,
       specified, the specific XLA device instance will be returned. Otherwise
       the first device (default 0) will be returned.
     devkind (string..., optional): If specified, device type such as `TPU`,
-      `CUDA`, `CPU`, or custom PJRT device. Deprecated.
+      `CPU`, or custom PJRT device. Deprecated.
 
   Returns:
     A `torch.device` with the requested instance of an XLA device.
@@ -152,7 +152,7 @@ def xla_real_devices(devices: Optional[List[torch.device]] = None) -> List[str]:
     devices: The list of torch devices such as ['xla:0', 'xla:1'].
 
   Returns:
-    A list of real devices' name such as ['CUDA:0', 'CUDA:1'].
+    A list of real devices' name such as ['CPU:0', 'CPU:1'].
   """
   if not devices:
     devices = get_xla_supported_devices()
@@ -210,7 +210,7 @@ def xla_replication_devices(
         format(len(local_devices), len(kind_devices)))
   replication_devices = []
   for device in torch_xla._XLAC._xla_get_all_devices():
-    # device is like 'CUDA:0'
+    # device is like 'CPU:0'
     xdev = _utils.parse_xla_device(device)
     if not xdev:
       raise RuntimeError('Invalid device format: {}'.format(device))
@@ -240,7 +240,7 @@ def set_replication(device: torch.device,
   devctx = _get_device_context(device=device)
   devices = [str(x) for x in devices]
   if devices:
-    # sample replication_devices: ['CUDA:0', 'CUDA:1', 'CUDA:2', 'CUDA:3']
+    # sample replication_devices: ['CPU:0', 'CPU:1', 'CPU:2', 'CPU:3']
     replication_devices = xla_replication_devices(devices)
     torch_xla._XLAC._xla_set_replication_devices(replication_devices)
     devctx.device_index = devices.index(device)
