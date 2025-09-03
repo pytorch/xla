@@ -333,8 +333,9 @@ at::Tensor all_to_all_single(const at::Tensor& input,
   bool pin_layout = false;
   const torch::lazy::Value& token =
       GetAllReduceToken(bridge::GetCurrentDevice());
-  int64_t split_count =
-      runtime::GetComputationClientOrDie()->GetAllDevices().size();
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
+  int64_t split_count = client->GetAllDevices().size();
   std::vector<int64_t> all_groups(split_count);
   std::iota(all_groups.begin(), all_groups.end(), 0);
 
