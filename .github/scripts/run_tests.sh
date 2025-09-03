@@ -30,14 +30,7 @@ function run_torch_xla_cpp_tests() {
 
   TORCH_DIR=$(python -c "import pkgutil; import os; print(os.path.dirname(pkgutil.get_loader('torch').get_filename()))")
   export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${TORCH_DIR}/lib
-  if [ -x "$(command -v nvidia-smi)" ]; then
-    CUDA_PLUGIN_DIR=$(python -c "import pkgutil; import os; print(os.path.dirname(pkgutil.get_loader('torch_xla_cuda_plugin').get_filename()))")
-    export PJRT_LIBRARY_PATH=$CUDA_PLUGIN_DIR/lib/pjrt_c_api_gpu_plugin.so
-    export PJRT_DEVICE=LIBRARY
-    export PJRT_DYNAMIC_PLUGINS=1
-  else
-    export PJRT_DEVICE=CPU
-  fi
+  export PJRT_DEVICE=CPU
   export XLA_EXPERIMENTAL="nonzero:masked_select:nms"
 
   test_names=("test_aten_xla_tensor_1"
@@ -55,6 +48,7 @@ function run_torch_xla_cpp_tests() {
                "test_tensor"
                # disable test_xla_backend_intf since it is flaky on upstream
                #"test_xla_backend_intf"
+               "test_xla_generator"
                "test_xla_sharding"
                "test_runtime"
                "test_status_dont_show_cpp_stacktraces"

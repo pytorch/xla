@@ -10,6 +10,8 @@
 #ifndef XLA_TORCH_XLA_CSRC_STATUS_H_
 #define XLA_TORCH_XLA_CSRC_STATUS_H_
 
+#include <sstream>
+
 #include "absl/status/statusor.h"
 
 namespace torch_xla {
@@ -60,30 +62,56 @@ constexpr char kStatusPropagationTraceKey[] =
 #define XLA_STATUS_VAR_ XLA_CONCAT_(status_, __LINE__)
 
 // Provides a flexible way to handle error checking with optional message
-// modification. It evaluates `expr`, checks if it's OK, and either:
-//   1. Returns early with an error status
-//   2. Proceeds with the given `then` block if successful
-#define XLA_RETURN_IF_ERROR_IMPL_(expr, var, then, ...)                   \
-  auto var = (expr);                                                      \
-  if (!var.ok()) {                                                        \
-    return ::torch_xla::status_internal::MaybeWithNewMessage(             \
-        ::torch_xla::status_internal::GetStatus(var), __FILE__, __LINE__, \
-        __FUNCTION__, ##__VA_ARGS__);                                     \
-  }                                                                       \
-  then
+// modification. It evaluates `expr`, and:
+//
+//   1. Runs the `on_error` block, if the returned status is an error
+//   2. Runs the `on_success` block, otherwise
+//
+#define XLA_PROCESS_STATUS_IMPL_(on_error, on_success, expr, var, ...) \
+  auto var = (expr);                                                   \
+  if (!var.ok()) {                                                     \
+    on_error(var, ##__VA_ARGS__);                                      \
+  }                                                                    \
+  on_success
 
-// Propagates `rexpr`, in case it's a non-ok status.
+// `on_error` implementation for propagating the status `var`.
 //
-// Example:
+// This macro wraps `var` (error status returned) into a new status, adding
+// source location information to the status propagation trace if
+// `TORCH_SHOW_CPP_STACKTRACES` is set. And then, returns the newly created
+// status.
 //
-//     XLA_RETURN_IF_ERROR(
-//         FnThatReturnsStatus(),
-//         "New error message."
-//     );
+// It should be only used as parameter to `XLA_PROCESS_STATUS_IMPL_` macro
+// defined above.
 //
-// If the function call results in an ok status, execution continues. Otherwise,
-// we early return a non-ok status. Then, if `TORCH_SHOW_CPP_STACKTRACES` is
-// set, the error shown will be:
+#define XLA_PROPAGATE_STATUS_IMPL_(var, ...)                            \
+  return ::torch_xla::status_internal::MaybeWithNewMessage(             \
+      ::torch_xla::status_internal::GetStatus(var), __FILE__, __LINE__, \
+      __FUNCTION__, ##__VA_ARGS__)
+
+// `on_error` implementation for throwing an exception with the status `var`.
+//
+// This macro wraps `var` (error status returned) into a new status, adding
+// source location information to the status propagation trace if
+// `TORCH_SHOW_CPP_STACKTRACES` is set. And then, throws an exception using the
+// `ThrowStatusError()` function.
+//
+// It should be only used as parameter to `XLA_PROCESS_STATUS_IMPL_` macro
+// defined above.
+//
+#define XLA_THROW_STATUS_IMPL_(var, ...)                                \
+  ::torch_xla::status_internal::ThrowStatusError(                       \
+      ::torch_xla::status_internal::GetStatus(var), __FILE__, __LINE__, \
+      __FUNCTION__, ##__VA_ARGS__)
+
+// Macro implementation for processing an `absl::Status` value. This is the core
+// definition of `XLA_*_IF_ERROR()` macros that, given that `rexpr` is an error
+// status, either throws or returns (i.e. propagates) a newly created status
+// with source location information.
+//
+// If `rexpr` results in an ok status, execution continues. Otherwise, we run
+// `on_error`. Then, if `TORCH_SHOW_CPP_STACKTRACES` is set, the error shown
+// will be:
 //
 //     RuntimeError: New error message.
 //
@@ -93,18 +121,61 @@ constexpr char kStatusPropagationTraceKey[] =
 //       ...
 //       From: <cpp-source-file>:<line> (error: New error message.)
 //
-#define XLA_RETURN_IF_ERROR(rexpr, ...)                                  \
-  do {                                                                   \
-    XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_, {}, ##__VA_ARGS__) \
+#define XLA_DO_IF_ERROR_IMPL_(on_error, rexpr, ...)                 \
+  do {                                                              \
+    XLA_PROCESS_STATUS_IMPL_(on_error, /* on_success= */ {}, rexpr, \
+                             XLA_STATUS_VAR_, ##__VA_ARGS__)        \
   } while (false)
 
-// Propagates `rexpr`, in case it's a non-ok status. Otherwise, assign
-// its result to `lhs`.
+// If `rexpr` returns a non-ok status, this macro propagates the returned status
+// by early-returning a, possibly, new status with source location information.
+// Otherwise, continues execution.
+//
+// Example:
+//
+//     XLA_RETURN_IF_ERROR(
+//         FnThatReturnsStatus(),
+//         "New error message."
+//     );
+//
+#define XLA_RETURN_IF_ERROR(rexpr, ...) \
+  XLA_DO_IF_ERROR_IMPL_(XLA_PROPAGATE_STATUS_IMPL_, rexpr, ##__VA_ARGS__)
+
+// If `rexpr` returns a non-ok status, this macro throws an exception with the
+// returned status, possibly, wrapped by a new status with source location
+// information. Otherwise, continues execution.
+//
+// Example:
+//
+//     XLA_THROW_IF_ERROR(
+//         FnThatReturnsStatus(),
+//         "New error message."
+//     );
+//
+#define XLA_THROW_IF_ERROR(rexpr, ...) \
+  XLA_DO_IF_ERROR_IMPL_(XLA_THROW_STATUS_IMPL_, rexpr, ##__VA_ARGS__)
+
+// Macro implementation for processing an `absl::Status` value. This is the core
+// definition of `XLA_ASSIGN_OR_*()` macros that, given that `rexpr` is an error
+// status, either throws or returns (i.e. propagates) a newly created status
+// with source location information.
+//
+// If `rexpr` results in an ok status, we assign the value held by the status
+// returned by `rexpr` to `lhs`. Otherwise, we run `on_error`.
 //
 // Note 1: `lhs` might be a variable declarate, e.g:
 //
 // Note 2: this macro will be replaced by multiple statements that live on
-//         the scope it was called (see XLA_RETURN_IF_ERROR_IMPL).
+//         the scope it was called (see `XLA_PROCESS_STATUS_IMPL_`).
+//
+#define XLA_ASSIGN_OR_DO_IMPL_(on_error, lhs, rexpr, ...)                   \
+  XLA_PROCESS_STATUS_IMPL_(                                                 \
+      on_error, /* on_success= */ lhs = std::move(XLA_STATUS_VAR_).value(), \
+      rexpr, XLA_STATUS_VAR_, ##__VA_ARGS__)
+
+// If `rexpr` returns a non-ok status, this macro propagates the returned status
+// by early-returning a, possibly, new status with source location information.
+// Otherwise, assigns `rexpr` to `lhs`.
 //
 // Example:
 //
@@ -114,16 +185,40 @@ constexpr char kStatusPropagationTraceKey[] =
 //         "New error message."
 //     );
 //
-// If the function call results in an ok status, execution continues with
-// `result` set to `ret.value()`, where `ret` is the returned value of the
-// function. Otherwise, we early return a non-ok status. Then, if
-// `TORCH_SHOW_CPP_STACKTRACES` is set, the error shown will be similar to
-// the one above.
+#define XLA_ASSIGN_OR_RETURN(lhs, rexpr, ...) \
+  XLA_ASSIGN_OR_DO_IMPL_(XLA_PROPAGATE_STATUS_IMPL_, lhs, rexpr, ##__VA_ARGS__)
+
+// If `rexpr` returns a non-ok status, this macro throws an exception with the
+// returned status, possibly, wrapped by a new status with source location
+// information. Otherwise, assigns `rexpr` to `lhs`.
 //
-#define XLA_ASSIGN_OR_RETURN(lhs, rexpr, ...)                         \
-  XLA_RETURN_IF_ERROR_IMPL_(rexpr, XLA_STATUS_VAR_,                   \
-                            lhs = std::move(XLA_STATUS_VAR_).value(), \
-                            ##__VA_ARGS__)
+// Example:
+//
+//     XLA_ASSIGN_OR_THROW(
+//         int result,
+//         FnThatReturnsStatus(),
+//         "New error message."
+//     );
+//
+#define XLA_ASSIGN_OR_THROW(lhs, rexpr, ...) \
+  XLA_ASSIGN_OR_DO_IMPL_(XLA_THROW_STATUS_IMPL_, lhs, rexpr, ##__VA_ARGS__)
+
+// Crashes if `status` is not an ok status.
+//
+// Example:
+//
+//     XLA_CHECK_OK(
+//         FnThatReturnStatus(),
+//         "New error message"
+//     );
+//
+// If `FnThatReturnStatus()` returns a non-ok status, this macro will
+// call `ABSL_CHECK()`, which will crash.
+//
+#define XLA_CHECK_OK(status, ...)                                          \
+  ::torch_xla::status_internal::OkOrDie(                                   \
+      ::torch_xla::status_internal::GetStatus(status), __FILE__, __LINE__, \
+      __FUNCTION__, ##__VA_ARGS__)
 
 namespace status_internal {
 
@@ -172,33 +267,64 @@ absl::Status MaybeWithNewMessage(const absl::Status& status, const char* file,
                                  int32_t line, const char* function,
                                  std::string_view new_message = "");
 
+// Throws an exception from the given `status`
+//
+// This function wraps `status` within a new status, with the current source
+// location information added to its status propagation trace payload.
+//
+// Then, it throws an exception by using the `TORCH_CHECK(false)` macro, which
+// also displays the C++ stacktrace at the end, if `TORCH_SHOW_CPP_STACKTRACES`
+// is set.
+void ThrowStatusError(const absl::Status& status, const char* file,
+                      const int32_t line, const char* function,
+                      std::string_view message = "");
+
+// Checks that `status` is an ok status.
+//
+// Otherwise, it will create a new status instance with the given source
+// location information, and incorporate its message (alongside the
+// status propagation trace) to the crash report.
+void OkOrDie(const absl::Status& status, const char* file, const int32_t line,
+             const char* function, std::string_view message = "");
+
 }  // namespace status_internal
 
-// Maybe throws an exception if `status` has a non-ok code.
+// Builds the complete error message for the given `status`.
+//
+// If `TORCH_SHOW_CPP_STACKTRACES` is enabled, returns the concatenation of
+// `status.message()` with its inner status propagation trace.
+//
+// It doesn't add a trailing line break.
+std::string BuildStatusErrorMessage(const absl::Status& status);
+
+// Throws an exception if `status` has a non-ok code.
 //
 // Ideally, this function should be used only used in the project's
 // boundary, e.g. when we need to throw an exception for the user to see.
-void MaybeThrow(const absl::Status& status);
+void OkOrThrow(const absl::Status& status);
 
 // Either returns the value `status` holds, if it's an ok-status, or throw an
 // exception from its error status.
 template <class T>
 T& GetValueOrThrow(absl::StatusOr<T>& status) {
-  MaybeThrow(status.status());
+  OkOrThrow(status.status());
   return status.value();
 }
 
 template <class T>
 const T& GetValueOrThrow(const absl::StatusOr<T>& status) {
-  MaybeThrow(status.status());
+  OkOrThrow(status.status());
   return status.value();
 }
 
 template <class T>
 T GetValueOrThrow(absl::StatusOr<T>&& status) {
-  MaybeThrow(status.status());
+  OkOrThrow(status.status());
   return std::move(status).value();
 }
+
+// `GetValueOrThrow` overload for `Status`.
+void GetValueOrThrow(const absl::Status& status);
 
 }  // namespace torch_xla
 

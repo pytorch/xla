@@ -25,7 +25,8 @@ xla::XlaComputation CreateCrsComputation(const xla::Shape& shape) {
   xla::XlaBuilder builder("CrsComputation");
   xla::XlaOp x = xla::Parameter(&builder, 0, shape, "x");
   xla::CrossReplicaSum(x);
-  return GetValueOrThrow(builder.Build());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation crs_computation, builder.Build());
+  return crs_computation;
 }
 
 void TestSingleReplication(
@@ -65,7 +66,8 @@ void TestSingleReplication(
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
-      results[i] = GetValueOrThrow(
+      XLA_ASSIGN_OR_THROW(
+          results[i],
           torch_xla::runtime::GetComputationClientOrDie()->ExecuteComputation(
               *compiled_computations[i],
               {std::dynamic_pointer_cast<
@@ -79,7 +81,8 @@ void TestSingleReplication(
   counter.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    std::vector<xla::Literal> literals = GetValueOrThrow(
+    XLA_ASSIGN_OR_THROW(
+        std::vector<xla::Literal> literals,
         runtime::GetComputationClientOrDie()->TransferFromDevice(results[i]));
     ASSERT_EQ(literals.size(), 1);
 

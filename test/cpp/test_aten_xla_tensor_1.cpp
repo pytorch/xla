@@ -27,7 +27,7 @@ TEST_F(AtenXlaTensorTest, TestStorage) {
   torch::Tensor a = torch::tensor({0.0});
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
-    XLATensorPtr xla_tensor_a = GetValueOrThrow(bridge::GetXlaTensor(xla_a));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor_a, bridge::GetXlaTensor(xla_a));
     EXPECT_EQ(xla_a.device(), xla_tensor_a->Storage().device());
     AllClose(a, xla_a);
   });
@@ -2429,7 +2429,7 @@ TEST_F(AtenXlaTensorTest, TestCount_Nonzero_error_case) {
     torch::Tensor xla_a = CopyToDevice(a, device);
 
     std::vector<long int> dims = {0, 0};
-    EXPECT_THROW(torch::count_nonzero(xla_a, dims), std::runtime_error);
+    EXPECT_THROW(torch::count_nonzero(xla_a, dims), c10::Error);
 
     dims = {10};
     EXPECT_THROW(torch::count_nonzero(xla_a, dims), c10::Error);

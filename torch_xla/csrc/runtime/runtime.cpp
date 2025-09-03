@@ -61,7 +61,8 @@ const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient() {
 }
 
 ComputationClient* absl_nonnull GetComputationClientOrDie() {
-  return GetValueOrThrow(GetComputationClient());
+  XLA_ASSIGN_OR_THROW(ComputationClient * client, GetComputationClient());
+  return client;
 }
 
 ComputationClient* GetComputationClientIfInitialized() {

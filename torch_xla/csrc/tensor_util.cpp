@@ -1056,7 +1056,7 @@ xla::PrimitiveType GetShapeDimensionType(
 
 std::shared_ptr<runtime::ComputationClient::Data> get_data_handle(
     const at::Tensor& input) {
-  XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(input));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xtensor, bridge::GetXlaTensor(input));
   if (xtensor->CurrentDataHandle() != nullptr) {
     TF_VLOG(4) << "The xla tensor has a current data handle.";
     return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(

@@ -61,9 +61,15 @@ bool CanApplySharding(const XLATensor::ShardingSpecPtr sharding) {
 
 XLATensor::Data::~Data() { XLAGraphExecutor::Get()->UnregisterTensor(this); }
 
-XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
-                               const torch::lazy::BackendDevice& device) {
-  XLA_CHECK_EQ(tensor.device().type(), at::kCPU);
+absl::StatusOr<absl_nonnull XLATensorPtr> XLATensor::Create(
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
+  if (!tensor.is_cpu()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "Could not create an XLATensor out of the provided tensor. Expected "
+        "tensor data to be on CPU. Got: ",
+        c10::DeviceTypeName(tensor.device().type()),
+        ". Consider moving the tensor to CPU.")));
+  }
   XLATensorPtr xtensor =
       c10::make_intrusive<XLATensor>(XLATensor(tensor, device));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -512,8 +518,8 @@ at::Tensor XLATensor::ToTensor(bool detached) {
     XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
     // XlaNode is available on the tensor.
-    std::vector<at::Tensor> tensors =
-        GetValueOrThrow(XlaDataToTensors({GetXlaData()}, {dtype()}));
+    XLA_ASSIGN_OR_THROW(std::vector<at::Tensor> tensors,
+                        XlaDataToTensors({GetXlaData()}, {dtype()}));
     tensor = std::move(tensors.front());
     if (!detached) {
       SetTensorData(tensor);
@@ -621,7 +627,9 @@ std::vector<XLATensorPtr> XLATensor::MakeOutputTensors(
 XLATensorPtr XLATensor::CopyTensorToDevice(
     const torch::lazy::BackendDevice& device) {
   // TODO: This can be optimized via proper XRT/XLA computation.
-  return Create(ToTensor(/*detached=*/true), device);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr result,
+                      Create(ToTensor(/*detached=*/true), device));
+  return result;
 }
 
 torch::lazy::Value XLATensor::MaybeCastIrValue(

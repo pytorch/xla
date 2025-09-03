@@ -54,7 +54,6 @@ ptxla_cc_test(
         ":cpp_test_util",
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
-        "//torch_xla/csrc:aten_cuda_functions",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -65,7 +64,6 @@ ptxla_cc_test(
     deps = [
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
-        "//torch_xla/csrc:aten_cuda_functions",
         "@com_google_googletest//:gtest_main",
         "@xla//xla:shape_util",
     ],
@@ -81,7 +79,6 @@ ptxla_cc_test(
         "//torch_xla/csrc/runtime:debug_macros",
         "//torch_xla/csrc:status",
         "//torch_xla/csrc:tensor",
-        "//torch_xla/csrc:aten_cuda_functions",
         "//torch_xla/csrc:thread_pool",
         "@com_google_absl//absl/synchronization",
         "@com_google_googletest//:gtest_main",
@@ -100,7 +97,6 @@ ptxla_cc_test(
         ":cpp_test_util",
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
-        "//torch_xla/csrc:aten_cuda_functions",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -127,7 +123,6 @@ ptxla_cc_test(
         "//torch_xla/csrc/runtime:sys_util",
         "//torch_xla/csrc:status",
         "//torch_xla/csrc:tensor",
-        "//torch_xla/csrc:aten_cuda_functions",
         "@com_google_googletest//:gtest_main",
         "@xla//xla:xla_data_proto_cc",
         "@xla//xla/tsl/profiler/utils:session_manager",
@@ -146,7 +141,6 @@ ptxla_cc_test(
             ":torch_xla_test",
             "//torch_xla/csrc/runtime:metrics",
             "//torch_xla/csrc:tensor",
-            "//torch_xla/csrc:aten_cuda_functions",
             "@com_google_googletest//:gtest_main",
             "@xla//xla:permutation_util",
         ],
@@ -167,6 +161,7 @@ cc_library(
     name = "test_status_common",
     hdrs = ["test_status_common.h"],
     deps = [
+        ":cpp_test_util",
         "//torch_xla/csrc:status",
         "//torch_xla/csrc/runtime:env_vars",
         "@com_google_absl//absl/status:statusor",
@@ -196,9 +191,21 @@ ptxla_cc_test(
     name = "test_debug_macros",
     srcs = ["test_debug_macros.cpp"],
     deps = [
+        ":cpp_test_util",
         "//torch_xla/csrc:status",
         "//torch_xla/csrc/runtime:debug_macros",
         "//torch_xla/csrc/runtime:env_vars",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+ptxla_cc_test(
+    name = "test_xla_generator",
+    srcs = ["test_xla_generator.cpp"],
+    deps = [
+        ":cpp_test_util",
+        ":torch_xla_test",
+        "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest_main",
     ],
 )

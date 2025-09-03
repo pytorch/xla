@@ -8,6 +8,7 @@
 #include <stdexcept>
 
 #include "absl/log/absl_check.h"
+#include "absl/strings/str_cat.h"
 #include "tsl/platform/stacktrace.h"
 
 namespace torch_xla {
@@ -103,25 +104,63 @@ static std::string GetFormattedStatusPropagationTrace(
   auto status_propagation_trace = GetStatusPropagationTraceOrEmpty(status);
   return status_propagation_trace.empty()
              ? ""
-             : absl::StrCat("\nStatus Propagation Trace:",
-                            status_propagation_trace.Flatten(), "\n");
+             : absl::StrCat("\n\nStatus Propagation Trace:",
+                            status_propagation_trace.Flatten());
 }
 
-// Get the status message followed by a line break, if we are printing the
-// C++ stacktraces.
-//
-// This is needed so we have a blank line in between the status message and
-// the dumped C++ traces (either the status propagation one, or the C++
-// stacktrace).
-static std::string MaybeGetMessageWithLineBreak(const absl::Status& status) {
-  return torch::get_cpp_stacktraces_enabled()
-             ? absl::StrCat(status.message(), "\n")
-             : std::string(status.message());
+std::string BuildStatusErrorMessage(const absl::Status& status) {
+  return absl::StrCat(status.message(),
+                      GetFormattedStatusPropagationTrace(status));
 }
 
-void MaybeThrow(const absl::Status& status) {
-  TORCH_CHECK(status.ok(), MaybeGetMessageWithLineBreak(status),
-              GetFormattedStatusPropagationTrace(status));
+// Return a line break if torch::get_cpp_stacktraces_enabled() is true.
+static std::string LineBreakIfCppStacktracesEnabled() {
+  return torch::get_cpp_stacktraces_enabled() ? "\n" : "";
+}
+
+void status_internal::ThrowStatusError(const absl::Status& status,
+                                       const char* file, const int32_t line,
+                                       const char* function,
+                                       std::string_view message) {
+  ABSL_CHECK(!status.ok());
+  absl::Status new_status = status_internal::MaybeWithNewMessage(
+      status, file, line, function, message);
+  TORCH_CHECK(false, absl::StrCat(BuildStatusErrorMessage(new_status),
+                                  LineBreakIfCppStacktracesEnabled()));
+}
+
+void OkOrThrow(const absl::Status& status) {
+  TORCH_CHECK(status.ok(), absl::StrCat(BuildStatusErrorMessage(status),
+                                        LineBreakIfCppStacktracesEnabled()));
+}
+
+void GetValueOrThrow(const absl::Status& status) { OkOrThrow(status); }
+
+void status_internal::OkOrDie(const absl::Status& status, const char* file,
+                              const int32_t line, const char* function,
+                              std::string_view message) {
+  if (status.ok()) {
+    return;
+  }
+
+  std::ostringstream oss;
+  oss << "\n\n"
+      << "Internal Error:\n";
+
+  if (!message.empty()) {
+    oss << "    " << message << "\n";
+  }
+
+  oss << "    This is a bug! Please, open an issue in the PyTorch/XLA "
+      << "GitHub repository: https://github.com/pytorch/xla"
+      << "\n\n"
+      << "Status Error:\n"
+      << "    "
+      << BuildStatusErrorMessage(
+             status_internal::MaybeWithNewMessage(status, file, line, function))
+      << "\n";
+
+  ABSL_CHECK(status.ok()) << oss.str();
 }
 
 }  // namespace torch_xla

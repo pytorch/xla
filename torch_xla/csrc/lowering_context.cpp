@@ -325,7 +325,7 @@ void LoweringContext::AddParameter(const torch::lazy::Output& output,
 }
 
 torch::lazy::ComputationPtr LoweringContext::Build() {
-  xla::XlaComputation xla_computation = GetValueOrThrow(BuildXla());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation xla_computation, BuildXla());
   return std::make_shared<runtime::ComputationClient::Computation>(
       builder_.name(), std::move(xla_computation), device_);
 }

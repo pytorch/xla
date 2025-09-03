@@ -2,13 +2,13 @@
 # Define common configuration parameters for 2.8 release and nightly
 locals {
   tpu_python_versions = ["3.9", "3.10", "3.11", "3.12", "3.13"]
-  release_git_tag         = "v2.8.0-rc4"
-  release_package_version = "2.8.0-rc4"
+  release_git_tag         = "v2.8.0-rc5"
+  release_package_version = "2.8.0-rc5"
   release_pytorch_git_rev = "v2.8.0-rc8"
   nightly_package_version = "2.9.0"
   cuda_versions = {
     "nightly": [],
-    "r2.8": ["12.1", "12.6"] # Note: PyTorch 2.8 release supports 11.8, 12.6, 12.8
+    "r2.8": [] # Note: PyTorch 2.8 release doesn't have CUDA support
   }
 
   # Built once a day from master

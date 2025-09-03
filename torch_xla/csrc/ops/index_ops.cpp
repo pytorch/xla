@@ -18,6 +18,7 @@
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
@@ -315,7 +316,10 @@ XLATensorPtr GetZeroElementTensor(const XLATensorPtr& base,
                     base_dimensions.begin() + start_dim + indices.size(),
                     base_dimensions.end());
 
-  return tensor_methods::full(dimensions, 0, base->GetDevice(), base->dtype());
+  XLA_ASSIGN_OR_THROW(
+      XLATensorPtr output,
+      tensor_methods::full(dimensions, 0, base->GetDevice(), base->dtype()));
+  return output;
 }
 
 XLATensorPtr IndexByTensors(const XLATensorPtr& base,

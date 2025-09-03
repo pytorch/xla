@@ -54,7 +54,7 @@ function install_package() {
 function install_torchbench_models() {
   pushd $CDIR
 
-  torchbench_commit_hash=$(cat $PYTORCH_DIR/.github/ci_commit_pins/torchbench.txt)
+  torchbench_commit_hash=$(cat $PYTORCH_DIR/.ci/docker/ci_commit_pins/torchbench.txt)
   git clone --quiet https://github.com/pytorch/benchmark.git "$TORCHBENCH_DIR"
   cd $TORCHBENCH_DIR
   git checkout $torchbench_commit_hash

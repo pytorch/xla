@@ -135,25 +135,6 @@ function run_pt_xla_debug_level2 {
   PT_XLA_DEBUG_LEVEL=2 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
-function run_torch_op_tests {
-  run_dynamic "$_TEST_DIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
-  run_test_without_functionalization "$_TEST_DIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
-  run_test "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
-  # TODO https://github.com/pytorch/xla/issues/9459: Investigate why this 
-  # doesn't run any tests.
-  # run_test "$_TEST_DIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
-  run_test "$_TEST_DIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
-  run_test "$_TEST_DIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
-  # run_dynamic "$_TEST_DIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/nn/test_dropout.py" "$@" -v TestDropoutNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/nn/test_pooling.py" "$@" -v TestPoolingNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/nn/test_embedding.py" "$@" -v TestEmbeddingNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/nn/test_multihead_attention.py" "$@" -v TestMultiheadAttentionNNDeviceTypeXLA
-  run_dynamic "$_TEST_DIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
-}
-
 #######################################################################################
 ################################# XLA OP TESTS SHARDS #################################
 #######################################################################################
@@ -183,8 +164,8 @@ function run_xla_op_tests1 {
   run_test "$_TEST_DIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$_TEST_DIR/pjrt/test_internal_tpu.py"
 
-  PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/pjrt/test_ddp.py"
-  PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/pjrt/test_mesh_service.py"
+  PJRT_DEVICE=CPU run_test "$_TEST_DIR/pjrt/test_ddp.py"
+  PJRT_DEVICE=CPU run_test "$_TEST_DIR/pjrt/test_mesh_service.py"
 
   run_test "$_TEST_DIR/test_python_ops.py"
   run_test "$_TEST_DIR/test_ops.py"
@@ -218,7 +199,7 @@ function run_xla_op_tests2 {
   run_test "$_TEST_DIR/eager/test_eager_with_xla_compile.py"
   run_test "$_TEST_DIR/eager/test_eager_with_torch_compile.py"
 
-  PJRT_DEVICE=CPU XLA_CUDA=0 run_test "$_TEST_DIR/eager/test_eager_all_reduce_in_place.py"
+  PJRT_DEVICE=CPU run_test "$_TEST_DIR/eager/test_eager_all_reduce_in_place.py"
 
   run_test "$_TEST_DIR/eager/test_eager_spmd.py"
   run_test "$_TEST_DIR/test_callback.py"
@@ -256,6 +237,8 @@ function run_xla_op_tests3 {
   run_test_multi_devices_without_func "$_TEST_DIR/spmd/test_dtensor_integration3.py"
   run_test_multi_devices "$_TEST_DIR/spmd/test_dtensor_convert_mesh.py"
   run_test_multi_devices "$_TEST_DIR/spmd/test_xla_dtensor_spec_conversion.py"
+  run_test_multi_devices "$_TEST_DIR/spmd/test_dtensor_redistribute.py"
+  run_test_multi_devices "$_TEST_DIR/spmd/test_xla_sharded_tensor.py"
   run_test "$_TEST_DIR/spmd/test_xla_auto_sharding.py"
   run_test "$_TEST_DIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$_TEST_DIR/spmd/test_mp_input_sharding.py"
@@ -299,7 +282,6 @@ function run_xla_op_tests5 {
 #######################################################################################
 
 function run_op_tests {
-  run_torch_op_tests
   run_xla_op_tests1
   run_xla_op_tests2
   run_xla_op_tests3
@@ -349,9 +331,8 @@ function run_tests {
     run_xla_op_tests5
   elif [[ "$RUN_TORCH_MP_OP_TESTS" == "torch_mp_op" ]]; then
     echo "Running torch op tests..."
-    run_torch_op_tests
 
-    PJRT_DEVICE=CPU XLA_CUDA=0 run_mp_op_tests
+    PJRT_DEVICE=CPU run_mp_op_tests
   else
     # Run full tests without sharding, respects XLA_SKIP_*
     if [[ "$XLA_SKIP_XLA_OP_TESTS" != "1" ]]; then
@@ -360,9 +341,6 @@ function run_tests {
       run_xla_op_tests3
       run_xla_op_tests4
       run_xla_op_tests5
-    fi
-    if [[ "$XLA_SKIP_TORCH_OP_TESTS" != "1" ]]; then
-      run_torch_op_tests
     fi
     if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
       run_mp_op_tests

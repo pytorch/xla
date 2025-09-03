@@ -736,7 +736,6 @@ def _aten_empty_strided(sizes, stride, dtype=None, **kwargs):
   return jnp.empty(sizes, dtype=dtype)
 
 
-@op(torch.ops.aten.index_put_)
 @op(torch.ops.aten.index_put)
 def _aten_index_put(self, indexes, values, accumulate=False):
   indexes = [slice(None, None, None) if i is None else i for i in indexes]
@@ -5618,6 +5617,8 @@ mutation_ops_to_functional = {
         op_base.InplaceOp(torch.ops.aten.floor_divide),
     torch.ops.aten.remainder_:
         op_base.InplaceOp(torch.ops.aten.remainder),
+    torch.ops.aten.index_put_:
+        op_base.InplaceOp(torch.ops.aten.index_put),
 }
 
 # Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.

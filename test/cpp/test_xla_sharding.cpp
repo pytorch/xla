@@ -28,8 +28,8 @@ namespace {
 bool XlaDataValuesEqual(torch::lazy::BackendDataPtr a,
                         torch::lazy::BackendDataPtr b,
                         at::ScalarType element_type) {
-  std::vector<at::Tensor> tensors =
-      GetValueOrThrow(XlaDataToTensors({a, b}, {element_type, element_type}));
+  XLA_ASSIGN_OR_THROW(std::vector<at::Tensor> tensors,
+                      XlaDataToTensors({a, b}, {element_type, element_type}));
   return TensorCompare(tensors[0], tensors[1]);
 }
 }  // namespace
@@ -385,8 +385,8 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
   auto x = xla::Parameter(&b, 0, shape, "p0");
   b.ClearSharding();
   auto y = xla::Add(x, xla::ConstantR0<float>(&b, 3));
-  xla::XlaComputation xla_computation =
-      GetValueOrThrow(b.Build(/*remove_dynamic_dimensions=*/false));
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation xla_computation,
+                      b.Build(/*remove_dynamic_dimensions=*/false));
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(xla_computation),
                        bridge::GetDefaultDevice()->toString(),

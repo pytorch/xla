@@ -59,6 +59,15 @@ absl::StatusOr<absl_nonnull XLATensorPtr> GetXlaTensor(
 absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> GetXlaTensors(
     const at::ITensorListRef& tensors);
 
+// Retrieves the underlying `XLATensorPtr` from `tensor`.
+//
+// If `tensor` is not an actual XLA tensor, this function will craft a
+// specialized error message for PyTorch operations or Python API
+// functions, i.e. functions where the parameter name makes sense for
+// the end user.
+absl::StatusOr<absl_nonnull XLATensorPtr> GetInputXlaTensor(
+    const at::Tensor& tensor, std::string_view param);
+
 bool IsXlaTensor(const at::Tensor& tensor);
 
 // Replaces the XLA tensor embedded within `tensor`'s XLA TensorImpl with

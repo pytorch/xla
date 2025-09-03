@@ -8,7 +8,9 @@
 
 #include <algorithm>
 #include <functional>
+#include <iterator>
 
+#include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "torch_xla/csrc/LazyIr.h"
@@ -63,7 +65,6 @@
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/generic_slice.h"
 #include "torch_xla/csrc/ops/get_dimensions_size.h"
-#include "torch_xla/csrc/ops/gpu_custom_call.h"
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/ops/index_select.h"
@@ -342,6 +343,139 @@ XLATensorPtr DispatchComparisonOp(c10::Symbol kind, const XLATensorPtr& input,
   torch::lazy::NodePtr node =
       ComparisonOp(kind, input->GetIrValue(), other->GetIrValue());
   return XLATensor::Create(node, input->GetDevice(), at::ScalarType::Bool);
+}
+
+// Checks that the canonical dimensions out of the given dimensions are unique
+// for the `flip` operation.
+//
+// This function fails if any canonical dimension appears more than once.
+// Notice that its error message is specialized for the `flip` operation.
+//
+// @param rank Input rank
+// @param dims (Error Message) `flip` operation original `dims` argument
+// @param canonical_dims (Error Message) Canonical dimensions extracted from
+//                       the `dims` argument
+absl::Status CheckFlipDimensionsAreUnique(
+    int64_t rank, absl::Span<const int64_t> dims,
+    absl::Span<const int64_t> canonical_dims) {
+  // Counter that maps each given dimension to the number of times it has
+  // appeared.
+  std::vector<int64_t> count(rank, 0);
+
+  // Count the number of times each dimension appears.
+  for (auto dim : canonical_dims) {
+    count[dim] += 1;
+  }
+
+  bool any_dimension_appears_more_than_once = std::any_of(
+      count.begin(), count.end(), [](const auto n) { return n > 1; });
+
+  if (any_dimension_appears_more_than_once) {
+    // Suggestion for the value of dims that wouldn't raise an error.
+    std::vector<int64_t> dims_suggestion;
+    // Each "bad" dimension is represented as a string of the form:
+    //
+    //     <dimension> (<count> times)
+    //
+    // To be later joined with commas.
+    std::vector<std::string> bad_count_str;
+
+    // Iterates each dimension, populating both `dims_suggestion` and
+    // `bad_count_str`.
+    for (int64_t i : c10::irange(rank)) {
+      // Dimension does not appear. Do nothing.
+      if (count[i] == 0) {
+        continue;
+      }
+
+      // Dimension appears in `dims`. Add it to the suggestion list.
+      dims_suggestion.push_back(i);
+
+      // Dimension appears more than once. Add it to the "bad" list.
+      if (count[i] > 1) {
+        bad_count_str.push_back(absl::StrCat(i, " (", count[i], " times)"));
+      }
+    }
+
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "flip(): expected each dimension to appear at most once. Found "
+        "dimensions: ",
+        absl::StrJoin(bad_count_str, /* sep= */ ", "),
+        ". Consider changing dims from [", absl::StrJoin(dims, /* sep= */ ", "),
+        "] to [", absl::StrJoin(dims_suggestion, /* sep= */ ", "), "].")));
+  }
+
+  return absl::OkStatus();
+}
+
+template <class F>
+absl::Status CheckFullSizesArePositiveImpl(absl::Span<const int64_t> sizes,
+                                           const F& original_sizes_as_str) {
+  const bool has_concrete_negative_size = std::any_of(
+      sizes.begin(), sizes.end(), [](const int64_t size) { return size < 0; });
+  if (has_concrete_negative_size) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("full(): expected concrete sizes (i.e. non-symbolic) to "
+                     "be positive values. However found negative ones: [",
+                     original_sizes_as_str(), "].")));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckFullSizesArePositive(absl::Span<const int64_t> sizes) {
+  return CheckFullSizesArePositiveImpl(
+      sizes, [&]() { return absl::StrJoin(sizes, /* sep= */ ", "); });
+}
+
+absl::Status CheckFullConcreteSizesArePositive(at::SymIntArrayRef sym_sizes) {
+  std::vector<int64_t> concrete_sizes_or_zero;
+  std::transform(sym_sizes.begin(), sym_sizes.end(),
+                 std::back_inserter(concrete_sizes_or_zero),
+                 [](at::SymInt sym) { return sym.maybe_as_int().value_or(0); });
+  return CheckFullSizesArePositiveImpl(concrete_sizes_or_zero, [&]() {
+    return absl::StrJoin(sym_sizes.begin(), sym_sizes.end(), /* sep= */ ", ",
+                         [](std::string* out, at::SymInt sym) {
+                           absl::StrAppendFormat(out, "%s",
+                                                 absl::FormatStreamed(sym));
+                         });
+  });
+}
+
+absl::Status CheckGatherRanksAreEqual(const XLATensorPtr& input,
+                                      const XLATensorPtr& index) {
+  int64_t input_rank = input->shape().get().dimensions_size();
+  int64_t index_rank = index->shape().get().dimensions_size();
+  if (input_rank != index_rank) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "gather(): expected rank of input (", input_rank, ") and index (",
+        index_rank, ") tensors to be the same.")));
+  }
+  return absl::OkStatus();
+}
+
+// Checks that all index dimensions are smaller or equal to those of input,
+// except on dimension canonical_dim.
+absl::Status CheckGatherDimensionsAreCompatible(const XLATensorPtr& input,
+                                                const XLATensorPtr& index,
+                                                int64_t canonical_dim) {
+  // Dimensions that fail the "smaller or equal" condition.
+  std::vector<int64_t> bad_dims;
+  for (int64_t dim = 0; dim < input->shape().get().dimensions_size(); dim++) {
+    if (dim != canonical_dim && input->size(dim) < index->size(dim)) {
+      bad_dims.push_back(dim);
+    }
+  }
+  if (!bad_dims.empty()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "gather(): expected sizes of index [",
+        absl::StrJoin(index->shape().get().dimensions(), /* sep= */ ", "),
+        "] to be smaller or equal those of input [",
+        absl::StrJoin(input->shape().get().dimensions(), /* sep= */ ", "),
+        "] on all dimensions, except on dimension ", canonical_dim,
+        ". However, that's not true on dimensions [",
+        absl::StrJoin(bad_dims, /* sep= */ ", "), "].")));
+  }
+  return absl::OkStatus();
 }
 
 }  // namespace
@@ -630,45 +764,6 @@ void custom_sharding_(
   xla_node->SetSharding(sharding_spec->sharding, 0);
   input->SetInPlaceIrValue(customShardingNode);
   input->SetShardingSpec(*sharding_spec);
-}
-
-std::vector<XLATensorPtr> gpu_custom_call(
-    const std::vector<XLATensorPtr>& inputs, const std::string& payload,
-    const std::vector<std::vector<int64_t>>& output_shapes,
-    const std::vector<at::ScalarType>& output_dtypes) {
-  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
-
-  std::vector<torch::lazy::Value> values;
-  values.reserve(inputs.size());
-  for (const auto& input : inputs) {
-    values.push_back(input->GetIrValue());
-  }
-
-  XLA_CHECK_EQ(output_shapes.size(), output_dtypes.size());
-  std::vector<xla::Shape> output_xla_shapes;
-  output_xla_shapes.reserve(output_shapes.size());
-  for (size_t i = 0; i < output_shapes.size(); ++i) {
-    output_xla_shapes.push_back(xla::ShapeUtil::MakeShape(
-        MakeXlaPrimitiveType(output_dtypes[i], &(inputs[0]->GetDevice())),
-        output_shapes[i]));
-  }
-
-  auto node = torch_xla::MakeNode<GpuCustomCall>(
-      values, xla::ShapeUtil::MakeTupleShape(output_xla_shapes), payload);
-
-  std::vector<XLATensorPtr> outputs;
-  outputs.reserve(output_shapes.size());
-  for (size_t i = 0; i < output_shapes.size(); ++i) {
-    outputs.push_back(inputs[0]->CreateFrom(torch::lazy::Value(node, i),
-                                            output_dtypes[i],
-                                            /*delay_eager_execution=*/true));
-  }
-  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
-  if (graph_executor->UseEagerMode()) {
-    // Execute the HLO that will run the `custom` and in one hlo
-    graph_executor->ApplyEagerSync(outputs);
-  }
-  return outputs;
 }
 
 std::vector<XLATensorPtr> tpu_custom_call(
@@ -1160,8 +1255,8 @@ std::vector<XLATensorPtr> broadcast_tensors(
   return tensors.front()->MakeOutputTensors(node);
 }
 
-XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
-                 at::ScalarType dtype) {
+absl::StatusOr<absl_nonnull XLATensorPtr> cat(
+    absl::Span<const XLATensorPtr> tensors, int64_t dim, at::ScalarType dtype) {
   // Shape checks for cat:
   // - If not empty, every tensor shape must be the same.
   // - Empty tensor passes but is simply ignore in implementation,
@@ -1169,9 +1264,10 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
   // - If empty dimension, other dimensions must be the same.
   //   e.g. ([4, 0, 32, 32], [4, 2, 32, 32], dim=1) passes.
   //   ([4, 0, 32, 32], [4, 2, 31, 32], dim=1) throws.
-  XLA_CHECK_GT(tensors.size(), 0);
+  ABSL_CHECK(tensors.size() > 0);
   std::vector<torch::lazy::Value> values;
   std::vector<xla::Shape> shapes;
+  size_t last_tensor_index;
   for (size_t i = 0; i < tensors.size(); ++i) {
     xla::Shape tensor_shape = tensors[i]->shape();
     if (tensor_shape.dimensions_size() == 1 &&
@@ -1181,13 +1277,20 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
     dim = torch::lazy::GetCanonicalDimensionIndex(
         dim, tensor_shape.dimensions_size());
     tensor_shape.DeleteDimension(dim);
-    if (!shapes.empty()) {
-      XLA_CHECK(xla::ShapeUtil::CompatibleIgnoringElementType(shapes.back(),
-                                                              tensor_shape))
-          << shapes.back() << " vs. " << tensor_shape;
+    if (!shapes.empty() && !xla::ShapeUtil::CompatibleIgnoringElementType(
+                               shapes.back(), tensor_shape)) {
+      auto last_tensor = tensors[last_tensor_index];
+      auto tensor = tensors[i];
+      return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+          "cat(): cannot concatenate tensors of shape ",
+          last_tensor->shape().get().ToString(), " with ",
+          tensor->shape().get().ToString(), " at dimension ", dim,
+          ". Expected shapes to be equal (except at dimension ", dim,
+          ") or that either of them was a 1D empty tensor of size (0,).")));
     }
     shapes.push_back(tensor_shape);
     values.push_back(tensors[i]->GetIrValue());
+    last_tensor_index = i;
   }
   if (values.empty()) {
     return tensors[0];
@@ -1336,8 +1439,11 @@ std::tuple<XLATensorPtr, XLATensorPtr> cummax(const XLATensorPtr& input,
     at::Tensor val =
         at::empty(shape_, at::TensorOptions().dtype(input->dtype()));
     at::Tensor idx = at::empty(shape_, at::TensorOptions().dtype(at::kLong));
-    return std::make_tuple(input->Create(val, input->GetDevice()),
-                           input->Create(idx, input->GetDevice()));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_val,
+                        XLATensor::Create(val, input->GetDevice()));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_idx,
+                        XLATensor::Create(idx, input->GetDevice()));
+    return std::make_tuple(xla_val, xla_idx);
   }
   torch::lazy::NodePtr node =
       torch_xla::MakeNode<CumMax>(input->GetIrValue(), canonical_dim);
@@ -1411,9 +1517,10 @@ XLATensorPtr diagonal(const XLATensorPtr& input, int64_t offset, int64_t dim1,
       input->GetIrValue(), offset, canonical_dim1, canonical_dim2));
 }
 
-XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
-                 const std::optional<std::string_view>& rounding_mode,
-                 std::optional<at::ScalarType> logical_element_type) {
+absl::StatusOr<absl_nonnull XLATensorPtr> div(
+    const XLATensorPtr& input, const XLATensorPtr& other,
+    const std::optional<std::string_view>& rounding_mode,
+    std::optional<at::ScalarType> logical_element_type) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
   xla::PrimitiveType input_type = input->shape().get().element_type();
@@ -1436,8 +1543,10 @@ XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
     } else if (*rounding_mode == "floor") {
       res = torch_xla::MakeNode<Floor>(res);
     } else {
-      XLA_CHECK(false)
-          << "rounding_mode must be one of None, 'trunc', or 'floor'";
+      return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+          absl::StrCat("div(): invalid rounding mode `", *rounding_mode,
+                       "`. Expected it to be either 'trunc', 'floor', or be "
+                       "left unspecified.")));
     }
   }
 
@@ -1667,12 +1776,11 @@ void fill_(XLATensorPtr& input, const at::Scalar& value) {
   input->SetInPlaceIrValue(std::move(constant));
 }
 
-XLATensorPtr flip(const XLATensorPtr& input, absl::Span<const int64_t> dims) {
-  auto dimensions = torch::lazy::GetCanonicalDimensionIndices(
-      torch_xla::runtime::util::ToVector<int64_t>(dims),
-      input->shape().get().dimensions_size());
-  std::set<int64_t> unique_dims(dimensions.begin(), dimensions.end());
-  XLA_CHECK_EQ(unique_dims.size(), dimensions.size());
+absl::StatusOr<absl_nonnull XLATensorPtr> flip(const XLATensorPtr& input,
+                                               absl::Span<const int64_t> dims) {
+  auto rank = input->shape().get().dimensions_size();
+  auto dimensions = torch::lazy::GetCanonicalDimensionIndices(dims, rank);
+  XLA_RETURN_IF_ERROR(CheckFlipDimensionsAreUnique(rank, dims, dimensions));
   return input->CreateFrom(
       torch_xla::MakeNode<Flip>(input->GetIrValue(), dimensions));
 }
@@ -1691,10 +1799,10 @@ XLATensorPtr fmod(const XLATensorPtr& input, const at::Scalar& other,
                            logical_element_type);
 }
 
-XLATensorPtr full(absl::Span<const int64_t> size, const at::Scalar& fill_value,
-                  const torch::lazy::BackendDevice& device,
-                  at::ScalarType scalar_type) {
-  CheckShapeDimensions(size);
+absl::StatusOr<absl_nonnull XLATensorPtr> full(
+    absl::Span<const int64_t> size, const at::Scalar& fill_value,
+    const torch::lazy::BackendDevice& device, at::ScalarType scalar_type) {
+  XLA_RETURN_IF_ERROR(CheckFullSizesArePositive(size));
   xla::Shape shape =
       MakeArrayShapeFromDimensions(size, /*dynamic_dimensions=*/{},
                                    MakeXlaPrimitiveType(scalar_type, &device),
@@ -1718,19 +1826,10 @@ XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                            device, *scalar_type);
 }
 
-XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
-                         const at::Scalar& fill_value,
-                         const torch::lazy::BackendDevice& device,
-                         at::ScalarType scalar_type) {
-  XLA_CHECK(std::all_of(sym_size.begin(), sym_size.end(), [](at::SymInt dim) {
-    // TODO: It should be OK to perform this test on symbolic ints too, not
-    // sure why you conditionalized it.
-    if (auto c = dim.maybe_as_int()) {
-      return *c >= 0;
-    }
-    return true;
-  })) << "Dimensions cannot be negative numbers";
-
+absl::StatusOr<absl_nonnull XLATensorPtr> full_symint(
+    at::SymIntArrayRef sym_size, const at::Scalar& fill_value,
+    const torch::lazy::BackendDevice& device, at::ScalarType scalar_type) {
+  XLA_RETURN_IF_ERROR(CheckFullConcreteSizesArePositive(sym_size));
   return XLATensor::Create(
       XLAGraphExecutor::Get()->GetIrValueForScalar(
           fill_value, MakeXlaPrimitiveType(scalar_type, &device), sym_size,
@@ -1738,18 +1837,14 @@ XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
       device, scalar_type);
 }
 
-XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
-                    const XLATensorPtr& index) {
-  xla::Shape input_shape = input->shape();
-  xla::Shape index_shape = index->shape();
-  XLA_CHECK_EQ(input_shape.dimensions_size(), index_shape.dimensions_size());
+absl::StatusOr<absl_nonnull XLATensorPtr> gather(const XLATensorPtr& input,
+                                                 int64_t dim,
+                                                 const XLATensorPtr& index) {
   int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
-      dim, input_shape.dimensions_size());
-  for (size_t dim = 0; dim < input_shape.dimensions_size(); dim++) {
-    if (dim != canonical_dim) {
-      XLA_CHECK_LE(index->size(dim), input->size(dim));
-    }
-  }
+      dim, input->shape().get().dimensions_size());
+  XLA_RETURN_IF_ERROR(CheckGatherRanksAreEqual(input, index));
+  XLA_RETURN_IF_ERROR(
+      CheckGatherDimensionsAreCompatible(input, index, canonical_dim));
   return input->CreateFrom(torch_xla::MakeNode<Gather>(
       input->GetIrValue(), canonical_dim, index->GetIrValue()));
 }
@@ -2400,10 +2495,10 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm(
     }
   } else {
     at::Tensor at_input = bridge::AtenFromXlaTensor(input);
-    mean = GetValueOrThrow(
-        bridge::GetXlaTensor(at::empty({0}, at_input.options())));
-    variance_inverse = GetValueOrThrow(
-        bridge::GetXlaTensor(at::empty({0}, at_input.options())));
+    XLA_ASSIGN_OR_THROW(
+        mean, bridge::GetXlaTensor(at::empty({0}, at_input.options())));
+    XLA_ASSIGN_OR_THROW(variance_inverse, bridge::GetXlaTensor(at::empty(
+                                              {0}, at_input.options())));
   }
 
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
@@ -2789,8 +2884,12 @@ XLATensorPtr dynamic_view(const XLATensorPtr& input,
 
 //////////////////////////////////////////////////////////////////////////////
 
-void random_(XLATensorPtr& input, int64_t from, int64_t to) {
-  XLA_CHECK_LE(from, to);
+absl::Status random_(XLATensorPtr& input, int64_t from, int64_t to) {
+  if (from >= to) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("random_(): expected `from` (", from,
+                     ") to be smaller than `to` (", to, ").")));
+  }
   auto input_shape = input->shape();
   input->SetInPlaceIrValue(torch_xla::MakeNode<DiscreteUniform>(
       XLAGraphExecutor::Get()->GetIrValueForScalar(
@@ -2798,6 +2897,7 @@ void random_(XLATensorPtr& input, int64_t from, int64_t to) {
       XLAGraphExecutor::Get()->GetIrValueForScalar(to, xla::PrimitiveType::S64,
                                                    input->GetDevice()),
       XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape));
+  return absl::OkStatus();
 }
 
 XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,

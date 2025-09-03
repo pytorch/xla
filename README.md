@@ -32,10 +32,10 @@ Note: Builds are available for Python 3.8 to 3.11; please use one of the support
 # - for conda
 # conda create -n py311 python=3.11
 
-pip install torch==2.7.0 'torch_xla[tpu]==2.7.0'
+pip install torch==2.8.0 'torch_xla[tpu]==2.8.0'
 
 # Optional: if you're using custom kernels, install pallas dependencies
-pip install 'torch_xla[pallas]'
+pip install --pre torch_xla[pallas] --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
 ```
 **As of 07/16/2025 and starting from Pytorch/XLA 2.8 release, PyTorch/XLA will 
 provide nightly and release wheels for Python 3.11 to 3.13**
@@ -97,7 +97,7 @@ Our github contains many useful docs on working with different aspects of PyTorc
 - [docs/source/learn](https://github.com/pytorch/xla/tree/master/docs/source/learn): docs for learning concepts associated with XLA, troubleshooting, pjrt, eager mode, and dynamic shape.
 - [docs/source/accelerators](https://github.com/pytorch/xla/tree/master/docs/source/accelerators): references to `GPU` and `TPU` accelerator documents.
 - [docs/source/perf](https://github.com/pytorch/xla/tree/master/docs/source/perf): documentation about performance specific aspects of PyTorch/XLA such as: `AMP`, `DDP`, `Dynamo`, Fori loop, `FSDP`, quantization, recompilation, and `SPMD`
-- [docs/source/features](https://github.com/pytorch/xla/tree/master/docs/source/features): documentation on distributed torch, pallas, scan, stable hlo, and triton.
+- [docs/source/features](https://github.com/pytorch/xla/tree/master/docs/source/features): documentation on distributed torch, pallas, scan, and stable hlo.
 - [docs/source/contribute](https://github.com/pytorch/xla/tree/master/docs/source/contribute): documents on setting up PyTorch for development, and guides for lowering operations.
 - PJRT plugins:
   - [CPU](https://github.com/pytorch/xla/blob/master/plugins/cpu/README.md)
