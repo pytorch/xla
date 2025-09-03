@@ -1,8 +1,6 @@
-# Contributing to TorchXLA2
+# Contributing to torchax
 
 We appreciate all contributions. If you are planning to contribute a bug fix for an open issue, please comment on the thread and we're happy to provide any guidance. You are very welcome to pick issues from good first issue and help wanted labels.
-
-If you plan to contribute new features, utility functions or extensions to the core, please first open an issue and discuss the feature with us. Sending a PR without discussion might end up resulting in a rejected PR, because we might be taking the core in a different direction than you might be aware of.
 
 
 # Developer setup
@@ -19,8 +17,16 @@ conda activate <your_name>
 pip install --upgrade "jax[cpu]" torch
 pip install -r test_requirements.txt
 pip install -e .
-pytest test
+pip install pytest-xdist # recommended for running test faster
+pytest -n auto test
 ```
+
+## Setup on GPU or TPU
+
+Same as Mac setup, except, if you run test using pytest, please also
+add `JAX_PLATFORMS=cpu`. The reason is because pytest usually runs
+test in multiple threads. CPU device can be accessed concurrently where
+TPU devices usually only allow one accesor per process; so it could deadlock.
 
 ### VSCode
 
@@ -35,4 +41,3 @@ The plugins I installed (a subset of the ones listed above) are:
 
 I also changed Python interpreter to point at the one in my conda env.
 That is all the changes I have.
-

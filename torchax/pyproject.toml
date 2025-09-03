@@ -48,6 +48,3 @@ odml = ["jax[cpu]>=0.6.2", "jax[cpu]"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["torchax"]
-
-[tool.pytest.ini_options]
-addopts="-n auto"

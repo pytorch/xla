@@ -32,7 +32,6 @@ class MiscTest(unittest.TestCase):
 
   def test_to_device(self):
     env = torchax.default_env()
-    env.config.debug_print_each_op = True
     with env:
       step1 = torch.ones(
           100,
@@ -41,6 +40,19 @@ class MiscTest(unittest.TestCase):
       step2 = torch.triu(step1, diagonal=1)
       step3 = step2.to(dtype=torch.bool, device='jax')
       self.assertEqual(step3.device.type, 'jax')
+
+  def test_to_device_twice(self):
+      env = torchax.default_env()
+      env.config.debug_print_each_op = True
+      with env:
+        step1 = torch.ones(
+            100,
+            100,
+        )
+        step2 = torch.triu(step1, diagonal=1)
+        step3 = step2.to(dtype=torch.bool, device='jax')
+        step3.to('jax')
+        self.assertEqual(step3.device.type, 'jax')
 
 
 if __name__ == '__main__':

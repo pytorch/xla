@@ -46,3 +46,8 @@ dynamic = [
 Homepage = "https://github.com/pytorch/xla"
 Repository = "https://github.com/pytorch/xla"
 "Bug Tracker" = "https://github.com/pytorch/xla/issues"
+
+[tool.uv.workspace]
+members = [
+    "torchax2",
+]

@@ -97,10 +97,13 @@ inputs = torch.randn(3, 3, 28, 28, device='jax')
 m = MyModel().to('jax')
 res = m(inputs)
 print(type(res))  # outputs torchax.tensor.Tensor
+print(res.jax()) # print the underlying Jax Array
 ```
 
 `torchax.tensor.Tensor` is a `torch.Tensor` subclass that holds
 a `jax.Array`. You can inspect that JAX array with `res.jax()`.
+
+In other words, despite that the code above looks like PyTorch, it is actually running JAX!
 
 ## What is happening behind the scene
 
