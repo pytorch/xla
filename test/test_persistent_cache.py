@@ -131,9 +131,7 @@ class PersistentCacheTest(parameterized.TestCase):
       ('spmd_replicated', _spmd_replicated_test),
       ('spmd_sharded', _spmd_sharded_test),
   )
-  @absltest.skipUnless(
-      xr.device_type() == 'TPU',
-      'TPU required for SPMD')
+  @absltest.skipUnless(xr.device_type() == 'TPU', 'TPU required for SPMD')
   def test_persistent_cache(self, test_fn):
     self._run_test(_test_spawn, test_fn)
 

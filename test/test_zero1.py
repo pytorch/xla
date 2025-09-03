@@ -159,8 +159,7 @@ def _mp_fn(index):
     sys.exit(0 if test.result.wasSuccessful() else 1)
   else:
     print(
-        'Default device {} is not a TPU device'.format(device),
-        file=sys.stderr)
+        'Default device {} is not a TPU device'.format(device), file=sys.stderr)
 
 
 if __name__ == '__main__':
