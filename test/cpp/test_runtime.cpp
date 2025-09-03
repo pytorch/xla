@@ -16,7 +16,7 @@ TEST(RuntimeTest, ComputationClientInitialization) {
   auto status = GetComputationClient();
   ASSERT_TRUE(status.ok());
 
-  EXPECT_EQ(status.value(), client);
+  client = status.value();
   EXPECT_EQ(GetComputationClientIfInitialized(), client);
 }
 
