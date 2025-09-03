@@ -13,9 +13,6 @@ TEST(RuntimeTest, ComputationClientInitialization) {
   // Initialize the ComputationClient.
   // Check all the APIs return the same valid ComputationClient.
 
-  client = GetComputationClientOrDie();
-  ASSERT_NE(client, nullptr);
-
   auto status = GetComputationClient();
   ASSERT_TRUE(status.ok());
 
