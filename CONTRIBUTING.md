@@ -238,10 +238,6 @@ first time, you may need to build everything again, for example, after a
   python setup.py develop
   ```
 
-### Additional steps for GPU
-
-Please refer to this [guide](https://github.com/pytorch/xla/blob/master/plugins/cuda/README.md).
-
 ## Before Creating a Pull Request
 
 In `pytorch/xla` repo we enforce coding style for both C++ and Python files.

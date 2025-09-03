@@ -77,11 +77,6 @@ PYTORCH_DIR=$1
 XLA_DIR=$2
 USE_COVERAGE="${3:-0}"
 
-if [ -x "$(command -v nvidia-smi)" ]; then
-  num_devices=$(nvidia-smi --list-gpus | wc -l)
-  echo "Found $num_devices GPU devices..."
-  export GPU_NUM_DEVICES=$num_devices
-fi
 export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 

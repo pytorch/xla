@@ -6,10 +6,6 @@ locals {
   release_package_version = "2.8.0-rc5"
   release_pytorch_git_rev = "v2.8.0-rc8"
   nightly_package_version = "2.9.0"
-  cuda_versions = {
-    "nightly": [],
-    "r2.8": [] # Note: PyTorch 2.8 release doesn't have CUDA support
-  }
 
   # Built once a day from master
   generated_nightly_builds = concat(
@@ -22,16 +18,6 @@ locals {
         cxx11_abi      = "1"
       }
     ],
-    # CUDA builds
-    [
-      for pair in setproduct(local.tpu_python_versions, local.cuda_versions["nightly"]) : {
-        accelerator     = "cuda"
-        cuda_version    = pair[1]
-        python_version  = pair[0]
-        bundle_libtpu   = "0"
-        cxx11_abi       = "1"
-      }
-    ]
   )
 
   # Built on push to specific tag.
@@ -59,19 +45,6 @@ locals {
         bundle_libtpu   = "1"
       }
     ],
-
-    # cuda build for latest release
-    [
-    for pair in setproduct(local.tpu_python_versions, local.cuda_versions["r2.8"]) : {
-      git_tag         = local.release_git_tag
-      package_version = local.release_package_version
-      pytorch_git_rev = local.release_pytorch_git_rev
-      accelerator     = "cuda"
-      cuda_version    = pair[1]
-      python_version  = pair[0]
-      bundle_libtpu   = "0"
-    }
-    ]
   )
   versioned_builds = concat(local.generated_versioned_builds, var.manual_versioned_builds)
   nightly_builds = concat(local.generated_nightly_builds, var.manual_nightly_builds)
