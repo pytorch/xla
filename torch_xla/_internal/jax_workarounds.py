@@ -59,14 +59,21 @@ def maybe_get_torchax():
 
 
 def maybe_get_jax():
-  try:
-    jax_import_guard()
-    with jax_env_context():
-      import jax
-      # TorchXLA still expects SPMD style sharding
-      jax.config.update('jax_use_shardy_partitioner', False)
-      return jax
-  except (ModuleNotFoundError, ImportError):
-    logging.warn('You are trying to use a feature that requires jax/pallas.'
-                 'You can install Jax/Pallas via pip install torch_xla[pallas]')
-    return None
+  env_val = os.environ.get('TORCH_XLA_ENABLE_JAX', '')
+  
+  if env_val.lower() in ('1', 'true', 'yes'):
+    try:
+      jax_import_guard()
+      with jax_env_context():
+        import jax
+        return jax
+    except (ModuleNotFoundError, ImportError):
+      logging.warning('JAX explicitly enabled but not installed. '
+                      'You can install Jax/Pallas via pip install torch_xla[pallas]')
+      return None
+  
+  if env_val == '':
+    logging.warning('You are trying to use a feature that requires JAX. '
+                    'You can install Jax/Pallas via pip install torch_xla[pallas] and Set TORCH_XLA_ENABLE_JAX=1 to enable JAX features, or TORCH_XLA_ENABLE_JAX=0 to suppress this warning')
+  # If explicitly disabled (0, false, no, etc.), return silently
+  return None
