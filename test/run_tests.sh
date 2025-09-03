@@ -27,6 +27,7 @@ export TORCH_TEST_DEVICES="$_TEST_DIR/pytorch_test_base.py"
 export PYTORCH_TEST_WITH_SLOW=1
 export XLA_DUMP_FATAL_STACK=1
 export CPU_NUM_DEVICES=4
+unset XLA_STABLEHLO_COMPILE
 
 _TORCH_XLA_DIR=$(
   cd ~
