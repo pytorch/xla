@@ -38,7 +38,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
-from torch_xla.amp import autocast, GradScaler
+from torch_xla.amp import autocast
 try:
   from torch_xla.amp import syncfree
 except ImportError:
@@ -143,11 +143,8 @@ def train_mnist(flags, **kwargs):
 
   if device_hw == 'TPU':
     scaler = None
-  elif device_hw == 'CUDA':
-    # GradScaler only used for GPU
-    scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
   else:
-    print("Only TPU or GPU supported for AMP.")
+    print("Only TPU supported for AMP.")
     sys.exit(1)
 
   def train_loop_fn(loader):

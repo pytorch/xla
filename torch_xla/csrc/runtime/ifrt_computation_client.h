@@ -110,10 +110,6 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
-  std::intptr_t GetCudaStreamForDevice(int local_device_id) const override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  }
-
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;

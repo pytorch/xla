@@ -119,57 +119,6 @@ def _get_input_arg_device(input_args: tuple) -> torch.device:
     return device
 
 
-# Returns True if all the input args are on a CUDA device.
-def _args_on_cuda(input_args: tuple) -> bool:
-  input_device: torch.device = _get_input_arg_device(input_args)
-  if input_device is None:
-    return False
-
-  return input_device.type == "cuda"
-
-
-# Given an input list, moves the tensors to the given target_device.
-# The output order will be the same as the input. Non tensors will also still
-# be in the list.
-def _maybe_move_tensors_to_device(tensors: tuple,
-                                  target_device: torch.device) -> tuple:
-  assert target_device, "Moving tensors to None device not supported"
-
-  moved_tensors = []
-  for tensor in tensors:
-    if not isinstance(tensor, torch.Tensor):
-      moved_tensors.append(tensor)
-      continue
-
-    if tensor.device == target_device:
-      moved_tensors.append(tensor)
-      continue
-
-    if dynamo_debug:
-      print("Moving Tensor {} to device {}".format(tensor, target_device))
-
-    zero_copy_enabled = xu.getenv_as(xenv.ZERO_COPY_ENABLED, bool, defval=False)
-    if zero_copy_enabled and tensor.device.type == 'cuda' and target_device.type == 'xla':
-      # If the input cuda tensor requires gradient, we need to call detach. Otherwise, we'd get the error "RuntimeError: Can't export tensors that require gradient, use tensor.detach()"
-      moved_tensor = torch_xla_dlpack.from_dlpack(tensor.detach())
-    elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
-      # `torch_xla.sync()` is need to make sure the pjrt buffer is valid.
-      torch_xla.sync()
-      moved_tensor = torch_xla_dlpack.from_xla_cuda_to_cuda(tensor)
-    else:
-      # Have to move to CPU before moving it to target device.
-      cpu_device: torch.device = torch.device("cpu")
-      moved_tensor = tensor.to(cpu_device)
-      moved_tensor = moved_tensor.to(target_device)
-
-    # Explicitly have to copy requires_grad attribute because it's dropped
-    # with torch.to(..)
-    moved_tensor.requires_grad = tensor.requires_grad
-    moved_tensors.append(moved_tensor)
-
-  return tuple(moved_tensors)
-
-
 def _split_xla_args_tensor_sym_constant(args):
   tensors = deque(maxlen=len(args))
   constants = []
@@ -561,14 +510,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
        special_return_handler, xla_args_need_update) = extract_graph_helper(
            xla_model, sym_constants_to_graph_vars)
 
-    original_device: torch.device = _get_input_arg_device(args)
-    is_cuda_args: bool = False
-    if original_device:
-      is_cuda_args = original_device.type == "cuda"
-
-    if is_cuda_args:
-      args = _maybe_move_tensors_to_device(args, torch_xla.device())
-
     if not config.skip_input_data_check:
       # `torch_xla.sync()` needs to be blocking since we want to access args's
       # XLADatas and they can't be placeholder.
@@ -619,11 +560,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
     # First few elements might be xla_args that needs to be in place updated
     result = res[len(xla_args_need_update):]
-
     result = none_remover.add_nones(result)
-    if is_cuda_args:
-      result = _maybe_move_tensors_to_device(tuple(result), original_device)
-
     if len(result) == 1:
       return result[0]
     else:
@@ -811,10 +748,6 @@ def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
 
 
 def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
-  if _args_on_cuda(xla_args):
-    xla_args = tuple(
-        _maybe_move_tensors_to_device(xla_args, torch_xla.device()))
-
   # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
   # value reference before actually computing it.
   for a in xla_args:

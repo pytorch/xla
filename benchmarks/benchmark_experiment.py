@@ -20,13 +20,12 @@ class ExperimentLoader:
 
     # Start with default config.
     config_choices = {
-        "accelerator": ["cpu", "cuda", "tpu"],
+        "accelerator": ["cpu", "tpu"],
         "xla": [None, "PJRT", "XRT"],
         "xla_flags": [None],
         "dynamo": [None, "inductor", "openxla"],
         "torch_xla2": [None],  # options only apply to torch_xla2
         "test": ["eval", "train"],
-        "keep_model_data_on_cuda": [False],
         "enable_functionalization": [False],
     }
 
@@ -46,10 +45,6 @@ class ExperimentLoader:
     if self._args.xla_flags:
       config_choices["xla_flags"] = list(
           map(parse_none_str, set(self._args.xla_flags)))
-    if self._args.keep_model_data_on_cuda:
-      config_choices["keep_model_data_on_cuda"] = [
-          self._args.keep_model_data_on_cuda
-      ]
     if self._args.enable_functionalization:
       config_choices["enable_functionalization"] = [
           self._args.enable_functionalization
@@ -85,7 +80,6 @@ class ExperimentLoader:
     cfg_xla = experiment_config["xla"]
     cfg_test = experiment_config["test"]
     cfg_torch_xla2 = experiment_config["torch_xla2"]
-    cfg_keep_model_data_on_cuda = experiment_config["keep_model_data_on_cuda"]
 
     # Check that dynamo refers to an existing backend.
     if cfg_dynamo is not None and cfg_dynamo not in dynamo.list_backends(
@@ -118,15 +112,15 @@ class ExperimentLoader:
     if cfg_accelerator == "tpu":
       if cfg_xla is None:
         return False
-    elif cfg_accelerator in ("cpu", "cuda"):
+    elif cfg_accelerator == "cpu":
       if cfg_xla == "XRT":
+        return False
+    elif cfg_accelerator == "cuda":
+      if cfg_xla is not None:
+        # PyTorch/XLA with CUDA backend is no longer supported.
         return False
     else:
       raise NotImplementedError
-
-    # cfg_keep_model_data_on_cuda is only avaible when using dynamo
-    if cfg_keep_model_data_on_cuda and cfg_dynamo != "openxla":
-      return False
 
     return True
 
@@ -140,7 +134,6 @@ class ExperimentLoader:
     test = experiment_config["test"]
     batch_size = experiment_config.get("batch_size", self._args.batch_size)
     torch_xla2 = experiment_config["torch_xla2"]
-    keep_model_data_on_cuda = experiment_config["keep_model_data_on_cuda"]
     enable_functionalization = experiment_config["enable_functionalization"]
     return BenchmarkExperiment(
         accelerator=accelerator,
@@ -148,7 +141,6 @@ class ExperimentLoader:
         xla_flags=xla_flags,
         dynamo=dynamo,
         torch_xla2=torch_xla2,
-        keep_model_data_on_cuda=keep_model_data_on_cuda,
         test=test,
         batch_size=batch_size,
         enable_functionalization=enable_functionalization,
@@ -159,14 +151,12 @@ class BenchmarkExperiment:
 
   def __init__(self, accelerator: str, xla: Optional[str],
                xla_flags: Optional[str], dynamo: str, torch_xla2: bool,
-               keep_model_data_on_cuda: bool, test: str, batch_size: str,
-               enable_functionalization: bool):
+               test: str, batch_size: str, enable_functionalization: bool):
     self.accelerator = accelerator
     self.xla = xla
     self.xla_flags = xla_flags
     self.dynamo = dynamo
     self.torch_xla2 = torch_xla2
-    self.keep_model_data_on_cuda = keep_model_data_on_cuda
     self.test = test
     self.batch_size = batch_size
     self.accelerator_model = get_accelerator_model(self.accelerator)
@@ -191,8 +181,6 @@ class BenchmarkExperiment:
       if is_xla_device_available("TPU"):
         process_env["TPU_NUM_DEVICES"] = "1"
         process_env["XRT_TPU_CONFIG"] = "localservice;0;localhost:51011"
-      elif is_xla_device_available("CUDA"):
-        process_env["GPU_NUM_DEVICES"] = "1"
     elif self.xla is None:
       # In non-xla CPU training experiments, an env var is still needed if an
       # xla device exists, or there will be "Missing XLA configuration" error.
@@ -246,7 +234,6 @@ class BenchmarkExperiment:
     d["xla_flags"] = self.xla_flags
     d["dynamo"] = self.dynamo
     d["torch_xla2"] = self.torch_xla2
-    d["keep_model_data_on_cuda"] = self.keep_model_data_on_cuda
     d["test"] = self.test
     d["batch_size"] = self.batch_size
     d["enable_functionalization"] = self.enable_functionalization

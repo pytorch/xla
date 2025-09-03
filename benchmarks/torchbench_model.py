@@ -273,13 +273,10 @@ class TorchBenchModel(BenchmarkModel):
 
     # Move the initialized model to XLA device if it's not there already.
     if self.benchmark_experiment.xla and not self.should_initialize_on_xla():
-      # First, move the model and the inputs to CPU.
-      # This avoids having dupplicated data on CUDA.
-      keep_model_data_on_cuda = self.benchmark_experiment.keep_model_data_on_cuda
-      if self.is_accelerator_cuda() and not keep_model_data_on_cuda:
-        self.module = self.module.to("cpu")
-        self.example_inputs = move_to_device(self.example_inputs, "cpu")
-        cleanup(self.is_accelerator_cuda())
+      assert not self.is_accelerator_cuda()
+      self.module = self.module.to("cpu")
+      self.example_inputs = move_to_device(self.example_inputs, "cpu")
+      cleanup()
 
     # Torchbench has quite different setup for yolov3, so directly passing
     # the right example_inputs

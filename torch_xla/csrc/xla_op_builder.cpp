@@ -690,8 +690,8 @@ xla::XlaOp ConcatInDim(const BuilderPtr& builder,
 xla::XlaOp Convert(const BuilderPtr& builder,
                    const std::vector<OpPtr>& operands, py::dict args) {
   std::string type = args["to_type"].cast<std::string>();
-  xla::PrimitiveType xla_type =
-      GetValueOrThrow(xla::primitive_util::StringToPrimitiveType(type));
+  XLA_ASSIGN_OR_THROW(xla::PrimitiveType xla_type,
+                      xla::primitive_util::StringToPrimitiveType(type));
   return MaybeConvertTo(operands.at(0)->op, xla_type);
 }
 
@@ -717,8 +717,8 @@ xla::XlaOp SetDimensionSize(const BuilderPtr& builder,
 xla::XlaOp BitcastConvert(const BuilderPtr& builder,
                           const std::vector<OpPtr>& operands, py::dict args) {
   std::string type = args["to_type"].cast<std::string>();
-  xla::PrimitiveType xla_type =
-      GetValueOrThrow(xla::primitive_util::StringToPrimitiveType(type));
+  XLA_ASSIGN_OR_THROW(xla::PrimitiveType xla_type,
+                      xla::primitive_util::StringToPrimitiveType(type));
   return xla::BitcastConvertType(operands.at(0)->op, xla_type);
 }
 
@@ -873,8 +873,8 @@ xla::Shape PyShapeToShape(py::object shape) {
   std::string type = py_shape["type"].cast<std::string>();
   std::vector<int64_t> dimensions =
       GetTupleVector<int64_t>(py_shape["sizes"].cast<py::tuple>());
-  xla::PrimitiveType xla_type =
-      GetValueOrThrow(xla::primitive_util::StringToPrimitiveType(type));
+  XLA_ASSIGN_OR_THROW(xla::PrimitiveType xla_type,
+                      xla::primitive_util::StringToPrimitiveType(type));
   if (py_shape.contains("dynamic_dimensions")) {
     std::vector<bool> dynamic_dimensions =
         GetTupleVector<bool>(py_shape["dynamic_dimensions"]);

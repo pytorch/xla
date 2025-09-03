@@ -8,7 +8,7 @@ from torch.utils import _pytree as pytree
 from torchax import tensor
 from contextlib import contextmanager
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 VERSION = __version__
 
 __all__ = [

@@ -10,7 +10,7 @@ import torch.distributed as dist
 
 def _mp_fn(index):
   device = torch_xla.device()
-  if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):
+  if xm.xla_device_hw(device) in ('TPU', 'NEURON'):
     world_size = xr.world_size()
     dist.init_process_group('xla', init_method='xla://')
     # note that we can't use torch.tensor(torch.distributed.get_rank()) directly
@@ -25,8 +25,7 @@ def _mp_fn(index):
         xla_rank_tensor.cpu() == expected), f'{xla_rank_tensor} != {expected}'
   else:
     print(
-        'Default device {} is not a TPU or GPU device'.format(device),
-        file=sys.stderr)
+        'Default device {} is not a TPU device'.format(device), file=sys.stderr)
 
 
 if __name__ == '__main__':

@@ -15,7 +15,6 @@
 #include "xla/pjrt/distributed/client.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/pjrt/distributed/in_memory_key_value_store.h"
-#include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
@@ -43,23 +42,6 @@ class LibraryPlugin : public PjRtPlugin {
 
 std::unordered_map<std::string, std::shared_ptr<const PjRtPlugin>>
     pjrt_plugins_ = {{"LIBRARY", std::make_shared<LibraryPlugin>()}};
-
-xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
-  auto allocator_config = xla::GpuAllocatorConfig{};
-  if (sys_util::GetEnvString(env::kEnvPjrtAllocatorCudaAsync, "").empty() &&
-      sys_util::GetEnvString(env::kEnvPjrtAllocatorPreallocate, "").empty() &&
-      sys_util::GetEnvString(env::kEnvPjrtAllocatorFraction, "").empty()) {
-    return allocator_config;
-  }
-  if (sys_util::GetEnvBool(env::kEnvPjrtAllocatorCudaAsync, false)) {
-    allocator_config.kind = xla::GpuAllocatorConfig::Kind::kCudaAsync;
-  }
-  allocator_config.preallocate =
-      sys_util::GetEnvBool(env::kEnvPjrtAllocatorPreallocate, true);
-  allocator_config.memory_fraction =
-      sys_util::GetEnvDouble(env::kEnvPjrtAllocatorFraction, 0.75);
-  return allocator_config;
-}
 
 absl::StatusOr<std::shared_ptr<const PjRtPlugin>> GetPjRtPlugin(
     const std::string& device_type) {
@@ -167,59 +149,6 @@ InitializePjRt(const std::string& device_type) {
   } else if (device_type == "TPU_LEGACY") {
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
         "TPU_LEGACY client is no longer available."));
-  } else if (device_type == "CUDA") {
-    TORCH_WARN("The XLA:CUDA device is deprecated in release 2.8. ",
-               "Future releases might remove XLA:CUDA support entirely. ",
-               "Use the PyTorch native CUDA backend, instead.")
-    TF_VLOG(1) << "Initializing PjRt GPU client...";
-    bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
-    int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
-    int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
-    int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
-    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
-
-    TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
-               << global_process_rank << ", num_nodes=" << global_world_size
-               << ", local_process_rank=" << local_process_rank
-               << ", local_world_size=" << local_world_size
-               << ", spmd case=" << sys_util::GetEnvBool("XLA_USE_SPMD", false)
-               << ", PJRT_LOCAL_PROCESS_RANK="
-               << sys_util::GetEnvString(env::kEnvPjRtLocalRank, "")
-               << ", RANK=" << sys_util::GetEnvString("RANK", "")
-               << ", LOCAL_WORLD_SIZE="
-               << sys_util::GetEnvString("LOCAL_WORLD_SIZE", "")
-               << ", WORLD_SIZE=" << sys_util::GetEnvString("WORLD_SIZE", "");
-    std::optional<std::set<int>> allowed_devices;
-    if (local_world_size > 1) {
-      allowed_devices = std::set{local_process_rank};
-    }
-
-    std::shared_ptr<xla::KeyValueStoreInterface> kv_store;
-    if (global_world_size > 1) {
-      // Use the distributed key-value store from DistributedRuntimeClient.
-      std::string master_addr =
-          runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
-      std::string port = runtime::sys_util::GetEnvString(
-          "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
-      XLA_ASSIGN_OR_RETURN(
-          coordinator,
-          XlaCoordinator::Create(global_process_rank, global_world_size,
-                                 master_addr, port));
-      std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
-          coordinator->GetClient();
-      kv_store = xla::GetDistributedKeyValueStore(distributed_client,
-                                                  /*key_prefix=*/"gpu:");
-    }
-
-    xla::GpuClientOptions options;
-    options.allocator_config = GetGpuAllocatorConfig();
-    options.node_id = global_process_rank;
-    options.num_nodes = global_world_size;
-    options.allowed_devices = allowed_devices;
-    options.platform_name = "gpu";
-    options.should_stage_host_to_device_transfers = true;
-    options.kv_store = kv_store;
-    XLA_ASSIGN_OR_RETURN(client, xla::GetStreamExecutorGpuClient(options));
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
     XLA_RETURN_IF_ERROR(pjrt::LoadPjrtPlugin(

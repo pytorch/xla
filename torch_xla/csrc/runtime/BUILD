@@ -2,10 +2,6 @@ load(
     "//bazel:rules_def.bzl",
     "ptxla_cc_test",
 )
-load(
-    "@xla//xla/tsl/platform/default:cuda_build_defs.bzl",
-    "if_cuda_is_configured",
-)
 
 licenses(["notice"])  # Apache 2.0
 
@@ -134,7 +130,6 @@ cc_library(
         "@xla//xla:shape_util",
         "@xla//xla/hlo/builder:xla_computation",
         "@xla//xla/pjrt:pjrt_client",
-        "@xla//xla/pjrt/c:pjrt_c_api_gpu_extension_hdrs",
         "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
         "@xla//xla/pjrt/c:pjrt_c_api_wrapper_impl",
         "@xla//xla/pjrt:pjrt_c_api_client",
@@ -216,10 +211,9 @@ cc_library(
         "@torch//:headers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:initialize",
+        "@xla//xla/pjrt/distributed:in_memory_key_value_store",
         "@xla//xla/pjrt:pjrt_c_api_client",
         "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
-        "@xla//xla/pjrt/gpu:se_gpu_pjrt_client",
-        "@xla//xla/service:gpu_plugin",
     ],
 )
 
@@ -295,9 +289,7 @@ cc_library(
     deps = [
         "@xla//xla/backends/profiler/cpu:host_tracer",
         "@xla//xla/backends/profiler/cpu:metadata_collector",
-    ] + if_cuda_is_configured([
-        "@xla//xla/backends/profiler/gpu:device_tracer",
-    ]),
+    ],
     alwayslink = True,
 )
 

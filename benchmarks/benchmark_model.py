@@ -103,7 +103,6 @@ class BenchmarkModel:
     else:
       raise NotImplementedError
 
-    keep_model_data_on_cuda = self.benchmark_experiment.keep_model_data_on_cuda
     if self.benchmark_experiment.torch_xla2:
       import torch_xla2.export
       import torch_xla2
@@ -125,7 +124,7 @@ class BenchmarkModel:
       self.module = lambda *x: jax_func(weights, x)
       self.example_inputs = move_to_device(
           self.example_inputs, device, torch_xla2=True)
-    elif not keep_model_data_on_cuda:
+    else:
       self.module = self.module.to(self.device)
       self.example_inputs = move_to_device(
           self.example_inputs, self.device, torch_xla2=False)
@@ -136,14 +135,6 @@ class BenchmarkModel:
 
       logger.info(f"Running torch.compile with opts {compilation_opts}")
       self.model_iter_fn = torch.compile(self.model_iter_fn, **compilation_opts)
-
-    if keep_model_data_on_cuda:
-
-      def assert_func(t):
-        assert t.device.type.lower(
-        ) == 'cuda', 'When keep_model_data_on_cuda is set, the input data should remain on the CUDA device.'
-
-      pytree.tree_map_only(torch.Tensor, assert_func, self.example_inputs)
 
   def pick_grad(self):
     if self.benchmark_experiment.test == "eval":

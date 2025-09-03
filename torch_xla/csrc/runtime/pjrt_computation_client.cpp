@@ -23,7 +23,6 @@
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
-#include "xla/pjrt/c/pjrt_c_api_gpu_extension.h"
 #include "xla/pjrt/c/pjrt_c_api_wrapper_impl.h"
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
@@ -152,8 +151,6 @@ PjRtComputationClient::Create() {
 }
 
 PjRtComputationClient::~PjRtComputationClient() {
-  // In the GPU case, the PjRtClient depends on the DistributedRuntimeClient
-  // tracked in XlaCoordinator, so the PjRtClient must be destroyed first.
   client_ = nullptr;
   coordinator_ = nullptr;
 }
@@ -1036,45 +1033,6 @@ ComputationClient::MemoryInfo PjRtComputationClient::GetMemoryInfo(
       *stats.bytes_limit,
       stats.peak_bytes_in_use,
   };
-}
-
-void PjRtComputationClient::RegisterCustomCall(const std::string& fn_name,
-                                               void* function_ptr,
-                                               const std::string& platform) {
-  if (platform != "CUDA") {
-    XLA_ERROR() << "Custom call targets can only be registered for "
-                   "PJRT CUDA runtime.";
-    return;
-  }
-
-  auto* c_api_client = dynamic_cast<xla::PjRtCApiClient*>(client_.get());
-  if (!c_api_client) {
-    XLA_REGISTER_CUSTOM_CALL_TARGET_WITH_SYM(fn_name, function_ptr, platform);
-    return;
-  }
-  const PJRT_Api* pjrt_api = c_api_client->pjrt_c_api();
-
-  // See openxla reference:
-  // https://github.com/openxla/xla/blob/b604c8d87df842002a7a8de79a434026329fbcb2/xla/pjrt/c/pjrt_c_api_gpu_test.cc#L414
-  const PJRT_Extension_Base* next =
-      reinterpret_cast<const PJRT_Extension_Base*>(pjrt_api->extension_start);
-  while (next != nullptr &&
-         next->type !=
-             PJRT_Extension_Type::PJRT_Extension_Type_Gpu_Custom_Call) {
-    next = next->next;
-  }
-  XLA_CHECK(next) << "Custom call extension not found";
-  PJRT_Gpu_Register_Custom_Call_Args args;
-  args.struct_size = PJRT_Gpu_Register_Custom_Call_Args_STRUCT_SIZE;
-  args.function_name = fn_name.c_str();
-  args.function_name_size = fn_name.size();
-  args.api_version = 0;
-  args.handler_execute = function_ptr;
-  PJRT_Error* error =
-      reinterpret_cast<const PJRT_Gpu_Custom_Call*>(next)->custom_call(&args);
-  if (error) {
-    XLA_ERROR() << error->status;
-  }
 }
 
 void PjRtComputationClient::OnReadyCallback(

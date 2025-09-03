@@ -38,7 +38,6 @@
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"
-#include "status.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_fallback.h"
@@ -345,10 +344,10 @@ std::vector<std::vector<int64_t>> CreateReduceGroups(const py::list& groups) {
   return replica_groups;
 }
 
-std::vector<at::Tensor> XlaCustomCall(
+std::vector<at::Tensor> TpuCustomCall(
     const std::vector<at::Tensor>& inputs, const std::string& payload,
     const std::vector<std::vector<int64_t>>& output_shapes,
-    const std::vector<py::object>& output_dtypes, bool is_tpu) {
+    const std::vector<py::object>& output_dtypes) {
   std::vector<at::ScalarType> dtypes;
   dtypes.reserve(output_dtypes.size());
   for (auto& dtype : output_dtypes) {
@@ -356,11 +355,7 @@ std::vector<at::Tensor> XlaCustomCall(
   }
   XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> xla_inputs,
                       bridge::GetXlaTensors(inputs));
-  if (is_tpu) {
-    return bridge::AtenFromXlaTensors(tensor_methods::tpu_custom_call(
-        xla_inputs, payload, output_shapes, dtypes));
-  }
-  return bridge::AtenFromXlaTensors(tensor_methods::gpu_custom_call(
+  return bridge::AtenFromXlaTensors(tensor_methods::tpu_custom_call(
       xla_inputs, payload, output_shapes, dtypes));
 }
 
@@ -1771,11 +1766,6 @@ void InitXlaModuleBindings(py::module m) {
            []() {
               return runtime::GetComputationClientOrDie()->GetPlatformVersion();
            })
-      .def("_get_stream_for_cuda_device",
-           [](const int device_id) {
-            return runtime::GetComputationClientOrDie()->GetCudaStreamForDevice(
-                device_id);
-           })
       .def("_xla_num_devices",
            []() -> int64_t {
             if (UseVirtualDevice()) {
@@ -3063,24 +3053,7 @@ void InitXlaModuleBindings(py::module m) {
               const std::vector<std::vector<int64_t>>& output_shapes,
               const std::vector<py::object>& output_dtypes)
                -> std::vector<at::Tensor> {
-            return XlaCustomCall(inputs, payload, output_shapes, output_dtypes,
-                                 /*is_tpu=*/true);
-           })
-      .def("_has_cuda_support",
-           []() {
-#ifdef GOOGLE_CUDA
-             return true;
-#else
-            return false;
-#endif
-           })
-      .def("_xla_gpu_custom_call",
-           [](const std::vector<at::Tensor>& inputs, const std::string& payload,
-              const std::vector<std::vector<int64_t>>& output_shapes,
-              const std::vector<py::object>& output_dtypes)
-               -> std::vector<at::Tensor> {
-            return XlaCustomCall(inputs, payload, output_shapes, output_dtypes,
-                                 /*is_tpu=*/false);
+            return TpuCustomCall(inputs, payload, output_shapes, output_dtypes);
            })
       .def("_xla_register_custom_call_target",
            [](const std::string& fn_name, const py::capsule& function_ptr,

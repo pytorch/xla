@@ -937,11 +937,6 @@ def parse_args(args=None):
         CPU fallbacks.""",
   )
   parser.add_argument(
-      "--keep-model-data-on-cuda",
-      action="store_true",
-      help="""Whether to keep the model and data on CUDA and not to move to an XLA device. This is to be used with PyTorch/XLA dynamo. When set, PyTorch/XLA dynamo bridge move the model and data to the XLA device.""",
-  )
-  parser.add_argument(
       "--xla-flags",
       type=str,
       action="append",

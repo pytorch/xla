@@ -3,7 +3,6 @@ import os
 import sys
 import torch_xla
 import torch_xla.core.xla_model as xm
-from torch_xla.test.test_utils import skipIfCUDA
 
 # Setup import folders.
 xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -25,7 +24,7 @@ class TestXrtDistributedDataParallel(parameterized.TestCase):
     # We cannot run this guard before XMP,
     # see API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing.
     device = torch_xla.device()
-    if xm.xla_device_hw(device) not in ('TPU', 'CUDA'):
+    if xm.xla_device_hw(device) not in ('TPU',):
       print(
           'Default device {} is not a TPU device'.format(device),
           file=sys.stderr)
@@ -39,8 +38,6 @@ class TestXrtDistributedDataParallel(parameterized.TestCase):
   def test_ddp_correctness(self):
     torch_xla.launch(self._ddp_correctness, args=(False, FLAGS.debug))
 
-  # Ref: https://github.com/pytorch/xla/pull/8593
-  @skipIfCUDA("GPU CI is failing")
   def test_ddp_correctness_with_gradient_as_bucket_view(self):
     torch_xla.launch(self._ddp_correctness, args=(False, FLAGS.debug, True))
 

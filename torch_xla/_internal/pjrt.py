@@ -12,7 +12,7 @@ import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
-from torch_xla._internal import tpu, gpu, neuron
+from torch_xla._internal import tpu, neuron
 from torch_xla import runtime
 import torch_xla.utils.utils as xu
 from torch_xla.experimental import plugins
@@ -149,8 +149,6 @@ def run_multiprocess(fn: Callable[..., R],
     num_processes = plugins.default().physical_chip_count()
   elif runtime.device_type() == 'TPU':
     num_processes = tpu.num_local_processes()
-  elif runtime.device_type() == 'CUDA':
-    num_processes = gpu.num_local_processes()
   elif runtime.device_type() == 'NEURON':
     num_processes = neuron.num_local_processes()
   else:
@@ -207,7 +205,7 @@ def spawn(fn: Callable,
     return _run_singleprocess(spawn_fn)
   elif nprocs is not None:
     raise ValueError(
-        'Unsupported nprocs (%d). Please use nprocs=1 or None (default). If None, spawn will use all available devices. Use the environment variable X_NUM_DEVICES (where X is CPU, GPU, TPU, NEURONCORE, etc) to limit the number of devices used.'
+        'Unsupported nprocs (%d). Please use nprocs=1 or None (default). If None, spawn will use all available devices. Use the environment variable X_NUM_DEVICES (where X is CPU, TPU, NEURONCORE, etc) to limit the number of devices used.'
         % nprocs)
 
   run_multiprocess(spawn_fn, start_method=start_method)
@@ -220,8 +218,6 @@ def _initialize_single_process(local_rank: int, local_world_size: int):
 
 def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
   """Run function in one process with one thread per addressable device."""
-  assert runtime.device_type() not in (
-      'CUDA'), "spawn_threads does not support GPU device"
   spawn_fn = _SpawnFn(fn, *args)
   _run_thread_per_device(
       local_rank=0,
