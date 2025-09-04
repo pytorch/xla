@@ -4,6 +4,10 @@
 #
 #    bazel run //:requirements.update
 #
+expecttest==0.3.0 \
+    --hash=sha256:60f88103086e1754240b42175f622be83b6ffeac419434691ee5a5be819d0544 \
+    --hash=sha256:6e8512fb86523ada1f94fd1b14e280f924e379064bb8a29ee399950e513eeccd
+    # via -r requirements.in
 filelock==3.18.0 \
     --hash=sha256:adbc88eabb99d2fec8c9c1b229b171f18afa655400173ddc653d5d01501fb9f2 \
     --hash=sha256:c401f4f8377c4464e6db25fff06205fd89bdd83b65eb0488ed1b160f780e21de
