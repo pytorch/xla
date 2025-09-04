@@ -22,9 +22,7 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
-        "//openxla_patches:gpu_nvml.diff",
-        "//openxla_patches:gpu_race_condition.diff",
-        "//openxla_patches:count_down.diff",
+        "//openxla_patches:no_fortify.diff",
     ],
     strip_prefix = "xla-" + xla_hash,
     urls = [
@@ -223,7 +221,7 @@ The `xla_client` tests are pure hermetic tests that can be easily
 executed. The `torch_xla` plugin tests are more complex: they require
 `torch` and `torch_xla` to be installed, and they cannot run in
 parallel, since they are using either XRT server/client on the same
-port, or because they use a GPU or TPU device and there's only one
+port, or because they use a TPU device and there's only one
 available at the time. For that reason, all tests under
 `torch_xla/csrc/` are bundled into a single target `:main` that runs
 them all sequentially.

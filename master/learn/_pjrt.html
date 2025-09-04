@@ -289,7 +289,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gite0de097 )
+                  master (2.9.0+git342de86 )
                 </div>
               
             
@@ -356,11 +356,6 @@
 <li class="toctree-l1"><a class="reference internal" href="troubleshoot.html">Troubleshooting Basics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Troubleshooting recompilations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
 <ul>
@@ -487,7 +482,7 @@ including <code class="docutils literal notranslate"><span class="pre">pjrt://</
 <h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>To use the PJRT preview runtime, set the <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment
-variable to <code class="docutils literal notranslate"><span class="pre">CPU</span></code>, <code class="docutils literal notranslate"><span class="pre">TPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">CUDA</span></code></p></li>
+variable to <code class="docutils literal notranslate"><span class="pre">CPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">TPU</span></code></p></li>
 <li><p>In XRT, all distributed workloads are multiprocess, with one process
 per device. On TPU v2 and v3 in PJRT, workloads are multiprocess and
 multithreaded (4 processes with 2 threads each), so your workload
@@ -507,7 +502,7 @@ you set the same <code class="docutils literal notranslate"><span class="pre">to
 <li><p>To use <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code>, import
 <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt_backend</span></code> and use the <code class="docutils literal notranslate"><span class="pre">xla://</span></code>
 <code class="docutils literal notranslate"><span class="pre">init_method</span></code>.</p></li>
-<li><p>These steps are optional for GPU and TPU v4.</p></li>
+<li><p>These steps are optional for TPU v4.</p></li>
 </ul>
 </li>
 </ul>
@@ -534,7 +529,7 @@ def _mp_fn(index):
 <span class="w"> </span> torch.manual_seed(42)
 <span class="w"> </span> model = nn.Linear(128, 10).to(device)
 
-<span class="gi">+  # Optional for TPU v4 and GPU</span>
+<span class="gi">+  # Optional for TPU v4</span>
 <span class="gi">+  xm.broadcast_master_param(model)</span>
 <span class="w"> </span> model = DDP(model, gradient_as_bucket_view=True)
 
@@ -571,7 +566,7 @@ if __name__ == &#39;__main__&#39;:
 <h2>Benefits<a class="headerlink" href="#benefits" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>Simple runtime configuration: just set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> to <code class="docutils literal notranslate"><span class="pre">TPU</span></code>,
-<code class="docutils literal notranslate"><span class="pre">CPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">CUDA</span></code> and start using XLA! Or, let PJRT select a device
+or <code class="docutils literal notranslate"><span class="pre">CPU</span></code> and start using XLA! Or, let PJRT select a device
 automatically based on your environment.</p></li>
 <li><p>Improved performance: reduced overhead from gRPC means faster
 end-to-end execution. On TorchBench 2.0, we observed a &gt;35%

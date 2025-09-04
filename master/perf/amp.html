@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gite0de097 )
+                  master (2.9.0+git342de86 )
                 </div>
               
             
@@ -358,11 +358,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
 <li class="toctree-l1"><a class="reference internal" href="recompilation.html">Troubleshooting recompilations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_gpu.html">Running SPMD on GPU</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
 <ul>
@@ -455,7 +450,7 @@
 <h1>Automatic Mixed Precision<a class="headerlink" href="#automatic-mixed-precision" title="Permalink to this heading">¶</a></h1>
 <p>Pytorch/XLA’s AMP extends <a class="reference external" href="https://pytorch.org/docs/stable/amp.html">Pytorch’s AMP
 package</a> with support for
-automatic mixed precision on <code class="docutils literal notranslate"><span class="pre">XLA:GPU</span></code> and <code class="docutils literal notranslate"><span class="pre">XLA:TPU</span></code> devices. AMP is
+automatic mixed precision on <code class="docutils literal notranslate"><span class="pre">XLA:TPU</span></code> devices. AMP is
 used to accelerate training and inference by executing certain
 operations in <code class="docutils literal notranslate"><span class="pre">float32</span></code> and other operations in a lower precision
 datatype (<code class="docutils literal notranslate"><span class="pre">float16</span></code> or <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code> depending on hardware support). This
@@ -541,7 +536,7 @@ unlisted ops run if they’re downstream from autocasted ops.</p>
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">¶</a></h2>
 <p>Our <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_amp.py">mnist training script</a>
 and <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_amp.py">imagenet training script</a>
-demonstrate how AMP is used on both TPUs and GPUs.</p>
+demonstrate how AMP is used on TPUs.</p>
 </section>
 </section>
 

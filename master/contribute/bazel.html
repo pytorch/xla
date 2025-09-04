@@ -38,7 +38,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Configure A Development Environment" href="configure-environment.html" />
-    <link rel="prev" title="Running SPMD on GPU" href="../perf/spmd_gpu.html" />
+    <link rel="prev" title="Troubleshooting recompilations" href="../perf/recompilation.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gite0de097 )
+                  master (2.9.0+git342de86 )
                 </div>
               
             
@@ -358,11 +358,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Troubleshooting recompilations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Training on GPU</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contributing</span></p>
 <ul class="current">
@@ -471,9 +466,7 @@ which can be seen in the <code class="docutils literal notranslate"><span class=
     <span class="p">],</span>
     <span class="n">patch_tool</span> <span class="o">=</span> <span class="s2">&quot;patch&quot;</span><span class="p">,</span>
     <span class="n">patches</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s2">&quot;//openxla_patches:gpu_nvml.diff&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;//openxla_patches:gpu_race_condition.diff&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;//openxla_patches:count_down.diff&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;//openxla_patches:no_fortify.diff&quot;</span><span class="p">,</span>
     <span class="p">],</span>
     <span class="n">strip_prefix</span> <span class="o">=</span> <span class="s2">&quot;xla-&quot;</span> <span class="o">+</span> <span class="n">xla_hash</span><span class="p">,</span>
     <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span>
@@ -638,7 +631,7 @@ new ones as required.</p>
 executed. The <code class="docutils literal notranslate"><span class="pre">torch_xla</span></code> plugin tests are more complex: they require
 <code class="docutils literal notranslate"><span class="pre">torch</span></code> and <code class="docutils literal notranslate"><span class="pre">torch_xla</span></code> to be installed, and they cannot run in
 parallel, since they are using either XRT server/client on the same
-port, or because they use a GPU or TPU device and there’s only one
+port, or because they use a TPU device and there’s only one
 available at the time. For that reason, all tests under
 <code class="docutils literal notranslate"><span class="pre">torch_xla/csrc/</span></code> are bundled into a single target <code class="docutils literal notranslate"><span class="pre">:main</span></code> that runs
 them all sequentially.</p>
@@ -683,7 +676,7 @@ functionality to bring powerful features to assist code editing.</p>
         <a href="configure-environment.html" class="btn btn-neutral float-right" title="Configure A Development Environment" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="../perf/spmd_gpu.html" class="btn btn-neutral" title="Running SPMD on GPU" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="../perf/recompilation.html" class="btn btn-neutral" title="Troubleshooting recompilations" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
