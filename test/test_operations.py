@@ -90,12 +90,7 @@ def skipIfFunctionalizationDisabled(reason):
 
 def onlyOnCPU(fn):
   accelerator = os.environ.get("PJRT_DEVICE").lower()
-  return unittest.skipIf(accelerator != "cpu", "PJRT_DEVICE=CUDA required")(fn)
-
-
-def onlyOnCUDA(fn):
-  accelerator = os.environ.get("PJRT_DEVICE").lower()
-  return unittest.skipIf(accelerator != "cuda", "PJRT_DEVICE=CUDA required")(fn)
+  return unittest.skipIf(accelerator != "cpu", "PJRT_DEVICE=CPU required")(fn)
 
 
 def onlyIfXLAExperimentalContains(feat):
@@ -108,77 +103,8 @@ def _gen_tensor(*args, **kwargs):
   return torch.randn(*args, **kwargs)
 
 
-def _gen_int_tensor(*args, **kwargs):
-  return torch.randint(*args, **kwargs)
-
-
 def _gen_mask(size):
   return torch.randint(0, 2, size, dtype=torch.bool)
-
-
-def _get_device_support(devname):
-  devices = torch_xla._XLAC._xla_get_devices()
-  num_devices = 0
-  for device in devices:
-    if re.match(devname + r':\d+$', device):
-      num_devices += 1
-  return DeviceSupport(num_devices=num_devices) if num_devices > 0 else None
-
-
-def _support_replicated(devname, num_devices):
-  devsup = _get_device_support(devname)
-  if not devsup:
-    return False
-  return devsup.num_devices >= num_devices
-
-
-def _random_inputs(shapes, num_replicas=1):
-  random_tensors = []
-  for _ in range(0, num_replicas):
-    replica_inputs = []
-    for shape in shapes:
-      replica_inputs.append(_gen_tensor(*shape))
-    random_tensors.append(tuple(replica_inputs))
-  return tuple(random_tensors)
-
-
-def _random_like(tensor_list):
-  random_tensors = []
-  for o in tensor_list:
-    if o.dtype == torch.float32 or o.dtype == torch.float64:
-      random_tensors += [_gen_tensor(*o.shape, dtype=o.dtype)]
-    elif o.dtype == torch.int64:
-      # TODO remove this, we shouldn't be needing to pass random_tensor for long types
-      random_tensors += [torch.empty_like(o)]
-    else:
-      raise RuntimeError('Unsupported type: ', o.dtype)
-  return random_tensors
-
-
-def _zeros_like(tensor_list):
-  zeros_tensors = []
-  for o in tensor_list:
-    if o.dtype == torch.float32 or o.dtype == torch.float64:
-      zeros_tensors += [torch.zeros(*o.shape, dtype=o.dtype)]
-    elif o.dtype == torch.int64:
-      # TODO remove this, we shouldn't be needing to pass zeros_tensor for long types
-      zeros_tensors += [torch.zeros_like(o)]
-    else:
-      raise RuntimeError('Unsupported type: ', o.dtype)
-  return zeros_tensors
-
-
-def onlyIfTorchSupportsCUDA(fn):
-  return unittest.skipIf(
-      not torch.cuda.is_available(), reason="requires PyTorch CUDA support")(
-          fn)
-
-
-def onlyIfPJRTDeviceIsCUDA(fn):
-  return unittest.skipIf(
-      os.environ.get("PJRT_DEVICE") not in ("GPU", "CUDA"),
-      reason="requires CUDA as PJRT_DEVICE")(
-          fn)
 
 
 class TestToXlaTensorArena(test_utils.XlaTestCase):
@@ -274,10 +200,6 @@ class XlaMNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
-@unittest.skipIf(
-    xr.device_type() == 'CUDA',
-    'Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU device per process instead of relying on threads.'
-)
 class TestParallelTensorMNIST(test_utils.XlaTestCase):
 
   def test(self):
@@ -436,7 +358,7 @@ class TestDynamicShape(test_utils.XlaTestCase):
   def test_nonzero_cast(self):
     t1 = torch.ones(5, 2, device='xla')
     # Result of the nonzero should be the index type. Currently
-    # index type is s64 on cpu and gpu, but s32 on TPU. We should be
+    # index type is s64 on cpu, but s32 on TPU. We should be
     # able to cast it to any other type without error.
     t2 = torch.nonzero(t1.int()).float()
     torch_xla.sync()
@@ -3036,27 +2958,6 @@ class TestGeneric(test_utils.XlaTestCase):
 
     self.assertEqual(a, former_a)
 
-  def _test_move_tensor_cuda_to_xla(self, cpu_tensor):
-    # Assumes CPU-XLA data movement works.
-    cuda_tensor = cpu_tensor.to("cuda")
-    # Move tensor CUDA -> XLA.
-    xla_tensor = cuda_tensor.to('xla')
-    # Move the XLA tensor back to CPU, and check that it is the same as
-    # the original CPU tensor.
-    self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu()))
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_aten_move_cuda_to_xla(self):
-    self._test_move_tensor_cuda_to_xla(torch.arange(5))
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_aten_move_scalar_cuda_to_xla(self):
-    # 0-dimensional scalar-tensor
-    # Has a different execution path than other tensors.
-    self._test_move_tensor_cuda_to_xla(torch.tensor(42))
-
   def test_unsafe_buffer_pointer(self):
     xla_device = torch_xla.device()
     xla_tensor_0 = torch.tensor(42).to(xla_device)
@@ -3081,178 +2982,6 @@ class TestGeneric(test_utils.XlaTestCase):
     xm.wait_device_ops()
     buf_ptr_3 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_3)
     self.assertGreaterEqual(buf_ptr_3, 0)
-
-
-class TestDLPack(parameterized.TestCase):
-
-  def _test_dlpack_capsule_conversion_helper(self, xla_tensor):
-    dlpt = xdlpack.to_dlpack(xla_tensor)  # dlpt1 has type PyCapsule
-    xla_tensor2 = xdlpack.from_dlpack(dlpt)
-
-    self.assertEqual(xla_tensor.device, xla_tensor2.device)
-    self.assertTrue(torch.allclose(xla_tensor.cpu(), xla_tensor2.cpu()))
-    self.assertRaisesRegex(RuntimeError,
-                           "DLTensor capsule can be consumed only once",
-                           lambda: xdlpack.from_dlpack(dlpt))
-
-    self.assertEqual(
-        torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor),
-        torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor2))
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  @parameterized.parameters(*all_types_and(torch.half, torch.bfloat16))
-  def test_dlpack_roundtrip_tensor(self, dtype):
-    xla_device = torch_xla.device()
-    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
-    # xla_tensor_2 uses XLANativeFunctions::_to_copy
-    xla_tensor_2 = torch.arange(5, dtype=dtype).to(xla_device)
-    self._test_dlpack_capsule_conversion_helper(xla_tensor_2)
-
-    # xla_tensor_3 uses arange_out IR node.
-    xla_tensor_3 = torch.arange(5, dtype=dtype, device='xla')
-    torch_xla.sync()
-    self._test_dlpack_capsule_conversion_helper(xla_tensor_3)
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  @parameterized.parameters(
-      *all_types_and_complex_and(torch.half, torch.bfloat16, torch.bool,
-                                 torch.uint16, torch.uint32, torch.uint64))
-  def test_dlpack_roundtrip_scalar(self, dtype):
-    xla_device = torch_xla.device()
-    xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)
-    # `torch_xla.sync()` ensures xtensor->CurrentDataHandle() != nullptr
-    torch_xla.sync()
-    self._test_dlpack_capsule_conversion_helper(xla_tensor_0)
-
-    xla_tensor_1 = torch.tensor(42, dtype=dtype).to(xla_device)
-    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
-    self._test_dlpack_capsule_conversion_helper(xla_tensor_1)
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_roundtrip_bool(self):
-    xla_tensor = torch.ones(1, dtype=torch.bool).to('xla')
-    self._test_dlpack_capsule_conversion_helper(xla_tensor)
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_pytorch_cuda_to_xla(self):
-    t1_cuda = torch.arange(5).cuda()
-    dlt1 = torch.utils.dlpack.to_dlpack(t1_cuda)
-    xla_t1 = xdlpack.from_dlpack(dlt1)
-    self.assertEqual(xla_t1.device.type, 'xla')
-    self.assertEqual(xla_t1.device.index, t1_cuda.device.index)
-    t1_cuda[0] = t1_cuda[0] + 20
-    self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
-
-    t2_cuda = torch.tensor(5).cuda()
-    dlt2 = torch.utils.dlpack.to_dlpack(t2_cuda)
-    xla_t2 = xdlpack.from_dlpack(dlt2)
-    self.assertEqual(xla_t2.device.type, 'xla')
-    self.assertEqual(xla_t2.device.index, t2_cuda.device.index)
-    t2_cuda.fill_(6)
-    self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
-
-    cuda1 = torch.device('cuda:1')
-    t3_cuda = torch.tensor(5, device=cuda1)
-    dlt3 = torch.utils.dlpack.to_dlpack(t3_cuda)
-    xla_t3 = xdlpack.from_dlpack(dlt3)
-    self.assertEqual(xla_t3.device.type, 'xla')
-    self.assertEqual(
-        xla_t3.device.index,
-        t3_cuda.device.index,
-        msg='both value should 1. xla_t3.device should be xla:1.')
-    t3_cuda.fill_(6)
-    self.assertTrue(torch.allclose(xla_t3.cpu(), t3_cuda.cpu()))
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_pytorch_cuda_to_xla_protocol_conversion(self):
-    # Unlike the test_dlpack_pytorch_cuda_to_xla,
-    # torch_cuda_tensor has attribute __dlpack__ and __dlpack_device__.
-    # From cuda tensors to xla tensors, the synchronization is handdled implicitly.
-    t1_cuda = torch.arange(5).cuda()
-    xla_t1 = xdlpack.from_dlpack(t1_cuda)
-    self.assertEqual(xla_t1.device.type, 'xla')
-    self.assertEqual(xla_t1.device.index, t1_cuda.device.index)
-    t1_cuda[0] = t1_cuda[0] + 20
-    self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
-
-    t2_cuda = torch.tensor(5).cuda()
-    xla_t2 = xdlpack.from_dlpack(t2_cuda)
-    self.assertEqual(xla_t2.device.type, 'xla')
-    self.assertEqual(xla_t2.device.index, t2_cuda.device.index)
-    t2_cuda.fill_(6)
-    self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
-
-    cuda1 = torch.device('cuda:1')
-    t3_cuda = torch.tensor(5, device=cuda1)
-    xla_t3 = xdlpack.from_dlpack(t3_cuda)
-    self.assertEqual(xla_t3.device.type, 'xla')
-    self.assertEqual(
-        xla_t3.device.index,
-        t3_cuda.device.index,
-        msg='both value should 1. xla_t3.device should be xla:1.')
-    t3_cuda.fill_(6)
-    self.assertTrue(torch.allclose(xla_t3.cpu(), t3_cuda.cpu()))
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_xla_to_pytorch_cuda(self):
-    xla_t1 = torch.arange(5).to('xla')
-    dlt1 = xdlpack.to_dlpack(xla_t1)
-    cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
-    self.assertEqual(cuda_t1.device.type, 'cuda')
-    self.assertEqual(cuda_t1.device.index, xla_t1.device.index)
-    cuda_t1[0] = cuda_t1[0] + 20
-    self.assertTrue(torch.allclose(xla_t1.cpu(), cuda_t1.cpu()))
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_xla_to_pytorch_cuda_protocol_conversion(self):
-    xla_t1 = torch.arange(5).to('xla')
-    cuda_t1 = torch.utils.dlpack.from_dlpack(xla_t1)
-    self.assertEqual(cuda_t1.device.type, 'cuda')
-    self.assertEqual(cuda_t1.device.index, xla_t1.device.index)
-    cuda_t1[0] = cuda_t1[0] + 20
-    self.assertTrue(torch.allclose(xla_t1.cpu(), cuda_t1.cpu()))
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_non_default_layout(self):
-    cuda_t = torch.arange(25, device=torch.device('cuda')).reshape(5, 5)
-
-    t1 = cuda_t.t()
-    xla_t1 = xdlpack.from_dlpack(t1.__dlpack__())
-    self.assertEqual(xla_t1.device.type, 'xla')
-    self.assertEqual(xla_t1.device.index, t1.device.index)
-    self.assertTrue(torch.allclose(t1.cpu(), xla_t1.cpu()))
-
-    t2 = cuda_t[0]
-    xla_t2 = xdlpack.from_dlpack(t2.__dlpack__())
-    self.assertEqual(xla_t2.device.type, 'xla')
-    self.assertEqual(xla_t2.device.index, t2.device.index)
-    self.assertTrue(torch.allclose(t2.cpu(), xla_t2.cpu()))
-
-    t3 = cuda_t[:, 0]
-    self.assertRaisesRegex(
-        RuntimeError,
-        r"Only DLPack tensors with trivial \(compact\) striding are supported",
-        lambda: xdlpack.from_dlpack(t3.__dlpack__()))
-
-    t4 = cuda_t[1, :]
-    xla_t4 = xdlpack.from_dlpack(t4.__dlpack__())
-    self.assertEqual(xla_t4.device.type, 'xla')
-    self.assertEqual(xla_t4.device.index, t4.device.index)
-    self.assertTrue(torch.allclose(t4.cpu(), xla_t4.cpu()))
-
-    t5 = cuda_t[1]
-    xla_t5 = xdlpack.from_dlpack(t5.__dlpack__())
-    self.assertEqual(xla_t5.device.type, 'xla')
-    self.assertEqual(xla_t5.device.index, t5.device.index)
-    self.assertTrue(torch.allclose(t5.cpu(), xla_t5.cpu()))
 
 
 class SimpleModelWithDropout(torch.nn.Module):
@@ -3308,7 +3037,7 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
         opt_barrier = line
         break
 
-    # Somehow the CPU/GPU CI will not have the opt-barrier.
+    # Somehow the CPU CI will not have the opt-barrier.
     if opt_barrier != "":
       self.assertEqual(opt_barrier.count("f32[128,128]"), 6)
       self.assertEqual(opt_barrier.count("f32[128]"), 2)

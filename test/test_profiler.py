@@ -77,11 +77,6 @@ class ProfilerTest(unittest.TestCase):
                     f'Expected "build_graph" trace in: {path}')
 
   def test_trace_and_metrics(self):
-    # Create a new context for forking processes with the spawn method.
-    # This is necessary so as to avoid CUDA initialization issues when
-    # both PyTorch and PyTorch/XLA were compiled with CUDA support.
-    context = multiprocessing.get_context("spawn")
-
     port = xu.get_free_tcp_ports()[0]
     training_started = context.Event()
     p = context.Process(

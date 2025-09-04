@@ -295,7 +295,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_leaky_relu_inplace_with_neg_slope_xla',  # expecting a specific error message
         'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
-        'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
+        'test_upsamplingBilinear2d_xla',  # precision on TPU, slow compilation on CPU
         # torch.autograd.gradcheck.GradcheckError: Jacobian mismatch for output 0 with respect to input 0
         'test_GRU_grad_and_gradgrad_xla_float64',  # grad check failure
         'test_LSTM_grad_and_gradgrad_xla_float64',  # grad check failure
@@ -475,18 +475,6 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
     },
 }
 
-DISABLED_TORCH_TESTS_GPU_ONLY = {
-    # test_torch.py
-    'TestTorchDeviceTypeXLA': {
-        'test_maximum_minimum_float_nan_and_inf',  # maximum(nan,inf) = inf on GPU
-    },
-
-    # test_indexing.py
-    'TestIndexingXLA': {
-        'test_index_put_accumulate_large_tensor_xla',  # illegal memory access was encountered
-    },
-}
-
 
 class MatchSet(object):
 
@@ -526,15 +514,12 @@ def union_of_disabled_tests(sets):
 
 
 DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
-DISABLED_TORCH_TESTS_GPU = union_of_disabled_tests(
-    [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_GPU_ONLY])
 DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(
     [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_TPU_ONLY])
 
 DISABLED_TORCH_TESTS = {
     'TPU': prepare_match_set(DISABLED_TORCH_TESTS_TPU),
     'CPU': prepare_match_set(DISABLED_TORCH_TESTS_CPU),
-    'CUDA': prepare_match_set(DISABLED_TORCH_TESTS_GPU),
 }
 
 
