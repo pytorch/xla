@@ -2581,6 +2581,32 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
           "than the upper bound.")
       self.assertEqual(str(e), expected_error)
 
+  def test_mm_raises_error_on_non_matrix_input(self):
+    a = torch.rand(2, 2, 2, device=torch_xla.device())
+    b = torch.rand(2, 2, device=torch_xla.device())
+
+    try:
+      torch.mm(a, b)
+    except RuntimeError as e:
+      expected_error = (
+          "mm(): expected the first input tensor f32[2,2,2] to be a "
+          "matrix (i.e. a 2D tensor).")
+      self.assertEqual(str(e), expected_error)
+
+  def test_mm_raises_error_on_incompatible_shapes(self):
+    a = torch.rand(2, 5, device=torch_xla.device())
+    b = torch.rand(8, 2, device=torch_xla.device())
+
+    try:
+      torch.mm(a, b)
+    except RuntimeError as e:
+      expected_error = (
+          "mm(): cannot matrix-multiply tensors f32[2,5] and f32[8,2]. "
+          "Expected the size of dimension 1 of the first input tensor (5) "
+          "to be equal the size of dimension 0 of the second input "
+          "tensor (8).")
+      self.assertEqual(str(e), expected_error)
+
 
 class MNISTComparator(nn.Module):
 
