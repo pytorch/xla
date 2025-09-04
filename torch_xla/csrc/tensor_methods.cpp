@@ -199,9 +199,9 @@ void CheckRank(const XLATensorPtr& t, int64_t expected_rank,
   int64_t actual_rank = t->shape().get().dimensions_size();
   XLA_CHECK_EQ(actual_rank, expected_rank)
       << "Expected " << expected_rank << "-dimensional tensor, but got "
-      << actual_rank << "-dimensional tensor for " << "argument #" << arg_number
-      << " '" << arg_name << "'" << " (while checking arguments for " << tag
-      << ")";
+      << actual_rank << "-dimensional tensor for "
+      << "argument #" << arg_number << " '" << arg_name << "'"
+      << " (while checking arguments for " << tag << ")";
 }
 
 template <typename T>
@@ -217,8 +217,8 @@ void CheckDimensionSize(const XLATensorPtr& t, int64_t dim,
   int64_t dim_size = t->size(dim);
   XLA_CHECK_EQ(t->size(dim), expected_size)
       << "Expected tensor to have size " << expected_size << " at dimension "
-      << dim << ", but got size " << dim_size << " for " << "argument #"
-      << arg_number << " '" << arg_name << "'"
+      << dim << ", but got size " << dim_size << " for "
+      << "argument #" << arg_number << " '" << arg_name << "'"
       << " (while checking arguments for " << tag << ")";
 }
 

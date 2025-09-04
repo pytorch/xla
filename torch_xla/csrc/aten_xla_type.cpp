@@ -1842,8 +1842,8 @@ at::Tensor& XLANativeFunctions::fill_(at::Tensor& self,
                                       const at::Tensor& value) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLA_CHECK_EQ(value.dim(), 0) << "fill_ only supports a 0-dimensional "
-                               << "value tensor, but got tensor " << "with "
-                               << value.dim() << " dimension(s).";
+                               << "value tensor, but got tensor "
+                               << "with " << value.dim() << " dimension(s).";
   return torch_xla::XLANativeFunctions::fill_(self, value.item());
 }
 
