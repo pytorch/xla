@@ -3,10 +3,9 @@ variable "dev_images" {
     accelerator    = string
     arch           = optional(string, "amd64")
     python_version = optional(string, "3.8")
-    cuda_version   = optional(string, "11.8")
 
     # Additional tags on top of uniquely generated tag based on accelerator,
-    # python and cuda versions.
+    # python versions.
     extra_tags = optional(list(string), [])
   }))
 }
@@ -16,7 +15,7 @@ locals {
     for di in var.dev_images :
     format("%s_%s",
       di.python_version,
-      di.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", di.cuda_version)
+      "tpuvm"
     ) => di
   }
 }
@@ -55,7 +54,6 @@ module "dev_images" {
     accelerator    = each.value.accelerator
     arch           = each.value.arch
     python_version = each.value.python_version
-    cuda_version   = each.value.cuda_version
   }
 
   docker_repo_url = module.docker_registry.url

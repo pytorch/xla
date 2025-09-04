@@ -2,7 +2,7 @@
 
 Pytorch/XLA's AMP extends [Pytorch's AMP
 package](https://pytorch.org/docs/stable/amp.html) with support for
-automatic mixed precision on `XLA:GPU` and `XLA:TPU` devices. AMP is
+automatic mixed precision on `XLA:TPU` devices. AMP is
 used to accelerate training and inference by executing certain
 operations in `float32` and other operations in a lower precision
 datatype (`float16` or `bfloat16` depending on hardware support). This
@@ -99,4 +99,4 @@ unlisted ops run if they're downstream from autocasted ops.
 
 Our [mnist training script](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_amp.py)
 and [imagenet training script](https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_amp.py)
-demonstrate how AMP is used on both TPUs and GPUs.
+demonstrate how AMP is used on TPUs.

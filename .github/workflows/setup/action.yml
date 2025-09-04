@@ -3,20 +3,10 @@ inputs:
   torch-commit:
     type: string
     description: PyTorch commit to check out, if provided
-  cuda:
-    type: boolean
-    description: Whether to set up CUDA library paths
-    default: false
   wheels-artifact:
     type: string
     description: |
       Artifact containing `torch` (cpu) and `torch-xla` wheels to install
-  cuda-plugin-artifact:
-    type: string
-    description: Artifact containing `torch-xla-cuda-plugin` to install
-  cuda-torch-artifact:
-    type: string
-    description: Artifact containing CUDA build of `torch`
 runs:
   using: "composite"
   steps:
@@ -26,12 +16,6 @@ runs:
       run: |
         ls -la
         rm -rvf ${GITHUB_WORKSPACE}/*
-    - name: Setup CUDA environment
-      shell: bash
-      run: |
-        echo "PATH=$PATH:/usr/local/cuda-12.3/bin" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.3/lib64" >> $GITHUB_ENV
-      if: ${{ inputs.cuda }}
     - name: Setup gcloud
       shell: bash
       run: |
@@ -59,23 +43,6 @@ runs:
         name: ${{ inputs.wheels-artifact }}
         path: /tmp/wheels/
       if: ${{ inputs.wheels-artifact }}
-    - name: Fetch CUDA plugin
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ inputs.cuda-plugin-artifact }}
-        path: /tmp/wheels/
-      if: ${{ inputs.cuda-plugin-artifact }}
-    - name: Remove CPU `torch` build
-      shell: bash
-      run: |
-        rm -rf /tmp/wheels/torch-*
-      if: ${{ inputs.cuda-torch-artifact }}
-    - name: Fetch CUDA `torch` build
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ inputs.cuda-torch-artifact }}
-        path: /tmp/wheels/
-      if: ${{ inputs.cuda-torch-artifact }}
     - name: Install wheels
       shell: bash
       run: |

@@ -38,7 +38,7 @@ the `runtime` tag.
 ## TL;DR
 
 -   To use the PJRT preview runtime, set the `PJRT_DEVICE` environment
-    variable to `CPU`, `TPU`, or `CUDA`
+    variable to `CPU`, or `TPU`
 -   In XRT, all distributed workloads are multiprocess, with one process
     per device. On TPU v2 and v3 in PJRT, workloads are multiprocess and
     multithreaded (4 processes with 2 threads each), so your workload
@@ -57,7 +57,7 @@ the `runtime` tag.
     -   To use `torch.distributed`, import
         `torch_xla.experimental.pjrt_backend` and use the `xla://`
         `init_method`.
-    -   These steps are optional for GPU and TPU v4.
+    -   These steps are optional for TPU v4.
 
 Sample diff from XRT to PJRT:
 
@@ -84,7 +84,7 @@ def _mp_fn(index):
   torch.manual_seed(42)
   model = nn.Linear(128, 10).to(device)
 
-+  # Optional for TPU v4 and GPU
++  # Optional for TPU v4
 +  xm.broadcast_master_param(model)
   model = DDP(model, gradient_as_bucket_view=True)
 
@@ -119,7 +119,7 @@ if __name__ == '__main__':
 ## Benefits
 
 -   Simple runtime configuration: just set `PJRT_DEVICE` to `TPU`,
-    `CPU`, or `CUDA` and start using XLA! Or, let PJRT select a device
+    or `CPU` and start using XLA! Or, let PJRT select a device
     automatically based on your environment.
 -   Improved performance: reduced overhead from gRPC means faster
     end-to-end execution. On TorchBench 2.0, we observed a \>35%

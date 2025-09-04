@@ -44,20 +44,20 @@ fail. Steps for fixing and merging such breaking PyTorch change is as following:
 
 ### Running TPU tests on PRs
 
-The `build_and_test.yml` workflow runs tests on the TPU in addition to CPU and
-GPU. The set of tests run on the TPU is defined in `test/tpu/run_tests.sh`.
+The `build_and_test.yml` workflow runs tests on the TPU in addition to CPU.
+The set of tests run on the TPU is defined in `test/tpu/run_tests.sh`.
 
 ## CI Environment
 
 Before the CI in this repository runs, we build a base dev image. These are the
 same images we recommend in our VSCode `.devcontainer` setup and nightly build
-to ensure consistency between environments. We produce variants with and without
-CUDA, configured in `infra/ansible` (build config) and
-`infra/tpu-pytorch-releases/dev_images.tf` (build triggers).
+to ensure consistency between environments. We produce variants configured in
+`infra/ansible` (build config) and `infra/tpu-pytorch-releases/dev_images.tf`
+(build triggers).
 
 The CI runs in two environments:
 
-1. Organization self-hosted runners for CPU and GPU: used for almost every step
+1. Organization self-hosted runners for CPU: used for almost every step
    of the CI. These runners are managed by PyTorch and have access to the shared
    ECR repository.
 1. TPU self-hosted runners: these are managed by us and are only available in
@@ -68,24 +68,18 @@ The CI runs in two environments:
 
 We have two build paths for each CI run:
 
-- `torch_xla`: we build the main package to support both TPU and GPU[^1], along
+- `torch_xla`: we build the main package to support TPU, along
   with a CPU build of `torch` from HEAD. This build step exports the
   `torch-xla-wheels` artifact for downstream use in tests.
   - Some CI tests also require `torchvision`. To reduce flakiness, we compile
     `torchvision` from [`torch`'s CI pin][pytorch-vision-pin].
   - C++ tests are piggybacked onto the same build and uploaded in the
     `cpp-test-bin` artifact.
-- `torch_xla_cuda_plugin`: the XLA CUDA runtime can be built independently of
-  either `torch` or `torch_xla` -- it depends only on our pinned OpenXLA. Thus,
-  this build should be almost entirely cached, unless your PR changes the XLA
-  pin or adds a patch.
 
-Both the main package build and plugin build are configured with ansible at
-`infra/ansible`, although they run in separate stages (`stage=build_srcs` vs
-`stage=build_plugin`). This is the same configuration we use for our nightly and
-release builds.
+The main package build is configured with ansible at `infra/ansible`. This is
+the same configuration we use for our nightly and release builds.
 
-The CPU and GPU test configs are defined in the same file, `_test.yml`. Since
+The CPU test config is defined in the file `_test.yml`. Since
 some of the tests come from the upstream PyTorch repository, we check out
 PyTorch at the same git rev as the `build` step (taken from
 `torch_xla.version.__torch_gitrev__`). The tests are split up into multiple
@@ -93,23 +87,16 @@ groups that run in parallel; the `matrix` section of `_test.yml` corresponds to
 in `.github/scripts/run_tests.sh`.
 
 CPU tests run immediately after the `torch_xla` build completes. This will
-likely be the first test feedback on your commit. GPU tests will launch when
-both the `torch_xla` and `torch_xla_cuda_plugin` complete. GPU compilation is
-much slower due to the number of possible optimizations, and the GPU chips
-themselves are quite outdated, so these tests will take longer to run than the
-CPU tests.
+likely be the first test feedback on your commit. 
 
 ![CPU tests launch when `torch_xla` is
 complete](../docs/assets/ci_test_dependency.png)
-
-![GPU tests also depend on CUDA
-plugin](../docs/assets/ci_test_dependency_gpu.png)
 
 For the C++ test groups in either case, the test binaries are pre-built during
 the build phase and packaged in `cpp-test-bin`. This will only be downloaded if
 necessary.
 
-[^1]: Note: both GPU and TPU support require their respective plugins to be
+[^1]: Note: TPU support require its respective plugins to be
     installed. This package will _not_ work on either out of the box.
 
 ### TPU CI
