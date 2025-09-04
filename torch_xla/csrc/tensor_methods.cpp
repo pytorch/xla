@@ -2377,7 +2377,8 @@ XLATensorPtr mish(const XLATensorPtr& input) {
           tensor_ops::Softplus(input, 1, 20)->GetIrValue()));
 }
 
-absl::StatusOr<XLATensorPtr> mm(const XLATensorPtr& input, const XLATensorPtr& weight) {
+absl::StatusOr<XLATensorPtr> mm(const XLATensorPtr& input,
+                                const XLATensorPtr& weight) {
   XLA_RETURN_IF_ERROR(CheckMMInputIsMatrix(input, "first"));
   XLA_RETURN_IF_ERROR(CheckMMInputIsMatrix(weight, "second"));
   XLA_RETURN_IF_ERROR(CheckMMMatrixSizesAreCompatible(input, weight));

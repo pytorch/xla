@@ -1842,8 +1842,8 @@ at::Tensor& XLANativeFunctions::fill_(at::Tensor& self,
                                       const at::Tensor& value) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLA_CHECK_EQ(value.dim(), 0) << "fill_ only supports a 0-dimensional "
-                               << "value tensor, but got tensor "
-                               << "with " << value.dim() << " dimension(s).";
+                               << "value tensor, but got tensor " << "with "
+                               << value.dim() << " dimension(s).";
   return torch_xla::XLANativeFunctions::fill_(self, value.item());
 }
 
@@ -2495,7 +2495,8 @@ at::Tensor XLANativeFunctions::mm(const at::Tensor& self,
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mat2, bridge::GetXlaTensor(mat2));
-  XLA_ASSIGN_OR_THROW(XLATensorPtr output, tensor_methods::mm(xla_self, xla_mat2));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr output,
+                      tensor_methods::mm(xla_self, xla_mat2));
   return bridge::AtenFromXlaTensor(std::move(output));
 }
 
