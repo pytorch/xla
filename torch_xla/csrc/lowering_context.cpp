@@ -19,6 +19,7 @@
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/stack_frame_index_builder.h"
 #include "torch_xla/csrc/status.h"
+#include "torch_xla/csrc/torch_xla_op_sharding.h"
 
 namespace torch_xla {
 
@@ -133,9 +134,9 @@ xla::XlaOp LoweringContext::GetParameter(
     const std::string param_name = absl::StrCat("p", param_index);
     xla::XlaOp param;
     if (data->HasSharding()) {
-      const xla::OpSharding sharding = data->GetSharding();
-      const xla::XlaScopedShardingAssignment scoped_sharding(builder(),
-                                                             sharding);
+      const torch_xla::OpSharding sharding = data->GetSharding();
+      const xla::XlaScopedShardingAssignment scoped_sharding(
+          builder(), sharding.GetXlaOpSharding());
       param = xla::Parameter(builder(), param_index, shape, param_name);
     } else {
       param = xla::Parameter(builder(), param_index, shape, param_name);
@@ -237,6 +238,17 @@ xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
   return it->second;
 }
 
+void LoweringContext::ExtractShardingAndSetDenormalizedTileAssignments(
+    std::vector<std::shared_ptr<torch_xla::OpSharding>> shardings) {
+  for (auto sharding : shardings) {
+    std::vector<int64_t> denormalized_tile_assignment =
+        sharding->GetDenormalizedTileAssignment();
+    if (!denormalized_tile_assignment.empty()) {
+      denormalized_tile_assignments_.push_back(denormalized_tile_assignment);
+    }
+  }
+}
+
 XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node& node) {
   XlaOpVector result_ops;
   try {
@@ -244,6 +256,12 @@ XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node& node) {
     const XlaNode* const casted = dynamic_cast<const XlaNode*>(&node);
 
     result_ops = casted->Lower(this);
+    // save the denormalized_tile_assignment from all nodes and then use it
+    // during Compile
+    auto shardings = casted->GetShardings();
+    if (!shardings.empty()) {
+      ExtractShardingAndSetDenormalizedTileAssignments(shardings);
+    }
     if (!casted->dynamic_dims().empty()) {
       const xla::internal::XlaBuilderFriend builder_friend;
       auto* const inst = builder_friend.GetInstruction(result_ops[0]);

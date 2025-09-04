@@ -12,6 +12,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/torch_xla_op_sharding.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_client.h"
@@ -42,23 +43,24 @@ class IfrtComputationClient : public ComputationClient {
 
   DataPtr CreateDataPlaceholder(
       std::string device, xla::Shape shape,
-      std::optional<xla::OpSharding> sharding = std::nullopt) override;
+      std::optional<torch_xla::OpSharding> sharding = std::nullopt) override;
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
   DataPtr GetDataShard(DataPtr data, size_t index) override;
 
   DataPtr WrapDataShards(absl::Span<const DataPtr> shards, std::string device,
-                         xla::Shape shape, xla::OpSharding sharding) override;
+                         xla::Shape shape,
+                         torch_xla::OpSharding sharding) override;
 
-  std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) override;
+  std::optional<torch_xla::OpSharding> GetDataSharding(DataPtr handle) override;
 
   std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
 
   std::vector<DataPtr> ReshardData(
       absl::Span<const DataPtr> handles,
-      absl::Span<const xla::OpSharding> shardings) override {
+      absl::Span<const torch_xla::OpSharding> shardings) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
@@ -71,7 +73,8 @@ class IfrtComputationClient : public ComputationClient {
 
   DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
-      std::string device, xla::Shape shape, xla::OpSharding sharding) override;
+      std::string device, xla::Shape shape,
+      torch_xla::OpSharding sharding) override;
 
   DataPtr CopyToDevice(DataPtr data, std::string dst) override;
 
@@ -205,13 +208,13 @@ class IfrtComputationClient : public ComputationClient {
 
     IfrtData(std::string device, xla::Shape device_shape,
              tsl::RCReference<xla::ifrt::Array> buffer,
-             std::optional<xla::OpSharding> sharding = std::nullopt)
+             std::optional<torch_xla::OpSharding> sharding = std::nullopt)
         : Data(std::move(device), std::move(device_shape)),
           buffer(buffer),
           sharding_(sharding) {}
 
     IfrtData(std::string device, tsl::RCReference<xla::ifrt::Array> buffer,
-             std::optional<xla::OpSharding> sharding = std::nullopt)
+             std::optional<torch_xla::OpSharding> sharding = std::nullopt)
         : Data(std::move(device),
                xla::ShapeUtil::MakeShape(
                    xla::ifrt::ToPrimitiveType(buffer->dtype()).value(),
@@ -234,7 +237,7 @@ class IfrtComputationClient : public ComputationClient {
 
     bool HasSharding() const override { return sharding_.has_value(); }
 
-    xla::OpSharding GetSharding() const override;
+    torch_xla::OpSharding GetSharding() const override;
 
     std::string ToString() const override {
       std::stringstream ss;
@@ -244,7 +247,9 @@ class IfrtComputationClient : public ComputationClient {
         ss << "  Data Device: " << device() << "\n";
         ss << "  Data Shape: " << shape().ToString() << "\n";
         ss << "  OpSharding: "
-           << xla::HloSharding::FromProto(*sharding_)->ToString() << "\n";
+           << xla::HloSharding::FromProto(sharding_.value().GetXlaOpSharding())
+                  ->ToString()
+           << "\n";
         ss << "  NumShards: " << buffer->sharding().devices()->size() << "\n";
       } else {
         ss << "XLAData: \n";
@@ -260,24 +265,42 @@ class IfrtComputationClient : public ComputationClient {
       return ss.str();
     }
 
-    std::optional<xla::OpSharding> sharding_;
+    std::optional<torch_xla::OpSharding> sharding_;
     tsl::RCReference<xla::ifrt::Array> buffer;
   };
 
   tsl::RCReference<xla::ifrt::Array> ReplicateShardedData(
       const std::shared_ptr<IfrtData> handle);
 
+  // TODO - move the below constructor to ifrt_computation_client.cpp
+  // issue link - https://github.com/pytorch/xla/issues/9572
   struct IfrtComputation : public Computation {
-    IfrtComputation(xla::XlaComputation computation,
-                    std::vector<std::string> devices,
-                    std::shared_ptr<xla::ifrt::LoadedExecutable> executable)
+    IfrtComputation(
+        xla::XlaComputation computation, std::vector<std::string> devices,
+        std::shared_ptr<xla::ifrt::LoadedExecutable> executable,
+        std::optional<std::vector<int64_t>> denormalized_tile_assignment)
         : Computation(std::move(computation), std::move(devices)),
-          executable(std::move(executable)) {
-      output_shardings_ = this->executable->GetOutputShardings();
+          executable(std::move(executable)),
+          denormalized_tile_assignment_(std::move(
+              denormalized_tile_assignment.value_or(std::vector<int64_t>{}))) {
+      xla_output_shardings_ = this->executable->GetOutputShardings();
+      output_shardings_ = std::nullopt;
+      if (xla_output_shardings_.has_value()) {
+        output_shardings_ = std::vector<torch_xla::OpSharding>{};
+        output_shardings_->reserve(xla_output_shardings_.value().size());
+        for (const auto& sharding : xla_output_shardings_.value()) {
+          // convert each into torch_xla::OpSharding object
+          torch_xla::OpSharding torch_xla_op_sharding(
+              sharding, denormalized_tile_assignment_);
+          output_shardings_.value().push_back(torch_xla_op_sharding);
+        }
+      }
     }
 
     std::shared_ptr<xla::ifrt::LoadedExecutable> executable;
-    std::optional<std::vector<xla::OpSharding>> output_shardings_;
+    std::optional<std::vector<xla::OpSharding>> xla_output_shardings_;
+    std::optional<std::vector<torch_xla::OpSharding>> output_shardings_;
+    std::vector<int64_t> denormalized_tile_assignment_;
   };
 };
 

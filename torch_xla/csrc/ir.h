@@ -21,6 +21,7 @@
 #include "absl/types/span.h"
 #include "torch_xla/csrc/dynamic_shape_detector.h"
 #include "torch_xla/csrc/runtime/types.h"
+#include "torch_xla/csrc/torch_xla_op_sharding.h"
 #include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
@@ -133,14 +134,19 @@ class XlaNode : public torch::lazy::Node {
   torch::lazy::hash_t shardingHash() const { return sharding_hash_; }
 
   // The node's outputs get assigned the same HLO sharding
-  const std::shared_ptr<xla::OpSharding> GetSharding(size_t index) const {
+  const std::shared_ptr<torch_xla::OpSharding> GetSharding(size_t index) const {
     if (output_shardings_.size() == 0) {
       return nullptr;
     }
     return output_shardings_[index];
   }
 
-  void SetSharding(const xla::OpSharding& sharding, size_t index);
+  const std::vector<std::shared_ptr<torch_xla::OpSharding>> GetShardings()
+      const {
+    return output_shardings_;
+  }
+
+  void SetSharding(const torch_xla::OpSharding& sharding, size_t index);
 
   void ClearSharding() {
     output_shardings_.clear();
@@ -180,7 +186,7 @@ class XlaNode : public torch::lazy::Node {
   torch::lazy::hash_t sharding_hash_ = 0;
 
   // Experimental sharding annotations attached to the IR node.
-  std::vector<std::shared_ptr<xla::OpSharding>> output_shardings_;
+  std::vector<std::shared_ptr<torch_xla::OpSharding>> output_shardings_;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {

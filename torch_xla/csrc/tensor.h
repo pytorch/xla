@@ -11,6 +11,7 @@
 
 #include "absl/base/nullability.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/torch_xla_op_sharding.h"
 #include "torch_xla/csrc/view.h"
 
 namespace torch_xla {
@@ -263,13 +264,13 @@ class XLATensor : public torch::lazy::LazyTensor {
   // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
   // HloSharding for replication, manual and tile shardings.
   struct ShardingSpec {
-    ShardingSpec(const xla::OpSharding& sharding, const xla::Shape& shape)
+    ShardingSpec(const torch_xla::OpSharding& sharding, const xla::Shape& shape)
         : sharding(sharding), shape(shape) {}
-    ShardingSpec(const xla::OpSharding& sharding, const xla::Shape& shape,
+    ShardingSpec(const torch_xla::OpSharding& sharding, const xla::Shape& shape,
                  const bool& minibatch)
         : sharding(sharding), shape(shape), minibatch(minibatch) {}
 
-    xla::OpSharding sharding = xla::HloSharding::Unknown().ToProto();
+    torch_xla::OpSharding sharding;
     // Optional source tensor shape unpartitioned.
     xla::Shape shape;
     // Parameter for represent input batch in sharded along batch axes

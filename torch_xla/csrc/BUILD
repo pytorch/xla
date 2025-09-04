@@ -127,6 +127,7 @@ ptxla_cc_library(
         ":shape_builder",
         ":shape_helper",
         ":status",
+        ":torch_xla_op_sharding",
         ":version",
         "//torch_xla/csrc:hash_util",
         "//torch_xla/csrc:thread_pool",
@@ -315,6 +316,7 @@ ptxla_cc_library(
         ":shape_helper",
         ":status",
         ":unwrap_data",
+        ":torch_xla_op_sharding",
         "//torch_xla/csrc/runtime:cache",
         "//torch_xla/csrc/runtime:computation_client",
         "@com_google_absl//absl/log:absl_check",
@@ -372,5 +374,15 @@ cc_library(
         "@tsl//tsl/platform:stacktrace",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
+    name = "torch_xla_op_sharding",
+    srcs = ["torch_xla_op_sharding.cpp"],
+    hdrs = ["torch_xla_op_sharding.h"],
+    deps = [
+        "//torch_xla/csrc/runtime:debug_macros",
+        "@xla//xla/hlo/builder:xla_builder",
     ],
 )

@@ -71,6 +71,7 @@
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/torch_xla_op_sharding.h"
 #include "torch_xla/csrc/version.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
@@ -755,7 +756,8 @@ std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors,
 std::string GetXLAShardingSpec(const XLATensorPtr xtensor) {
   auto sharding_spec = xtensor->sharding_spec();
   if (sharding_spec != nullptr) {
-    auto hlo_sharding = xla::HloSharding::FromProto(sharding_spec->sharding);
+    auto hlo_sharding =
+        xla::HloSharding::FromProto(sharding_spec->sharding.GetXlaOpSharding());
     return hlo_sharding->ToString();
   }
   return std::string();
@@ -1560,7 +1562,7 @@ void InitXlaModuleBindings(py::module m) {
              runtime::ComputationClient::ComputationPtr>(m, "XlaComputation");
 
   // Define the _XLAC.OpSharding class.
-  PythonScope<py::class_<xla::OpSharding>>(m, "OpSharding")
+  PythonScope<py::class_<torch_xla::OpSharding>>(m, "OpSharding")
       .def_init([](const py::list& tile_assignment,
                    const py::list& group_assignment,
                    const py::list& replication_groups, int sharding_type) {
@@ -2576,16 +2578,16 @@ void InitXlaModuleBindings(py::module m) {
             }
            })
       .def("_xla_mark_sharding",
-           [](const at::Tensor& input, xla::OpSharding sharding) {
+           [](const at::Tensor& input, torch_xla::OpSharding sharding) {
             ShardingUtil::XlaMarkSharding(input, sharding);
            })
       .def("_xla_annotate_custom_sharding",
-           [](const at::Tensor& input, xla::OpSharding sharding) {
+           [](const at::Tensor& input, torch_xla::OpSharding sharding) {
             XLA_ASSIGN_OR_THROW(XLATensorPtr xtensor, bridge::GetXlaTensor(input));
             ShardingUtil::XlaAnnotateCustomSharding(xtensor, sharding);
            })
       .def("_mark_manual_sharding",
-           [](const at::Tensor& input, xla::OpSharding sharding) {
+           [](const at::Tensor& input, torch_xla::OpSharding sharding) {
             XLA_CHECK(IsNonDeviceDataIR(input))
                 << "Marking any data tensors as manual is not supported";
             ShardingUtil::XlaMarkSharding(input, sharding);
@@ -2605,13 +2607,14 @@ void InitXlaModuleBindings(py::module m) {
                 xtensor->CreateFrom(torch_xla::MakeNode<CustomSharding>(
                     xtensor->GetIrValue(), shard_shape,
                     CustomSharding::Type::kSPMDFullToShardShape));
-            output->SetShardingSpec(XLATensor::ShardingSpec(
-                xla::HloSharding::Manual().ToProto(), shard_shape));
+            torch_xla::OpSharding sharding(xla::HloSharding::Manual().ToProto(), 
+                            sharding_spec->sharding.GetDenormalizedTileAssignment());
+            output->SetShardingSpec(XLATensor::ShardingSpec(sharding, shard_shape));
             return bridge::AtenFromXlaTensor(output);
           })
       .def(
           "_spmd_shard_to_full_shape",
-          [](const at::Tensor& input, const xla::OpSharding& sharding,
+          [](const at::Tensor& input, const torch_xla::OpSharding& sharding,
              const std::vector<int64_t>& output_shape,
              const py::object& output_dtype) -> at::Tensor {
             XLA_ASSIGN_OR_THROW(XLATensorPtr xtensor, bridge::GetXlaTensor(input));
@@ -2645,7 +2648,7 @@ void InitXlaModuleBindings(py::module m) {
             return GetXLAShardingSpec(xtensor);
            })
       .def("_get_xla_op_sharding",
-           [](const at::Tensor& input) -> std::optional<xla::OpSharding> {
+           [](const at::Tensor& input) -> std::optional<torch_xla::OpSharding> {
             XLA_ASSIGN_OR_THROW(XLATensorPtr xtensor, bridge::GetXlaTensor(input));
             XLATensor::ShardingSpecPtr sharding_spec =
                 xtensor ? xtensor->sharding_spec() : nullptr;
@@ -2685,7 +2688,7 @@ void InitXlaModuleBindings(py::module m) {
           // `torch_xla.runtime.local_runtime_devices()`.
           "_global_tensor_from_cpu_shards",
           [](const std::vector<at::Tensor>& shards,
-             const xla::OpSharding& sharding,
+             const torch_xla::OpSharding& sharding,
              std::optional<std::vector<int64_t>>& global_shape) -> at::Tensor {
             XLA_CHECK(UseVirtualDevice())
                 << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";

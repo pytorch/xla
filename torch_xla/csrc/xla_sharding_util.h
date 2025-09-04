@@ -9,6 +9,7 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/torch_xla_op_sharding.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/service/hlo.pb.h"
@@ -28,8 +29,8 @@ class ShardingUtil {
     UNKNOWN = 6  // implicit replication
   };
 
-  // Determine the ShardingType of the given xla::OpSharding.
-  static ShardingType GetShardingType(xla::OpSharding& sharding);
+  // Determine the ShardingType of the given torch_xla::OpSharding.
+  static ShardingType GetShardingType(torch_xla::OpSharding& sharding);
 
   // Annotates HLO instructions in the lowered computation and returns true if
   // the computation needs to be compiled with SPMD partitioning. For this call
@@ -42,15 +43,14 @@ class ShardingUtil {
                                  const XLATensor::ShardingSpec& b);
 
   // Returns true if two OpShardings are the same.
-  static bool EqualOpShardings(const xla::OpSharding& a,
-                               const xla::OpSharding& b);
+  static bool EqualOpShardings(const torch_xla::OpSharding& a,
+                               const torch_xla::OpSharding& b);
 
-  // Creates an xla::OpSharding. `tile_assignmnent` is required for TILED
+  // Creates an torch_xla::OpSharding. `tile_assignmnent` is required for TILED
   // `sharding_type` and `replication_groups` for `PARTIAL`.
-  static xla::OpSharding CreateOpSharding(const py::list& tile_assignment,
-                                          const py::list& group_assignment,
-                                          const py::list& replication_groups,
-                                          ShardingType sharding_type);
+  static torch_xla::OpSharding CreateOpSharding(
+      const py::list& tile_assignment, const py::list& group_assignment,
+      const py::list& replication_groups, ShardingType sharding_type);
 
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
@@ -67,7 +67,7 @@ class ShardingUtil {
   static std::vector<std::pair<int, std::vector<at::indexing::TensorIndex>>>
   GetShardReplicaAndIndicesForDevices(const std::vector<int64_t>& shard_shape,
                                       const std::vector<int64_t>& tensor_shape,
-                                      const xla::OpSharding sharding,
+                                      const torch_xla::OpSharding sharding,
                                       const std::vector<std::string>& devices);
 
   // Returns the indices for the shards. Supports `OTHER` sharding types and
@@ -94,7 +94,9 @@ class ShardingUtil {
   // is always on virtual SPMD device.
   static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
       const std::vector<xla::Shape>& output_shapes,
-      runtime::ComputationClient::ComputationPtr computation);
+      runtime::ComputationClient::ComputationPtr computation,
+      std::optional<std::vector<int64_t>> denormalized_tile_assignment =
+          std::nullopt);
 
   // Create sharded data placeholders, each corresponding to the individual
   // sharding spec from the input list
@@ -111,7 +113,9 @@ class ShardingUtil {
       std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
       runtime::ComputationClient::ComputationPtr computation,
       std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
-      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
+      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs,
+      std::optional<std::vector<int64_t>> denormalized_tile_assignment =
+          std::nullopt);
 
   // Transfers the individual shards to the devices and returns a DataPtr for
   // the PjRtShardedData wrapping the shards.
@@ -121,14 +125,14 @@ class ShardingUtil {
       const XLATensor::ShardingSpecPtr& sharding_spec);
 
   static void XlaMarkSharding(const at::Tensor& input,
-                              xla::OpSharding sharding);
+                              torch_xla::OpSharding sharding);
 
   // Add a custom sharding node IR to an XLATensor. Note that unlike
   // XlaMarkSharding, this will not explicitly set a sharding spec tied to the
   // DeviceData node, nor transfer any sharded data to the device. This serves
   // merely as an XLA custom sharding annotation IR.
   static void XlaAnnotateCustomSharding(const XLATensorPtr& input,
-                                        xla::OpSharding sharding);
+                                        torch_xla::OpSharding sharding);
   //////////////////////////// Auto-Sharding ////////////////////////////
 
   // Construct a device mesh for auto-sharding pass. Returns a tuple of mesh
