@@ -58,7 +58,7 @@ def maybe_get_torchax():
     return None
 
 
-def maybe_get_jax():
+def maybe_get_jax(log=True):
   try:
     jax_import_guard()
     with jax_env_context():
@@ -67,6 +67,7 @@ def maybe_get_jax():
       jax.config.update('jax_use_shardy_partitioner', False)
       return jax
   except (ModuleNotFoundError, ImportError):
-    logging.warn('You are trying to use a feature that requires jax/pallas.'
-                 'You can install Jax/Pallas via pip install torch_xla[pallas]')
+    if log:
+      logging.warn('You are trying to use a feature that requires jax/pallas.'
+                  'You can install Jax/Pallas via pip install torch_xla[pallas]')
     return None
