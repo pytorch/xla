@@ -68,6 +68,7 @@ def maybe_get_jax(log=True):
       return jax
   except (ModuleNotFoundError, ImportError):
     if log:
-      logging.warn('You are trying to use a feature that requires jax/pallas.'
-                  'You can install Jax/Pallas via pip install torch_xla[pallas]')
+      logging.warning(
+          'You are trying to use a feature that requires jax/pallas.'
+          'You can install Jax/Pallas via pip install torch_xla[pallas]')
     return None
