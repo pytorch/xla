@@ -57,8 +57,10 @@ class AtenXlaDeviceMapper {
       devices_.emplace_back(ParseDeviceString("SPMD:0"));
       devices_ordinals_[devices_.back()] = 0;
     } else {
-      for (auto& device_str :
-           torch_xla::runtime::GetComputationClientOrDie()->GetLocalDevices()) {
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
+      for (auto& device_str : client->GetLocalDevices()) {
         devices_.emplace_back(ParseDeviceString(device_str));
         devices_ordinals_[devices_.back()] = devices_.size() - 1;
       }
@@ -398,11 +400,15 @@ std::string ToXlaString(const c10::Device& device) {
 }
 
 const torch::lazy::BackendDevice* GetDefaultDevice() {
-  static std::string default_device_spec =
-      UseVirtualDevice()
-          ? "SPMD:0"
-          : runtime::GetComputationClientOrDie()->GetDefaultDevice();
-  XLA_CHECK(!default_device_spec.empty());
+  static std::string default_device_spec = []() -> std::string {
+    if (UseVirtualDevice()) {
+      return "SPMD:0";
+    }
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                        runtime::GetComputationClient());
+    return client->GetDefaultDevice();
+  }();
+  ABSL_CHECK(!default_device_spec.empty());
   static const torch::lazy::BackendDevice default_device =
       ParseDeviceString(default_device_spec);
   return &default_device;

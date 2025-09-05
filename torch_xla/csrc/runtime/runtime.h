@@ -10,13 +10,6 @@ namespace torch_xla::runtime {
 // Returns the ComputationClient singleton.
 const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient();
 
-ABSL_DEPRECATED(
-    "Use GetComputationClient(), instead. "
-    "This function throws an exception on error, instead of "
-    "actually handling the StatusOr return value, which is "
-    "safer.")
-ComputationClient* absl_nonnull GetComputationClientOrDie();
-
 // Returns the ComputationClient singleton if it was successfully initialized.
 // Returns a nullptr if the ComputationClient wasn't initialized yet.
 // Throws an exception if the ComputationClient was initialized but the

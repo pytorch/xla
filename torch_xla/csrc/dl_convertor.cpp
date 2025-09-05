@@ -125,8 +125,9 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
   ABSL_CHECK(handle != nullptr)
       << "Could not extract a valid data handle from the input tensor";
 
-  std::shared_ptr<xla::PjRtBuffer> pjrt_buffer =
-      runtime::GetComputationClientOrDie()->GetPjRtBuffer(handle);
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
+  std::shared_ptr<xla::PjRtBuffer> pjrt_buffer = client->GetPjRtBuffer(handle);
   ABSL_CHECK(pjrt_buffer != nullptr) << "Could not get a valid pjrt_buffer";
 
   ABSL_CHECK(!pjrt_buffer->IsTuple())
@@ -169,11 +170,13 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
 // Reference: https://github.com/openxla/xla/blob/main/xla/python/dlpack.cc
 absl::StatusOr<xla::PjRtDevice*> DeviceForDLDevice(const DLDevice& context) {
   switch (context.device_type) {
-    case DLDeviceType::kDLCPU:
-      XLA_CHECK_EQ(runtime::GetComputationClientOrDie()->GetPlatformID(),
-                   xla::CpuId());
-      return runtime::GetComputationClientOrDie()->LookupAddressableDevice(
-          context.device_id);
+    case DLDeviceType::kDLCPU: {
+      XLA_ASSIGN_OR_RETURN(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
+      XLA_CHECK_EQ(client->GetPlatformID(), xla::CpuId());
+      return client->LookupAddressableDevice(context.device_id);
+    }
     default:
       return tsl::errors::InvalidArgument(
           "Unknown/unsupported DLPack device type %d", context.device_type);
@@ -330,10 +333,11 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
           shape, *device->default_memory_space(), on_delete_callback));
   ABSL_CHECK(pjrt_buffer.get() != nullptr) << "pjrt buffer is null.";
 
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   runtime::ComputationClient::DataPtr data =
       runtime::PjRtComputationClient::CreateData(
-          runtime::GetComputationClientOrDie()->PjRtDeviceToString(device),
-          shape, std::move(pjrt_buffer));
+          client->PjRtDeviceToString(device), shape, std::move(pjrt_buffer));
 
   at::ScalarType tensor_type = at::toScalarType(dlmt->dl_tensor.dtype);
   XLATensorPtr xla_tensor = XLATensor::Create(data, tensor_type);
