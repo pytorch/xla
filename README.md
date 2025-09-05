@@ -20,8 +20,10 @@ Note: Builds are available for Python 3.11 to 3.13; please use one of the suppor
 # python3.11 -m venv py311
 # - for conda
 # conda create -n py311 python=3.11
-
-pip install torch==2.8.0 'torch_xla[tpu]==2.8.0'
+pip install torch==2.8.0
+pip install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.1-cp311-cp311-linux_x86_64.whl
+# To install libtpu
+pip install 'torch_xla[tpu]'
 # Optional: if you're using custom kernels, install pallas dependencies
 pip install 'torch_xla[pallas]'
 ```
