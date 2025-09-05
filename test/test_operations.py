@@ -2582,8 +2582,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       self.assertEqual(str(e), expected_error)
 
   def test_mm_raises_error_on_non_matrix_input(self):
-    a = torch.rand(2, 2, 2, device=torch_xla.device())
-    b = torch.rand(2, 2, device=torch_xla.device())
+    device = torch_xla.device()
+    a = torch.rand(2, 2, 2, device=device)
+    b = torch.rand(2, 2, device=device)
 
     try:
       torch.mm(a, b)
@@ -2594,8 +2595,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       self.assertEqual(str(e), expected_error)
 
   def test_mm_raises_error_on_incompatible_shapes(self):
-    a = torch.rand(2, 5, device=torch_xla.device())
-    b = torch.rand(8, 2, device=torch_xla.device())
+    device = torch_xla.device()
+    a = torch.rand(2, 5, device=device)
+    b = torch.rand(8, 2, device=device)
 
     try:
       torch.mm(a, b)
