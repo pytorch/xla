@@ -11,6 +11,7 @@
 #include <iterator>
 
 #include "absl/log/absl_check.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "torch_xla/csrc/LazyIr.h"
@@ -453,14 +454,14 @@ absl::Status CheckGatherRanksAreEqual(const XLATensorPtr& input,
   return absl::OkStatus();
 }
 
-// Checks that all index dimensions are smaller or equal to those of input,
-// except on dimension canonical_dim.
-absl::Status CheckGatherDimensionsAreCompatible(const XLATensorPtr& input,
-                                                const XLATensorPtr& index,
-                                                int64_t canonical_dim) {
+// Checks that all index dimension sizes are smaller or equal to those of
+// input, except on dimension canonical_dim.
+absl::Status CheckGatherSizesAreCompatible(const XLATensorPtr& input,
+                                           const XLATensorPtr& index,
+                                           int64_t canonical_dim) {
   // Dimensions that fail the "smaller or equal" condition.
   std::vector<int64_t> bad_dims;
-  for (int64_t dim = 0; dim < input->shape().get().dimensions_size(); dim++) {
+  for (int64_t dim = 0; dim < input->shape().get().dimensions().size(); dim++) {
     if (dim != canonical_dim && input->size(dim) < index->size(dim)) {
       bad_dims.push_back(dim);
     }
@@ -474,6 +475,33 @@ absl::Status CheckGatherDimensionsAreCompatible(const XLATensorPtr& input,
         "] on all dimensions, except on dimension ", canonical_dim,
         ". However, that's not true on dimensions [",
         absl::StrJoin(bad_dims, /* sep= */ ", "), "].")));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckMMInputIsMatrix(const XLATensorPtr& mat,
+                                  const std::string_view arg) {
+  xla::Shape shape = mat->shape();
+  if (shape.dimensions().size() != 2) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("mm(): expected the ", arg, " input tensor ",
+                     shape.ToString(), " to be a matrix (i.e. a 2D tensor).")));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckMMMatrixSizesAreCompatible(const XLATensorPtr& mat1,
+                                             const XLATensorPtr& mat2) {
+  xla::Shape shape1 = mat1->shape();
+  xla::Shape shape2 = mat2->shape();
+  if (shape1.dimensions(1) != shape2.dimensions(0)) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "mm(): cannot matrix-multiply tensors ", shape1.ToString(), " and ",
+        shape2.ToString(),
+        ". Expected the size of dimension 1 of the first input tensor (",
+        shape1.dimensions(1),
+        ") to be equal the size of dimension 0 of the second input tensor (",
+        shape2.dimensions(0), ").")));
   }
   return absl::OkStatus();
 }
@@ -1844,7 +1872,7 @@ absl::StatusOr<absl_nonnull XLATensorPtr> gather(const XLATensorPtr& input,
       dim, input->shape().get().dimensions_size());
   XLA_RETURN_IF_ERROR(CheckGatherRanksAreEqual(input, index));
   XLA_RETURN_IF_ERROR(
-      CheckGatherDimensionsAreCompatible(input, index, canonical_dim));
+      CheckGatherSizesAreCompatible(input, index, canonical_dim));
   return input->CreateFrom(torch_xla::MakeNode<Gather>(
       input->GetIrValue(), canonical_dim, index->GetIrValue()));
 }
@@ -2349,7 +2377,11 @@ XLATensorPtr mish(const XLATensorPtr& input) {
           tensor_ops::Softplus(input, 1, 20)->GetIrValue()));
 }
 
-XLATensorPtr mm(const XLATensorPtr& input, const XLATensorPtr& weight) {
+absl::StatusOr<XLATensorPtr> mm(const XLATensorPtr& input,
+                                const XLATensorPtr& weight) {
+  XLA_RETURN_IF_ERROR(CheckMMInputIsMatrix(input, "first"));
+  XLA_RETURN_IF_ERROR(CheckMMInputIsMatrix(weight, "second"));
+  XLA_RETURN_IF_ERROR(CheckMMMatrixSizesAreCompatible(input, weight));
   return input->CreateFrom(Dot(input->GetIrValue(), weight->GetIrValue()));
 }
 

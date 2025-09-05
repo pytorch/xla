@@ -646,7 +646,8 @@ void min_out(XLATensorPtr& min, XLATensorPtr& min_indices,
 
 XLATensorPtr mish(const XLATensorPtr& input);
 
-XLATensorPtr mm(const XLATensorPtr& input, const XLATensorPtr& weight);
+absl::StatusOr<XLATensorPtr> mm(const XLATensorPtr& input,
+                                const XLATensorPtr& weight);
 
 XLATensorPtr mse_loss(const XLATensorPtr& input, const XLATensorPtr& target,
                       int64_t reduction);

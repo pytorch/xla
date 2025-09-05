@@ -2495,7 +2495,9 @@ at::Tensor XLANativeFunctions::mm(const at::Tensor& self,
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mat2, bridge::GetXlaTensor(mat2));
-  return bridge::AtenFromXlaTensor(tensor_methods::mm(xla_self, xla_mat2));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr output,
+                      tensor_methods::mm(xla_self, xla_mat2));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::mse_loss(const at::Tensor& self,
