@@ -33,6 +33,7 @@ shard the input tensor. For example, the first dimension of the tensor is sharde
 across the axis/axes described in the first element of this tuple and so on.
 """
 
+
 class Mesh:
   """Describe the logical XLA device topology mesh and the underlying resources.
 
