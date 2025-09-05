@@ -90,14 +90,18 @@ XLAGraphExecutor::ComputationCache* CreateComputationCache() {
     auto serialize_fn =
         [](XLAGraphExecutor::ComputationCache::TypePtr computation)
         -> std::string {
-      return runtime::GetComputationClientOrDie()->SerializeComputation(
-          computation->computation);
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
+      return client->SerializeComputation(computation->computation);
     };
     auto deserialize_fn = [](std::string serialization)
         -> XLAGraphExecutor::ComputationCache::TypePtr {
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
       runtime::ComputationClient::ComputationPtr computation =
-          runtime::GetComputationClientOrDie()->DeserializeComputation(
-              serialization);
+          client->DeserializeComputation(serialization);
       if (!computation) return nullptr;
       return std::make_shared<XLAGraphExecutor::CachedComputation>(
           computation, /*is_sharded=*/UseVirtualDevice());
@@ -469,8 +473,10 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
     if (UseVirtualDevice()) {
       wait_devices.insert(ParseDeviceString("SPMD:0"));
     } else {
-      for (auto& device_str :
-           runtime::GetComputationClientOrDie()->GetLocalDevices()) {
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
+      for (auto& device_str : client->GetLocalDevices()) {
         wait_devices.insert(ParseDeviceString(device_str));
       }
     }
@@ -584,6 +590,8 @@ XLAGraphExecutor::ComputationCache* XLAGraphExecutor::GetComputationCache() {
 void XLAGraphExecutor::ClearPendingIrs(
     std::vector<XLATensorPtr> tensors,
     const torch::lazy::BackendDevice& device) {
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   std::unordered_set<int64_t> tensor_ids;
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
@@ -598,9 +606,8 @@ void XLAGraphExecutor::ClearPendingIrs(
         } else {
           xla::Shape shape = MakeShapeWithDeviceLayout(
               tensors[i]->shape(), static_cast<XlaDeviceType>(device.type()));
-          torch::lazy::BackendDataPtr handle =
-              runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
-                  device.toString(), std::move(shape));
+          torch::lazy::BackendDataPtr handle = client->CreateDataPlaceholder(
+              device.toString(), std::move(shape));
           tensors[i]->data()->handle = handle;
           TF_VLOG(4) << "Replacing the IR " << ir_value.node.get()->ToString()
                      << " of Tensor with ID " << tensors[i]->GetUniqueId()
@@ -638,10 +645,12 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   // Ensure that the compilation environment and git revisions are reflected
   // in the hash, so that different versions of the code can produce different
   // hashes for the same graph.
-  MergeHash({runtime::GetComputationClientOrDie()->HashCompilationEnv(),
-             torch::lazy::StringHash(TORCH_GITREV),
-             torch::lazy::StringHash(XLA_GITREV)},
-            &coll.hash);
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
+  MergeHash(
+      {client->HashCompilationEnv(), torch::lazy::StringHash(TORCH_GITREV),
+       torch::lazy::StringHash(XLA_GITREV)},
+      &coll.hash);
   coll.config = config;
   coll.device = *unique_device;
   coll.indices.reserve(tensors.size());
@@ -779,10 +788,11 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     placeholders =
         ShardingUtil::CreateShardedPlaceholder(output_sharding_hash[hash]);
   } else {
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                        runtime::GetComputationClient());
     for (const xla::Shape& shape : *output_shapes) {
       torch::lazy::BackendDataPtr handle =
-          runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
-              device.toString(), std::move(shape));
+          client->CreateDataPlaceholder(device.toString(), std::move(shape));
       placeholders.push_back(handle);
     }
   }
@@ -840,18 +850,19 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       std::vector<torch::lazy::BackendDataPtr> results;
       if (async->cached_computation->is_sharded) {
         // TODO(JackCaoG): handle eager mode
-        std::vector<std::string> devices =
-            runtime::GetComputationClientOrDie()->GetLocalDevices();
+        XLA_ASSIGN_OR_THROW(
+            runtime::ComputationClient * absl_nonnull const client,
+            runtime::GetComputationClient());
+        std::vector<std::string> devices = client->GetLocalDevices();
         runtime::ComputationClient::ExecuteReplicatedOptions execute_options;
         // OutputHandler creates sharded data for sharded
         // tensor results. Both sharded and unsharded results should be
         // "Assign"ed to the corresponding data placeholders.
         XLA_ASSIGN_OR_THROW(
             std::vector<runtime::ComputationClient::DataPtr> outputs,
-            runtime::GetComputationClientOrDie()->ExecuteReplicated(
-                *async->cached_computation->computation,
-                UnwrapXlaData(async->parameters_data), devices,
-                execute_options));
+            client->ExecuteReplicated(*async->cached_computation->computation,
+                                      UnwrapXlaData(async->parameters_data),
+                                      devices, execute_options));
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing Dynamo IR sharded graph hash "
                    << torch::lazy::HashToString(hash) << " on devices "
@@ -918,16 +929,15 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
 
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   std::vector<runtime::ComputationClient::CompileInstance> instances;
-  instances.emplace_back(
-      std::move(computation), device.toString(),
-      runtime::GetComputationClientOrDie()->GetCompilationDevices(
-          device.toString(),
-          runtime::GetComputationClientOrDie()->GetLocalDevices()),
-      &shape);
+  instances.emplace_back(std::move(computation), device.toString(),
+                         client->GetCompilationDevices(
+                             device.toString(), client->GetLocalDevices()),
+                         &shape);
   std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
-      computations =
-          runtime::GetComputationClientOrDie()->Compile(std::move(instances));
+      computations = client->Compile(std::move(instances));
 
   std::vector<torch::lazy::BackendDataPtr> arguments;
   {
@@ -948,8 +958,8 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
 
   XLA_ASSIGN_OR_THROW(
       std::vector<runtime::ComputationClient::DataPtr> result_data,
-      runtime::GetComputationClientOrDie()->ExecuteComputation(
-          *computations[0], UnwrapXlaData(arguments), device.toString()));
+      client->ExecuteComputation(*computations[0], UnwrapXlaData(arguments),
+                                 device.toString()));
 
   return WrapXlaData(result_data);
 }
@@ -1044,6 +1054,8 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
                                   tsl::profiler::TraceMeLevel::kInfo);
   ir_values.reserve(indices.size());
   tensor_data_vec.reserve(indices.size());
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   for (auto index : indices) {
     XLATensorPtr& tensor = (*tensors)[index];
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
@@ -1051,9 +1063,8 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
     const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
     xla::Shape shape = MakeShapeWithDeviceLayout(
         tensor->shape(), static_cast<XlaDeviceType>(tensor_device.type()));
-    torch::lazy::BackendDataPtr handle =
-        runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
-            tensor_device.toString(), std::move(shape));
+    torch::lazy::BackendDataPtr handle = client->CreateDataPlaceholder(
+        tensor_device.toString(), std::move(shape));
 
     tensor_data_vec.push_back(handle);
     if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {
@@ -1114,9 +1125,11 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     try {
       std::vector<torch::lazy::BackendDataPtr> results;
       // Execute replicated if the compiled computation is partitioned.
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
       if (async->cached_computation->is_sharded) {
-        std::vector<std::string> devices =
-            runtime::GetComputationClientOrDie()->GetLocalDevices();
+        std::vector<std::string> devices = client->GetLocalDevices();
         runtime::ComputationClient::ExecuteReplicatedOptions execute_options;
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
@@ -1126,10 +1139,9 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         // "Assign"ed to the corresponding data placeholders.
         XLA_ASSIGN_OR_THROW(
             std::vector<runtime::ComputationClient::DataPtr> outputs,
-            runtime::GetComputationClientOrDie()->ExecuteReplicated(
-                *async->cached_computation->computation,
-                UnwrapXlaData(async->parameters_data), devices,
-                execute_options));
+            client->ExecuteReplicated(*async->cached_computation->computation,
+                                      UnwrapXlaData(async->parameters_data),
+                                      devices, execute_options));
         results = WrapXlaData(outputs);
         TORCH_LAZY_COUNTER("ExecuteReplicated", 1);
         TF_VLOG(3) << "Executing IR graph hash "
@@ -1142,11 +1154,11 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
                    << async->device << " ...";
         XLA_ASSIGN_OR_THROW(
             std::vector<runtime::ComputationClient::DataPtr> outputs,
-            runtime::GetComputationClientOrDie()->ExecuteComputation(
-                *async->cached_computation->computation,
-                UnwrapXlaData(async->parameters_data), async->device.toString(),
-                {/*explode_tuple=*/true,
-                 /*eager_mode=*/use_eager_mode}));
+            client->ExecuteComputation(*async->cached_computation->computation,
+                                       UnwrapXlaData(async->parameters_data),
+                                       async->device.toString(),
+                                       {/*explode_tuple=*/true,
+                                        /*eager_mode=*/use_eager_mode}));
         results = WrapXlaData(outputs);
         TORCH_LAZY_COUNTER("ExecuteComputation", 1);
         TF_VLOG(3) << "Executing IR graph hash "
@@ -1444,12 +1456,13 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   std::vector<runtime::ComputationClient::CompileInstance> instances;
   instances.push_back(
       {std::move(computation), coll.device.toString(),
-       runtime::GetComputationClientOrDie()->GetCompilationDevices(
-           coll.device.toString(), devices),
-       &shape, should_wrap_parameter, is_sharded});
+       client->GetCompilationDevices(coll.device.toString(), devices), &shape,
+       should_wrap_parameter, is_sharded});
   instances.front().eager_mode = UseEagerMode();
   if (use_autosharding) {
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
@@ -1480,8 +1493,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " ...";
   std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
-      computations =
-          runtime::GetComputationClientOrDie()->Compile(std::move(instances));
+      computations = client->Compile(std::move(instances));
   DebugUtil::post_compilation_analysis(computations[0]);
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
