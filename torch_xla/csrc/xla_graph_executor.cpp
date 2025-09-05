@@ -90,14 +90,16 @@ XLAGraphExecutor::ComputationCache* CreateComputationCache() {
     auto serialize_fn =
         [](XLAGraphExecutor::ComputationCache::TypePtr computation)
         -> std::string {
-      XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
-                          runtime::GetComputationClient());
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
       return client->SerializeComputation(computation->computation);
     };
     auto deserialize_fn = [](std::string serialization)
         -> XLAGraphExecutor::ComputationCache::TypePtr {
-      XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
-                          runtime::GetComputationClient());
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
       runtime::ComputationClient::ComputationPtr computation =
           client->DeserializeComputation(serialization);
       if (!computation) return nullptr;
@@ -471,8 +473,9 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
     if (UseVirtualDevice()) {
       wait_devices.insert(ParseDeviceString("SPMD:0"));
     } else {
-      XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
-                          runtime::GetComputationClient());
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
       for (auto& device_str : client->GetLocalDevices()) {
         wait_devices.insert(ParseDeviceString(device_str));
       }
@@ -847,8 +850,9 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       std::vector<torch::lazy::BackendDataPtr> results;
       if (async->cached_computation->is_sharded) {
         // TODO(JackCaoG): handle eager mode
-        XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
-                            runtime::GetComputationClient());
+        XLA_ASSIGN_OR_THROW(
+            runtime::ComputationClient * absl_nonnull const client,
+            runtime::GetComputationClient());
         std::vector<std::string> devices = client->GetLocalDevices();
         runtime::ComputationClient::ExecuteReplicatedOptions execute_options;
         // OutputHandler creates sharded data for sharded
@@ -1121,8 +1125,9 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     try {
       std::vector<torch::lazy::BackendDataPtr> results;
       // Execute replicated if the compiled computation is partitioned.
-      XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
-                          runtime::GetComputationClient());
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
       if (async->cached_computation->is_sharded) {
         std::vector<std::string> devices = client->GetLocalDevices();
         runtime::ComputationClient::ExecuteReplicatedOptions execute_options;
