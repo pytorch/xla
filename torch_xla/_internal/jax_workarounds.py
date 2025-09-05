@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from typing import Callable, Any
 import functools
 import logging
+import torch_xla.utils.utils as xu
 
 
 # TODO(https://github.com/pytorch/xla/issues/8793): Get rid of this hack.
@@ -59,21 +60,24 @@ def maybe_get_torchax():
 
 
 def maybe_get_jax():
-  env_val = os.environ.get('TORCH_XLA_ENABLE_JAX', '')
-  
-  if env_val.lower() in ('1', 'true', 'yes'):
+  env_val = xu.getenv_as('TORCH_XLA_ENABLE_JAX', int, None)
+
+  if env_val == 1:
     try:
       jax_import_guard()
       with jax_env_context():
         import jax
         return jax
     except (ModuleNotFoundError, ImportError):
-      logging.warning('JAX explicitly enabled but not installed. '
-                      'You can install Jax/Pallas via pip install torch_xla[pallas]')
+      logging.warning(
+          'JAX explicitly enabled but not installed. '
+          'You can install Jax/Pallas via pip install torch_xla[pallas]')
       return None
-  
-  if env_val == '':
-    logging.warning('You are trying to use a feature that requires JAX. '
-                    'You can install Jax/Pallas via pip install torch_xla[pallas] and Set TORCH_XLA_ENABLE_JAX=1 to enable JAX features, or TORCH_XLA_ENABLE_JAX=0 to suppress this warning')
-  # If explicitly disabled (0, false, no, etc.), return silently
+
+  if env_val is None:
+    logging.warning(
+        'You are trying to use a feature that requires JAX. '
+        'You can install Jax/Pallas via pip install torch_xla[pallas] and Set TORCH_XLA_ENABLE_JAX=1 to enable JAX features, or TORCH_XLA_ENABLE_JAX=0 to suppress this warning'
+    )
+  # If explicitly disabled (0), return silently
   return None
