@@ -28,7 +28,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     if (!default_device_type_inited_) {
       // bridge::GetDefaultDevice will trigger the runtime device init, should
       // not do it during class init time.
-      XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+      XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                           runtime::GetComputationClient());
       default_device_type_ =
           std::make_shared<DeviceType>(client->GetDeviceType());
@@ -79,7 +79,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDevice& device,
       const torch::lazy::Shape& shape) const override {
     xla::Shape xla_shape = MakeXlaShapeFromLazyShape(shape, device);
-    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                         runtime::GetComputationClient());
     return client->CreateDataPlaceholder(device.toString(),
                                          std::move(xla_shape));
@@ -125,7 +125,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   std::vector<std::string> GetCompilationDevices(
       const std::string& device,
       c10::ArrayRef<std::string> devices) const override {
-    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                         runtime::GetComputationClient());
     return client->GetCompilationDevices(device, devices);
   }
@@ -160,7 +160,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
           torch_xla_computation->get_device_string(),
           {current_device.toString()}, &output_shapes.back()));
     }
-    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                         runtime::GetComputationClient());
     std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
         client_computations = client->Compile(std::move(compile_instances));
@@ -171,7 +171,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       torch::lazy::ComputationPtr computation,
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
-    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                         runtime::GetComputationClient());
     XLA_ASSIGN_OR_THROW(
         std::vector<runtime::ComputationClient::DataPtr> results,

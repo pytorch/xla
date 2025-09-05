@@ -551,7 +551,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     const torch::lazy::BackendDevice& device) {
   TORCH_LAZY_TIMED("TensorToData");
 
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
 
   if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
@@ -808,7 +808,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     return {};
   }
 
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
 
   // CreateTensorsData should be implicitly replicated to all devices.
@@ -849,7 +849,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   XLA_CHECK_EQ(tensors.size(), shardings.size());
   XLA_CHECK_EQ(tensors.size(), devices.size());
 
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
 
   std::vector<runtime::ComputationClient::DataPtr> handles;
@@ -914,8 +914,8 @@ absl::StatusOr<std::vector<xla::Literal>> ReleaseGilAndTransferData(
     save = PyEval_SaveThread();
   }
 
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
-                      runtime::GetComputationClient());
+  XLA_ASSIGN_OR_RETURN(runtime::ComputationClient * absl_nonnull const client,
+                       runtime::GetComputationClient());
   XLA_ASSIGN_OR_RETURN(std::vector<xla::Literal> literals,
                        client->TransferFromDevice(UnwrapXlaData(xla_data)));
 

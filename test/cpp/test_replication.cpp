@@ -48,7 +48,7 @@ void TestSingleReplication(
     instances.emplace_back(CreateCrsComputation(shape), device_str,
                            all_device_strings, &shape);
   }
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   std::vector<torch_xla::runtime::ComputationClient::ComputationPtr>
       compiled_computations = client->Compile(std::move(instances));

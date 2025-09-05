@@ -222,7 +222,7 @@ void WithAllDevices(
     const std::function<void(const std::vector<torch::lazy::BackendDevice>&,
                              const std::vector<torch::lazy::BackendDevice>&)>&
         devfn) {
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   for (auto device_type : device_types) {
     std::vector<torch::lazy::BackendDevice> devices;
@@ -280,7 +280,7 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
   XLA_ASSIGN_OR_THROW(xla::XlaComputation computation, lowering_ctx.BuildXla());
   XLA_ASSIGN_OR_THROW(xla::ProgramShape program_shape,
                       computation.GetProgramShape());
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
@@ -306,7 +306,7 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
 std::vector<at::Tensor> Fetch(
     absl::Span<const torch_xla::runtime::ComputationClient::DataPtr>
         device_data) {
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   XLA_ASSIGN_OR_THROW(std::vector<xla::Literal> literals,
                       client->TransferFromDevice(device_data));

@@ -332,7 +332,7 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
   std::vector<torch::lazy::BackendDataPtr> tensors_data =
       CreateTensorsData(tensors, shardings, devices);
 
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   int64_t n_devices = client->GetLocalDevices().size();
   if (n_devices > 1) {
@@ -371,7 +371,7 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
 
 TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
   xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {4, 4});
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   int64_t n_devices = client->GetLocalDevices().size();
   xla::Array<int64_t> tile_assignment({1, n_devices});

@@ -516,7 +516,7 @@ std::vector<torch::lazy::BackendDataPtr> ShardingUtil::CreateShardedPlaceholder(
     const std::vector<XLATensor::ShardingSpecPtr>& sharding_specs) {
   std::vector<torch::lazy::BackendDataPtr> placeholders;
   placeholders.reserve(sharding_specs.size());
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   for (int i = 0; i < sharding_specs.size(); ++i) {
     // Create sharded data placeholder, this will be used to
@@ -552,7 +552,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
       << "Expected size: " << indices.size()
       << ", actual size: " << new_sharding_specs.size();
 
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   for (int i = 0; i < indices.size(); ++i) {
     auto xtensor = (*tensors)[indices[i]];
@@ -611,7 +611,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
         local_shards[j], shard_shape, devices[j]));
   }
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   return client->TransferShardsToDevice(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
@@ -628,7 +628,7 @@ std::vector<int64_t> ShardingUtil::GetAutoShardingMesh() {
     for (auto i : mesh_shape) {
       total_devices *= i;
     }
-    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                         runtime::GetComputationClient());
     XLA_CHECK_EQ(total_devices, client->GetAllDevices().size())
         << "Invalid auto-sharding mesh_shape: "
@@ -645,7 +645,7 @@ std::vector<int64_t> ShardingUtil::GetAutoShardingMeshIds(
   // as the auto-sharding pass takes only one arrangement for now.
   // TODO(yeounoh) this was not necessary before; replace if this can be done
   // during the auto-sharding pass.
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   int64_t n_devices = client->GetAllDevices().size();
   std::vector<int64_t> device_mesh_ids = std::vector<int64_t>(n_devices);
@@ -742,7 +742,7 @@ void ShardingUtil::ReshardParameters(
   // more-granular control over the peak memory consumption.
   bool group_sharding =
       runtime::sys_util::GetEnvBool("XLA_AUTO_USE_GROUP_SHARDING", true);
-  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull client,
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
                       runtime::GetComputationClient());
   if (group_sharding) {
     outputs =
