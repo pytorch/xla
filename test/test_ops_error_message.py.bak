@@ -163,7 +163,7 @@ class TestOpsErrorMessage(expecttest.TestCase):
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
         callable=test,
-        expect="""mm(): expected the first input tensor f32[2,2,2] to be a matrix (i.e. a 2D tensor)."""
+        expect="""random_(): expected `to` to be within the range [-65504, 65504]. However got value 65505, which is greater than the upper bound."""
     )
 
   def test_mm_raises_error_on_incompatible_shapes(self):
@@ -177,5 +177,5 @@ class TestOpsErrorMessage(expecttest.TestCase):
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
         callable=test,
-        expect="""mm(): cannot matrix-multiply tensors f32[2,5] and f32[8,2]. Expected the size of dimension 1 of the first input tensor (5) to be equal the size of dimension 0 of the second input tensor (8)."""
+        expect="""random_(): expected `to` to be within the range [-65504, 65504]. However got value 65505, which is greater than the upper bound."""
     )
