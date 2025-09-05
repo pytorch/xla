@@ -111,6 +111,7 @@ jobs:
           # TODO: Add these in setup.py
           pip install fsspec
           pip install rich
+          pip install flax
       - name: Checkout PyTorch Repo
         if: inputs.has_code_changes == 'true'
         uses: actions/checkout@v4

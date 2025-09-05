@@ -15,9 +15,11 @@ __all__ = [
     'default_env',
     'extract_jax',
     'enable_globally',
+    'save_checkpoint',
+    'load_checkpoint',
 ]
 
-from jax._src import xla_bridge
+from .checkpoint import save_checkpoint, load_checkpoint
 
 os.environ.setdefault('ENABLE_RUNTIME_UPTIME_TELEMETRY', '1')
 

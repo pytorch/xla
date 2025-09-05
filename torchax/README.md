@@ -182,6 +182,42 @@ The first time `m_jitted` is called, it will trigger `jax.jit` to compile the
 compile for the given input shapes. Subsequent calls with the same input shapes
 will be fast as the compilation is cached.
 
+## Saving and Loading Checkpoints
+
+You can use `torchax.save_checkpoint` and `torchax.load_checkpoint` to save and load your training state. The state can be a dictionary containing the model's weights, optimizer state, and any other information you want to save.
+
+```python
+import torchax
+import torch
+import optax
+
+# Assume model, optimizer, and other states are defined
+model = MyModel()
+optimizer = optax.adam(1e-3)
+opt_state = optimizer.init(model.parameters())
+weights = model.parameters()
+buffers = model.buffers()
+epoch = 10
+
+state = {
+    'weights': weights,
+    'buffers': buffers,
+    'opt_state': opt_state,
+    'epoch': epoch,
+}
+
+# Save checkpoint
+torchax.save_checkpoint(state, '/path/to/checkpoint.pt')
+
+# Load checkpoint
+loaded_state = torchax.load_checkpoint('/path/to/checkpoint.pt')
+
+# Restore state
+model.load_state_dict(loaded_state['weights'])
+opt_state = loaded_state['opt_state']
+epoch = loaded_state['epoch']
+```
+
 ## Citation
 
 ```
