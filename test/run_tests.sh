@@ -179,6 +179,7 @@ function run_xla_op_tests1 {
   run_test "$_TEST_DIR/test_fp8.py"
   run_xla_ir_debug run_test "$_TEST_DIR/test_env_var_mapper.py"
   run_xla_hlo_debug run_test "$_TEST_DIR/test_env_var_mapper.py"
+  run_test "$_TEST_DIR/test_jax_env_var.py"
   run_xla_hlo_debug run_test "$_TEST_DIR/stablehlo/test_stablehlo_save_load.py"
   run_save_tensor_ir run_test "$_TEST_DIR/spmd/test_spmd_graph_dump.py"
   run_save_tensor_hlo run_test "$_TEST_DIR/spmd/test_spmd_graph_dump.py"
