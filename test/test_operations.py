@@ -2367,6 +2367,44 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t = t.to(torch.float16)
     self._test_no_fallback(torch.isneginf, (t,))
 
+  def test_roll_raises_error_on_empty_shifts(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 2, 2, device=device)
+    shifts = []
+
+    try:
+      torch.roll(a, shifts)
+    except RuntimeError as e:
+      expected_error = "roll(): expected `shifts` to have at least 1 element."
+      self.assertEqual(str(e), expected_error)
+
+  def test_roll_raises_error_on_shifts_with_empty_dims(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 2, 2, device=device)
+    shifts = [2, 2]
+
+    try:
+      torch.roll(a, shifts)
+    except RuntimeError as e:
+      expected_error = (
+          "roll(): expected `shifts` [2, 2] (size=2) to have exactly 1 element "
+          "when `dims` is empty.")
+      self.assertEqual(str(e), expected_error)
+
+  def test_roll_raises_error_on_mismatched_dims_and_shifts(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 2, 2, device=device)
+    shifts = [2, 2]
+    dims = [0]
+
+    try:
+      torch.roll(a, shifts, dims)
+    except RuntimeError as e:
+      expected_error = (
+          "roll(): expected `dims` [0] (size=1) to match the size of `shifts` "
+          "[2, 2] (size=2).")
+      self.assertEqual(str(e), expected_error)
+
 
 class MNISTComparator(nn.Module):
 
