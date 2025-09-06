@@ -17,8 +17,8 @@
 #include <mutex>
 #include <optional>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
-#include "status.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/shape_inference.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
@@ -3317,9 +3317,13 @@ at::Tensor XLANativeFunctions::roll(const at::Tensor& self,
                                     at::IntArrayRef shifts,
                                     at::IntArrayRef dims) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::roll(
-      xla_self, XlaHelpers::I64List(shifts), XlaHelpers::I64List(dims)));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::roll(xla_self, XlaHelpers::I64List(shifts),
+                           XlaHelpers::I64List(dims)));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::rrelu_with_noise(

@@ -13,6 +13,7 @@
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -502,6 +503,32 @@ absl::Status CheckMMMatrixSizesAreCompatible(const XLATensorPtr& mat1,
         shape1.dimensions(1),
         ") to be equal the size of dimension 0 of the second input tensor (",
         shape2.dimensions(0), ").")));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckRollShiftsRequired(absl::Span<const int64_t> shifts) {
+  if (shifts.empty()) {
+    return absl::InvalidArgumentError(
+        "roll(): expected `shifts` to have at least 1 element.");
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckRollDimsAndShiftsAreCompatible(
+    absl::Span<const int64_t> dims, absl::Span<const int64_t> shifts) {
+  if (dims.empty() && shifts.size() != 1) {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "roll(): expected `shifts` [", absl::StrJoin(shifts, /* sep= */ ", "),
+        "] (size=", shifts.size(),
+        ") to have exactly 1 element when `dims` is empty."));
+  }
+  if (dims.size() != shifts.size()) {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "roll(): expected `dims` [", absl::StrJoin(dims, /* sep= */ ", "),
+        "] (size=", dims.size(), ") to match the size of `shifts` [",
+        absl::StrJoin(shifts, /* sep= */ ", "), "] (size=", shifts.size(),
+        ")."));
   }
   return absl::OkStatus();
 }
@@ -3052,17 +3079,15 @@ void resize_(XLATensorPtr& input, std::vector<int64_t> size) {
   }
 }
 
-XLATensorPtr roll(const XLATensorPtr& input, absl::Span<const int64_t> shifts,
-                  absl::Span<const int64_t> dims) {
-  XLA_CHECK_GT(shifts.size(), 0) << "`shifts` required";
-  if (dims.size() != 0) {
-    XLA_CHECK_EQ(shifts.size(), dims.size())
-        << "shifts and dimensions must align. shifts: " << shifts.size()
-        << ", dims:" << dims.size();
-  }
-  auto canonical_dims = torch::lazy::GetCanonicalDimensionIndices(
-      torch::lazy::ToVector<int64_t>(dims),
-      input->shape().get().dimensions_size());
+absl::StatusOr<absl_nonnull XLATensorPtr> roll(
+    const absl_nonnull XLATensorPtr& input, absl::Span<const int64_t> shifts,
+    absl::Span<const int64_t> dims) {
+  XLA_RETURN_IF_ERROR(CheckRollShiftsRequired(shifts));
+  XLA_RETURN_IF_ERROR(CheckRollDimsAndShiftsAreCompatible(dims, shifts));
+  const std::vector<int64_t> canonical_dims =
+      torch::lazy::GetCanonicalDimensionIndices(
+          torch::lazy::ToVector<int64_t>(dims),
+          input->shape().get().dimensions().size());
   return input->CreateFrom(torch_xla::MakeNode<Roll>(
       input->GetIrValue(), torch::lazy::ToVector<int64_t>(shifts),
       canonical_dims));
