@@ -51,6 +51,12 @@ class ShardingUtil {
                                           const py::list& group_assignment,
                                           const py::list& replication_groups,
                                           ShardingType sharding_type);
+  // Creates an xla::OpSharding for TILED and PARTIAL types using the
+  // HloShardingV2 system.
+  static xla::OpSharding CreateIotaOpSharding(const py::list& dims,
+                                              const py::list& reshape_dims,
+                                              const py::list& transpose_perm,
+                                              const py::list& types);
 
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
@@ -150,6 +156,9 @@ class ShardingUtil {
 
   static void SetAutoSharding();
   static bool GetAutoSharding();
+
+  static xla::Shape GetAdjustedGlobalShape(const at::Tensor& tensor,
+                                           bool minibatch);
 };
 
 }  // namespace torch_xla
