@@ -761,7 +761,7 @@ std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors,
 }
 
 std::optional<xla::OpSharding> GetXLAOpSharding(const at::Tensor& input) {
-  XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xtensor, bridge::GetXlaTensor(input));
   XLATensor::ShardingSpecPtr sharding_spec =
       xtensor ? xtensor->sharding_spec() : nullptr;
   if (sharding_spec != nullptr) {
