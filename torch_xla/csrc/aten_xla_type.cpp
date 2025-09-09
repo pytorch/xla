@@ -14,6 +14,7 @@
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/util.h>
 
+#include <iterator>
 #include <mutex>
 #include <optional>
 
@@ -3696,12 +3697,16 @@ at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
 at::Tensor XLANativeFunctions::stack(at::TensorList tensors, int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   at::ScalarType result_type = at::native::result_type(tensors);
-  std::vector<at::Tensor> c_tensors(tensors.size());
-  std::transform(tensors.begin(), tensors.end(), c_tensors.begin(),
-                 [=](const at::Tensor& t) { return t.to(result_type); });
-  XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> xla_c_tensors,
-                      bridge::GetXlaTensors(c_tensors));
-  return bridge::AtenFromXlaTensor(tensor_methods::stack(xla_c_tensors, dim));
+  std::vector<absl_nonnull XLATensorPtr> xla_tensors;
+  std::transform(tensors.begin(), tensors.end(),
+                 std::back_inserter(xla_tensors), [=](const at::Tensor& t) {
+                   XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_t,
+                                       bridge::GetXlaTensor(t.to(result_type)));
+                   return xla_t;
+                 });
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::stack(xla_tensors, dim));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {

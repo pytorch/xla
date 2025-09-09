@@ -538,6 +538,15 @@ absl::Status CheckRollDimsAndShiftsAreCompatible(
   return absl::OkStatus();
 }
 
+absl::Status CheckStackAtLeastOneTensor(
+    absl::Span<const absl_nonnull XLATensorPtr> tensors) {
+  if (tensors.size() == 0) {
+    return XLA_ERROR_WITH_LOCATION(
+        absl::InvalidArgumentError("stack(): expected at least one tensor."));
+  }
+  return absl::OkStatus();
+}
+
 }  // namespace
 
 //////////////////////////////////////////////////////////////////////////////
@@ -3422,14 +3431,18 @@ XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims) {
   return view(input, output_dimensions);
 }
 
-XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim) {
-  XLA_CHECK_GT(tensors.size(), 0);
+absl::StatusOr<absl_nonnull XLATensorPtr> stack(
+    absl::Span<const absl_nonnull XLATensorPtr> tensors, int64_t dim) {
+  XLA_RETURN_IF_ERROR(CheckStackAtLeastOneTensor(tensors));
+
   std::vector<torch::lazy::Value> values;
-  for (auto& tensor : tensors) {
-    values.push_back(tensor->GetIrValue());
-  }
+  std::transform(
+      tensors.begin(), tensors.end(), std::back_inserter(values),
+      [](const absl_nonnull XLATensorPtr t) { return t->GetIrValue(); });
+
   int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
-      dim, tensors.front()->shape().get().dimensions_size() + 1);
+      dim, tensors.front()->shape().get().dimensions().size() + 1);
+
   return tensors[0]->CreateFrom(
       torch_xla::MakeNode<Stack>(values, canonical_dim));
 }

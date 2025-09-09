@@ -62,7 +62,9 @@ XLATensorPtr Cross(const XLATensorPtr& input, const XLATensorPtr& other,
   XLATensorPtr s3 = tensor_methods::sub(tensor_methods::mul(u1, v2),
                                         tensor_methods::mul(u2, v1), one);
   // Stack the terms into one result tensor.
-  return tensor_methods::stack({s1, s2, s3}, canonical_dim);
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::stack({s1, s2, s3}, canonical_dim));
+  return output;
 }
 
 XLATensorPtr MakeMatrixWithDiagonal(const XLATensorPtr& input,
