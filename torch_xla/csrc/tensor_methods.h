@@ -989,7 +989,7 @@ std::tuple<XLATensorPtr, XLATensorPtr> triangular_solve(
 // removed.
 std::vector<XLATensorPtr> unbind(const XLATensorPtr& input, int64_t dim);
 
-void uniform_(XLATensorPtr& input, double from, double to);
+absl::Status uniform_(XLATensorPtr& input, double from, double to);
 
 // Insert a dimension of size one at the specified position.
 XLATensorPtr unsqueeze(const XLATensorPtr& input, int64_t dim);
