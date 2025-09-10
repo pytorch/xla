@@ -1,5 +1,5 @@
 ARG python_version=3.8
-ARG debian_version=bullseye
+ARG debian_version=bookworm
 
 FROM python:${python_version}-${debian_version} AS build
 
