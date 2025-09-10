@@ -2374,9 +2374,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     try:
       torch.trace(a)
     except RuntimeError as e:
-      expected_error = (
-          "trace(): expected the input tensor f32[2,2,2] to be a "
-          "matrix (i.e. a 2D tensor).")
+      expected_error = ("trace(): expected the input tensor f32[2,2,2] to be a "
+                        "matrix (i.e. a 2D tensor).")
       self.assertEqual(str(e), expected_error)
 
 
