@@ -388,3 +388,9 @@ variables:
           your code.
       type: bool
       default_value: false
+    TORCH_XLA_ENABLE_JAX:
+      description:
+        - Controls JAX integration in PyTorch/XLA. When set to 1, enables JAX
+          features and imports. When set to 0, disables JAX features silently.
+          When unset, shows a warning message with guidance.
+      type: int
