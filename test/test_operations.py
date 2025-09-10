@@ -2367,6 +2367,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t = t.to(torch.float16)
     self._test_no_fallback(torch.isneginf, (t,))
 
+  def test_uniform__raises_error_on_invalid_range(self):
+    device = torch_xla.device()
+    a = torch.empty(5, 5, device=device)
+    from_ = 5.
+    to_ = 2.
+
+    try:
+      a.uniform_(from_, to_)
+    except RuntimeError as e:
+      expected_error = (
+          "uniform_(): expected `from` (5) to be smaller or equal `to` (2).")
+      self.assertEqual(str(e), expected_error)
+
 
 class MNISTComparator(nn.Module):
 
