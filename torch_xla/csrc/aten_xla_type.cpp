@@ -3936,8 +3936,9 @@ at::Tensor& XLANativeFunctions::uniform_(
     return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(uniform_)>::call(
         self, from, to, generator);
   }
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  tensor_methods::uniform_(xla_self, from, to);
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_THROW_IF_ERROR(tensor_methods::uniform_(xla_self, from, to));
   return self;
 }
 
