@@ -14,6 +14,7 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "status.h"
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -502,6 +503,15 @@ absl::Status CheckMMMatrixSizesAreCompatible(const XLATensorPtr& mat1,
         shape1.dimensions(1),
         ") to be equal the size of dimension 0 of the second input tensor (",
         shape2.dimensions(0), ").")));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckUniformRangeIsValid(double from, double to) {
+  if (from > to) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("uniform_(): expected `from` (", from,
+                     ") to be smaller or equal `to` (", to, ").")));
   }
   return absl::OkStatus();
 }
@@ -3653,15 +3663,16 @@ std::vector<XLATensorPtr> unbind(const XLATensorPtr& input, int64_t dim) {
   return slices;
 }
 
-void uniform_(XLATensorPtr& input, double from, double to) {
-  XLA_CHECK_LE(from, to);
-  auto input_shape = input->shape();
+absl::Status uniform_(XLATensorPtr& input, double from, double to) {
+  XLA_RETURN_IF_ERROR(CheckUniformRangeIsValid(from, to));
+  xla::Shape input_shape = input->shape();
   input->SetInPlaceIrValue(torch_xla::MakeNode<Uniform>(
       XLAGraphExecutor::Get()->GetIrValueForScalar(
-          from, input_shape.get().element_type(), input->GetDevice()),
+          from, input_shape.element_type(), input->GetDevice()),
       XLAGraphExecutor::Get()->GetIrValueForScalar(
-          to, input_shape.get().element_type(), input->GetDevice()),
+          to, input_shape.element_type(), input->GetDevice()),
       XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape));
+  return absl::OkStatus();
 }
 
 XLATensorPtr unsqueeze(const XLATensorPtr& input, int64_t dim) {
