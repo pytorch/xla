@@ -28,7 +28,6 @@ apt:
       - git
       - gnupg
       - libgomp1
-      - libopenblas-base
       - patch
       - vim
 

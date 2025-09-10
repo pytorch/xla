@@ -83,6 +83,14 @@ unset properties of existing triggers.
 5. See section [Manually trigger a Cloud Build](#manually-trigger-a-cloud-build)
    to manually trigger the created build and produce all the artifacts.
 
+### Build development docker locally for testing
+
+Sample command to build the development docker container locally for testing:
+```
+cd infra/ansible
+docker build -f development.Dockerfile --build-arg=python_version=3.12 --build-arg=ansible_vars='{"xla_git_rev":"master", "pytorch_git_rev":"main", "accelerator":"tpu", "arch": "amd64", "python_version":"3.12"}'
+```
+
 
 ### Nightly releases
 
