@@ -7,6 +7,10 @@ WORKDIR /ansible
 RUN pip install ansible
 COPY . /ansible
 
+# Ansible 2.19 requires this environment variable being set, so that we can use
+# string variables as boolean.
+ENV ALLOW_BROKEN_CONDITIONALS "1"
+
 ARG ansible_vars
 # HACK: install build dependencies only, but skip build step
 RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}" --tags "bazel,configure_env,install_deps"

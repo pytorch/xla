@@ -44,6 +44,10 @@ WORKDIR /ansible
 RUN pip install ansible
 COPY --from=ansible . /ansible
 
+# Ansible 2.19 requires this environment variable being set, so that we can use
+# string variables as boolean. 
+ENV ALLOW_BROKEN_CONDITIONALS "1"
+
 ARG ansible_vars
 RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "install_deps"
 
