@@ -58,10 +58,6 @@ jobs:
       - name: Build
         if: inputs.has_code_changes == 'true'
         shell: bash
-        env:
-          # Ansible 2.19 requires this environment variable being set, so that we can use
-          # string variables as boolean.
-          ALLOW_BROKEN_CONDITIONALS: 1
         run: |
           cd pytorch/xla/infra/ansible
           ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps

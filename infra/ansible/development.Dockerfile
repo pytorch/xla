@@ -11,10 +11,7 @@ RUN pip install ansible
 COPY . /ansible
 WORKDIR /ansible
 
-# Ansible 2.19 requires this environment variable being set, so that we can use
-# string variables as boolean. 
-ENV ALLOW_BROKEN_CONDITIONALS "1"
-# List Ansible tasks to apply for the dev image.
+# List Asnible tasks to apply for the dev image.
 ENV TAGS="bazel,configure_env,install_deps"
 
 ARG ansible_vars

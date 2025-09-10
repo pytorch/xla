@@ -7,10 +7,6 @@ WORKDIR /ansible
 RUN pip install ansible
 COPY . /ansible
 
-# Ansible 2.19 requires this environment variable being set, so that we can use
-# string variables as boolean. 
-ENV ALLOW_BROKEN_CONDITIONALS "1"
-
 # Build PyTorch and PyTorch/XLA wheels.
 ARG ansible_vars
 RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}"
