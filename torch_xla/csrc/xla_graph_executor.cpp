@@ -122,6 +122,11 @@ XLAGraphExecutor::ComputationCache* CreateComputationCache() {
 
 }  // namespace
 
+XLAGraphExecutor::~XLAGraphExecutor() {
+  computation_cache_->Clear();
+  delete computation_cache_;
+}
+
 auto XLAGraphExecutor::DeviceContextArena::Get() -> DeviceContextArena* {
   static DeviceContextArena* arena = new DeviceContextArena();
   return arena;
