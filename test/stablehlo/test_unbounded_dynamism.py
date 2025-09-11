@@ -25,6 +25,7 @@ os.environ['EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM'] = '1'
 
 class UnboundedDynamismExportTest(unittest.TestCase):
 
+  @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_add(self):
     args = (torch.rand((10, 197, 768)), torch.rand((10, 197, 768)))
     dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
@@ -78,6 +79,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         # Hit stablehlo.dot shape refinement error when inferencing saved_model in TF.
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
+  @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_bmm(self):
     args = (
         torch.rand((24, 197, 64)),
@@ -99,6 +101,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
+  @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_bmm_dynamic_out_dim(self):
     args = (
         torch.rand((8, 128, 256)),
@@ -141,6 +144,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
+  @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_cat(self):
     args = (torch.rand((10, 1, 768)), torch.rand((10, 196, 768)))
     dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
@@ -240,6 +244,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
+  @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_div(self):
     args = (torch.rand((10, 12, 197)), torch.rand((10, 12, 197)))
     dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
@@ -340,6 +345,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
+  @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_mul(self):
     args = (torch.rand((10, 2, 768)), torch.rand((10, 2, 768)))
     dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
@@ -571,6 +577,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
+  @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_sub(self):
     args = (torch.rand((10, 1, 1, 10)), torch.rand((10, 1, 1, 10)))
     dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
