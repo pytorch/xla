@@ -131,7 +131,7 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
 
     self._jax_scope = None
     # Also enter the JAX named scope, to support torchax lowering.
-    if jax := maybe_get_jax():
+    if jax := maybe_get_jax(log=False):
       self._jax_scope = jax.named_scope(self.name)
       self._jax_scope.__enter__()
 

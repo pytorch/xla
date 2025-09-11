@@ -646,7 +646,8 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
   tx = maybe_get_torchax()
-  jax = maybe_get_jax()
+  # Do not log jax warnings when workarounds are available.
+  jax = maybe_get_jax(log=False)
   if (jax is not None) and (tx is not None) and isinstance(t, tx.tensor.Tensor):
     from jax.sharding import PartitionSpec as P, NamedSharding
     jmesh = mesh.get_jax_mesh()
