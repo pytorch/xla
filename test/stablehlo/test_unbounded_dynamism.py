@@ -101,7 +101,6 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
-  @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_bmm_dynamic_out_dim(self):
     args = (
         torch.rand((8, 128, 256)),
@@ -123,6 +122,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
+  @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_bmm_dynamic_reduction_dim(self):
     args = (
         torch.rand((8, 128, 3)),
