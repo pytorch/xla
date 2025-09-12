@@ -222,6 +222,21 @@ class TestOpsErrorMessage(expecttest.TestCase):
         expect="""roll(): expected `dims` [0] (size=1) to match the size of `shifts` [2, 2] (size=2)."""
     )
 
+  def test_uniform__raises_error_on_invalid_range(self):
+    device = torch_xla.device()
+    a = torch.empty(5, 5, device=device)
+    from_ = 5.
+    to_ = 2.
+
+    def test():
+      return a.uniform_(from_, to_)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""uniform_(): expected `from` (5) to be smaller or equal `to` (2)."""
+    )
+
 
 if __name__ == "__main__":
   unittest.main()
