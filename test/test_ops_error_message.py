@@ -235,6 +235,21 @@ class TestOpsErrorMessage(expecttest.TestCase):
         expect="""trace(): expected the input tensor f32[2,2,2] to be a matrix (i.e. a 2D tensor)."""
     )
 
+  def test_uniform__raises_error_on_invalid_range(self):
+    device = torch_xla.device()
+    a = torch.empty(5, 5, device=device)
+    from_ = 5.
+    to_ = 2.
+
+    def test():
+      return a.uniform_(from_, to_)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""uniform_(): expected `from` (5) to be smaller or equal `to` (2)."""
+    )
+
 
 if __name__ == "__main__":
   unittest.main()
