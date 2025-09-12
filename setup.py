@@ -23,7 +23,7 @@
 #     whether to use ACL
 #
 #   BUNDLE_LIBTPU=0
-#     include libtpu in final wheel
+#     include libtpu in final wheel when BUNDLE_LIBTPU=1
 
 #   BUILD_CPP_TESTS=0
 #     build the C++ tests
