@@ -179,3 +179,18 @@ class TestOpsErrorMessage(expecttest.TestCase):
         callable=test,
         expect="""mm(): cannot matrix-multiply tensors f32[2,5] and f32[8,2]. Expected the size of dimension 1 of the first input tensor (5) to be equal the size of dimension 0 of the second input tensor (8)."""
     )
+
+  def test_uniform__raises_error_on_invalid_range(self):
+    device = torch_xla.device()
+    a = torch.empty(5, 5, device=device)
+    from_ = 5.
+    to_ = 2.
+
+    def test():
+      return a.uniform_(from_, to_)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""uniform_(): expected `from` (5) to be smaller or equal `to` (2)."""
+    )
