@@ -191,8 +191,7 @@ class TestOpsErrorMessage(expecttest.TestCase):
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
         callable=test,
-        expect="""roll(): expected `shifts` to have at least 1 element."""
-    )
+        expect="""roll(): expected `shifts` to have at least 1 element.""")
 
   def test_roll_raises_error_on_shifts_with_empty_dims(self):
     device = torch_xla.device()
