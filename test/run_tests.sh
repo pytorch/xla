@@ -150,6 +150,7 @@ function run_xla_op_tests1 {
   run_dynamic "$_TEST_DIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug "$_TEST_DIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$_TEST_DIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_test "$_TEST_DIR/test_ops_error_message.py" "$@" --verbosity=$VERBOSITY
   run_test "$_TEST_DIR/test_xla_graph_execution.py" "$@" --verbosity=$VERBOSITY
   run_pt_xla_debug_level2 "$_TEST_DIR/test_xla_graph_execution.py" "$@" --verbosity=$VERBOSITY
   run_test_without_functionalization "$_TEST_DIR/test_operations.py" "$@" --verbosity=$VERBOSITY
