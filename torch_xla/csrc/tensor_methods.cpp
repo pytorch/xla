@@ -517,13 +517,18 @@ absl::Status CheckRollShiftsRequired(absl::Span<const int64_t> shifts) {
 
 absl::Status CheckRollDimsAndShiftsAreCompatible(
     absl::Span<const int64_t> dims, absl::Span<const int64_t> shifts) {
-  if (dims.empty() && shifts.size() != 1) {
-    return absl::InvalidArgumentError(absl::StrCat(
-        "roll(): expected `shifts` [", absl::StrJoin(shifts, /* sep= */ ", "),
-        "] (size=", shifts.size(),
-        ") to have exactly 1 element when `dims` is empty."));
-  }
-  if (dims.size() != shifts.size()) {
+  if (dims.empty()) {
+    // If `dims` is empty, then return an error status if `shifts` is not
+    // of size one. Otherwise, `dims` and `shifts` are valid.
+    if (shifts.size() != 1) {
+      return absl::InvalidArgumentError(absl::StrCat(
+          "roll(): expected `shifts` [", absl::StrJoin(shifts, /* sep= */ ", "),
+          "] (size=", shifts.size(),
+          ") to have exactly 1 element when `dims` is empty."));
+    }
+  } else if (dims.size() != shifts.size()) {
+    // If `dims` is not empty, then return an error status if its size
+    // does not match with `shifts` size.
     return absl::InvalidArgumentError(absl::StrCat(
         "roll(): expected `dims` [", absl::StrJoin(dims, /* sep= */ ", "),
         "] (size=", dims.size(), ") to match the size of `shifts` [",
