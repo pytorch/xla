@@ -179,3 +179,16 @@ class TestOpsErrorMessage(expecttest.TestCase):
         callable=test,
         expect="""mm(): cannot matrix-multiply tensors f32[2,5] and f32[8,2]. Expected the size of dimension 1 of the first input tensor (5) to be equal the size of dimension 0 of the second input tensor (8)."""
     )
+
+  def test_trace_raises_error_on_non_matrix_input(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 2, 2, device=device)
+
+    def test():
+      torch.trace(a)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""trace(): expected the input tensor f32[2,2,2] to be a matrix (i.e. a 2D tensor)."""
+    )
