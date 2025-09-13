@@ -158,7 +158,7 @@ class TestOpsErrorMessage(expecttest.TestCase):
     b = torch.rand(2, 2, device=device)
 
     def test():
-      torch.mm(a, b)
+      return torch.mm(a, b)
 
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
@@ -172,7 +172,7 @@ class TestOpsErrorMessage(expecttest.TestCase):
     b = torch.rand(8, 2, device=device)
 
     def test():
-      torch.mm(a, b)
+      return torch.mm(a, b)
 
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
