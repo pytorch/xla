@@ -180,7 +180,6 @@ class TestOpsErrorMessage(expecttest.TestCase):
         expect="""mm(): cannot matrix-multiply tensors f32[2,5] and f32[8,2]. Expected the size of dimension 1 of the first input tensor (5) to be equal the size of dimension 0 of the second input tensor (8)."""
     )
 
-<<<<<<< HEAD
   def test_roll_raises_error_on_empty_shifts(self):
     device = torch_xla.device()
     a = torch.rand(2, 2, 2, device=device)
