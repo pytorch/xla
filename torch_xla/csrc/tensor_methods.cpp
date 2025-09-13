@@ -180,22 +180,6 @@ torch::lazy::Value MaybeExpand(const torch::lazy::Value& input,
       input, torch::lazy::ToVector<int64_t>(target_shape.dimensions()));
 }
 
-MinMaxValues GetMinMaxValues(const XLATensorPtr& tensor,
-                             const std::optional<at::Scalar>& min,
-                             const std::optional<at::Scalar>& max) {
-  XLA_CHECK(min || max)
-      << "At least one of \'min\' or \'max\' must not be None";
-  xla::PrimitiveType raw_element_type = XlaTypeFromTorchType(tensor->dtype());
-  XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(raw_element_type);
-  auto shape = tensor->shape();
-  return {XLAGraphExecutor::Get()->GetIrValueForScalar(
-              min ? *min : min_max.min, shape.get().element_type(),
-              tensor->GetDevice()),
-          XLAGraphExecutor::Get()->GetIrValueForScalar(
-              max ? *max : min_max.max, shape.get().element_type(),
-              tensor->GetDevice())};
-}
-
 void CheckRank(const XLATensorPtr& t, int64_t expected_rank,
                const std::string& tag, const std::string& arg_name,
                int arg_number) {
@@ -577,6 +561,16 @@ absl::Status CheckStackAtLeastOneTensor(
   if (tensors.size() == 0) {
     return XLA_ERROR_WITH_LOCATION(
         absl::InvalidArgumentError("stack(): expected at least one tensor."));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckClampMinOrMax(const std::optional<at::Scalar>& min,
+                                const std::optional<at::Scalar>& max) {
+  if (!min.has_value() && !max.has_value()) {
+    return XLA_ERROR_WITH_LOCATION(
+        absl::InvalidArgumentError("clamp(): expected at least one of `min` or "
+                                   "`max` arguments to be specified."));
   }
   return absl::OkStatus();
 }
@@ -1432,12 +1426,23 @@ void celu_(XLATensorPtr& input, const at::Scalar& alpha) {
   input->SetInPlaceIrValue(Celu(input->GetIrValue(), alpha));
 }
 
-XLATensorPtr clamp(const XLATensorPtr& input,
-                   const std::optional<at::Scalar>& min,
-                   const std::optional<at::Scalar>& max) {
-  MinMaxValues min_max = GetMinMaxValues(input, min, max);
-  return input->CreateFrom(
-      Clamp(input->GetIrValue(), min_max.min, min_max.max));
+absl::StatusOr<absl_nonnull XLATensorPtr> clamp(
+    const XLATensorPtr& input, const std::optional<at::Scalar>& min,
+    const std::optional<at::Scalar>& max) {
+  XLA_RETURN_IF_ERROR(CheckClampMinOrMax(min, max));
+
+  xla::Shape shape = input->shape();
+  const torch::lazy::BackendDevice& device = input->GetDevice();
+
+  xla::PrimitiveType raw_element_type = XlaTypeFromTorchType(input->dtype());
+  XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(raw_element_type);
+
+  torch::lazy::Value min_value = XLAGraphExecutor::Get()->GetIrValueForScalar(
+      min.value_or(min_max.min), shape.element_type(), device);
+  torch::lazy::Value max_value = XLAGraphExecutor::Get()->GetIrValueForScalar(
+      max.value_or(min_max.max), shape.element_type(), device);
+
+  return input->CreateFrom(Clamp(input->GetIrValue(), min_value, max_value));
 }
 
 XLATensorPtr clone(const XLATensorPtr& input) {
