@@ -166,6 +166,25 @@ namespace torch_xla {
 namespace tensor_methods {
 namespace {
 
+struct InputInfo {
+  const XLATensorPtr& tensor;
+  std::string_view name;
+  int position;
+
+  std::string PositionAsStr() const {
+    switch (position) {
+      case 1:
+        return "1st";
+      case 2:
+        return "2nd";
+      case 3:
+        return "3rd";
+      default:
+        return absl::StrCat(position, "th");
+    }
+  }
+};
+
 torch::lazy::Value MaybeExpand(const torch::lazy::Value& input,
                                const xla::Shape& target_shape) {
   if (GetXlaShape(input).dimensions() == target_shape.dimensions()) {
@@ -173,46 +192,6 @@ torch::lazy::Value MaybeExpand(const torch::lazy::Value& input,
   }
   return torch_xla::MakeNode<Expand>(
       input, torch::lazy::ToVector<int64_t>(target_shape.dimensions()));
-}
-
-void CheckRank(const XLATensorPtr& t, int64_t expected_rank,
-               const std::string& tag, const std::string& arg_name,
-               int arg_number) {
-  int64_t actual_rank = t->shape().get().dimensions_size();
-  XLA_CHECK_EQ(actual_rank, expected_rank)
-      << "Expected " << expected_rank << "-dimensional tensor, but got "
-      << actual_rank << "-dimensional tensor for "
-      << "argument #" << arg_number << " '" << arg_name << "'"
-      << " (while checking arguments for " << tag << ")";
-}
-
-template <typename T>
-void CheckShapeDimensions(const T& size) {
-  XLA_CHECK(std::all_of(size.begin(), size.end(), [](int64_t dim) {
-    return dim >= 0;
-  })) << "Dimensions cannot be negative numbers";
-}
-
-void CheckDimensionSize(const XLATensorPtr& t, int64_t dim,
-                        int64_t expected_size, const std::string& tag,
-                        const std::string& arg_name, int arg_number) {
-  int64_t dim_size = t->size(dim);
-  XLA_CHECK_EQ(t->size(dim), expected_size)
-      << "Expected tensor to have size " << expected_size << " at dimension "
-      << dim << ", but got size " << dim_size << " for "
-      << "argument #" << arg_number << " '" << arg_name << "'"
-      << " (while checking arguments for " << tag << ")";
-}
-
-void CheckBmmDimension(const std::string& tag, const XLATensorPtr& batch1,
-                       const XLATensorPtr& batch2) {
-  // Consistent with the checks in bmm_out_or_baddbmm_.
-  CheckRank(batch1, 3, tag, "batch1", 1);
-  CheckRank(batch2, 3, tag, "batch2", 2);
-  CheckDimensionSize(batch2, 0, /*batch_size=*/batch1->size(0), tag, "batch2",
-                     2);
-  CheckDimensionSize(batch2, 1, /*contraction_size=*/batch1->size(2), tag,
-                     "batch2", 2);
 }
 
 absl::Status CheckExpandValidRank(const XLATensorPtr& input,
@@ -528,6 +507,18 @@ absl::Status CheckRollShiftsRequired(absl::Span<const int64_t> shifts) {
   return absl::OkStatus();
 }
 
+absl::Status CheckInputIs3DTensor(const std::string_view op,
+                                  const InputInfo& input) {
+  int64_t rank = input.tensor->shape().get().dimensions().size();
+  if (rank != 3) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        op, "(): expected `", input.name, "` ",
+        input.tensor->shape().get().ToString(), " (a ", rank, "D tensor), the ",
+        input.PositionAsStr(), " input tensor, to be a 3D tensor.")));
+  }
+  return absl::OkStatus();
+}
+
 absl::Status CheckRollDimsAndShiftsAreCompatible(
     absl::Span<const int64_t> dims, absl::Span<const int64_t> shifts) {
   if (dims.empty()) {
@@ -567,6 +558,39 @@ absl::Status CheckClampMinOrMax(const std::optional<at::Scalar>& min,
         absl::InvalidArgumentError("clamp(): expected at least one of `min` or "
                                    "`max` arguments to be specified."));
   }
+  return absl::OkStatus();
+}
+
+absl::Status CheckBmmInputsAreValid(const std::string_view op,
+                                    const InputInfo& input,
+                                    const InputInfo& mat2) {
+  XLA_RETURN_IF_ERROR(CheckInputIs3DTensor(op, input));
+  XLA_RETURN_IF_ERROR(CheckInputIs3DTensor(op, mat2));
+
+  if (input.tensor->size(0) != mat2.tensor->size(0)) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        op,
+        "(): expected the size of the batch dimension (i.e. dimension 0) of `",
+        input.name, "` ", input.tensor->shape().get().ToString(),
+        " (batch dimension size: ", input.tensor->size(0), "), the ",
+        input.PositionAsStr(),
+        " input tensor, to be the same as the size of the batch dimension of `",
+        mat2.name, "` ", mat2.tensor->shape().get().ToString(),
+        " (batch dimension size: ", mat2.tensor->size(0), "), the ",
+        mat2.PositionAsStr(), " input tensor.")));
+  }
+  if (input.tensor->size(2) != mat2.tensor->size(1)) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        op, "(): cannot apply batch matrix-multiplication to `", input.name,
+        "` ", input.tensor->shape().get().ToString(), ", the ",
+        input.PositionAsStr(), " input tensor, and to `", mat2.name, "` ",
+        mat2.tensor->shape().get().ToString(), ", the ", mat2.PositionAsStr(),
+        " input tensor. Expected the size of dimension 2 of `", input.name,
+        "` (", input.tensor->size(2),
+        ") to be equal the size of dimension 1 of `", mat2.name, "` (",
+        mat2.tensor->size(1), ").")));
+  }
+
   return absl::OkStatus();
 }
 
@@ -1278,10 +1302,14 @@ XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
       count_include_pad));
 }
 
-XLATensorPtr baddbmm(const XLATensorPtr& input, const XLATensorPtr& batch1,
-                     const XLATensorPtr& batch2, const at::Scalar& beta,
-                     const at::Scalar& alpha) {
-  CheckBmmDimension(/*tag=*/"baddbmm", batch1, batch2);
+absl::StatusOr<absl_nonnull XLATensorPtr> baddbmm(const XLATensorPtr& input,
+                                                  const XLATensorPtr& batch1,
+                                                  const XLATensorPtr& batch2,
+                                                  const at::Scalar& beta,
+                                                  const at::Scalar& alpha) {
+  XLA_RETURN_IF_ERROR(CheckBmmInputsAreValid(
+      "baddbmm", {batch1, /* name= */ "batch1", /* position= */ 2},
+      {batch2, /* name= */ "batch2", /* position= */ 3}));
   torch::lazy::Value product_multiplier =
       XLAGraphExecutor::Get()->GetIrValueForScalar(
           alpha, batch1->shape().get().element_type(), batch1->GetDevice());
@@ -1331,9 +1359,12 @@ XLATensorPtr bitwise_xor(const XLATensorPtr& input, const XLATensorPtr& other) {
       input->GetIrValue(), other->GetIrValue()));
 }
 
-XLATensorPtr bmm(const XLATensorPtr& batch1, const XLATensorPtr& batch2) {
-  CheckBmmDimension(/*tag=*/"bmm", batch1, batch2);
-  return matmul(batch1, batch2);
+absl::StatusOr<absl_nonnull XLATensorPtr> bmm(const XLATensorPtr& input,
+                                              const XLATensorPtr& mat2) {
+  XLA_RETURN_IF_ERROR(CheckBmmInputsAreValid(
+      "bmm", {input, /* name= */ "input", /* position= */ 1},
+      {mat2, /* name= */ "mat2", /* position= */ 2}));
+  return matmul(input, mat2);
 }
 
 std::vector<XLATensorPtr> broadcast_tensors(

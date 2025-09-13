@@ -251,6 +251,72 @@ class TestOpsErrorMessage(expecttest.TestCase):
         expect="""clamp(): expected at least one of `min` or `max` arguments to be specified."""
     )
 
+  def test_bmm_raises_error_on_non_3D_tensor_input(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 3, 4, device=device)
+    b = torch.rand(2, 4, 3, device=device)
+
+    def test_a():
+      torch.bmm(a[0], b)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test_a,
+        expect="""bmm(): expected `input` f32[3,4] (a 2D tensor), the 1st input tensor, to be a 3D tensor."""
+    )
+
+    def test_b():
+      torch.bmm(a, b[0])
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test_b,
+        expect="""bmm(): expected `mat2` f32[4,3] (a 2D tensor), the 2nd input tensor, to be a 3D tensor."""
+    )
+
+  def test_bmm_raises_error_on_different_batch_dimension(self):
+    device = torch_xla.device()
+    a = torch.rand(4, 3, 4, device=device)
+    b = torch.rand(2, 4, 3, device=device)
+
+    def test():
+      torch.bmm(a, b)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""bmm(): expected the size of the batch dimension (i.e. dimension 0) of `input` f32[4,3,4] (batch dimension size: 4), the 1st input tensor, to be the same as the size of the batch dimension of `mat2` f32[2,4,3] (batch dimension size: 2), the 2nd input tensor."""
+    )
+
+  def test_bmm_raises_error_on_incompatible_shapes(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 3, 8, device=device)
+    b = torch.rand(2, 4, 3, device=device)
+
+    def test():
+      torch.bmm(a, b)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""bmm(): cannot apply batch matrix-multiplication to `input` f32[2,3,8], the 1st input tensor, and to `mat2` f32[2,4,3], the 2nd input tensor. Expected the size of dimension 2 of `input` (8) to be equal the size of dimension 1 of `mat2` (4)."""
+    )
+
+  def test_baddbmm_raises_error_on_incompatible_shapes(self):
+    device = torch_xla.device()
+    input = torch.rand(3, 3, device=device)
+    a = torch.rand(2, 3, 8, device=device)
+    b = torch.rand(2, 4, 3, device=device)
+
+    def test():
+      torch.baddbmm(input, a, b)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""baddbmm(): cannot apply batch matrix-multiplication to `batch1` f32[2,3,8], the 2nd input tensor, and to `batch2` f32[2,4,3], the 3rd input tensor. Expected the size of dimension 2 of `batch1` (8) to be equal the size of dimension 1 of `batch2` (4)."""
+    )
+
 
 if __name__ == "__main__":
   unittest.main()

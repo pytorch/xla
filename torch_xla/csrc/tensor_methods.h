@@ -272,9 +272,11 @@ XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
                                   std::vector<int64_t> padding, bool ceil_mode,
                                   bool count_include_pad);
 
-XLATensorPtr baddbmm(const XLATensorPtr& input, const XLATensorPtr& batch1,
-                     const XLATensorPtr& batch2, const at::Scalar& beta,
-                     const at::Scalar& alpha);
+absl::StatusOr<absl_nonnull XLATensorPtr> baddbmm(const XLATensorPtr& input,
+                                                  const XLATensorPtr& batch1,
+                                                  const XLATensorPtr& batch2,
+                                                  const at::Scalar& beta,
+                                                  const at::Scalar& alpha);
 
 XLATensorPtr bernoulli(const XLATensorPtr& input, double probability);
 XLATensorPtr bernoulli(const XLATensorPtr& input);
@@ -297,7 +299,8 @@ XLATensorPtr bitwise_xor(const XLATensorPtr& input, const XLATensorPtr& other);
 // Batch matrix multiplication. Both tensors must be 3D, the batch size must
 // match and the remaining two dimensions must be compatible for matrix
 // multiplication.
-XLATensorPtr bmm(const XLATensorPtr& batch1, const XLATensorPtr& batch2);
+absl::StatusOr<absl_nonnull XLATensorPtr> bmm(const XLATensorPtr& input,
+                                              const XLATensorPtr& mat2);
 
 // Broadcasts the given tensors according to broadcasting semantics.
 std::vector<XLATensorPtr> broadcast_tensors(
