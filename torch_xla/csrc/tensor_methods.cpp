@@ -166,11 +166,6 @@ namespace torch_xla {
 namespace tensor_methods {
 namespace {
 
-struct MinMaxValues {
-  torch::lazy::Value min;
-  torch::lazy::Value max;
-};
-
 torch::lazy::Value MaybeExpand(const torch::lazy::Value& input,
                                const xla::Shape& target_shape) {
   if (GetXlaShape(input).dimensions() == target_shape.dimensions()) {
