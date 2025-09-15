@@ -17,8 +17,8 @@
 #include <mutex>
 #include <optional>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
-#include "status.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/shape_inference.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
@@ -1785,19 +1785,21 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
 }
 
 at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
-                                                  at::SymIntArrayRef sym_size,
+                                                  at::SymIntArrayRef sym_sizes,
                                                   bool implicit) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  std::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  if (size.has_value()) {
-    return bridge::AtenFromXlaTensor(tensor_methods::expand(
-        xla_self, torch::lazy::ToVector<int64_t>(*size)));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  std::optional<at::IntArrayRef> sizes = c10::asIntArrayRefSlowOpt(sym_sizes);
+  if (sizes.has_value()) {
+    XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                        tensor_methods::expand(xla_self, *sizes));
+    return bridge::AtenFromXlaTensor(std::move(output));
   } else {
     // at least one of the dimension is symbolic, use the sym_int version of the
     // node
     return bridge::AtenFromXlaTensor(
-        tensor_methods::expand_symint(xla_self, sym_size));
+        tensor_methods::expand_symint(xla_self, sym_sizes));
   }
 }
 
@@ -4554,19 +4556,21 @@ at::Tensor XLANativeFunctions::diagonal(const at::Tensor& self, int64_t offset,
 }
 
 at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
-                                             at::SymIntArrayRef sym_size,
+                                             at::SymIntArrayRef sym_sizes,
                                              bool implicit) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  std::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  if (size.has_value()) {
-    return bridge::AtenFromXlaTensor(tensor_methods::expand(
-        xla_self, torch::lazy::ToVector<int64_t>(*size)));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  std::optional<at::IntArrayRef> sizes = c10::asIntArrayRefSlowOpt(sym_sizes);
+  if (sizes.has_value()) {
+    XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                        tensor_methods::expand(xla_self, *sizes));
+    return bridge::AtenFromXlaTensor(std::move(output));
   } else {
     // at least one of the dimension is symbolic, use the sym_int version of the
     // node
     return bridge::AtenFromXlaTensor(
-        tensor_methods::expand_symint(xla_self, sym_size));
+        tensor_methods::expand_symint(xla_self, sym_sizes));
   }
 }
 

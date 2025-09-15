@@ -10,10 +10,13 @@
 #include <functional>
 #include <iterator>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -233,16 +236,45 @@ void CheckBmmDimension(const std::string& tag, const XLATensorPtr& batch1,
                      "batch2", 2);
 }
 
-std::vector<int64_t> GetExpandDimensions(const xla::Shape& shape,
-                                         std::vector<int64_t> dimensions) {
-  XLA_CHECK_GE(dimensions.size(), shape.dimensions_size()) << shape;
-  int64_t base = dimensions.size() - shape.dimensions_size();
-  for (size_t i = 0; i < shape.dimensions_size(); ++i) {
-    if (dimensions[base + i] == -1) {
-      dimensions[base + i] = shape.dimensions(i);
+absl::Status CheckExpandValidRank(const XLATensorPtr& input,
+                                  const absl::Span<const int64_t> sizes) {
+  xla::Shape shape = input->shape();
+  int64_t rank = shape.dimensions().size();
+  if (rank > sizes.size()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "expand(): expected the `input` tensor ", shape.ToString(), " (rank: ",
+        rank, ") to have a rank smaller or equal to the given `sizes` [",
+        absl::StrJoin(sizes, /* sep= */ ", "), "] (rank: ", sizes.size(),
+        ").")));
+  }
+  return absl::OkStatus();
+}
+
+absl::StatusOr<std::vector<int64_t>> GetExpandDimensions(
+    const XLATensorPtr& input, const absl::Span<const int64_t> sizes) {
+  XLA_RETURN_IF_ERROR(CheckExpandValidRank(input, sizes));
+
+  xla::Shape shape = input->shape();
+  const int64_t rank = shape.dimensions().size();
+  const int64_t base = sizes.size() - rank;
+
+  std::vector<int64_t> expanded_dimensions(sizes.begin(), sizes.end());
+  for (size_t i = 0; i < shape.dimensions().size(); ++i) {
+    const int64_t dim = base + i;
+    const int64_t size = sizes[dim];
+    if (size == -1) {
+      expanded_dimensions[dim] = shape.dimensions(i);
+    } else if (shape.dimensions(i) != 1 && size != shape.dimensions(i)) {
+      return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+          "expand(): expected dimension ", dim, " of the given `sizes` [",
+          absl::StrJoin(sizes, /* sep= */ ", "), "] (", size,
+          ") to be -1, or equal to the size of the `input` tensor ",
+          shape.ToString(), " at dimension ", i, " (", shape.dimensions(i),
+          ").")));
     }
   }
-  return dimensions;
+
+  return expanded_dimensions;
 }
 
 // Resizes and / or checks whether a list is of the given size. The list is only
@@ -1750,11 +1782,12 @@ XLATensorPtr exp(const XLATensorPtr& input) {
   return input->CreateFrom(Exp(input->GetIrValue()));
 }
 
-XLATensorPtr expand(const XLATensorPtr& input, std::vector<int64_t> size) {
-  auto input_shape = input->shape();
-  auto output = input->CreateFrom(torch_xla::MakeNode<Expand>(
-      input->GetIrValue(),
-      GetExpandDimensions(input_shape.get(), std::move(size))));
+absl::StatusOr<absl_nonnull XLATensorPtr> expand(
+    const XLATensorPtr& input, const absl::Span<const int64_t> sizes) {
+  XLA_ASSIGN_OR_RETURN(std::vector<int64_t> expanded_dimensions,
+                       GetExpandDimensions(input, sizes));
+  auto output = input->CreateFrom(
+      torch_xla::MakeNode<Expand>(input->GetIrValue(), expanded_dimensions));
   output->SetStorage(input->Storage());
   return output;
 }
@@ -2886,15 +2919,14 @@ XLATensorPtr cast_int4(const XLATensorPtr& weight,
 // Dynamic Reshape ops here.
 //////////////////////////////////////////////////////////////////////////////
 
-XLATensorPtr dynamic_expand(const XLATensorPtr& input,
-                            const std::vector<int64_t>& size,
-                            const XLATensorPtr& src_tensor, int src_dim,
-                            int target_dim) {
-  std::vector<int64_t> expanded_size =
-      GetExpandDimensions(input->shape().get(), size);
+absl::StatusOr<absl_nonnull XLATensorPtr> dynamic_expand(
+    const XLATensorPtr& input, const absl::Span<const int64_t> sizes,
+    const XLATensorPtr& src_tensor, int src_dim, int target_dim) {
+  XLA_ASSIGN_OR_RETURN(std::vector<int64_t> expanded_dimensions,
+                       GetExpandDimensions(input, sizes));
   torch::lazy::NodePtr node = torch_xla::MakeNode<DynamicExpand>(
-      input->GetIrValue(), expanded_size, src_tensor->GetIrValue(), src_dim,
-      target_dim);
+      input->GetIrValue(), expanded_dimensions, src_tensor->GetIrValue(),
+      src_dim, target_dim);
   return input->CreateFrom(torch::lazy::Value(node));
 }
 
