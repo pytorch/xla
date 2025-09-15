@@ -1,4 +1,5 @@
 import os
+
 os.environ["XLA_DISABLE_FUNCTIONALIZATION"] = "1"
 
 import expecttest
