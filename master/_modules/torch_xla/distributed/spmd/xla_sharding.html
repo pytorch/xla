@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+git2329746 )
+                  master (2.9.0+gitefe20ab )
                 </div>
               
             
@@ -1090,7 +1090,8 @@
     <span class="sa">f</span><span class="s2">&quot;Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">).&quot;</span>
 
   <span class="n">tx</span> <span class="o">=</span> <span class="n">maybe_get_torchax</span><span class="p">()</span>
-  <span class="n">jax</span> <span class="o">=</span> <span class="n">maybe_get_jax</span><span class="p">()</span>
+  <span class="c1"># Do not log jax warnings when workarounds are available.</span>
+  <span class="n">jax</span> <span class="o">=</span> <span class="n">maybe_get_jax</span><span class="p">(</span><span class="n">log</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">jax</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">tx</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">jax.sharding</span><span class="w"> </span><span class="kn">import</span> <span class="n">PartitionSpec</span> <span class="k">as</span> <span class="n">P</span><span class="p">,</span> <span class="n">NamedSharding</span>
     <span class="n">jmesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_jax_mesh</span><span class="p">()</span>
