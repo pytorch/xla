@@ -6,7 +6,7 @@ import unittest
 
 
 def onlyOnCPU(fn):
-  accelerator = os.environ.get("PJRT_DEVICE").lower()
+  accelerator = os.environ.get("PJRT_DEVICE", "").lower()
   return unittest.skipIf(accelerator != "cpu", "PJRT_DEVICE=CPU required")(fn)
 
 
@@ -158,7 +158,7 @@ class TestOpsErrorMessage(expecttest.TestCase):
     b = torch.rand(2, 2, device=device)
 
     def test():
-      torch.mm(a, b)
+      return torch.mm(a, b)
 
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
@@ -172,10 +172,14 @@ class TestOpsErrorMessage(expecttest.TestCase):
     b = torch.rand(8, 2, device=device)
 
     def test():
-      torch.mm(a, b)
+      return torch.mm(a, b)
 
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
         callable=test,
         expect="""mm(): cannot matrix-multiply tensors f32[2,5] and f32[8,2]. Expected the size of dimension 1 of the first input tensor (5) to be equal the size of dimension 0 of the second input tensor (8)."""
     )
+
+
+if __name__ == "__main__":
+  unittest.main()
