@@ -180,6 +180,48 @@ class TestOpsErrorMessage(expecttest.TestCase):
         expect="""mm(): cannot matrix-multiply tensors f32[2,5] and f32[8,2]. Expected the size of dimension 1 of the first input tensor (5) to be equal the size of dimension 0 of the second input tensor (8)."""
     )
 
+  def test_roll_raises_error_on_empty_shifts(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 2, 2, device=device)
+    shifts = []
+
+    def test():
+      return torch.roll(a, shifts)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""roll(): expected `shifts` to have at least 1 element.""")
+
+  def test_roll_raises_error_on_shifts_with_empty_dims(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 2, 2, device=device)
+    shifts = [2, 2]
+
+    def test():
+      return torch.roll(a, shifts)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""roll(): expected `shifts` [2, 2] (size=2) to have exactly 1 element when `dims` is empty."""
+    )
+
+  def test_roll_raises_error_on_mismatched_dims_and_shifts(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 2, 2, device=device)
+    shifts = [2, 2]
+    dims = [0]
+
+    def test():
+      return torch.roll(a, shifts, dims)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""roll(): expected `dims` [0] (size=1) to match the size of `shifts` [2, 2] (size=2)."""
+    )
+
 
 if __name__ == "__main__":
   unittest.main()
