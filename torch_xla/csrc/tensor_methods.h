@@ -926,7 +926,8 @@ XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims);
 void squeeze_(XLATensorPtr& input);
 void squeeze_(XLATensorPtr& input, int64_t dim);
 
-XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim);
+absl::StatusOr<absl_nonnull XLATensorPtr> stack(
+    absl::Span<const absl_nonnull XLATensorPtr> tensors, int64_t dim);
 
 XLATensorPtr std(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                  bool keep_reduced_dimensions, double correction);
