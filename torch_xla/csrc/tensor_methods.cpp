@@ -517,7 +517,7 @@ absl::Status CheckInputIsMatrix(const XLATensorPtr& tensor,
   xla::Shape shape = tensor->shape();
   if (shape.dimensions().size() != 2) {
     const std::string arg_with_trailing_space =
-        arg.empty() ? "" : std::string(arg) + " ";
+        arg.empty() ? std::string("") : absl::StrCat(arg, " ");
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
         op, "(): expected the ", arg_with_trailing_space, "input tensor ",
         shape.ToString(), " to be a matrix (i.e. a 2D tensor).")));
