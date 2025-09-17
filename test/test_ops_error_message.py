@@ -180,6 +180,31 @@ class TestOpsErrorMessage(expecttest.TestCase):
         expect="""mm(): cannot matrix-multiply tensors f32[2,5] and f32[8,2]. Expected the size of dimension 1 of the first input tensor (5) to be equal the size of dimension 0 of the second input tensor (8)."""
     )
 
+  def test_avg_pool_3d_raises_error_on_bad_spec(self):
+    device = torch_xla.device()
+    a = torch.rand(1, 1, 4, 4, 4, device=device)
+  
+    def gen_test_fn(kernel_size=[2, 2, 2], stride=[], padding=[0]):
+      return lambda: torch.nn.functional.avg_pool3d(a, kernel_size, stride, padding)
+  
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=gen_test_fn(kernel_size=[2, 2]),
+        expect="""avg_pool3d(): expected argument kernel_size [2, 2] (size: 2) to have size of 3."""
+    )
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=gen_test_fn(stride=[1, 2]),
+        expect="""avg_pool3d(): expected argument stride [1, 2] (size: 2) to have size of 3."""
+    )
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=gen_test_fn(padding=[1, 2]),
+        expect="""avg_pool3d(): expected argument padding [1, 2] (size: 2) to have size of 3."""
+    )
+
 
 if __name__ == "__main__":
   unittest.main()
