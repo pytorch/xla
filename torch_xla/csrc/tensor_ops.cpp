@@ -240,9 +240,9 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
   // padding_idx.
   XLATensorPtr skip_padding = tensor_methods::unsqueeze(
       tensor_methods::ne(indices_rank1, padding_idx), 1);
-  skip_padding = tensor_methods::expand(
+  XLA_ASSIGN_OR_THROW(
       skip_padding,
-      torch::lazy::ToVector<int64_t>(grad->shape().get().dimensions()));
+      tensor_methods::expand(skip_padding, grad->shape().get().dimensions()));
   XLATensorPtr zero_grad =
       tensor_methods::full_like(grad, 0, grad->GetDevice(), grad->dtype());
   return tensor_methods::index_put(
