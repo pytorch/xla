@@ -1183,11 +1183,14 @@ at::Tensor XLANativeFunctions::avg_pool2d(
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
     std::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd(
-      xla_self, /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode,
-      count_include_pad, divisor_override));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::avg_pool_nd(xla_self, /*spatial_dim_count=*/2,
+                                  kernel_size, stride, padding, ceil_mode,
+                                  count_include_pad, divisor_override));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::avg_pool2d_backward(
@@ -1204,13 +1207,16 @@ at::Tensor XLANativeFunctions::avg_pool2d_backward(
                                                            count_include_pad,
                                                            divisor_override);
   }
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_grad_output,
                       bridge::GetXlaTensor(grad_output));
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd_backward(
-      xla_grad_output, xla_self, /*spatial_dim_count=*/2,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::avg_pool_nd_backward(
+          xla_grad_output, xla_self, /*spatial_dim_count=*/2, kernel_size,
+          stride, padding, ceil_mode, count_include_pad));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::avg_pool3d(
@@ -1218,11 +1224,14 @@ at::Tensor XLANativeFunctions::avg_pool3d(
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
     std::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd(
-      xla_self, /*spatial_dim_count=*/3, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode,
-      count_include_pad, divisor_override));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::avg_pool_nd(xla_self, /*spatial_dim_count=*/3,
+                                  kernel_size, stride, padding, ceil_mode,
+                                  count_include_pad, divisor_override));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::avg_pool3d_backward(
@@ -1239,13 +1248,16 @@ at::Tensor XLANativeFunctions::avg_pool3d_backward(
                                                            count_include_pad,
                                                            divisor_override);
   }
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_grad_output,
                       bridge::GetXlaTensor(grad_output));
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd_backward(
-      xla_grad_output, xla_self, /*spatial_dim_count=*/3,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::avg_pool_nd_backward(
+          xla_grad_output, xla_self, /*spatial_dim_count=*/3, kernel_size,
+          stride, padding, ceil_mode, count_include_pad));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::baddbmm(const at::Tensor& self,
@@ -2348,12 +2360,14 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max_pool2d_with_indices(
                                                                dilation,
                                                                ceil_mode);
   }
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  auto outputs = tensor_methods::max_pool_nd(
-      xla_self, /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
-                         bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr> output;
+  XLA_ASSIGN_OR_THROW(output, tensor_methods::max_pool_nd(
+                                  xla_self, /*spatial_dim_count=*/2,
+                                  kernel_size, stride, padding, ceil_mode));
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(output)),
+                         bridge::AtenFromXlaTensor(std::get<1>(output)));
 }
 
 at::Tensor XLANativeFunctions::max_pool2d_with_indices_backward(
@@ -2371,13 +2385,15 @@ at::Tensor XLANativeFunctions::max_pool2d_with_indices_backward(
                                                          padding, dilation,
                                                          ceil_mode, indices);
   }
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_grad_output,
                       bridge::GetXlaTensor(grad_output));
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::max_pool_nd_backward(
-      xla_grad_output, xla_self, /*spatial_dim_count=*/2,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::max_pool_nd_backward(
+                          xla_grad_output, xla_self, /*spatial_dim_count=*/2,
+                          kernel_size, stride, padding, ceil_mode));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::max_pool3d(
@@ -2403,13 +2419,15 @@ at::Tensor XLANativeFunctions::max_pool3d_with_indices_backward(
                                                          padding, dilation,
                                                          ceil_mode, indices);
   }
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_grad_output,
                       bridge::GetXlaTensor(grad_output));
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::max_pool_nd_backward(
-      xla_grad_output, xla_self, /*spatial_dim_count=*/3,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::max_pool_nd_backward(
+                          xla_grad_output, xla_self, /*spatial_dim_count=*/3,
+                          kernel_size, stride, padding, ceil_mode));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max_pool3d_with_indices(
@@ -2425,12 +2443,14 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max_pool3d_with_indices(
                                                                dilation,
                                                                ceil_mode);
   }
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  auto outputs = tensor_methods::max_pool_nd(
-      xla_self, /*spatial_dim_count=*/3, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
-                         bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr> output;
+  XLA_ASSIGN_OR_THROW(output, tensor_methods::max_pool_nd(
+                                  xla_self, /*spatial_dim_count=*/3,
+                                  kernel_size, stride, padding, ceil_mode));
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(output)),
+                         bridge::AtenFromXlaTensor(std::get<1>(output)));
 }
 
 at::Tensor XLANativeFunctions::max_unpool2d(const at::Tensor& self,

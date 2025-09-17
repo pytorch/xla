@@ -257,20 +257,19 @@ void as_strided_(XLATensorPtr& input, std::vector<int64_t> size,
                  std::vector<int64_t> stride,
                  std::optional<int64_t> storage_offset);
 
-XLATensorPtr avg_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
-                         std::vector<int64_t> kernel_size,
-                         std::vector<int64_t> stride,
-                         std::vector<int64_t> padding, bool ceil_mode,
-                         bool count_include_pad,
-                         std::optional<int> divisor_override);
+absl::StatusOr<absl_nonnull XLATensorPtr> avg_pool_nd(
+    const XLATensorPtr& input, int64_t spatial_dim_count,
+    const absl::Span<const int64_t> kernel_size,
+    const absl::Span<const int64_t> stride,
+    const absl::Span<const int64_t> padding, bool ceil_mode,
+    bool count_include_pad, std::optional<int> divisor_override);
 
-XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
-                                  const XLATensorPtr& input,
-                                  int64_t spatial_dim_count,
-                                  std::vector<int64_t> kernel_size,
-                                  std::vector<int64_t> stride,
-                                  std::vector<int64_t> padding, bool ceil_mode,
-                                  bool count_include_pad);
+absl::StatusOr<absl_nonnull XLATensorPtr> avg_pool_nd_backward(
+    const XLATensorPtr& out_backprop, const XLATensorPtr& input,
+    int64_t spatial_dim_count, const absl::Span<const int64_t> kernel_size,
+    const absl::Span<const int64_t> stride,
+    const absl::Span<const int64_t> padding, bool ceil_mode,
+    bool count_include_pad);
 
 absl::StatusOr<absl_nonnull XLATensorPtr> baddbmm(const XLATensorPtr& input,
                                                   const XLATensorPtr& batch1,
@@ -609,17 +608,17 @@ std::tuple<XLATensorPtr, XLATensorPtr> max(const XLATensorPtr& input,
 void max_out(XLATensorPtr& max, XLATensorPtr& max_values,
              const XLATensorPtr& input, int64_t dim, bool keepdim);
 
-std::tuple<XLATensorPtr, XLATensorPtr> max_pool_nd(
-    const XLATensorPtr& input, int64_t spatial_dim_count,
-    std::vector<int64_t> kernel_size, std::vector<int64_t> stride,
-    std::vector<int64_t> padding, bool ceil_mode);
+absl::StatusOr<std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr>>
+max_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
+            const absl::Span<const int64_t> kernel_size,
+            const absl::Span<const int64_t> stride,
+            const absl::Span<const int64_t> padding, bool ceil_mode);
 
-XLATensorPtr max_pool_nd_backward(const XLATensorPtr& out_backprop,
-                                  const XLATensorPtr& input,
-                                  int64_t spatial_dim_count,
-                                  std::vector<int64_t> kernel_size,
-                                  std::vector<int64_t> stride,
-                                  std::vector<int64_t> padding, bool ceil_mode);
+absl::StatusOr<absl_nonnull XLATensorPtr> max_pool_nd_backward(
+    const XLATensorPtr& out_backprop, const XLATensorPtr& input,
+    int64_t spatial_dim_count, const absl::Span<const int64_t> kernel_size,
+    const absl::Span<const int64_t> stride,
+    const absl::Span<const int64_t> padding, bool ceil_mode);
 
 XLATensorPtr max_unpool(const XLATensorPtr& input, const XLATensorPtr& indices,
                         std::vector<int64_t> output_size);

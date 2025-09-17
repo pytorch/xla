@@ -185,6 +185,20 @@ struct InputInfo {
   }
 };
 
+// Gathers the common inputs among `*_pool_nd` operations.
+// This is specifically used for input checking purposes.
+template <class T>
+struct _PoolNdInputs {
+  T kernel_size;
+  T stride;
+  T padding;
+};
+
+// Convenience aliases for representing `_PoolNdInputs` that either own or
+// reference the storage.
+using PoolNdInputsOwner = _PoolNdInputs<std::vector<int64_t>>;
+using PoolNdInputsRef = _PoolNdInputs<const absl::Span<const int64_t>>;
+
 torch::lazy::Value MaybeExpand(const torch::lazy::Value& input,
                                const xla::Shape& target_shape) {
   if (GetXlaShape(input).dimensions() == target_shape.dimensions()) {
@@ -233,6 +247,56 @@ absl::StatusOr<std::vector<int64_t>> GetExpandDimensions(
   }
 
   return expanded_dimensions;
+}
+
+std::vector<int64_t> RepeatIfSingleElement(const absl::Span<const int64_t> span,
+                                           int64_t n) {
+  return (span.size() == 1 && n > 1)
+             ? std::vector<int64_t>(n, span[0])
+             : std::vector<int64_t>(span.begin(), span.end());
+}
+
+absl::Status CheckPoolNdInputHasSize(const std::string_view op,
+                                     const std::string_view arg,
+                                     const absl::Span<const int64_t> input,
+                                     int64_t size) {
+  if (input.size() != size) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        op, "(): expected argument ", arg, " [",
+        absl::StrJoin(input, /* sep= */ ", "), "] (size: ", input.size(),
+        ") to have size of ", size, ".")));
+  }
+  return absl::OkStatus();
+}
+
+// Fills each field of `inputs` (only those that have only 1 element) so that
+// they have exactly `spatial_dim_count` elements, and check that they actually
+// have that.
+absl::StatusOr<PoolNdInputsOwner> FillAndCheckPoolNdInputs(
+    const std::string_view op, int64_t spatial_dim_count,
+    const PoolNdInputsRef& inputs) {
+  // Fill and check `inputs.kernel_size`.
+  std::vector<int64_t> kernel_size =
+      RepeatIfSingleElement(inputs.kernel_size, spatial_dim_count);
+  XLA_RETURN_IF_ERROR(CheckPoolNdInputHasSize(op, "kernel_size", kernel_size,
+                                              spatial_dim_count));
+
+  // Fill and check `inputs.stride`.
+  // Only for this field, if it is empty, copy from `kernel_size`.
+  std::vector<int64_t> stride =
+      inputs.stride.empty()
+          ? kernel_size
+          : RepeatIfSingleElement(inputs.stride, spatial_dim_count);
+  XLA_RETURN_IF_ERROR(
+      CheckPoolNdInputHasSize(op, "stride", stride, spatial_dim_count));
+
+  // Fill and check `inputs.padding`.
+  std::vector<int64_t> padding =
+      RepeatIfSingleElement(inputs.padding, spatial_dim_count);
+  XLA_RETURN_IF_ERROR(
+      CheckPoolNdInputHasSize(op, "padding", padding, spatial_dim_count));
+
+  return PoolNdInputsOwner{kernel_size, stride, padding};
 }
 
 // Resizes and / or checks whether a list is of the given size. The list is only
@@ -1279,35 +1343,37 @@ void as_strided_(XLATensorPtr& input, std::vector<int64_t> size,
   }
 }
 
-XLATensorPtr avg_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
-                         std::vector<int64_t> kernel_size,
-                         std::vector<int64_t> stride,
-                         std::vector<int64_t> padding, bool ceil_mode,
-                         bool count_include_pad,
-                         std::optional<int> divisor_override) {
-  kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
-  stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
-  padding = CheckIntList(padding, spatial_dim_count, "padding");
+absl::StatusOr<absl_nonnull XLATensorPtr> avg_pool_nd(
+    const XLATensorPtr& input, int64_t spatial_dim_count,
+    const absl::Span<const int64_t> kernel_size,
+    const absl::Span<const int64_t> stride,
+    const absl::Span<const int64_t> padding, bool ceil_mode,
+    bool count_include_pad, std::optional<int> divisor_override) {
+  XLA_ASSIGN_OR_RETURN(PoolNdInputsOwner inputs,
+                       FillAndCheckPoolNdInputs(
+                           absl::StrCat("avg_pool", spatial_dim_count, "d"),
+                           spatial_dim_count, {kernel_size, stride, padding}));
   return input->CreateFrom(torch_xla::MakeNode<AvgPoolNd>(
-      input->GetIrValue(), spatial_dim_count, std::move(kernel_size),
-      std::move(stride), std::move(padding), ceil_mode, count_include_pad,
-      divisor_override));
+      input->GetIrValue(), spatial_dim_count, std::move(inputs.kernel_size),
+      std::move(inputs.stride), std::move(inputs.padding), ceil_mode,
+      count_include_pad, divisor_override));
 }
 
-XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
-                                  const XLATensorPtr& input,
-                                  int64_t spatial_dim_count,
-                                  std::vector<int64_t> kernel_size,
-                                  std::vector<int64_t> stride,
-                                  std::vector<int64_t> padding, bool ceil_mode,
-                                  bool count_include_pad) {
-  kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
-  stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
-  padding = CheckIntList(padding, spatial_dim_count, "padding");
+absl::StatusOr<absl_nonnull XLATensorPtr> avg_pool_nd_backward(
+    const XLATensorPtr& out_backprop, const XLATensorPtr& input,
+    int64_t spatial_dim_count, const absl::Span<const int64_t> kernel_size,
+    const absl::Span<const int64_t> stride,
+    const absl::Span<const int64_t> padding, bool ceil_mode,
+    bool count_include_pad) {
+  XLA_ASSIGN_OR_RETURN(
+      PoolNdInputsOwner inputs,
+      FillAndCheckPoolNdInputs(
+          absl::StrCat("avg_pool", spatial_dim_count, "d_backward"),
+          spatial_dim_count, {kernel_size, stride, padding}));
   return out_backprop->CreateFrom(torch_xla::MakeNode<AvgPoolNdBackward>(
       out_backprop->GetIrValue(), input->GetIrValue(), spatial_dim_count,
-      std::move(kernel_size), std::move(stride), std::move(padding), ceil_mode,
-      count_include_pad));
+      std::move(inputs.kernel_size), std::move(inputs.stride),
+      std::move(inputs.padding), ceil_mode, count_include_pad));
 }
 
 absl::StatusOr<absl_nonnull XLATensorPtr> baddbmm(const XLATensorPtr& input,
@@ -2377,16 +2443,18 @@ void max_out(XLATensorPtr& max, XLATensorPtr& max_values,
   }
 }
 
-std::tuple<XLATensorPtr, XLATensorPtr> max_pool_nd(
-    const XLATensorPtr& input, int64_t spatial_dim_count,
-    std::vector<int64_t> kernel_size, std::vector<int64_t> stride,
-    std::vector<int64_t> padding, bool ceil_mode) {
-  kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
-  stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
-  padding = CheckIntList(padding, spatial_dim_count, "padding");
+absl::StatusOr<std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr>>
+max_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
+            const absl::Span<const int64_t> kernel_size,
+            const absl::Span<const int64_t> stride,
+            const absl::Span<const int64_t> padding, bool ceil_mode) {
+  XLA_ASSIGN_OR_RETURN(PoolNdInputsOwner inputs,
+                       FillAndCheckPoolNdInputs(
+                           absl::StrCat("max_pool", spatial_dim_count, "d"),
+                           spatial_dim_count, {kernel_size, stride, padding}));
   torch::lazy::NodePtr node = torch_xla::MakeNode<MaxPoolNd>(
-      input->GetIrValue(), spatial_dim_count, std::move(kernel_size),
-      std::move(stride), std::move(padding), ceil_mode);
+      input->GetIrValue(), spatial_dim_count, std::move(inputs.kernel_size),
+      std::move(inputs.stride), std::move(inputs.padding), ceil_mode);
 
   XLATensorPtr t1 = input->CreateFrom(torch::lazy::Value(node, 0),
                                       /*delay_eager_execution=*/true);
@@ -2402,17 +2470,20 @@ std::tuple<XLATensorPtr, XLATensorPtr> max_pool_nd(
   return std::make_tuple(t1, t2);
 }
 
-XLATensorPtr max_pool_nd_backward(
+absl::StatusOr<absl_nonnull XLATensorPtr> max_pool_nd_backward(
     const XLATensorPtr& out_backprop, const XLATensorPtr& input,
-    int64_t spatial_dim_count, std::vector<int64_t> kernel_size,
-    std::vector<int64_t> stride, std::vector<int64_t> padding, bool ceil_mode) {
-  kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
-  stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
-  padding = CheckIntList(padding, spatial_dim_count, "padding");
+    int64_t spatial_dim_count, const absl::Span<const int64_t> kernel_size,
+    const absl::Span<const int64_t> stride,
+    const absl::Span<const int64_t> padding, bool ceil_mode) {
+  XLA_ASSIGN_OR_RETURN(
+      PoolNdInputsOwner inputs,
+      FillAndCheckPoolNdInputs(
+          absl::StrCat("max_pool", spatial_dim_count, "d_backward"),
+          spatial_dim_count, {kernel_size, stride, padding}));
   return out_backprop->CreateFrom(torch_xla::MakeNode<MaxPoolNdBackward>(
       out_backprop->GetIrValue(), input->GetIrValue(), spatial_dim_count,
-      std::move(kernel_size), std::move(stride), std::move(padding),
-      ceil_mode));
+      std::move(inputs.kernel_size), std::move(inputs.stride),
+      std::move(inputs.padding), ceil_mode));
 }
 
 XLATensorPtr max_unpool(const XLATensorPtr& input, const XLATensorPtr& indices,
