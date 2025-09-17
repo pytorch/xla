@@ -222,6 +222,19 @@ class TestOpsErrorMessage(expecttest.TestCase):
         expect="""roll(): expected `dims` [0] (size=1) to match the size of `shifts` [2, 2] (size=2)."""
     )
 
+  def test_trace_raises_error_on_non_matrix_input(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 2, 2, device=device)
+
+    def test():
+      torch.trace(a)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""trace(): expected the input tensor f32[2,2,2] to be a matrix (i.e. a 2D tensor)."""
+    )
+
 
 if __name__ == "__main__":
   unittest.main()
