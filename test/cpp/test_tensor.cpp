@@ -4,6 +4,7 @@
 #include <limits>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
 #include "torch/csrc/autograd/variable.h"
@@ -297,14 +298,18 @@ TEST_F(TensorTest, TestMaxPool2D) {
                          /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
                          /*ceil_mode=*/false);
       ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-        XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+        XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr dev_input,
                             XLATensor::Create(input, device));
-        auto dev_output = tensor_methods::max_pool_nd(
-            dev_input,
-            /*spatial_dim_count=*/2,
-            /*kernel_size=*/{kernel_size, kernel_size},
-            /*stride=*/{stride, stride},
-            /*padding=*/{padding, padding}, /*ceil_mode=*/false);
+        std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr>
+            dev_output;
+        XLA_ASSIGN_OR_THROW(
+            dev_output,
+            tensor_methods::max_pool_nd(
+                dev_input,
+                /*spatial_dim_count=*/2,
+                /*kernel_size=*/{kernel_size, kernel_size},
+                /*stride=*/{stride, stride},
+                /*padding=*/{padding, padding}, /*ceil_mode=*/false));
         AllClose(output, std::get<0>(dev_output));
       });
     }
@@ -322,15 +327,18 @@ TEST_F(TensorTest, TestMaxPool2DNonSquare) {
           /*padding=*/{padding, padding + 1}, /*dilation=*/{1, 1},
           /*ceil_mode=*/false);
       ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-        XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+        XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr dev_input,
                             XLATensor::Create(input, device));
-        auto dev_output = tensor_methods::max_pool_nd(
-            dev_input,
-            /*spatial_dim_count=*/2,
-            /*kernel_size=*/{kernel_size, kernel_size + 1},
-            /*stride=*/{stride, stride + 1},
-            /*padding=*/{padding, padding + 1},
-            /*ceil_mode=*/false);
+        std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr>
+            dev_output;
+        XLA_ASSIGN_OR_THROW(dev_output,
+                            tensor_methods::max_pool_nd(
+                                dev_input,
+                                /*spatial_dim_count=*/2,
+                                /*kernel_size=*/{kernel_size, kernel_size + 1},
+                                /*stride=*/{stride, stride + 1},
+                                /*padding=*/{padding, padding + 1},
+                                /*ceil_mode=*/false));
         AllClose(output, std::get<0>(dev_output));
       });
     }
@@ -351,16 +359,17 @@ TEST_F(TensorTest, TestAvgPool2D) {
                            /*ceil_mode=*/false, count_include_pad,
                            /*divisor_override=*/std::nullopt);
         ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-          XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+          XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr dev_input,
                               XLATensor::Create(input, device));
-          XLATensorPtr dev_output = tensor_methods::avg_pool_nd(
-              dev_input,
-              /*spatial_dim_count=*/2,
-              /*kernel_size=*/{kernel_size, kernel_size},
-              /*stride=*/{stride, stride},
-              /*padding=*/{padding, padding},
-              /*ceil_mode=*/false, count_include_pad,
-              /*divisor_override=*/std::nullopt);
+          XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr dev_output,
+                              tensor_methods::avg_pool_nd(
+                                  dev_input,
+                                  /*spatial_dim_count=*/2,
+                                  /*kernel_size=*/{kernel_size, kernel_size},
+                                  /*stride=*/{stride, stride},
+                                  /*padding=*/{padding, padding},
+                                  /*ceil_mode=*/false, count_include_pad,
+                                  /*divisor_override=*/std::nullopt));
           AllClose(output, dev_output);
         });
       }
@@ -382,17 +391,19 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
             /*count_include_pad=*/count_include_pad,
             /*divisor_override=*/std::nullopt);
         ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-          XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+          XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr dev_input,
                               XLATensor::Create(input, device));
-          XLATensorPtr dev_output = tensor_methods::avg_pool_nd(
-              dev_input,
-              /*spatial_dim_count=*/2,
-              /*kernel_size=*/{kernel_size, kernel_size + 1},
-              /*stride=*/{stride, stride + 1},
-              /*padding=*/{padding, padding + 1},
-              /*ceil_mode=*/false,
-              /*count_include_pad=*/count_include_pad,
-              /*divisor_override=*/std::nullopt);
+          XLA_ASSIGN_OR_THROW(
+              absl_nonnull XLATensorPtr dev_output,
+              tensor_methods::avg_pool_nd(
+                  dev_input,
+                  /*spatial_dim_count=*/2,
+                  /*kernel_size=*/{kernel_size, kernel_size + 1},
+                  /*stride=*/{stride, stride + 1},
+                  /*padding=*/{padding, padding + 1},
+                  /*ceil_mode=*/false,
+                  /*count_include_pad=*/count_include_pad,
+                  /*divisor_override=*/std::nullopt));
           AllClose(output, dev_output);
         });
       }
