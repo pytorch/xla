@@ -3306,6 +3306,17 @@ void InitXlaModuleBindings(py::module m) {
              XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
                             "without a data handle or an IR.";
            })
+      .def("_set_custom_compile_options",
+           [](const py::dict& compile_options) {
+             std::unordered_map<std::string, std::string> options;
+             for (const auto& item : compile_options) {
+               // Keys must be strings; values are stringified.
+               const std::string key = py::str(item.first);
+               options[key] = py::str(item.second);
+             }
+             runtime::GetComputationClientOrDie()->SetCustomCompileOptions(
+                 options);
+           })
       .def(
           // from an XLA tensor to a PyCapsule.
           // When consuming the PyCapsule, we should synchronize
