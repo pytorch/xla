@@ -2,7 +2,6 @@
 #define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
 #include "absl/base/nullability.h"
-#include "absl/types/span.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -159,9 +158,10 @@ XLATensorPtr cast_int4(const XLATensorPtr& weight,
 // Dynamic Reshape ops here.
 //////////////////////////////////////////////////////////////////////////////
 
-absl::StatusOr<absl_nonnull XLATensorPtr> dynamic_expand(
-    const XLATensorPtr& input, const absl::Span<const int64_t> sizes,
-    const XLATensorPtr& src_tensor, int src_dim, int target_dim);
+XLATensorPtr dynamic_expand(const XLATensorPtr& input,
+                            const std::vector<int64_t>& size,
+                            const XLATensorPtr& src_tensor, int src_dim,
+                            int target_dim);
 
 XLATensorPtr dynamic_view(const XLATensorPtr& input,
                           const std::vector<int64_t>& size,
@@ -427,8 +427,7 @@ XLATensorPtr eq(const XLATensorPtr& input, const XLATensorPtr& other);
 
 XLATensorPtr exp(const XLATensorPtr& input);
 
-absl::StatusOr<absl_nonnull XLATensorPtr> expand(
-    const XLATensorPtr& input, const absl::Span<const int64_t> sizes);
+XLATensorPtr expand(const XLATensorPtr& input, std::vector<int64_t> size);
 
 XLATensorPtr expand_symint(const XLATensorPtr& input,
                            c10::SymIntArrayRef sym_size);

@@ -24,7 +24,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "absl/base/nullability.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
@@ -452,18 +451,15 @@ at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
 }
 
 at::Tensor DynamicExpand(const at::Tensor& input,
-                         const std::vector<int64_t>& sizes,
+                         const std::vector<int64_t>& size,
                          const at::Tensor& src_tensor, int src_dim,
                          int target_dim) {
-  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_input,
-                      bridge::GetXlaTensor(input));
-  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_src_tensor,
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_input, bridge::GetXlaTensor(input));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_src_tensor,
                       bridge::GetXlaTensor(src_tensor));
-  XLA_ASSIGN_OR_THROW(
-      absl_nonnull XLATensorPtr output,
-      tensor_methods::dynamic_expand(xla_input, sizes, xla_src_tensor, src_dim,
-                                     target_dim));
-  return bridge::AtenFromXlaTensor(std::move(output));
+  XLATensorPtr result = tensor_methods::dynamic_expand(
+      xla_input, size, xla_src_tensor, src_dim, target_dim);
+  return bridge::AtenFromXlaTensor(std::move(result));
 }
 
 at::Tensor DynamicView(const at::Tensor& input,
