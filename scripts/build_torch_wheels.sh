@@ -119,9 +119,9 @@ function install_llvm_clang() {
 
 function install_gcc() {
   sudo apt-get -y install gcc-11 g++-11
-  export CC=/usr/bin/gcc-10 export CXX=/usr/bin/g++-11
-  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100
-  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
+  export CC=/usr/bin/gcc-11 export CXX=/usr/bin/g++-11
+  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
+  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 }
 
 function install_req_packages() {
