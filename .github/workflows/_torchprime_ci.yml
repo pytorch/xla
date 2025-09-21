@@ -1,115 +1,115 @@
 name: torchprime E2E tests
 description: |
-  This workflow builds a docker image with the PyTorch/XLA wheels and then
-  triggers a torchprime (https://github.com/AI-Hypercomputer/torchprime)
-  E2E test using that docker image. It is intended to catch performance
-  regressions and API breaking changes in PyTorch/XLA pull requests.
+    This workflow builds a docker image with the PyTorch/XLA wheels and then
+    triggers a torchprime (https://github.com/AI-Hypercomputer/torchprime)
+    E2E test using that docker image. It is intended to catch performance
+    regressions and API breaking changes in PyTorch/XLA pull requests.
 on:
-  workflow_call:
-    inputs:
-      timeout-minutes:
-        required: false
-        type: number
-        description: Timeout in minutes for the job run
-        default: 80
-      has_code_changes:
-        required: false
-        type: string
-        description: Whether to run full workflow or not
-        default: 'true'
-    secrets:
-      # This is a token for the `torchxlabot2` user, which has access to the torchprime repo.
-      # It is used to trigger the torchprime E2E test workflow.
-      # The token should be managed in the "Settings > Secrets and variables > Actions"
-      # section of the repo.
-      TORCH_XLA_BOT_TOKEN:
-        required: true
-      GCLOUD_SERVICE_KEY:
-        required: true
+    workflow_call:
+        inputs:
+            timeout-minutes:
+                required: false
+                type: number
+                description: Timeout in minutes for the job run
+                default: 80
+            has_code_changes:
+                required: false
+                type: string
+                description: Whether to run full workflow or not
+                default: "true"
+        secrets:
+            # This is a token for the `torchxlabot2` user, which has access to the torchprime repo.
+            # It is used to trigger the torchprime E2E test workflow.
+            # The token should be managed in the "Settings > Secrets and variables > Actions"
+            # section of the repo.
+            TORCH_XLA_BOT_TOKEN:
+                required: true
+            GCLOUD_SERVICE_KEY:
+                required: true
 jobs:
-  torchprime-e2e-test:
-    name: Run torchprime E2E tests
-    timeout-minutes: ${{ inputs.timeout-minutes }}
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Use Docker in rootless mode
-        if: inputs.has_code_changes == 'true'
-        uses: ScribeMD/rootless-docker@0.2.2
-      - name: Add user to docker group
-        if: inputs.has_code_changes == 'true'
-        run: |
-          sudo usermod -aG docker $USER
-          newgrp docker
-        shell: bash
-      # Googlers: if this fails, follow go/ptxla-sa-key to debug.
-      - uses: google-github-actions/auth@v2
-        if: inputs.has_code_changes == 'true'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-      - uses: google-github-actions/setup-gcloud@v2
-        if: inputs.has_code_changes == 'true'
-        with:
-          version: '>= 363.0.0'
-          install_components: 'beta,gke-gcloud-auth-plugin'
-      - name: Verify GCP setup
-        if: inputs.has_code_changes == 'true'
-        run: gcloud info
-        shell: bash
-      - name: Authenticate Docker
-        if: inputs.has_code_changes == 'true'
-        run: gcloud auth configure-docker --quiet
-        shell: bash
-      - name: Activate SA credentials
-        if: inputs.has_code_changes == 'true'
-        run: gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
-        shell: bash
-      - name: Checkout infra
-        if: inputs.has_code_changes == 'true'
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            infra
-          fetch-depth: 1
-          path: pytorch-xla
-      # Build a docker image for torchprime E2E test
-      # First download the torch-xla-wheels
-      - name: Fetch wheels
-        if: inputs.has_code_changes == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: torch-xla-wheels
-          path: /tmp/wheels/
-      # Generate a 16-character random ID for the docker tag
-      - name: Generate random docker tag
-        if: inputs.has_code_changes == 'true'
-        id: random_tag
-        shell: bash
-        run: |
-          echo "random_id=$(openssl rand -hex 8)" >> $GITHUB_OUTPUT
-      # Then run docker to install them and push a docker
-      - name: Build and push docker image
-        if: inputs.has_code_changes == 'true'
-        id: build_docker
-        shell: bash
-        working-directory: pytorch-xla
-        run: |
-          . ./infra/ansible/publish_torchprime_e2e_test_docker.sh
-          echo "docker_url=gcr.io/${DOCKER_PROJECT}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}" >> $GITHUB_OUTPUT
-        env:
-          DEFAULT_CONTEXT_PATH: /tmp/wheels
-          DOCKER_IMAGE_NAME: for-torchprime-ci
-          DOCKER_IMAGE_TAG: ${{ steps.random_tag.outputs.random_id }}
-          DOCKER_PROJECT: tpu-pytorch
-      # Trigger torchprime E2E test workflow.
-      # (Googlers only) in case of infra failure, refer to go/ptxla-torchprime-trigger
-      # Refer to the same doc on the retention policy of the docker images.
-      - uses: convictional/trigger-workflow-and-wait@v1.6.5
-        if: inputs.has_code_changes == 'true'
-        with:
-          owner: AI-Hypercomputer
-          repo: torchprime
-          github_token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}
-          workflow_file_name: e2e_test.yml
-          wait_interval: 60
-          ref: main
-          client_payload: '{"docker_url": "${{ steps.build_docker.outputs.docker_url }}"}'
+    torchprime-e2e-test:
+        name: Run torchprime E2E tests
+        timeout-minutes: ${{ inputs.timeout-minutes }}
+        runs-on: ubuntu-22.04
+        steps:
+            - name: Use Docker in rootless mode
+              if: inputs.has_code_changes == 'true'
+              uses: ScribeMD/rootless-docker@0.2.2
+            - name: Add user to docker group
+              if: inputs.has_code_changes == 'true'
+              run: |
+                  sudo usermod -aG docker $USER
+                  newgrp docker
+              shell: bash
+            # Googlers: if this fails, follow go/ptxla-sa-key to debug.
+            - uses: google-github-actions/auth@v2
+              if: inputs.has_code_changes == 'true'
+              with:
+                  credentials_json: "${{ secrets.GCLOUD_SERVICE_KEY }}"
+            - uses: google-github-actions/setup-gcloud@v2
+              if: inputs.has_code_changes == 'true'
+              with:
+                  version: ">= 363.0.0"
+                  install_components: "beta,gke-gcloud-auth-plugin"
+            - name: Verify GCP setup
+              if: inputs.has_code_changes == 'true'
+              run: gcloud info
+              shell: bash
+            - name: Authenticate Docker
+              if: inputs.has_code_changes == 'true'
+              run: gcloud auth configure-docker --quiet
+              shell: bash
+            - name: Activate SA credentials
+              if: inputs.has_code_changes == 'true'
+              run: gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+              shell: bash
+            - name: Checkout infra
+              if: inputs.has_code_changes == 'true'
+              uses: actions/checkout@v4
+              with:
+                  sparse-checkout: |
+                      infra
+                  fetch-depth: 1
+                  path: pytorch-xla
+            # Build a docker image for torchprime E2E test
+            # First download the torch-xla-wheels
+            - name: Fetch wheels
+              if: inputs.has_code_changes == 'true'
+              uses: actions/download-artifact@v5
+              with:
+                  name: torch-xla-wheels
+                  path: /tmp/wheels/
+            # Generate a 16-character random ID for the docker tag
+            - name: Generate random docker tag
+              if: inputs.has_code_changes == 'true'
+              id: random_tag
+              shell: bash
+              run: |
+                  echo "random_id=$(openssl rand -hex 8)" >> $GITHUB_OUTPUT
+            # Then run docker to install them and push a docker
+            - name: Build and push docker image
+              if: inputs.has_code_changes == 'true'
+              id: build_docker
+              shell: bash
+              working-directory: pytorch-xla
+              run: |
+                  . ./infra/ansible/publish_torchprime_e2e_test_docker.sh
+                  echo "docker_url=gcr.io/${DOCKER_PROJECT}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}" >> $GITHUB_OUTPUT
+              env:
+                  DEFAULT_CONTEXT_PATH: /tmp/wheels
+                  DOCKER_IMAGE_NAME: for-torchprime-ci
+                  DOCKER_IMAGE_TAG: ${{ steps.random_tag.outputs.random_id }}
+                  DOCKER_PROJECT: tpu-pytorch
+            # Trigger torchprime E2E test workflow.
+            # (Googlers only) in case of infra failure, refer to go/ptxla-torchprime-trigger
+            # Refer to the same doc on the retention policy of the docker images.
+            - uses: convictional/trigger-workflow-and-wait@v1.6.5
+              if: inputs.has_code_changes == 'true'
+              with:
+                  owner: AI-Hypercomputer
+                  repo: torchprime
+                  github_token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}
+                  workflow_file_name: e2e_test.yml
+                  wait_interval: 60
+                  ref: main
+                  client_payload: '{"docker_url": "${{ steps.build_docker.outputs.docker_url }}"}'
