@@ -62,7 +62,9 @@ XLATensorPtr Cross(const XLATensorPtr& input, const XLATensorPtr& other,
   XLATensorPtr s3 = tensor_methods::sub(tensor_methods::mul(u1, v2),
                                         tensor_methods::mul(u2, v1), one);
   // Stack the terms into one result tensor.
-  return tensor_methods::stack({s1, s2, s3}, canonical_dim);
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::stack({s1, s2, s3}, canonical_dim));
+  return output;
 }
 
 XLATensorPtr MakeMatrixWithDiagonal(const XLATensorPtr& input,
@@ -238,9 +240,9 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
   // padding_idx.
   XLATensorPtr skip_padding = tensor_methods::unsqueeze(
       tensor_methods::ne(indices_rank1, padding_idx), 1);
-  skip_padding = tensor_methods::expand(
+  XLA_ASSIGN_OR_THROW(
       skip_padding,
-      torch::lazy::ToVector<int64_t>(grad->shape().get().dimensions()));
+      tensor_methods::expand(skip_padding, grad->shape().get().dimensions()));
   XLATensorPtr zero_grad =
       tensor_methods::full_like(grad, 0, grad->GetDevice(), grad->dtype());
   return tensor_methods::index_put(

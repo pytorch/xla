@@ -13,13 +13,10 @@ TEST(RuntimeTest, ComputationClientInitialization) {
   // Initialize the ComputationClient.
   // Check all the APIs return the same valid ComputationClient.
 
-  client = GetComputationClientOrDie();
-  ASSERT_NE(client, nullptr);
-
   auto status = GetComputationClient();
   ASSERT_TRUE(status.ok());
 
-  EXPECT_EQ(status.value(), client);
+  client = status.value();
   EXPECT_EQ(GetComputationClientIfInitialized(), client);
 }
 

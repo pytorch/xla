@@ -1,5 +1,5 @@
 # Used for fetching clang from the right repo, see apt.yaml.
-llvm_debian_repo: bullseye
+llvm_debian_repo: bookworm
 clang_version: 17
 # PyTorch and PyTorch/XLA wheel versions.
 package_version: 2.9.0

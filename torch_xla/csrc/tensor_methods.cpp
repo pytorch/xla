@@ -10,9 +10,13 @@
 #include <functional>
 #include <iterator>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -232,16 +236,45 @@ void CheckBmmDimension(const std::string& tag, const XLATensorPtr& batch1,
                      "batch2", 2);
 }
 
-std::vector<int64_t> GetExpandDimensions(const xla::Shape& shape,
-                                         std::vector<int64_t> dimensions) {
-  XLA_CHECK_GE(dimensions.size(), shape.dimensions_size()) << shape;
-  int64_t base = dimensions.size() - shape.dimensions_size();
-  for (size_t i = 0; i < shape.dimensions_size(); ++i) {
-    if (dimensions[base + i] == -1) {
-      dimensions[base + i] = shape.dimensions(i);
+absl::Status CheckExpandValidRank(const XLATensorPtr& input,
+                                  const absl::Span<const int64_t> sizes) {
+  xla::Shape shape = input->shape();
+  int64_t rank = shape.dimensions().size();
+  if (rank > sizes.size()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "expand(): expected the `input` tensor ", shape.ToString(), " (rank: ",
+        rank, ") to have a rank smaller or equal to the given `sizes` [",
+        absl::StrJoin(sizes, /* sep= */ ", "), "] (rank: ", sizes.size(),
+        ").")));
+  }
+  return absl::OkStatus();
+}
+
+absl::StatusOr<std::vector<int64_t>> GetExpandDimensions(
+    const XLATensorPtr& input, const absl::Span<const int64_t> sizes) {
+  XLA_RETURN_IF_ERROR(CheckExpandValidRank(input, sizes));
+
+  xla::Shape shape = input->shape();
+  const int64_t rank = shape.dimensions().size();
+  const int64_t base = sizes.size() - rank;
+
+  std::vector<int64_t> expanded_dimensions(sizes.begin(), sizes.end());
+  for (size_t i = 0; i < shape.dimensions().size(); ++i) {
+    const int64_t dim = base + i;
+    const int64_t size = sizes[dim];
+    if (size == -1) {
+      expanded_dimensions[dim] = shape.dimensions(i);
+    } else if (shape.dimensions(i) != 1 && size != shape.dimensions(i)) {
+      return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+          "expand(): expected dimension ", dim, " of the given `sizes` [",
+          absl::StrJoin(sizes, /* sep= */ ", "), "] (", size,
+          ") to be -1, or equal to the size of the `input` tensor ",
+          shape.ToString(), " at dimension ", i, " (", shape.dimensions(i),
+          ").")));
     }
   }
-  return dimensions;
+
+  return expanded_dimensions;
 }
 
 // Resizes and / or checks whether a list is of the given size. The list is only
@@ -453,14 +486,14 @@ absl::Status CheckGatherRanksAreEqual(const XLATensorPtr& input,
   return absl::OkStatus();
 }
 
-// Checks that all index dimensions are smaller or equal to those of input,
-// except on dimension canonical_dim.
-absl::Status CheckGatherDimensionsAreCompatible(const XLATensorPtr& input,
-                                                const XLATensorPtr& index,
-                                                int64_t canonical_dim) {
+// Checks that all index dimension sizes are smaller or equal to those of
+// input, except on dimension canonical_dim.
+absl::Status CheckGatherSizesAreCompatible(const XLATensorPtr& input,
+                                           const XLATensorPtr& index,
+                                           int64_t canonical_dim) {
   // Dimensions that fail the "smaller or equal" condition.
   std::vector<int64_t> bad_dims;
-  for (int64_t dim = 0; dim < input->shape().get().dimensions_size(); dim++) {
+  for (int64_t dim = 0; dim < input->shape().get().dimensions().size(); dim++) {
     if (dim != canonical_dim && input->size(dim) < index->size(dim)) {
       bad_dims.push_back(dim);
     }
@@ -474,6 +507,73 @@ absl::Status CheckGatherDimensionsAreCompatible(const XLATensorPtr& input,
         "] on all dimensions, except on dimension ", canonical_dim,
         ". However, that's not true on dimensions [",
         absl::StrJoin(bad_dims, /* sep= */ ", "), "].")));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckMMInputIsMatrix(const XLATensorPtr& mat,
+                                  const std::string_view arg) {
+  xla::Shape shape = mat->shape();
+  if (shape.dimensions().size() != 2) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("mm(): expected the ", arg, " input tensor ",
+                     shape.ToString(), " to be a matrix (i.e. a 2D tensor).")));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckMMMatrixSizesAreCompatible(const XLATensorPtr& mat1,
+                                             const XLATensorPtr& mat2) {
+  xla::Shape shape1 = mat1->shape();
+  xla::Shape shape2 = mat2->shape();
+  if (shape1.dimensions(1) != shape2.dimensions(0)) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "mm(): cannot matrix-multiply tensors ", shape1.ToString(), " and ",
+        shape2.ToString(),
+        ". Expected the size of dimension 1 of the first input tensor (",
+        shape1.dimensions(1),
+        ") to be equal the size of dimension 0 of the second input tensor (",
+        shape2.dimensions(0), ").")));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckRollShiftsRequired(absl::Span<const int64_t> shifts) {
+  if (shifts.empty()) {
+    return absl::InvalidArgumentError(
+        "roll(): expected `shifts` to have at least 1 element.");
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckRollDimsAndShiftsAreCompatible(
+    absl::Span<const int64_t> dims, absl::Span<const int64_t> shifts) {
+  if (dims.empty()) {
+    // If `dims` is empty, then return an error status if `shifts` is not
+    // of size one. Otherwise, `dims` and `shifts` are valid.
+    if (shifts.size() != 1) {
+      return absl::InvalidArgumentError(absl::StrCat(
+          "roll(): expected `shifts` [", absl::StrJoin(shifts, /* sep= */ ", "),
+          "] (size=", shifts.size(),
+          ") to have exactly 1 element when `dims` is empty."));
+    }
+  } else if (dims.size() != shifts.size()) {
+    // If `dims` is not empty, then return an error status if its size
+    // does not match with `shifts` size.
+    return absl::InvalidArgumentError(absl::StrCat(
+        "roll(): expected `dims` [", absl::StrJoin(dims, /* sep= */ ", "),
+        "] (size=", dims.size(), ") to match the size of `shifts` [",
+        absl::StrJoin(shifts, /* sep= */ ", "), "] (size=", shifts.size(),
+        ")."));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckStackAtLeastOneTensor(
+    absl::Span<const absl_nonnull XLATensorPtr> tensors) {
+  if (tensors.size() == 0) {
+    return XLA_ERROR_WITH_LOCATION(
+        absl::InvalidArgumentError("stack(): expected at least one tensor."));
   }
   return absl::OkStatus();
 }
@@ -1722,11 +1822,12 @@ XLATensorPtr exp(const XLATensorPtr& input) {
   return input->CreateFrom(Exp(input->GetIrValue()));
 }
 
-XLATensorPtr expand(const XLATensorPtr& input, std::vector<int64_t> size) {
-  auto input_shape = input->shape();
-  auto output = input->CreateFrom(torch_xla::MakeNode<Expand>(
-      input->GetIrValue(),
-      GetExpandDimensions(input_shape.get(), std::move(size))));
+absl::StatusOr<absl_nonnull XLATensorPtr> expand(
+    const XLATensorPtr& input, const absl::Span<const int64_t> sizes) {
+  XLA_ASSIGN_OR_RETURN(std::vector<int64_t> expanded_dimensions,
+                       GetExpandDimensions(input, sizes));
+  auto output = input->CreateFrom(
+      torch_xla::MakeNode<Expand>(input->GetIrValue(), expanded_dimensions));
   output->SetStorage(input->Storage());
   return output;
 }
@@ -1844,7 +1945,7 @@ absl::StatusOr<absl_nonnull XLATensorPtr> gather(const XLATensorPtr& input,
       dim, input->shape().get().dimensions_size());
   XLA_RETURN_IF_ERROR(CheckGatherRanksAreEqual(input, index));
   XLA_RETURN_IF_ERROR(
-      CheckGatherDimensionsAreCompatible(input, index, canonical_dim));
+      CheckGatherSizesAreCompatible(input, index, canonical_dim));
   return input->CreateFrom(torch_xla::MakeNode<Gather>(
       input->GetIrValue(), canonical_dim, index->GetIrValue()));
 }
@@ -2349,7 +2450,11 @@ XLATensorPtr mish(const XLATensorPtr& input) {
           tensor_ops::Softplus(input, 1, 20)->GetIrValue()));
 }
 
-XLATensorPtr mm(const XLATensorPtr& input, const XLATensorPtr& weight) {
+absl::StatusOr<XLATensorPtr> mm(const XLATensorPtr& input,
+                                const XLATensorPtr& weight) {
+  XLA_RETURN_IF_ERROR(CheckMMInputIsMatrix(input, "first"));
+  XLA_RETURN_IF_ERROR(CheckMMInputIsMatrix(weight, "second"));
+  XLA_RETURN_IF_ERROR(CheckMMMatrixSizesAreCompatible(input, weight));
   return input->CreateFrom(Dot(input->GetIrValue(), weight->GetIrValue()));
 }
 
@@ -2854,15 +2959,14 @@ XLATensorPtr cast_int4(const XLATensorPtr& weight,
 // Dynamic Reshape ops here.
 //////////////////////////////////////////////////////////////////////////////
 
-XLATensorPtr dynamic_expand(const XLATensorPtr& input,
-                            const std::vector<int64_t>& size,
-                            const XLATensorPtr& src_tensor, int src_dim,
-                            int target_dim) {
-  std::vector<int64_t> expanded_size =
-      GetExpandDimensions(input->shape().get(), size);
+absl::StatusOr<absl_nonnull XLATensorPtr> dynamic_expand(
+    const XLATensorPtr& input, const absl::Span<const int64_t> sizes,
+    const XLATensorPtr& src_tensor, int src_dim, int target_dim) {
+  XLA_ASSIGN_OR_RETURN(std::vector<int64_t> expanded_dimensions,
+                       GetExpandDimensions(input, sizes));
   torch::lazy::NodePtr node = torch_xla::MakeNode<DynamicExpand>(
-      input->GetIrValue(), expanded_size, src_tensor->GetIrValue(), src_dim,
-      target_dim);
+      input->GetIrValue(), expanded_dimensions, src_tensor->GetIrValue(),
+      src_dim, target_dim);
   return input->CreateFrom(torch::lazy::Value(node));
 }
 
@@ -3020,17 +3124,15 @@ void resize_(XLATensorPtr& input, std::vector<int64_t> size) {
   }
 }
 
-XLATensorPtr roll(const XLATensorPtr& input, absl::Span<const int64_t> shifts,
-                  absl::Span<const int64_t> dims) {
-  XLA_CHECK_GT(shifts.size(), 0) << "`shifts` required";
-  if (dims.size() != 0) {
-    XLA_CHECK_EQ(shifts.size(), dims.size())
-        << "shifts and dimensions must align. shifts: " << shifts.size()
-        << ", dims:" << dims.size();
-  }
-  auto canonical_dims = torch::lazy::GetCanonicalDimensionIndices(
-      torch::lazy::ToVector<int64_t>(dims),
-      input->shape().get().dimensions_size());
+absl::StatusOr<absl_nonnull XLATensorPtr> roll(
+    const absl_nonnull XLATensorPtr& input, absl::Span<const int64_t> shifts,
+    absl::Span<const int64_t> dims) {
+  XLA_RETURN_IF_ERROR(CheckRollShiftsRequired(shifts));
+  XLA_RETURN_IF_ERROR(CheckRollDimsAndShiftsAreCompatible(dims, shifts));
+  const std::vector<int64_t> canonical_dims =
+      torch::lazy::GetCanonicalDimensionIndices(
+          torch::lazy::ToVector<int64_t>(dims),
+          input->shape().get().dimensions().size());
   return input->CreateFrom(torch_xla::MakeNode<Roll>(
       input->GetIrValue(), torch::lazy::ToVector<int64_t>(shifts),
       canonical_dims));
@@ -3360,14 +3462,18 @@ XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims) {
   return view(input, output_dimensions);
 }
 
-XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim) {
-  XLA_CHECK_GT(tensors.size(), 0);
+absl::StatusOr<absl_nonnull XLATensorPtr> stack(
+    absl::Span<const absl_nonnull XLATensorPtr> tensors, int64_t dim) {
+  XLA_RETURN_IF_ERROR(CheckStackAtLeastOneTensor(tensors));
+
   std::vector<torch::lazy::Value> values;
-  for (auto& tensor : tensors) {
-    values.push_back(tensor->GetIrValue());
-  }
+  std::transform(
+      tensors.begin(), tensors.end(), std::back_inserter(values),
+      [](const absl_nonnull XLATensorPtr t) { return t->GetIrValue(); });
+
   int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
-      dim, tensors.front()->shape().get().dimensions_size() + 1);
+      dim, tensors.front()->shape().get().dimensions().size() + 1);
+
   return tensors[0]->CreateFrom(
       torch_xla::MakeNode<Stack>(values, canonical_dim));
 }

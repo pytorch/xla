@@ -2,6 +2,7 @@
 #define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
 #include "absl/base/nullability.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -158,10 +159,9 @@ XLATensorPtr cast_int4(const XLATensorPtr& weight,
 // Dynamic Reshape ops here.
 //////////////////////////////////////////////////////////////////////////////
 
-XLATensorPtr dynamic_expand(const XLATensorPtr& input,
-                            const std::vector<int64_t>& size,
-                            const XLATensorPtr& src_tensor, int src_dim,
-                            int target_dim);
+absl::StatusOr<absl_nonnull XLATensorPtr> dynamic_expand(
+    const XLATensorPtr& input, const absl::Span<const int64_t> sizes,
+    const XLATensorPtr& src_tensor, int src_dim, int target_dim);
 
 XLATensorPtr dynamic_view(const XLATensorPtr& input,
                           const std::vector<int64_t>& size,
@@ -427,7 +427,8 @@ XLATensorPtr eq(const XLATensorPtr& input, const XLATensorPtr& other);
 
 XLATensorPtr exp(const XLATensorPtr& input);
 
-XLATensorPtr expand(const XLATensorPtr& input, std::vector<int64_t> size);
+absl::StatusOr<absl_nonnull XLATensorPtr> expand(
+    const XLATensorPtr& input, const absl::Span<const int64_t> sizes);
 
 XLATensorPtr expand_symint(const XLATensorPtr& input,
                            c10::SymIntArrayRef sym_size);
@@ -646,7 +647,8 @@ void min_out(XLATensorPtr& min, XLATensorPtr& min_indices,
 
 XLATensorPtr mish(const XLATensorPtr& input);
 
-XLATensorPtr mm(const XLATensorPtr& input, const XLATensorPtr& weight);
+absl::StatusOr<XLATensorPtr> mm(const XLATensorPtr& input,
+                                const XLATensorPtr& weight);
 
 XLATensorPtr mse_loss(const XLATensorPtr& input, const XLATensorPtr& target,
                       int64_t reduction);
@@ -820,8 +822,9 @@ XLATensorPtr replication_pad3d_backward(const XLATensorPtr& grad_output,
 
 void resize_(XLATensorPtr& input, std::vector<int64_t> size);
 
-XLATensorPtr roll(const XLATensorPtr& input, absl::Span<const int64_t> shifts,
-                  absl::Span<const int64_t> dims);
+absl::StatusOr<absl_nonnull XLATensorPtr> roll(
+    const absl_nonnull XLATensorPtr& input, absl::Span<const int64_t> shifts,
+    absl::Span<const int64_t> dims);
 
 XLATensorPtr rrelu_with_noise(const XLATensorPtr& input, XLATensorPtr& noise,
                               const at::Scalar& lower, const at::Scalar& upper,
@@ -924,7 +927,8 @@ XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims);
 void squeeze_(XLATensorPtr& input);
 void squeeze_(XLATensorPtr& input, int64_t dim);
 
-XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim);
+absl::StatusOr<absl_nonnull XLATensorPtr> stack(
+    absl::Span<const absl_nonnull XLATensorPtr> tensors, int64_t dim);
 
 XLATensorPtr std(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                  bool keep_reduced_dimensions, double correction);

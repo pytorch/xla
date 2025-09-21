@@ -48,10 +48,10 @@ void TestSingleReplication(
     instances.emplace_back(CreateCrsComputation(shape), device_str,
                            all_device_strings, &shape);
   }
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   std::vector<torch_xla::runtime::ComputationClient::ComputationPtr>
-      compiled_computations =
-          torch_xla::runtime::GetComputationClientOrDie()->Compile(
-              std::move(instances));
+      compiled_computations = client->Compile(std::move(instances));
 
   std::vector<at::Tensor> tensors;
   for (size_t i = 0; i < device_strings.size(); ++i) {
@@ -66,14 +66,13 @@ void TestSingleReplication(
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
-      XLA_ASSIGN_OR_THROW(
-          results[i],
-          torch_xla::runtime::GetComputationClientOrDie()->ExecuteComputation(
-              *compiled_computations[i],
-              {std::dynamic_pointer_cast<
-                  torch_xla::runtime::ComputationClient::Data>(
-                  tensors_data[i])},
-              device_strings[i], exec_options));
+      XLA_ASSIGN_OR_THROW(results[i],
+                          client->ExecuteComputation(
+                              *compiled_computations[i],
+                              {std::dynamic_pointer_cast<
+                                  torch_xla::runtime::ComputationClient::Data>(
+                                  tensors_data[i])},
+                              device_strings[i], exec_options));
       counter.DecrementCount();
     };
     torch_xla::thread::Schedule(std::move(executor));
@@ -81,9 +80,8 @@ void TestSingleReplication(
   counter.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    XLA_ASSIGN_OR_THROW(
-        std::vector<xla::Literal> literals,
-        runtime::GetComputationClientOrDie()->TransferFromDevice(results[i]));
+    XLA_ASSIGN_OR_THROW(std::vector<xla::Literal> literals,
+                        client->TransferFromDevice(results[i]));
     ASSERT_EQ(literals.size(), 1);
 
     // The result must be the original tensor value, multiplied by the number of

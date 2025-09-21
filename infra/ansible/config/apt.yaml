@@ -15,8 +15,8 @@ apt:
       - wget
       - clang-format
       - clang-{{ clang_version }}
-      - gcc-10
-      - g++-10
+      - gcc-11
+      - g++-11
       - lcov
       - less
 
@@ -28,7 +28,6 @@ apt:
       - git
       - gnupg
       - libgomp1
-      - libopenblas-base
       - patch
       - vim
 
