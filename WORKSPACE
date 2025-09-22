@@ -1,5 +1,4 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 ################################ Python Setup ################################
 
@@ -8,18 +7,6 @@ http_archive(
     name = "pybind11_bazel",
     strip_prefix = "pybind11_bazel-fc56ce8a8b51e3dd941139d329b63ccfea1d304b",
     urls = ["https://github.com/pybind/pybind11_bazel/archive/fc56ce8a8b51e3dd941139d329b63ccfea1d304b.zip"],
-)
-
-git_repository(
-    name = "fmt",
-    branch = "master",
-    patch_cmds = [
-        "mv support/bazel/.bazelrc .bazelrc",
-        "mv support/bazel/.bazelversion .bazelversion",
-        "mv support/bazel/BUILD.bazel BUILD.bazel",
-        "mv support/bazel/WORKSPACE.bazel WORKSPACE.bazel",
-    ],
-    remote = "https://github.com/fmtlib/fmt",
 )
 
 http_archive(
@@ -53,6 +40,12 @@ new_local_repository(
     name = "torch",
     build_file = "//bazel:torch.BUILD",
     path = PYTORCH_LOCAL_DIR,
+)
+
+new_local_repository(
+    name = "fmt",
+    build_file = "//bazel:fmt.BUILD",
+    path = PYTORCH_LOCAL_DIR + "/third_party/fmt",
 )
 
 ############################# OpenXLA Setup ###############################
