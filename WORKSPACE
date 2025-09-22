@@ -1,4 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 ################################ Python Setup ################################
 
@@ -7,6 +8,18 @@ http_archive(
     name = "pybind11_bazel",
     strip_prefix = "pybind11_bazel-fc56ce8a8b51e3dd941139d329b63ccfea1d304b",
     urls = ["https://github.com/pybind/pybind11_bazel/archive/fc56ce8a8b51e3dd941139d329b63ccfea1d304b.zip"],
+)
+
+git_repository(
+    name = "fmt",
+    branch = "master",
+    patch_cmds = [
+        "mv support/bazel/.bazelrc .bazelrc",
+        "mv support/bazel/.bazelversion .bazelversion",
+        "mv support/bazel/BUILD.bazel BUILD.bazel",
+        "mv support/bazel/WORKSPACE.bazel WORKSPACE.bazel",
+    ],
+    remote = "https://github.com/fmtlib/fmt",
 )
 
 http_archive(
@@ -82,7 +95,7 @@ http_archive(
 # Initialize OpenXLA's external dependencies. There is an specific order
 # which those dependencies are initialized, because for bazel it's the
 # first definition that takes precedence.
-# We follow what openxla/xla does exactly: 
+# We follow what openxla/xla does exactly:
 # https://github.com/openxla/xla/blob/main/WORKSPACE#L37
 load("@xla//:workspace4.bzl", "xla_workspace4")
 
