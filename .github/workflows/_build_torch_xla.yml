@@ -6,10 +6,6 @@ on:
                 required: true
                 type: string
                 description: Base image for builds
-            torch-commit:
-                required: true
-                type: string
-                description: torch-commit
             runner:
                 required: false
                 type: string
@@ -53,8 +49,6 @@ jobs:
             - name: Setup
               if: inputs.has_code_changes == 'true'
               uses: ./.actions/.github/workflows/setup
-              with:
-                  torch-commit: ${{ inputs.torch-commit }}
             - name: Build
               if: inputs.has_code_changes == 'true'
               shell: bash
