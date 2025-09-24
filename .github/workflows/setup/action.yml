@@ -1,53 +1,53 @@
 name: Set up PyTorch/XLA
 inputs:
-  torch-commit:
-    type: string
-    description: PyTorch commit to check out, if provided
-  wheels-artifact:
-    type: string
-    description: |
-      Artifact containing `torch` (cpu) and `torch-xla` wheels to install
+    torch-commit:
+        type: string
+        description: PyTorch commit to check out, if provided
+    wheels-artifact:
+        type: string
+        description: |
+            Artifact containing `torch` (cpu) and `torch-xla` wheels to install
 runs:
-  using: "composite"
-  steps:
-    # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
-    - name: Clean up workspace
-      shell: bash
-      run: |
-        ls -la
-        rm -rvf ${GITHUB_WORKSPACE}/*
-    - name: Setup gcloud
-      shell: bash
-      run: |
-        echo "${GCLOUD_SERVICE_KEY}" > /tmp/default_credentials.json
-        echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/default_credentials.json" >> $GITHUB_ENV
-      # GCLOUD_SERVICE_KEY needs to be set from the outside because for some
-      # reason composite actions don't support secrets.
-      # https://docs.github.com/en/actions/using-workflows/avoiding-duplication
-      if: ${{ env.GCLOUD_SERVICE_KEY }}
-    - name: Checkout PyTorch Repo
-      uses: actions/checkout@v4
-      with:
-        repository: pytorch/pytorch
-        path: pytorch
-        ref: ${{ inputs.torch-commit }}
-        submodules: recursive
-      if: ${{ inputs.torch-commit }}
-    - name: Checkout PyTorch/XLA Repo
-      uses: actions/checkout@v4
-      with:
-        path: pytorch/xla
-    - name: Fetch PyTorch/XLA packages
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ inputs.wheels-artifact }}
-        path: /tmp/wheels/
-      if: ${{ inputs.wheels-artifact }}
-    - name: Install wheels
-      shell: bash
-      run: |
-        pip install /tmp/wheels/*.whl
+    using: "composite"
+    steps:
+        # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
+        - name: Clean up workspace
+          shell: bash
+          run: |
+              ls -la
+              rm -rvf ${GITHUB_WORKSPACE}/*
+        - name: Setup gcloud
+          shell: bash
+          run: |
+              echo "${GCLOUD_SERVICE_KEY}" > /tmp/default_credentials.json
+              echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/default_credentials.json" >> $GITHUB_ENV
+          # GCLOUD_SERVICE_KEY needs to be set from the outside because for some
+          # reason composite actions don't support secrets.
+          # https://docs.github.com/en/actions/using-workflows/avoiding-duplication
+          if: ${{ env.GCLOUD_SERVICE_KEY }}
+        - name: Checkout PyTorch Repo
+          uses: actions/checkout@v4
+          with:
+              repository: pytorch/pytorch
+              path: pytorch
+              ref: ${{ inputs.torch-commit }}
+              submodules: recursive
+          if: ${{ inputs.torch-commit }}
+        - name: Checkout PyTorch/XLA Repo
+          uses: actions/checkout@v4
+          with:
+              path: pytorch/xla
+        - name: Fetch PyTorch/XLA packages
+          uses: actions/download-artifact@v5
+          with:
+              name: ${{ inputs.wheels-artifact }}
+              path: /tmp/wheels/
+          if: ${{ inputs.wheels-artifact }}
+        - name: Install wheels
+          shell: bash
+          run: |
+              pip install /tmp/wheels/*.whl
 
-        echo "Import check..."
-        python -c "import torch_xla"
-      if: ${{ inputs.wheels-artifact }}
+              echo "Import check..."
+              python -c "import torch_xla"
+          if: ${{ inputs.wheels-artifact }}

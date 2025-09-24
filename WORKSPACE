@@ -42,6 +42,12 @@ new_local_repository(
     path = PYTORCH_LOCAL_DIR,
 )
 
+new_local_repository(
+    name = "fmt",
+    build_file = "//bazel:fmt.BUILD",
+    path = PYTORCH_LOCAL_DIR + "/third_party/fmt",
+)
+
 ############################# OpenXLA Setup ###############################
 
 # To build PyTorch/XLA with a new revison of OpenXLA, update the xla_hash to
@@ -82,7 +88,7 @@ http_archive(
 # Initialize OpenXLA's external dependencies. There is an specific order
 # which those dependencies are initialized, because for bazel it's the
 # first definition that takes precedence.
-# We follow what openxla/xla does exactly: 
+# We follow what openxla/xla does exactly:
 # https://github.com/openxla/xla/blob/main/WORKSPACE#L37
 load("@xla//:workspace4.bzl", "xla_workspace4")
 

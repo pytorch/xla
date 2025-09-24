@@ -10,6 +10,9 @@ cc_library(
         ["torch/include/**/*.h"],
         ["torch/include/google/protobuf/**/*.h"],
     ),
+    deps = [
+        "@fmt",
+    ],
     strip_include_prefix = "torch/include",
 )
 
