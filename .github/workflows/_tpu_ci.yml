@@ -2,10 +2,6 @@ name: TPU Integration Test
 on:
   workflow_call:
     inputs:
-      torch-commit:
-        required: false
-        type: string
-        description: torch-commit
       timeout-minutes:
         required: false
         type: number
@@ -41,7 +37,6 @@ jobs:
         if: inputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
-          torch-commit: ${{ inputs.torch-commit }}
           wheels-artifact: torch-xla-wheels
       - name: Install test dependencies
         if: inputs.has_code_changes == 'true'

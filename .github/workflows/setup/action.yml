@@ -1,8 +1,5 @@
 name: Set up PyTorch/XLA
 inputs:
-    torch-commit:
-        type: string
-        description: PyTorch commit to check out, if provided
     wheels-artifact:
         type: string
         description: |
@@ -16,6 +13,7 @@ runs:
           run: |
               ls -la
               rm -rvf ${GITHUB_WORKSPACE}/*
+
         - name: Setup gcloud
           shell: bash
           run: |
@@ -25,24 +23,44 @@ runs:
           # reason composite actions don't support secrets.
           # https://docs.github.com/en/actions/using-workflows/avoiding-duplication
           if: ${{ env.GCLOUD_SERVICE_KEY }}
+
+        # Checkout PyTorch/XLA first, so that we have access to the PyTorch commit pin
+        # that we should use when checking out PyTorch.
+        - name: Checkout PyTorch/XLA Repo
+          uses: actions/checkout@v4
+          with:
+              path: xla
+
+        # Retrieve the actual PyTorch commit.
+        - id: torch
+          name: Get PyTorch Commit Pin
+          shell: bash
+          run: |
+              COMMIT=$(cat "xla/.torch_commit")
+              echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+
+        # Checkout PyTorch using the retrieved PyTorch commit.
         - name: Checkout PyTorch Repo
           uses: actions/checkout@v4
           with:
               repository: pytorch/pytorch
               path: pytorch
-              ref: ${{ inputs.torch-commit }}
+              ref: ${{ steps.torch.outputs.commit }}
               submodules: recursive
-          if: ${{ inputs.torch-commit }}
-        - name: Checkout PyTorch/XLA Repo
-          uses: actions/checkout@v4
-          with:
-              path: pytorch/xla
+
+        # After checking out both PyTorch and PyTorch/XLA, we need to move PyTorch/XLA
+        # to the PyTorch directory.
+        - name: Move PyTorch/XLA Inside PyTorch
+          shell: bash
+          run: mv -v xla/ pytorch/
+
         - name: Fetch PyTorch/XLA packages
           uses: actions/download-artifact@v5
           with:
               name: ${{ inputs.wheels-artifact }}
               path: /tmp/wheels/
           if: ${{ inputs.wheels-artifact }}
+
         - name: Install wheels
           shell: bash
           run: |
