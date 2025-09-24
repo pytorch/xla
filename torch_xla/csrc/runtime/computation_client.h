@@ -446,6 +446,14 @@ class ComputationClient {
   // after the last ':' character of the device string.
   static int64_t GetDeviceOrdinal(const std::string& device);
 
+  // Sets XLA compile option overrides used by the backend compiler.
+  // - The map keys are XLA compiler flag names (env option override keys).
+  // - The values are stringified flag values.
+  // - Calling this method **overwrites** any previously set options.
+  //   (Pass an empty map to clear.)
+  virtual void SetCustomCompileOptions(
+      const std::unordered_map<std::string, std::string>& options) = 0;
+
  protected:
   static constexpr auto spmd_device_str = "SPMD:0";
 

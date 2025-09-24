@@ -554,6 +554,9 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
   for (auto& instance : instances) {
     xla::CompileOptions compile_options;
+    for (const auto& [name, value] : custom_compile_options_) {
+      compile_options.env_option_overrides.push_back({name, value});
+    }
     if (enable_cm_in_mp) {
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
       compile_options.env_option_overrides.push_back(
@@ -561,6 +564,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       compile_options.env_option_overrides.push_back(
           {"xla_tpu_decompose_einsum_reduce_scatter", true});
     }
+
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
@@ -1050,6 +1054,14 @@ void PjRtComputationClient::OnReadyCallback(
   XLA_CHECK(buffer) << "received placeholder data as argument";
   buffer->GetReadyFuture().OnReady(
       [callback](absl::Status unused) { callback(); });
+}
+
+void PjRtComputationClient::SetCustomCompileOptions(
+    const std::unordered_map<std::string, std::string>& options) {
+  custom_compile_options_.clear();
+  for (const auto& [key, value] : options) {
+    custom_compile_options_[key] = value;
+  }
 }
 
 }  // namespace runtime
