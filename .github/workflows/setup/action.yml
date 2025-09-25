@@ -36,7 +36,8 @@ runs:
           name: Get PyTorch Commit Pin
           shell: bash
           run: |
-              COMMIT=$(cat "xla/.torch_commit")
+              COMMIT_FILE="xla/.torch_commit"
+              COMMIT=$(tail -1 "$COMMIT_FILE")
               echo "commit=$COMMIT" >> $GITHUB_OUTPUT
 
         # Checkout PyTorch using the retrieved PyTorch commit.
