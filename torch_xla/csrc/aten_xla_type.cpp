@@ -3875,8 +3875,11 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::topk(
 
 at::Tensor XLANativeFunctions::trace(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::trace(xla_self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::trace(xla_self));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::transpose_copy(const at::Tensor& self,
