@@ -28,7 +28,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
   @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_add(self):
     args = (torch.rand((10, 197, 768)), torch.rand((10, 197, 768)))
-    dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
+    dynamic_shapes = ({0: Dim("dim")}, {0: Dim("dim")})
     m = wrap_func_as_nn_module(torch.ops.aten.add.Tensor)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -46,7 +46,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_add_scalar(self):
     args = (torch.rand((10, 197, 768)), 0.345)
-    dynamic_shapes = (({0: Dim("dim")}, None),)
+    dynamic_shapes = ({0: Dim("dim")}, None)
     m = wrap_func_as_nn_module(torch.ops.aten.add.Tensor)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -63,7 +63,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_addmm(self):
     args = (torch.rand((5)), torch.rand((10, 5)), torch.rand((5, 5)))
-    dynamic_shapes = ((None, {0: Dim("dim")}, None),)
+    dynamic_shapes = (None, {0: Dim("dim")}, None)
     m = wrap_func_as_nn_module(torch.ops.aten.addmm.default)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -85,7 +85,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         torch.rand((24, 197, 64)),
         torch.rand((24, 64, 197)),
     )
-    dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
+    dynamic_shapes = ({0: Dim("dim")}, {0: Dim("dim")})
     m = wrap_func_as_nn_module(torch.ops.aten.bmm.default)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -106,7 +106,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         torch.rand((8, 128, 256)),
         torch.rand((8, 256, 3)),
     )
-    dynamic_shapes = ((None, {2: Dim("dim")}),)
+    dynamic_shapes = (None, {2: Dim("dim")})
     m = wrap_func_as_nn_module(torch.ops.aten.bmm.default)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -128,7 +128,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         torch.rand((8, 128, 3)),
         torch.rand((8, 3, 256)),
     )
-    dynamic_shapes = (({2: Dim("dim")}, {1: Dim("dim")}),)
+    dynamic_shapes = ({2: Dim("dim")}, {1: Dim("dim")})
     m = wrap_func_as_nn_module(torch.ops.aten.bmm.default)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -147,7 +147,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
   @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_cat(self):
     args = (torch.rand((10, 1, 768)), torch.rand((10, 196, 768)))
-    dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
+    dynamic_shapes = ({0: Dim("dim")}, {0: Dim("dim")})
     m = wrap_func_as_nn_module(
         lambda x, y: torch.ops.aten.cat.default([x, y], 1))
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
@@ -170,7 +170,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         torch.rand((5, 3, 16, 16)),
         torch.rand((5)),
     )
-    dynamic_shapes = (({0: Dim("dim")}, None, None),)
+    dynamic_shapes = ({0: Dim("dim")}, None, None)
     m = wrap_func_as_nn_module(
         lambda x, y, z: torch.ops.aten.convolution.default(
             x,
@@ -201,7 +201,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         torch.rand((3, 1, 800)),
         torch.rand((512, 1, 10)),
     )
-    dynamic_shapes = (({0: Dim("dim")}, None),)
+    dynamic_shapes = ({0: Dim("dim")}, None)
     # dynamic_shapes = None
     m = wrap_func_as_nn_module(lambda x, y: torch.ops.aten.convolution.default(
         x,
@@ -229,7 +229,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_cumsum(self):
     args = (torch.rand((10, 5)), 1)
-    dynamic_shapes = (({0: Dim("dim")}, None),)
+    dynamic_shapes = ({0: Dim("dim")}, None)
     m = wrap_func_as_nn_module(torch.ops.aten.cumsum.default)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -247,7 +247,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
   @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_div(self):
     args = (torch.rand((10, 12, 197)), torch.rand((10, 12, 197)))
-    dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
+    dynamic_shapes = ({0: Dim("dim")}, {0: Dim("dim")})
     m = wrap_func_as_nn_module(torch.ops.aten.div.Tensor)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -265,7 +265,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_div_scalar(self):
     args = (torch.rand((10, 12, 197)), 8.0)
-    dynamic_shapes = (({0: Dim("dim")}, None),)
+    dynamic_shapes = ({0: Dim("dim")}, None)
     m = wrap_func_as_nn_module(torch.ops.aten.div.Tensor)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -282,7 +282,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_gelu(self):
     args = (torch.rand((3, 5)),)
-    dynamic_shapes = (({0: Dim("dim")},),)
+    dynamic_shapes = ({0: Dim("dim")},)
     m = wrap_func_as_nn_module(torch.ops.aten.gelu)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -348,7 +348,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
   @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_mul(self):
     args = (torch.rand((10, 2, 768)), torch.rand((10, 2, 768)))
-    dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
+    dynamic_shapes = ({0: Dim("dim")}, {0: Dim("dim")})
     m = wrap_func_as_nn_module(torch.ops.aten.mul.Tensor)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -366,7 +366,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_mul_scalar(self):
     args = (torch.rand((10, 2, 768)), 0.125)
-    dynamic_shapes = (({0: Dim("dim")}, None),)
+    dynamic_shapes = ({0: Dim("dim")}, None)
     m = wrap_func_as_nn_module(torch.ops.aten.mul.Tensor)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -489,7 +489,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_permute(self):
     args = (torch.rand((10, 197, 12, 64)),)
-    dynamic_shapes = (({0: Dim("dim")},),)
+    dynamic_shapes = ({0: Dim("dim")},)
     m = wrap_func_as_nn_module(
         lambda x: torch.ops.aten.permute.default(x, [0, 2, 1, 3]))
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
@@ -508,7 +508,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_select(self):
     args = (torch.rand((10, 197, 768)), 1, 0)
-    dynamic_shapes = (({0: Dim("dim")}, None, None),)
+    dynamic_shapes = ({0: Dim("dim")}, None, None)
     m = wrap_func_as_nn_module(torch.ops.aten.select.int)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -525,7 +525,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_slice(self):
     args = (torch.rand((10, 3, 224, 224)), 0, 0, 9223372036854775807)
-    dynamic_shapes = (({0: Dim("dim")}, None, None, None),)
+    dynamic_shapes = ({0: Dim("dim")}, None, None, None)
     m = wrap_func_as_nn_module(torch.ops.aten.slice.Tensor)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -543,7 +543,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_slice_2(self):
     args = (torch.rand((10, 3, 224, 224)), 1, 0, 2)
-    dynamic_shapes = (({0: Dim("dim")}, None, None, None),)
+    dynamic_shapes = ({0: Dim("dim")}, None, None, None)
     m = wrap_func_as_nn_module(torch.ops.aten.slice.Tensor)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -561,7 +561,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_softmax(self):
     args = (torch.rand((10, 12, 197, 197)), -1, False)
-    dynamic_shapes = (({0: Dim("dim")}, None, None),)
+    dynamic_shapes = ({0: Dim("dim")}, None, None)
     m = wrap_func_as_nn_module(torch.ops.aten._softmax.default)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -580,7 +580,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
   @unittest.skip("https://github.com/pytorch/xla/issues/9637")
   def test_sub(self):
     args = (torch.rand((10, 1, 1, 10)), torch.rand((10, 1, 1, 10)))
-    dynamic_shapes = (({0: Dim("dim")}, {0: Dim("dim")}),)
+    dynamic_shapes = ({0: Dim("dim")}, {0: Dim("dim")})
     m = wrap_func_as_nn_module(torch.ops.aten.sub.Tensor)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -598,7 +598,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_softmax_reduce_on_dynamic_dim(self):
     args = (torch.rand((1, 8, 128, 3)), -1, False)
-    dynamic_shapes = (({3: Dim("dim")}, None, None),)
+    dynamic_shapes = ({3: Dim("dim")}, None, None)
     m = wrap_func_as_nn_module(torch.ops.aten._softmax.default)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -635,7 +635,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_sub_scalar(self):
     args = (1.0, torch.rand((10, 1, 1, 10)))
-    dynamic_shapes = ((None, {0: Dim("dim")}),)
+    dynamic_shapes = (None, {0: Dim("dim")})
     m = wrap_func_as_nn_module(torch.ops.aten.sub.Tensor)
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -677,7 +677,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_transpose_on_dynamic_dim(self):
     args = (torch.rand((1, 8, 3, 256)),)
-    dynamic_shapes = (({2: Dim("dim")},),)
+    dynamic_shapes = ({2: Dim("dim")},)
     m = wrap_func_as_nn_module(
         lambda x: torch.ops.aten.transpose.int(x, -2, -1))
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
@@ -695,7 +695,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_unsqueeze_1(self):
     args = (torch.rand((3, 10)),)
-    dynamic_shapes = (({0: Dim("dim")},),)
+    dynamic_shapes = ({0: Dim("dim")},)
     m = wrap_func_as_nn_module(lambda x: torch.ops.aten.unsqueeze.default(x, 1))
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -712,7 +712,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
   def test_unsqueeze_2(self):
     args = (torch.rand((1, 1, 3, 256)),)
-    dynamic_shapes = (({2: Dim("dim")},),)
+    dynamic_shapes = ({2: Dim("dim")},)
     m = wrap_func_as_nn_module(lambda x: torch.ops.aten.unsqueeze.default(x, 2))
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
