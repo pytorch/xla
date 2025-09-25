@@ -56,6 +56,11 @@ if [ "$_BUILD_BASE" == "pytorch" ]; then
   # Change to the pytorch directory.
   cd $_SCRIPT_DIR/../..
 
+  TORCH_COMMIT="xla/.torch_commit"
+  if [ -e "$TORCH_COMMIT" ]; then
+    git checkout $(tail -1 "$TORCH_COMMIT")
+  fi
+
   # Remove any leftover old wheels and old installation.
   pip uninstall torch -y
   python3 setup.py clean
