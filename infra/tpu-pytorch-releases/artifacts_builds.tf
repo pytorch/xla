@@ -94,7 +94,7 @@ locals {
     for b in local.nightly_builds :
     format("%s_%s%s%s",
       b.python_version,
-      b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version),
+      "tpuvm",
       try(b.cxx11_abi == "0", false) ? "_precxx11" : "",
       try(b.bundle_libtpu == "1", false) ? "_libtpu" : ""
     ) => b
@@ -106,7 +106,7 @@ locals {
     format("r%s_%s_%s%s%s",
       replace(b.package_version, "+", "_"),
       b.python_version,
-      b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version),
+      "tpuvm",
       try(b.cxx11_abi == "0", false) ? "_precxx11" : "",
       try(b.bundle_libtpu == "1", false) ? "_libtpu" : ""
     ) => b
@@ -136,20 +136,13 @@ module "nightly_builds" {
   ]
 
   description = join(" ", [
-    "Builds nightly xla:nightly_${each.key}' ${
-      each.value.accelerator == "tpu"
-      ? "TPU"
-      : format("CUDA %s", each.value.cuda_version)
-    } docker image and corresponding wheels for PyTorch/XLA.",
+    "Builds nightly xla:nightly_${each.key}' TPU docker image and ",
+    "corresponding wheels for PyTorch/XLA.",
     "Trigger managed by Terraform setup in",
     "infra/tpu-pytorch-releases/artifacts_builds.tf."
   ])
 
-  wheels_dest = "${module.releases_storage_bucket.url}/wheels/${
-    each.value.accelerator == "tpu"
-    ? "tpuvm"
-    : "cuda/${each.value.cuda_version}"
-  }"
+  wheels_dest = "${module.releases_storage_bucket.url}/wheels/tpuvm"
   wheels_srcs = ["/dist/*.whl"]
   build_args = {
     python_version = each.value.python_version
@@ -183,20 +176,13 @@ module "versioned_builds" {
   image_tags   = [each.key]
 
   description = join(" ", [
-    "Builds official xla:${each.key}' ${
-      each.value.accelerator == "tpu"
-      ? "TPU"
-      : format("CUDA %s", each.value.cuda_version)
-    } docker image and corresponding wheels for PyTorch/XLA.",
+    "Builds official xla:${each.key}' TPU docker image and ",
+    "corresponding wheels for PyTorch/XLA.",
     "Trigger managed by Terraform setup in",
     "infra/tpu-pytorch-releases/artifacts_builds.tf."
   ])
 
-  wheels_dest = "${module.releases_storage_bucket.url}/wheels/${
-    each.value.accelerator == "tpu"
-    ? "tpuvm"
-    : "cuda/${each.value.cuda_version}"
-  }"
+  wheels_dest = "${module.releases_storage_bucket.url}/wheels/tpuvm"
   wheels_srcs = ["/dist/*.whl"]
   # Pass docker build args to infra/ansible/Dockerfile, other than `ansible_vars`.
   build_args = {
