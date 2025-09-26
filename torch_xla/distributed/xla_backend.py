@@ -131,9 +131,14 @@ class ProcessGroupXla(ProcessGroup):
   # Call site:
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L1129
   def broadcast(self, tensors, opts):
+    import torch.distributed as dist
+
     root_tensor = tensors[opts.rootTensor]
+    # Convert group local rank to glocal rank for xla collectives
+    group_source = opts.rootRank
+    global_src = dist.get_global_rank(self, group_src)
     xm.collective_broadcast([root_tensor],
-                            opts.rootRank,
+                            global_src,
                             groups=self._mesh,
                             pin_layout=False)
 
