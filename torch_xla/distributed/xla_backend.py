@@ -134,8 +134,8 @@ class ProcessGroupXla(ProcessGroup):
     import torch.distributed as dist
 
     root_tensor = tensors[opts.rootTensor]
-    # Convert group local rank to glocal rank for xla collectives
-    group_source = opts.rootRank
+    # Convert group local rank to global rank for xla collectives
+    group_src = opts.rootRank
     global_src = dist.get_global_rank(self, group_src)
     xm.collective_broadcast([root_tensor],
                             global_src,
