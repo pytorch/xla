@@ -44,6 +44,18 @@ def patch_world(rank, size):
     yield
 
 
+@contextlib.contextmanager
+def patch_world_with_xla_runtime(rank, size):
+  assert isinstance(dist.group.WORLD,
+                    torch_xla.distributed.xla_backend.ProcessGroupXla)
+  with mock.patch.object(
+      dist.group.WORLD, 'rank', return_value=rank), mock.patch.object(
+          dist.group.WORLD, 'size', return_value=size), mock.patch.object(
+          xr, 'global_ordinal', return_value=rank), mock.patch.object(
+          xr, 'world_size', return_value=size):
+    yield
+
+
 class XlaBackendTest(parameterized.TestCase):
 
   @classmethod
@@ -328,7 +340,7 @@ class XlaBackendTest(parameterized.TestCase):
     with self.assertRaises(NotImplementedError):
       getattr(pg_xla, op)(tensor)
 
-  @patch_world(rank=0, size=2)
+  @patch_world_with_xla_runtime(rank=0, size=2)
   def test_broadcast_single_rank_group_rank0(self):
     """Test broadcast in single-member process group for rank 0"""
     device = torch_xla.device()
@@ -351,7 +363,7 @@ class XlaBackendTest(parameterized.TestCase):
     self.assertEqual(dist.get_rank(group=tp), 0)
     self.assertEqual(dist.get_world_size(group=tp), 1)
 
-  @patch_world(rank=1, size=2)
+  @patch_world_with_xla_runtime(rank=1, size=2)
   def test_broadcast_single_rank_group_rank1(self):
     """Test broadcast in single-member process group for rank 1"""
     device = torch_xla.device()
@@ -375,7 +387,7 @@ class XlaBackendTest(parameterized.TestCase):
                      0)  # Local rank in single-member group is 0
     self.assertEqual(dist.get_world_size(group=tp), 1)
 
-  @patch_world(rank=0, size=2)
+  @patch_world_with_xla_runtime(rank=0, size=2)
   def test_broadcast_global_rank_conversion_single_member(self):
     """Test that global rank conversion works correctly for single-member groups"""
     device = torch_xla.device()
