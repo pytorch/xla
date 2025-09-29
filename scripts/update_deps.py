@@ -489,8 +489,10 @@ def update_pytorch() -> bool:
   cmd_clone = [
       "git",
       "clone",
-      "--branch", "viable/strict",
-      "--depth", "1",
+      "--branch",
+      "viable/strict",
+      "--depth",
+      "1",
       "https://github.com/pytorch/pytorch",
       torch_temp_dir,
   ]
@@ -498,7 +500,8 @@ def update_pytorch() -> bool:
 
   cmd_commit_show = [
       "git",
-      "--git-dir", f"{torch_temp_dir}/.git",
+      "--git-dir",
+      f"{torch_temp_dir}/.git",
       "show",
       "--no-patch",
       f"--pretty=format:\"{_TORCH_COMMIT_FORMAT}\"",
