@@ -135,8 +135,8 @@ class ProcessGroupXla(ProcessGroup):
 
     root_tensor = tensors[opts.rootTensor]
     # Convert group local rank to global rank for xla collectives
-    group_src = opts.rootRank
-    global_src = dist.get_global_rank(self, group_src)
+    group_source = opts.rootRank
+    global_src = dist.get_global_rank(self, group_source)
     xm.collective_broadcast([root_tensor],
                             global_src,
                             groups=self._mesh,
