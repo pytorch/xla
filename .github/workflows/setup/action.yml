@@ -35,21 +35,15 @@ runs:
           with:
               path: pytorch/xla
 
-        # Retrieve the pinned PyTorch commit.
-        - name: Get PyTorch Commit Pin
-          id: torch
-          working-directory: pytorch/xla
-          shell: bash
-          env:
-            TORCH_COMMIT_FILE: ".torch_commit"
-          run: echo "commit=$(tail -1 "$TORCH_COMMIT_FILE")" >> $GITHUB_OUTPUT
-
         # Fetch and checkout to the pinned PyTorch commit.
         - name: Checkout to PyTorch Commit Pin
           working-directory: pytorch
           shell: bash
+          env:
+            TORCH_COMMIT_FILE: ".torch_commit"
           run: |
-            git fetch --no-recurse-submodules origin {{ steps.torch.outputs.commit }}
+            COMMIT=$(tail -1 "xla/$TORCH_COMMIT_FILE")
+            git fetch --no-recurse-submodules origin $COMMIT
             git checkout --no-recurse-submodules FETCH_HEAD
             git submodule update --init --recursive
 
