@@ -57,7 +57,7 @@ requires maintenance, i.e. someone has to keep updating the PyTorch commit so
 as to make sure it's always supporting (almost) the latest PyTorch versions.
 
 Updating the PyTorch commit pin is, theoretically, simple. You just have to run
-`scripts/update_pytorch_pin.sh` bash file, and open a PR. In practice, you may
+`scripts/update_deps.py --pytorch` file, and open a PR. In practice, you may
 encounter a few compilation errors, or even segmentation faults.
 
 ## CI Environment
