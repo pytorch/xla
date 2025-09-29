@@ -1,1 +1,8 @@
+# commit 928ac57c2ab03f9f79376f9995553eea2e6f4ca8
+# Author: Syed Tousif Ahmed <syeahmed@nvidia.com>
+# Author Date:    Wed Sep 17 00:20:48 2025 -0700
+# Committer Date: Wed Sep 17 16:39:11 2025 +0000
+#
+#    Upgrades dlpack to v1.1 to include fp8/fp4 (#162195)
+#
 928ac57c2ab03f9f79376f9995553eea2e6f4ca8

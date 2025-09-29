@@ -13,13 +13,12 @@ changes.
 ### Temporarily Pinning PyTorch PR in PyTorch/XLA PR
 
 Sometimes a PyTorch/XLA PR needs to be pinned to a specific PyTorch PR to test
-new features, fix breaking changes, etc. Since PyTorch/XLA CI pulls from PyTorch
-master by default, we need to manually provide a PyTorch pin. In a PyTorch/XLA
-PR, PyTorch can be manually pinned by creating a `.torch_pin` file at the root
-of the repository. The `.torch_pin` should have the corresponding PyTorch PR
-number prefixed by "#". Take a look at [example
-here](https://github.com/pytorch/xla/pull/7313). Before the PyTorch/XLA PR gets
-merged, the `.torch_pin` must be deleted and `.torch_commit` updated.
+new features, fix breaking changes, etc. In a PyTorch/XLA PR, PyTorch can be
+manually pinned by creating a `.torch_pin` file at the root of the repository.
+The `.torch_pin` should have the corresponding PyTorch PR number prefixed by
+"#". Take a look at [example here](https://github.com/pytorch/xla/pull/7313).
+Before the PyTorch/XLA PR gets merged, the `.torch_pin` must be deleted and
+`.torch_commit` updated.
 
 ### Coordinating merges for breaking PyTorch PRs
 

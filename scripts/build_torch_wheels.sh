@@ -213,14 +213,9 @@ function build_armcomputelibrary() {
 
 function build_and_install_torch() {
   # Checkout the PT commit ID or branch if we have one.
-  TORCH_PIN="xla/.torch_pin"
-  if [ -e "$TORCH_PIN" ]; then
-    git checkout $(cat "$TORCH_PIN")
-  else
-    TORCH_COMMIT="xla/.torch_commit"
-    if [ -e "$TORCH_COMMIT" ]; then
-      git checkout $(tail -1 "$TORCH_COMMIT")
-    fi
+  COMMITID_FILE="xla/.torch_pin"
+  if [ -e "$COMMITID_FILE" ]; then
+    git checkout $(cat "$COMMITID_FILE")
   fi
   # Only checkout dependencies once PT commit/branch checked out.
   git submodule update --init --recursive
