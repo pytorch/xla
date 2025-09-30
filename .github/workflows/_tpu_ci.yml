@@ -66,7 +66,7 @@ jobs:
 
           # Retrieve the PyTorch/XLA ".whl" file.
           # This assumes PyTorch/XLA wheels are downloaded in "/tmp/wheels".
-          WHL=$(ls "/tmp/wheels/torch_xla*")
+          WHL=$(ls /tmp/wheels/torch_xla*)
 
           # Links for finding `jax` and `libtpu` versions.
           INDEX="https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ "
