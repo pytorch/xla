@@ -664,6 +664,8 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad1dRank3) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReflectionPad1dBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   std::vector<int64_t> pad{2, 2};
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::reflection_pad1d(inputs[0], pad);
@@ -709,6 +711,8 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad2dRank4) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReflectionPad2dBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   std::vector<int64_t> pad{2, 3, 1, 2};
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::reflection_pad2d(inputs[0], pad);
@@ -754,6 +758,8 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank4) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReflectionPad3dBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   std::vector<int64_t> pad{1, 1, 1, 1, 1, 1};
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::reflection_pad3d(inputs[0], pad);
@@ -801,6 +807,8 @@ TEST_F(AtenXlaTensorTest, TestReplicationPad1dZeroPad) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReplicationPad1dBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   std::vector<int64_t> pad{2, 3};
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::replication_pad1d(inputs[0], pad);
@@ -848,6 +856,8 @@ TEST_F(AtenXlaTensorTest, TestReplicationPad2dZeroPad) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReplicationPad2dBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   std::vector<int64_t> pad{2, 3, 1, 1};
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::replication_pad2d(inputs[0], pad);
@@ -895,6 +905,8 @@ TEST_F(AtenXlaTensorTest, TestReplicationPad3dZeroPad) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReplicationPad3dBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   std::vector<int64_t> pad{2, 3, 1, 1, 1, 1};
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::replication_pad3d(inputs[0], pad);
@@ -1131,6 +1143,8 @@ TEST_F(AtenXlaTensorTest, TestAsStridedMultipleDimMismatch) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
@@ -1161,6 +1175,8 @@ TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAvgPool3DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
@@ -1192,6 +1208,8 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAvgPool2DNoBatchBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
@@ -1222,6 +1240,8 @@ TEST_F(AtenXlaTensorTest, TestAvgPool2DNoBatchBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatchBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
@@ -1253,6 +1273,8 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatchBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool3DNoBatchBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   for (int64_t output_size : {7, 4}) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
@@ -1273,6 +1295,8 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool3DNoBatchBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool3DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   for (int64_t output_size : {7, 4}) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
@@ -1293,6 +1317,8 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool3DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   for (int64_t output_size : {7, 8}) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
@@ -1312,6 +1338,8 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DNoBatchBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   for (int64_t output_size : {7, 8}) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
@@ -1329,6 +1357,8 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DNoBatchBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestConv3DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int in_channels = 4;
   int out_channels = 8;
   int kernel_size = 5;

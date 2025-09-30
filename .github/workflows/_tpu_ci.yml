@@ -37,25 +37,56 @@ jobs:
           sparse-checkout: |
             .github/workflows/setup
           path: .actions
+
       - name: Setup
         if: inputs.has_code_changes == 'true'
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
           wheels-artifact: torch-xla-wheels
+
       - name: Install test dependencies
         if: inputs.has_code_changes == 'true'
         shell: bash
         run: |
+          set -x
+
           # TODO: Add these in setup.py
           pip install --upgrade pip
           pip install fsspec
           pip install rich
-          # jax and libtpu is needed for pallas tests.
-          pip install --pre 'torch_xla[pallas]' --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html'
-          pip install --pre 'torch_xla[tpu]' --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html'
+
+          # PyTorch/XLA Optional Dependencies
+          # =================================
+          #
+          # Install `JAX` and `libtpu` dependencies for pallas and TPU tests.
+          #
+          # Note that we might need to install pre-release versions of both, in
+          # external artifact repositories.
+
+          # Retrieve the PyTorch/XLA ".whl" file.
+          # This assumes PyTorch/XLA wheels are downloaded in "/tmp/wheels".
+          WHL=$(ls /tmp/wheels/torch_xla*)
+
+          # Links for finding `jax` and `libtpu` versions.
+          INDEX="https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ "
+          LINKS="https://storage.googleapis.com/jax-releases/libtpu_releases.html"
+
+          pip install "$WHL[pallas]" --pre --index-url $INDEX --find-links $LINKS
+          pip install "$WHL[tpu]"    --pre --index-url $INDEX --find-links $LINKS
+
           pip install --upgrade protobuf
-          pip install flax
+
+          # Flax Pin
+          # ========
+          #
+          # Be careful when bumping the `flax` version, since it can cause tests that
+          # depend on `jax` to start breaking.
+          #
+          # Newer `flax` versions might pull newer `jax` versions, which might be incompatible
+          # with the current version of PyTorch/XLA.
+          pip install flax==0.11.2
+
       - name: Run Tests (${{ matrix.test_script }})
         if: inputs.has_code_changes == 'true'
         env:
@@ -64,6 +95,7 @@ jobs:
         run: |
           cd pytorch/xla
           ${{ matrix.test_script }}
+
       - name: Report no code changes
         # Only report the first instance
         if: inputs.has_code_changes == 'false' && strategy.job-index == 0

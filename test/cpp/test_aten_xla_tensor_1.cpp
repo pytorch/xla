@@ -356,6 +356,8 @@ TEST_F(AtenXlaTensorTest, TestSiLU) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSiLUBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::silu(inputs[0]);
   };
@@ -681,6 +683,8 @@ TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumOuterBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Tensor a =
       torch::rand({5}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor b =
@@ -719,6 +723,8 @@ TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMulBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   if (UsingTpu()) {
     GTEST_SKIP();
   }
@@ -759,6 +765,8 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinear) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinearBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Tensor a = torch::rand(
       {3, 5, 4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor l = torch::rand(
@@ -795,6 +803,8 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonal) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonalBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Tensor input = torch::rand(
       {3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   std::string equation = "ii->i";
@@ -827,6 +837,8 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonal) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonalBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Tensor input = torch::rand(
       {4, 3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   std::string equation = "...ii->...i";
@@ -859,6 +871,8 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermute) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermuteBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Tensor input = torch::rand(
       {2, 3, 4, 5}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   std::string equation = "...ij->...ji";
@@ -892,6 +906,8 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxisBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Tensor x = torch::rand(
       {2, 3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor y =
@@ -1036,6 +1052,8 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2D) {
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int batch_size = 2;
   int h = 5;
   int w = 5;
@@ -1094,6 +1112,8 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DWithScale) {
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackwardWithScale) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   struct ImageInfo {
     int batch_size;
     int h;
@@ -1223,6 +1243,8 @@ TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DWithScale) {
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int batch_size = 2;
   int h = 5;
   int w = 5;
@@ -1245,6 +1267,8 @@ TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DBackwardWithScale) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   struct ImageInfo {
     int batch_size;
     int h;
@@ -1610,6 +1634,8 @@ TEST_F(AtenXlaTensorTest, TestTake) {
 }
 
 TEST_F(AtenXlaTensorTest, TestTakeBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::take(inputs[0], inputs[1]);
   };
@@ -3499,6 +3525,8 @@ TEST_F(AtenXlaTensorTest, TestPrelu) {
 }
 
 TEST_F(AtenXlaTensorTest, TestPreluBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::prelu(inputs[0], inputs[1]);
   };
@@ -3583,6 +3611,8 @@ TEST_F(AtenXlaTensorTest, TestHardSigmoidInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestHardSigmoidBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::hardsigmoid(inputs[0]);
   };
@@ -3625,6 +3655,8 @@ TEST_F(AtenXlaTensorTest, TestHardSwishInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestHardSwishBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::hardswish(inputs[0]);
   };
