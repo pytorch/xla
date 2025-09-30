@@ -43,7 +43,7 @@ _JAX_INDEX_URL = 'https://us-python.pkg.dev/ml-oss-artifacts-published/jax-publi
 _JAX_PROJECT_URL = _JAX_INDEX_URL + 'jax/'
 _JAXLIB_PROJECT_URL = _JAX_INDEX_URL + 'jaxlib/'
 
-_TORCH_COMMIT_FORMAT = "# commit %H%n# Author: %an <%ae>%n# Author Date:    %ad%n# Committer Date: %cd%n#%n#    %s%n#%n%H"
+_TORCH_COMMIT_FORMAT = "# %cs%n%H"
 _TORCH_COMMIT_FILE = os.path.join(_PTXLA_DIR, ".torch_commit")
 
 
@@ -481,18 +481,18 @@ def update_jax(use_latest: bool) -> bool:
   return success
 
 
-def update_pytorch() -> bool:
+def update_pytorch(use_latest: bool) -> bool:
   clean_tmp_dir()
 
   torch_temp_dir = os.path.join(_TMP_DIR, "pytorch")
+  branch = "main" if use_latest else "viable/strict"
 
   cmd_clone = [
       "git",
       "clone",
       "--branch",
-      "viable/strict",
-      "--depth",
-      "1",
+      branch,
+      "--depth=1",
       "https://github.com/pytorch/pytorch",
       torch_temp_dir,
   ]
@@ -500,8 +500,7 @@ def update_pytorch() -> bool:
 
   cmd_commit_show = [
       "git",
-      "--git-dir",
-      f"{torch_temp_dir}/.git",
+      f"--git-dir={torch_temp_dir}/.git",
       "show",
       "--no-patch",
       f"--pretty=format:\"{_TORCH_COMMIT_FORMAT}\"",
@@ -525,23 +524,15 @@ def main() -> None:
       default=False,
       help='Update to latest nightly versions instead of latest stable versions.'
   )
-  parser.add_argument(
-      '--pytorch',
-      action='store_true',
-      help='Update PyTorch to the current viable/strict branch.',
-  )
   args = parser.parse_args()
 
-  if args.pytorch:
-    success = update_pytorch()
-    if not success:
-      sys.exit(1)
-  elif args.use_latest:
+  if args.use_latest:
     logger.info('Updating to latest nightly versions...')
     openxla_updated = update_openxla()
     libtpu_updated = update_libtpu()
     jax_updated = update_jax(use_latest=True)
-    if not (openxla_updated and libtpu_updated and jax_updated):
+    pytorch_updated = update_pytorch(use_latest=True)
+    if not (openxla_updated and libtpu_updated and jax_updated and pytorch_updated):
       sys.exit(1)
   else:
     logger.info('Updating to latest stable versions...')
@@ -558,7 +549,10 @@ def main() -> None:
     libtpu_updated = update_libtpu(
         target_date=jax_release_date.replace('-', ''))
     jax_updated = update_jax(use_latest=False)
-    if not (openxla_updated and libtpu_updated and jax_updated):
+
+    pytorch_updated = update_pytorch(use_latest=False)
+
+    if not (openxla_updated and libtpu_updated and jax_updated and pytorch_updated):
       sys.exit(1)
 
 
