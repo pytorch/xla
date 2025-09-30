@@ -532,7 +532,8 @@ def main() -> None:
     libtpu_updated = update_libtpu()
     jax_updated = update_jax(use_latest=True)
     pytorch_updated = update_pytorch(use_latest=True)
-    if not (openxla_updated and libtpu_updated and jax_updated and pytorch_updated):
+    if not (openxla_updated and libtpu_updated and jax_updated and
+            pytorch_updated):
       sys.exit(1)
   else:
     logger.info('Updating to latest stable versions...')
@@ -552,7 +553,8 @@ def main() -> None:
 
     pytorch_updated = update_pytorch(use_latest=False)
 
-    if not (openxla_updated and libtpu_updated and jax_updated and pytorch_updated):
+    if not (openxla_updated and libtpu_updated and jax_updated and
+            pytorch_updated):
       sys.exit(1)
 
 
