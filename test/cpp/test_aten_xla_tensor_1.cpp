@@ -356,9 +356,8 @@ TEST_F(AtenXlaTensorTest, TestSiLU) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSiLUBackward) {
-  GTEST_SKIP()
-    << "failing due to PyTorch upstream changes. "
-    << "See: https://github.com/pytorch/xla/issues/9651.";
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::silu(inputs[0]);
   };
