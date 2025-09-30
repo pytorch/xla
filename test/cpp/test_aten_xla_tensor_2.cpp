@@ -1536,6 +1536,8 @@ TEST_F(AtenXlaTensorTest, TestGroupNorm) {
 }
 
 TEST_F(AtenXlaTensorTest, TestGroupNormBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int num_channels = 6;
   torch::Tensor input =
       torch::rand({20, num_channels, 10, 10},
@@ -1642,6 +1644,8 @@ TEST_F(AtenXlaTensorTest, TestLayerNorm) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLayerNormBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Tensor input = torch::rand(
       {2, 3, 3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   double eps = 1e-05;

@@ -24,6 +24,8 @@ class AtenXlaTensorTest : public AtenXlaTensorTestBase {};
 }  // namespace
 
 TEST_F(AtenXlaTensorTest, TestTransposedConv3DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int in_channels = 4;
   int out_channels = 8;
   int kernel_size = 5;
@@ -69,6 +71,8 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv3DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int kernel_size = 3;
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
@@ -99,6 +103,8 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestMaxPool3DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int kernel_size = 3;
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
@@ -130,6 +136,8 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestMaxPool2DNoBatchBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int kernel_size = 3;
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
@@ -157,6 +165,8 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DNoBatchBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int kernel_size = 3;
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
@@ -188,6 +198,8 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestMaxUnpool2DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int kernel_size = 2;
   torch::Tensor input =
       torch::rand({2, 2, 8, 8}, torch::TensorOptions(torch::kFloat));
@@ -223,6 +235,8 @@ TEST_F(AtenXlaTensorTest, TestMaxUnpool2DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestMaxUnpool3DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int kernel_size = 2;
   torch::Tensor input =
       torch::rand({2, 2, 8, 8, 8}, torch::TensorOptions(torch::kFloat));
@@ -262,6 +276,8 @@ TEST_F(AtenXlaTensorTest, TestMaxUnpool3DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestTanhBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::tanh(inputs[0]);
   };
@@ -274,6 +290,8 @@ TEST_F(AtenXlaTensorTest, TestTanhBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSigmoidBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::sigmoid(inputs[0]);
   };
@@ -286,6 +304,8 @@ TEST_F(AtenXlaTensorTest, TestSigmoidBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLogSigmoidBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::log_sigmoid(inputs[0]);
   };
@@ -302,6 +322,8 @@ TEST_F(AtenXlaTensorTest, TestLogSigmoidBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   for (int dim = -4; dim < 4; ++dim) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
@@ -322,6 +344,8 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSoftmaxBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   for (int dim = -4; dim < 4; ++dim) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
@@ -339,6 +363,8 @@ TEST_F(AtenXlaTensorTest, TestSoftmaxBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSoftplusBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::softplus(inputs[0]);
   };
@@ -351,6 +377,8 @@ TEST_F(AtenXlaTensorTest, TestSoftplusBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReluBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::relu(inputs[0]);
   };
@@ -363,6 +391,8 @@ TEST_F(AtenXlaTensorTest, TestReluBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestRreluBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::rrelu(inputs[0]);
   };
@@ -375,6 +405,8 @@ TEST_F(AtenXlaTensorTest, TestRreluBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestHardshrinkBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::hardshrink(inputs[0]);
   };
@@ -387,6 +419,8 @@ TEST_F(AtenXlaTensorTest, TestHardshrinkBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestHardshrinkBackwardWithMixedDataType) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   if (UsingTpu()) {
     GTEST_SKIP();
   }
@@ -406,6 +440,8 @@ TEST_F(AtenXlaTensorTest, TestHardshrinkBackwardWithMixedDataType) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSoftshrinkBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::softshrink(inputs[0]);
   };
@@ -418,6 +454,8 @@ TEST_F(AtenXlaTensorTest, TestSoftshrinkBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSoftshrinkBackwardWithMixedDataType) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   if (UsingTpu()) {
     GTEST_SKIP();
   }
@@ -437,6 +475,8 @@ TEST_F(AtenXlaTensorTest, TestSoftshrinkBackwardWithMixedDataType) {
 }
 
 TEST_F(AtenXlaTensorTest, TestHardtanhBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::hardtanh(inputs[0]);
   };
@@ -449,6 +489,8 @@ TEST_F(AtenXlaTensorTest, TestHardtanhBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEluBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Scalar alpha = 0.5;
   torch::Scalar scale = 2.5;
   torch::Scalar input_scale = 1.5;
@@ -464,6 +506,8 @@ TEST_F(AtenXlaTensorTest, TestEluBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestGeluBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   for (const auto& approximate : {"none", "tanh"}) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
@@ -480,6 +524,8 @@ TEST_F(AtenXlaTensorTest, TestGeluBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLeakyReluBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   double negative_slope = 0.01;
   auto testfn = [=](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::leaky_relu(inputs[0], negative_slope);
@@ -493,6 +539,8 @@ TEST_F(AtenXlaTensorTest, TestLeakyReluBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestTransposeBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::t(inputs[0]);
   };
@@ -505,6 +553,8 @@ TEST_F(AtenXlaTensorTest, TestTransposeBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int in_channels = 32;
   int out_channels = 320;
   int labels = 50;
@@ -529,6 +579,8 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestBinaryCrossEntropyBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   if (UsingTpu()) {
     GTEST_SKIP();
   }
@@ -570,6 +622,8 @@ TEST_F(AtenXlaTensorTest, TestBinaryCrossEntropyBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int batch = 6;
   int classes = 2;
   for (auto dtype : {torch::kFloat, torch::kDouble}) {
@@ -611,6 +665,8 @@ TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNllLoss2dBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int batch = 6;
   int classes = 2;
   int height = 3;
@@ -656,6 +712,8 @@ TEST_F(AtenXlaTensorTest, TestNllLoss2dBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSmoothL1LossBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Tensor input = torch::randn(
       {2, 4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor target =
@@ -681,6 +739,8 @@ TEST_F(AtenXlaTensorTest, TestSmoothL1LossBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestViewBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return inputs[0].view({-1, 320});
   };
@@ -693,6 +753,8 @@ TEST_F(AtenXlaTensorTest, TestViewBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestBatchNorm2DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   double momentum = 0.1;
   double eps = 0.5;
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
@@ -739,6 +801,8 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestBatchNorm3DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   double momentum = 0.1;
   double eps = 0.5;
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
@@ -785,6 +849,8 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm3DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int batch = 10;
   int classes = 5;
   torch::Tensor undef;
@@ -828,6 +894,8 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestKlDivBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Tensor input = torch::rand(
       {4, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor target = torch::rand(
@@ -847,6 +915,8 @@ TEST_F(AtenXlaTensorTest, TestKlDivBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int num_weights = 32;
   for (int padding_idx = -1; padding_idx < num_weights; ++padding_idx) {
     for (bool scale_grad_by_freq : {false, true}) {

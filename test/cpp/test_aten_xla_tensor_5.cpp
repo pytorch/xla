@@ -1451,6 +1451,8 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(bridge::GetDefaultDevice()->type());
   // skip this test until the tile mismatch bug is fixed.
