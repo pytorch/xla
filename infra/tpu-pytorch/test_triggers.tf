@@ -23,7 +23,7 @@ module "tpu_e2e_tests" {
   ])
 
   build_args = {
-    python_version = "3.10"
+    python_version = "3.12"
   }
 
   ansible_vars = {
