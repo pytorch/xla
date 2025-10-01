@@ -3,22 +3,22 @@
 PyTorch and PyTorch/XLA use CI to lint, build, and test each PR that is
 submitted. All CI tests should succeed before the PR is merged into master.
 PyTorch CI pins PyTorch/XLA to a specific commit. On the other hand, PyTorch/XLA
-CI pulls PyTorch from master unless a pin is manually provided. This README will
-go through the reasons of these pins, how to pin a PyTorch/XLA PR to an upstream
-PyTorch PR, and how to coordinate a merge for breaking PyTorch changes.
+CI pulls PyTorch from `.torch_commit` unless a pin is manually provided. This
+README will go through the reasons of these pins, how to pin a PyTorch/XLA PR
+to an upstream PyTorch PR, and how to coordinate a merge for breaking PyTorch
+changes.
 
 ## Usage
 
-### Pinning PyTorch PR in PyTorch/XLA PR
+### Temporarily Pinning PyTorch PR in PyTorch/XLA PR
 
 Sometimes a PyTorch/XLA PR needs to be pinned to a specific PyTorch PR to test
-new features, fix breaking changes, etc. Since PyTorch/XLA CI pulls from PyTorch
-master by default, we need to manually provide a PyTorch pin. In a PyTorch/XLA
-PR, PyTorch can be manually pinned by creating a `.torch_pin` file at the root
-of the repository. The `.torch_pin` should have the corresponding PyTorch PR
-number prefixed by "#". Take a look at [example
-here](https://github.com/pytorch/xla/pull/7313). Before the PyTorch/XLA PR gets
-merged, the `.torch_pin` must be deleted.
+new features, fix breaking changes, etc. In a PyTorch/XLA PR, PyTorch can be
+manually pinned by creating a `.torch_pin` file at the root of the repository.
+The `.torch_pin` should have the corresponding PyTorch PR number prefixed by
+"#". Take a look at [example here](https://github.com/pytorch/xla/pull/7313).
+Before the PyTorch/XLA PR gets merged, the `.torch_pin` must be deleted and
+`.torch_commit` updated.
 
 ### Coordinating merges for breaking PyTorch PRs
 
@@ -35,10 +35,11 @@ fail. Steps for fixing and merging such breaking PyTorch change is as following:
    PyTorch PR to pin the PyTorch/XLA to the commit hash created in step 1 by
    updating `pytorch/.github/ci_commit_pins/xla.txt`.
 1. Once CI tests are green on both ends, merge PyTorch PR.
-1. Remove the `.torch_pin` in PyTorch/XLA PR and merge. To be noted, `git commit
-   --amend` should be avoided in this step as PyTorch CI will keep using the
-   commit hash created in step 1 until other PRs update that manually or the
-   nightly buildbot updates that automatically.
+1. Remove the `.torch_pin` in PyTorch/XLA PR and update the `.torch_commit` to
+   the hash of the merged PyTorch PR. To be noted, `git commit --amend` should
+   be avoided in this step as PyTorch CI will keep using the commit hash
+   created in step 1 until other PRs update that manually or the nightly
+   buildbot updates that automatically.
 1. Finally, don't delete your branch until 2 days later. See step 4 for
    explanations.
 
@@ -46,6 +47,18 @@ fail. Steps for fixing and merging such breaking PyTorch change is as following:
 
 The `build_and_test.yml` workflow runs tests on the TPU in addition to CPU.
 The set of tests run on the TPU is defined in `test/tpu/run_tests.sh`.
+
+## Update the PyTorch Commit Pin
+
+In order to reduce development burden of PyTorch/XLA, starting from #9654, we
+started pinning PyTorch using the `.torch_commit` file. This should reduce the
+number of times a PyTorch PR breaks our most recent commits. However, this also
+requires maintenance, i.e. someone has to keep updating the PyTorch commit so
+as to make sure it's always supporting (almost) the latest PyTorch versions.
+
+Updating the PyTorch commit pin is, theoretically, simple. You just have to run
+`scripts/update_deps.py --pytorch` file, and open a PR. In practice, you may
+encounter a few compilation errors, or even segmentation faults.
 
 ## CI Environment
 
@@ -151,13 +164,6 @@ As mentioned above, [PyTorch CI pins PyTorch/XLA][pytorch-pin-ptxla] to a "known
 good" commit to prevent accidental changes from PyTorch/XLA to break PyTorch CI
 without warning. PyTorch has hundreds of commits each week, and this pin ensures
 that PyTorch/XLA as a downstream package does not cause failures in PyTorch CI.
-
-#### Why does PyTorch/XLA CI pull from PyTorch master?
-
-[PyTorch/XLA CI pulls PyTorch from master][pull-pytorch-master] unless a PyTorch
-pin is manually provided. PyTorch/XLA is a downstream package to PyTorch, and
-pulling from master ensures that PyTorch/XLA will stay up-to-date and works with
-the latest PyTorch changes.
 
 #### TPU CI is broken
 

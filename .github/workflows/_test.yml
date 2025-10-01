@@ -23,10 +23,6 @@ on:
                 description: |
                     Set the maximum (in minutes) how long the workflow should take to finish
                       timeout-minutes:
-            torch-commit:
-                required: true
-                type: string
-                description: torch-commit
             has_code_changes:
                 required: false
                 type: string
@@ -89,7 +85,6 @@ jobs:
               if: inputs.has_code_changes == 'true'
               uses: ./.actions/.github/workflows/setup
               with:
-                  torch-commit: ${{ inputs.torch-commit }}
                   wheels-artifact: torch-xla-wheels
             - name: Fetch CPP test binaries
               if: inputs.has_code_changes == 'true' && matrix.run_cpp_tests
@@ -112,18 +107,6 @@ jobs:
                   pip install fsspec
                   pip install rich
                   pip install flax
-            - name: Checkout PyTorch Repo
-              if: inputs.has_code_changes == 'true'
-              uses: actions/checkout@v4
-              with:
-                  repository: pytorch/pytorch
-                  path: pytorch
-                  ref: ${{ inputs.torch-commit }}
-            - name: Checkout PyTorch/XLA Repo
-              if: inputs.has_code_changes == 'true'
-              uses: actions/checkout@v4
-              with:
-                  path: pytorch/xla
             - name: Extra CI deps
               if: inputs.has_code_changes == 'true'
               shell: bash
