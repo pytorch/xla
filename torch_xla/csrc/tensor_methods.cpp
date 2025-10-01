@@ -511,13 +511,16 @@ absl::Status CheckGatherSizesAreCompatible(const XLATensorPtr& input,
   return absl::OkStatus();
 }
 
-absl::Status CheckMMInputIsMatrix(const XLATensorPtr& mat,
-                                  const std::string_view arg) {
-  xla::Shape shape = mat->shape();
+absl::Status CheckInputIsMatrix(const XLATensorPtr& tensor,
+                                const std::string_view op,
+                                const std::string_view arg = "") {
+  xla::Shape shape = tensor->shape();
   if (shape.dimensions().size() != 2) {
-    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
-        absl::StrCat("mm(): expected the ", arg, " input tensor ",
-                     shape.ToString(), " to be a matrix (i.e. a 2D tensor).")));
+    const std::string arg_with_trailing_space =
+        arg.empty() ? std::string("") : absl::StrCat(arg, " ");
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        op, "(): expected the ", arg_with_trailing_space, "input tensor ",
+        shape.ToString(), " to be a matrix (i.e. a 2D tensor).")));
   }
   return absl::OkStatus();
 }
@@ -2452,8 +2455,8 @@ XLATensorPtr mish(const XLATensorPtr& input) {
 
 absl::StatusOr<XLATensorPtr> mm(const XLATensorPtr& input,
                                 const XLATensorPtr& weight) {
-  XLA_RETURN_IF_ERROR(CheckMMInputIsMatrix(input, "first"));
-  XLA_RETURN_IF_ERROR(CheckMMInputIsMatrix(weight, "second"));
+  XLA_RETURN_IF_ERROR(CheckInputIsMatrix(input, "mm", "first"));
+  XLA_RETURN_IF_ERROR(CheckInputIsMatrix(weight, "mm", "second"));
   XLA_RETURN_IF_ERROR(CheckMMMatrixSizesAreCompatible(input, weight));
   return input->CreateFrom(Dot(input->GetIrValue(), weight->GetIrValue()));
 }
@@ -3648,13 +3651,11 @@ std::tuple<XLATensorPtr, XLATensorPtr> topk(const XLATensorPtr& input,
   return std::make_tuple(t1, t2);
 }
 
-XLATensorPtr trace(const XLATensorPtr& input) {
-  auto input_shape_ref = input->shape();
-  XLA_CHECK_EQ((*input_shape_ref).dimensions_size(), 2)
-      << "invalid argument for trace: expected a matrix";
-  torch::lazy::NodePtr eye = Identity((*input_shape_ref).dimensions(0),
-                                      (*input_shape_ref).dimensions(1),
-                                      (*input_shape_ref).element_type());
+absl::StatusOr<absl_nonnull XLATensorPtr> trace(const XLATensorPtr& input) {
+  XLA_RETURN_IF_ERROR(CheckInputIsMatrix(input, "trace"));
+  xla::Shape shape = input->shape();
+  torch::lazy::NodePtr eye =
+      Identity(shape.dimensions(0), shape.dimensions(1), shape.element_type());
   return sum(input->CreateFrom(eye * input->GetIrValue()), {0, 1}, false,
              input->dtype());
 }

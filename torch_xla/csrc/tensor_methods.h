@@ -973,7 +973,7 @@ std::tuple<XLATensorPtr, XLATensorPtr> topk(const XLATensorPtr& input,
                                             bool stable);
 
 // Returns the sum of the elements of the diagonal of the input 2-D matrix.
-XLATensorPtr trace(const XLATensorPtr& input);
+absl::StatusOr<absl_nonnull XLATensorPtr> trace(const XLATensorPtr& input);
 
 // Swap given dimensions of the input.
 XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1);
