@@ -27,6 +27,10 @@ function install_and_setup_conda() {
   fi
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
+  # Accept Conda channel ToS.
+  conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+  conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
   conda update -y -n base conda
   conda install -y python=$PYTHON_VERSION
 
