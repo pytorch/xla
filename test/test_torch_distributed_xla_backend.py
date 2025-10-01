@@ -48,11 +48,11 @@ def patch_world(rank, size):
 def patch_world_with_xla_runtime(rank, size):
   assert isinstance(dist.group.WORLD,
                     torch_xla.distributed.xla_backend.ProcessGroupXla)
-  with mock.patch.object(
-      dist.group.WORLD, 'rank', return_value=rank), mock.patch.object(
-          dist.group.WORLD, 'size', return_value=size), mock.patch.object(
-              xr, 'global_ordinal', return_value=rank), mock.patch.object(
-                  xr, 'world_size', return_value=size):
+
+  with mock.patch.object(dist.group.WORLD, 'rank', return_value=rank), \
+       mock.patch.object(dist.group.WORLD, 'size', return_value=size), \
+       mock.patch.object(xr, 'global_ordinal', return_value=rank), \
+       mock.patch.object(xr, 'world_size', return_value=size):
     yield
 
 
