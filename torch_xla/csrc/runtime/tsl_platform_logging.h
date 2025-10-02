@@ -13,6 +13,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+/*
+ * This file was copied from the OpenXLA repository (https://github.com/openxla/xla),
+ * before it was deleted.
+ *
+ * Commit: 20358a12f26199d016e6e690fe31a4a0a141226e
+ * Date: 2025-08-26
+ */
+
 #if defined(_WIN32)
 // prevent compile error because MSVC doesn't realize in debug build that
 // LOG(FATAL) finally invokes abort()
