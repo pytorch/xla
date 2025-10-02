@@ -14,8 +14,8 @@ limitations under the License.
 ==============================================================================*/
 
 /*
- * This file was copied from the OpenXLA repository (https://github.com/openxla/xla),
- * before it was deleted.
+ * This file was copied from the OpenXLA repository
+ * (https://github.com/openxla/xla), before it was deleted.
  *
  * Commit: 20358a12f26199d016e6e690fe31a4a0a141226e
  * Date: 2025-08-26
@@ -49,9 +49,9 @@ limitations under the License.
 /*
  * Do not undef.
  *
- * // TODO(mrry): Prevent this Windows.h #define from leaking out of our headers.
- * #undef ERROR
- * 
+ * // TODO(mrry): Prevent this Windows.h #define from leaking out of our
+ * headers. #undef ERROR
+ *
  * // Undef everything in case we're being mixed with some other Google library
  * // which already defined them itself.  Presumably all Google libraries will
  * // support the same syntax for these so it should not be a big deal if they
@@ -62,7 +62,7 @@ limitations under the License.
  * #undef LOG_EVERY_POW_2
  * #undef LOG_EVERY_N_SEC
  * #undef VLOG
- * 
+ *
  * #undef CHECK
  * #undef CHECK_EQ
  * #undef CHECK_NE
@@ -70,7 +70,7 @@ limitations under the License.
  * #undef CHECK_LE
  * #undef CHECK_GT
  * #undef CHECK_GE
- * 
+ *
  * #undef DCHECK
  * #undef DCHECK_EQ
  * #undef DCHECK_NE
@@ -78,7 +78,7 @@ limitations under the License.
  * #undef DCHECK_LE
  * #undef DCHECK_GT
  * #undef DCHECK_GE
- * 
+ *
  * #undef QCHECK
  * #undef QCHECK_EQ
  * #undef QCHECK_NE
@@ -86,7 +86,7 @@ limitations under the License.
  * #undef QCHECK_LE
  * #undef QCHECK_GT
  * #undef QCHECK_GE
- * 
+ *
  * #undef PCHECK
  *
  */
@@ -152,13 +152,17 @@ class LogMessageNull : public std::basic_ostringstream<char> {
   ~LogMessageNull() override {}
 };
 
-#define _TF_LOG_INFO \
-  ::tsl::torch_xla::internal::LogMessage(__FILE__, __LINE__, absl::LogSeverity::kInfo)
-#define _TF_LOG_WARNING \
-  ::tsl::torch_xla::internal::LogMessage(__FILE__, __LINE__, absl::LogSeverity::kWarning)
-#define _TF_LOG_ERROR \
-  ::tsl::torch_xla::internal::LogMessage(__FILE__, __LINE__, absl::LogSeverity::kError)
-#define _TF_LOG_FATAL ::tsl::torch_xla::internal::LogMessageFatal(__FILE__, __LINE__)
+#define _TF_LOG_INFO                                         \
+  ::tsl::torch_xla::internal::LogMessage(__FILE__, __LINE__, \
+                                         absl::LogSeverity::kInfo)
+#define _TF_LOG_WARNING                                      \
+  ::tsl::torch_xla::internal::LogMessage(__FILE__, __LINE__, \
+                                         absl::LogSeverity::kWarning)
+#define _TF_LOG_ERROR                                        \
+  ::tsl::torch_xla::internal::LogMessage(__FILE__, __LINE__, \
+                                         absl::LogSeverity::kError)
+#define _TF_LOG_FATAL \
+  ::tsl::torch_xla::internal::LogMessageFatal(__FILE__, __LINE__)
 
 #define _TF_LOG_QFATAL _TF_LOG_FATAL
 
@@ -174,42 +178,44 @@ class LogMessageNull : public std::basic_ostringstream<char> {
  * #define LOG(severity) _TF_LOG_##severity
  *
  *
- * 
+ *
  * #ifdef IS_MOBILE_PLATFORM
- * 
+ *
  * // Turn VLOG off when under mobile devices for considerations of binary size.
  * #define VLOG_IS_ON(lvl) ((lvl) <= 0)
- * 
+ *
  * #else
- * 
- * // Otherwise, set TF_CPP_MAX_VLOG_LEVEL environment to update minimum log level
+ *
+ * // Otherwise, set TF_CPP_MAX_VLOG_LEVEL environment to update minimum log
+ * level
  * // of VLOG, or TF_CPP_VMODULE to set the minimum log level for individual
  * // translation units.
  * #define VLOG_IS_ON(lvl)                                              \
  *   (([](int level, const char* fname) {                               \
  *     static const bool vmodule_activated =                            \
- *         ::tsl::torch_xla::internal::LogMessage::VmoduleActivated(fname, level); \
+ *         ::tsl::torch_xla::internal::LogMessage::VmoduleActivated(fname,
+ * level); \
  *     return vmodule_activated;                                        \
  *   })(lvl, __FILE__))
- * 
+ *
  * #endif
- * 
+ *
  * #define VLOG(level)                                       \
  *   TF_PREDICT_TRUE(!VLOG_IS_ON(level))                     \
  *   ? (void)0                                               \
  *   : ::tsl::torch_xla::internal::Voidifier() &                        \
  *           ::tsl::torch_xla::internal::LogMessage(__FILE__, __LINE__, \
  *                                       absl::LogSeverity::kInfo)
- * 
+ *
  * // `DVLOG` behaves like `VLOG` in debug mode (i.e. `#ifndef NDEBUG`).
  * // Otherwise, it compiles away and does nothing.
  * #ifndef NDEBUG
  * #define DVLOG VLOG
  * #else
  * #define DVLOG(verbose_level) \
- *   while (false && (verbose_level) > 0) ::tsl::torch_xla::internal::LogMessageNull()
- * #endif
- * 
+ *   while (false && (verbose_level) > 0)
+ * ::tsl::torch_xla::internal::LogMessageNull() #endif
+ *
  */
 
 class LogEveryNState {
@@ -257,11 +263,13 @@ class LogEveryNSecState {
  * // * A local static (`logging_internal_stateful_condition_state`) is
  * //   declared in a scope such that each `LOG_EVERY_N` (etc.) line has its own
  * //   state.
- * // * `COUNTER`, the third variable, is used to support `<< COUNTER`. It is not
+ * // * `COUNTER`, the third variable, is used to support `<< COUNTER`. It is
+ * not
  * //   mangled, so shadowing can be a problem, albeit more of a
  * //   shoot-yourself-in-the-foot one.  Don't name your variables `COUNTER`.
  * // * A single for loop can declare state and also test
- * //   `condition && state.ShouldLog()`, but there's no way to constrain it to run
+ * //   `condition && state.ShouldLog()`, but there's no way to constrain it to
+ * run
  * //   only once (or not at all) without declaring another variable.  The outer
  * //   for-loop declares this variable (`do_log`).
  * // * Using for loops instead of if statements means there's no risk of an
@@ -270,7 +278,7 @@ class LogEveryNSecState {
  *   for (bool logging_internal_stateful_condition_do_log(condition);  \
  *        logging_internal_stateful_condition_do_log;                  \
  *        logging_internal_stateful_condition_do_log = false)          \
- *     for (static ::tsl::torch_xla::internal::Log##kind##State                   \
+ *     for (static ::tsl::torch_xla::internal::Log##kind##State \
  *              logging_internal_stateful_condition_state;             \
  *          logging_internal_stateful_condition_do_log &&              \
  *          logging_internal_stateful_condition_state.ShouldLog(arg);  \
@@ -279,11 +287,12 @@ class LogEveryNSecState {
  *                logging_internal_stateful_condition_state.counter(); \
  *            logging_internal_stateful_condition_do_log;              \
  *            logging_internal_stateful_condition_do_log = false)
- * 
+ *
  * // An instance of `LOG_EVERY_N` increments a hidden zero-initialized counter
  * // every time execution passes through it and logs the specified message when
  * // the counter's value is a multiple of `n`, doing nothing otherwise.  Each
- * // instance has its own counter.  The counter's value can be logged by streaming
+ * // instance has its own counter.  The counter's value can be logged by
+ * streaming
  * // the symbol `COUNTER`.  `LOG_EVERY_N` is thread-safe.
  * // Example:
  * //
@@ -294,7 +303,8 @@ class LogEveryNSecState {
  * #define LOG_EVERY_N(severity, n)                       \
  *   LOGGING_INTERNAL_STATEFUL_CONDITION(EveryN, true, n) \
  *   LOG(severity)
- * // `LOG_FIRST_N` behaves like `LOG_EVERY_N` except that the specified message is
+ * // `LOG_FIRST_N` behaves like `LOG_EVERY_N` except that the specified message
+ * is
  * // logged when the counter's value is less than `n`.  `LOG_FIRST_N` is
  * // thread-safe.
  * #define LOG_FIRST_N(severity, n)                       \
@@ -308,15 +318,17 @@ class LogEveryNSecState {
  *   LOG(severity)
  * // An instance of `LOG_EVERY_N_SEC` uses a hidden state variable to log the
  * // specified message at most once every `n_seconds`.  A hidden counter of
- * // executions (whether a message is logged or not) is also maintained and can be
- * // logged by streaming the symbol `COUNTER`.  `LOG_EVERY_N_SEC` is thread-safe.
+ * // executions (whether a message is logged or not) is also maintained and can
+ * be
+ * // logged by streaming the symbol `COUNTER`.  `LOG_EVERY_N_SEC` is
+ * thread-safe.
  * // Example:
  * //
  * //   LOG_EVERY_N_SEC(INFO, 2.5) << "Got " << COUNTER << " cookies so far";
  * #define LOG_EVERY_N_SEC(severity, n_seconds)                      \
  *   LOGGING_INTERNAL_STATEFUL_CONDITION(EveryNSec, true, n_seconds) \
  *   LOG(severity)
- * 
+ *
  * // CHECK dies with a fatal error if condition is not true.  It is *not*
  * // controlled by NDEBUG, so the check will be executed regardless of
  * // compilation mode.  Therefore, it is safe to do things like:
@@ -420,17 +432,17 @@ string* MakeCheckOpString(const T1& v1, const T2& v2, const char* exprtext) {
 // The (int, int) overload works around the issue that the compiler
 // will not instantiate the template version of the function on values of
 // unnamed enum type - see comment below.
-#define TF_DEFINE_CHECK_OP_IMPL(name, op)                           \
-  template <typename T1, typename T2>                               \
-  inline string* name##Impl(const T1& v1, const T2& v2,             \
-                            const char* exprtext) {                 \
-    if (TF_PREDICT_TRUE(v1 op v2))                                  \
-      return NULL;                                                  \
-    else                                                            \
-      return ::tsl::torch_xla::internal::MakeCheckOpString(v1, v2, exprtext);  \
-  }                                                                 \
-  inline string* name##Impl(int v1, int v2, const char* exprtext) { \
-    return name##Impl<int, int>(v1, v2, exprtext);                  \
+#define TF_DEFINE_CHECK_OP_IMPL(name, op)                                     \
+  template <typename T1, typename T2>                                         \
+  inline string* name##Impl(const T1& v1, const T2& v2,                       \
+                            const char* exprtext) {                           \
+    if (TF_PREDICT_TRUE(v1 op v2))                                            \
+      return NULL;                                                            \
+    else                                                                      \
+      return ::tsl::torch_xla::internal::MakeCheckOpString(v1, v2, exprtext); \
+  }                                                                           \
+  inline string* name##Impl(int v1, int v2, const char* exprtext) {           \
+    return name##Impl<int, int>(v1, v2, exprtext);                            \
   }
 
 // The (size_t, int) and (int, size_t) specialization are to handle unsigned
@@ -486,7 +498,8 @@ inline string* Check_LTImpl(int v1, size_t v2, const char* exprtext) {
 }
 
 inline string* Check_LTImpl(size_t v1, int v2, const char* exprtext) {
-  if (v2 < 0) return ::tsl::torch_xla::internal::MakeCheckOpString(v1, v2, exprtext);
+  if (v2 < 0)
+    return ::tsl::torch_xla::internal::MakeCheckOpString(v1, v2, exprtext);
   return Check_LTImpl(v1, size_t(v2), exprtext);
 }
 
@@ -508,14 +521,17 @@ inline string* Check_GTImpl(const T1& v1, const T2& v2, const char* exprtext) {
  *
  * // In optimized mode, use CheckOpString to hint to compiler that
  * // the while condition is unlikely.
- * #define CHECK_OP_LOG(name, op, val1, val2)                                     \
- *   while (::tsl::torch_xla::internal::CheckOpString _result{::tsl::torch_xla::internal::name##Impl(   \
- *       ::tsl::torch_xla::internal::GetReferenceableValue(val1),                            \
- *       ::tsl::torch_xla::internal::GetReferenceableValue(val2), #val1 " " #op " " #val2)}) \
- *   ::tsl::torch_xla::internal::LogMessageFatal(__FILE__, __LINE__) << *(_result.str_)
- * 
+ * #define CHECK_OP_LOG(name, op, val1, val2) \
+ *   while (::tsl::torch_xla::internal::CheckOpString
+ * _result{::tsl::torch_xla::internal::name##Impl(   \
+ *       ::tsl::torch_xla::internal::GetReferenceableValue(val1), \
+ *       ::tsl::torch_xla::internal::GetReferenceableValue(val2), #val1 " " #op
+ * " " #val2)}) \
+ *   ::tsl::torch_xla::internal::LogMessageFatal(__FILE__, __LINE__) <<
+ * *(_result.str_)
+ *
  * #define CHECK_OP(name, op, val1, val2) CHECK_OP_LOG(name, op, val1, val2)
- * 
+ *
  * // CHECK_EQ/NE/...
  * #define CHECK_EQ(val1, val2) CHECK_OP(Check_EQ, ==, val1, val2)
  * #define CHECK_NE(val1, val2) CHECK_OP(Check_NE, !=, val1, val2)
@@ -526,7 +542,7 @@ inline string* Check_GTImpl(const T1& v1, const T2& v2, const char* exprtext) {
  * #define CHECK_NOTNULL(val)                          \
  *   ::tsl::torch_xla::internal::CheckNotNull(__FILE__, __LINE__, \
  *                                 "'" #val "' Must be non NULL", (val))
- * 
+ *
  * #ifndef NDEBUG
  * // DCHECK_EQ/NE/...
  * #define DCHECK(condition) CHECK(condition)
@@ -536,28 +552,28 @@ inline string* Check_GTImpl(const T1& v1, const T2& v2, const char* exprtext) {
  * #define DCHECK_LT(val1, val2) CHECK_LT(val1, val2)
  * #define DCHECK_GE(val1, val2) CHECK_GE(val1, val2)
  * #define DCHECK_GT(val1, val2) CHECK_GT(val1, val2)
- * 
+ *
  * #else
- * 
+ *
  * #define DCHECK(condition) \
  *   while (false && (condition)) LOG(FATAL)
- * 
+ *
  * // NDEBUG is defined, so DCHECK_EQ(x, y) and so on do nothing.
  * // However, we still want the compiler to parse x and y, because
  * // we don't want to lose potentially useful errors and warnings.
  * // _DCHECK_NOP is a helper, and should not be used outside of this file.
  * #define _TF_DCHECK_NOP(x, y) \
  *   while (false && ((void)(x), (void)(y), 0)) LOG(FATAL)
- * 
+ *
  * #define DCHECK_EQ(x, y) _TF_DCHECK_NOP(x, y)
  * #define DCHECK_NE(x, y) _TF_DCHECK_NOP(x, y)
  * #define DCHECK_LE(x, y) _TF_DCHECK_NOP(x, y)
  * #define DCHECK_LT(x, y) _TF_DCHECK_NOP(x, y)
  * #define DCHECK_GE(x, y) _TF_DCHECK_NOP(x, y)
  * #define DCHECK_GT(x, y) _TF_DCHECK_NOP(x, y)
- * 
+ *
  * #endif
- * 
+ *
  * // These are for when you don't want a CHECK failure to print a verbose
  * // stack trace.  The implementation of CHECK* in this file already doesn't.
  * #define QCHECK(condition) CHECK(condition)

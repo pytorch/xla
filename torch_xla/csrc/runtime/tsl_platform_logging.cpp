@@ -14,8 +14,8 @@ limitations under the License.
 ==============================================================================*/
 
 /*
- * This file was copied from the OpenXLA repository (https://github.com/openxla/xla),
- * before it was deleted.
+ * This file was copied from the OpenXLA repository
+ * (https://github.com/openxla/xla), before it was deleted.
  *
  * Commit: 20358a12f26199d016e6e690fe31a4a0a141226e
  * Date: 2025-08-26
@@ -518,7 +518,7 @@ void TFDefaultLogSink::Send(const TFLogEntry& entry) {
   if (entry.log_severity() == absl::LogSeverity::kFatal) {
     abort();
   }
-#else   // PLATFORM_POSIX_ANDROID
+#else  // PLATFORM_POSIX_ANDROID
   static const internal::VlogFileMgr vlog_file;
   static bool log_thread_id = internal::EmitThreadIdFromEnv();
   uint64_t now_micros = EnvTime::NowMicros();

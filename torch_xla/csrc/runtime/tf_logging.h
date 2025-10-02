@@ -3,8 +3,8 @@
 
 #include <sstream>
 
-#include "torch_xla/csrc/runtime/tsl_platform_logging.h"
 #include "absl/log/absl_log.h"
+#include "torch_xla/csrc/runtime/tsl_platform_logging.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -52,10 +52,12 @@ class ErrorGenerator {
   while (TF_PREDICT_FALSE(!(condition))) \
   TF_ERROR_STREAM() << "Check failed: " #condition ": "
 
-#define TF_CHECK_OP_LOG(name, op, val1, val2)                                  \
-  while (::tsl::torch_xla::internal::CheckOpString _result{::tsl::torch_xla::internal::name##Impl(   \
-      ::tsl::torch_xla::internal::GetReferenceableValue(val1),                            \
-      ::tsl::torch_xla::internal::GetReferenceableValue(val2), #val1 " " #op " " #val2)}) \
+#define TF_CHECK_OP_LOG(name, op, val1, val2)                      \
+  while (::tsl::torch_xla::internal::CheckOpString _result{        \
+      ::tsl::torch_xla::internal::name##Impl(                      \
+          ::tsl::torch_xla::internal::GetReferenceableValue(val1), \
+          ::tsl::torch_xla::internal::GetReferenceableValue(val2), \
+          #val1 " " #op " " #val2)})                               \
   TF_ERROR_STREAM() << *(_result.str_)
 
 #define TF_CHECK_OP(name, op, val1, val2) TF_CHECK_OP_LOG(name, op, val1, val2)
