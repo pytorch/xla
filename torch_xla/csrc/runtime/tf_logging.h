@@ -3,32 +3,29 @@
 
 #include <sstream>
 
-#include "absl/base/log_severity.h"
-#include "tsl/platform/logging.h"
+#include "torch_xla/csrc/runtime/tsl_platform_logging.h"
+#include "absl/log/absl_log.h"
 
 namespace torch_xla {
 namespace runtime {
 namespace internal {
 
-// It happens that Caffe defined the same exact Google macros, hiding the TF
-// ones, and making log messages disappear.
-// Unfortunately to get those back, we have to poke through the TF
-// implementaiton of them.
-#define TF_LOG(severity) _TF_LOG_##severity
-
-#define TF_VLOG_IS_ON(lvl)                                           \
-  (([](int level, const char* fname) {                               \
-    static const bool vmodule_activated =                            \
-        ::tsl::internal::LogMessage::VmoduleActivated(fname, level); \
-    return vmodule_activated;                                        \
-  })(lvl, __FILE__))
-
-#define TF_VLOG(level)                                    \
-  TF_PREDICT_TRUE(!TF_VLOG_IS_ON(level))                  \
-  ? (void)0                                               \
-  : ::tsl::internal::Voidifier() &                        \
-          ::tsl::internal::LogMessage(__FILE__, __LINE__, \
-                                      absl::LogSeverity::kInfo)
+// TODO: replace all TF_*LOG macro calls with ABSL_*LOG()
+//
+// Why are we using Abseil logging, now?
+// =====================================
+// Ref: https://github.com/openxla/xla/pull/29477
+//
+// OpenXLA removed their internal logging in favor of Abseil.
+//
+// Why do we have the `TF_` prefix?
+// ================================
+// Ref: https://github.com/pytorch/xla/pull/34
+//
+// So as not to clash with C10 definition.
+// Maybe this is not a problem anymore, though.
+#define TF_LOG(severity) ABSL_LOG(severity)
+#define TF_VLOG(level) ABSL_VLOG(level)
 
 struct ErrorSink : public std::basic_ostringstream<char> {};
 
@@ -39,7 +36,7 @@ class ErrorGenerator {
   // Use a dummy & operator as it has lower precedence WRT the streaming
   // operator, and hence allows collecting user error messages before we finally
   // throw.
-  TF_ATTRIBUTE_NORETURN void operator&(
+  ABSL_ATTRIBUTE_NORETURN void operator&(
       const std::basic_ostream<char>& oss) const;
 
  private:
@@ -56,9 +53,9 @@ class ErrorGenerator {
   TF_ERROR_STREAM() << "Check failed: " #condition ": "
 
 #define TF_CHECK_OP_LOG(name, op, val1, val2)                                  \
-  while (::tsl::internal::CheckOpString _result{::tsl::internal::name##Impl(   \
-      ::tsl::internal::GetReferenceableValue(val1),                            \
-      ::tsl::internal::GetReferenceableValue(val2), #val1 " " #op " " #val2)}) \
+  while (::tsl::torch_xla::internal::CheckOpString _result{::tsl::torch_xla::internal::name##Impl(   \
+      ::tsl::torch_xla::internal::GetReferenceableValue(val1),                            \
+      ::tsl::torch_xla::internal::GetReferenceableValue(val2), #val1 " " #op " " #val2)}) \
   TF_ERROR_STREAM() << *(_result.str_)
 
 #define TF_CHECK_OP(name, op, val1, val2) TF_CHECK_OP_LOG(name, op, val1, val2)
@@ -74,10 +71,6 @@ class ErrorGenerator {
 // is consistent.
 #define TF_CHECK_GE(val1, val2) TF_CHECK_LE(val2, val1)
 #define TF_CHECK_GT(val1, val2) TF_CHECK_LT(val2, val1)
-
-#undef TF_CHECK_OK
-#define TF_CHECK_OK(val) TF_DO_CHECK_OK(val, FATAL)
-#define TF_CHECK_NOTNULL(val) TF_CHECK(val != nullptr)
 
 }  // namespace internal
 }  // namespace runtime

@@ -17,7 +17,7 @@
 #include "xla/pjrt/distributed/in_memory_key_value_store.h"
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
-#include "xla/pjrt/tfrt_cpu_pjrt_client.h"
+#include "xla/pjrt/cpu/cpu_client.h"
 
 namespace torch_xla {
 namespace runtime {
