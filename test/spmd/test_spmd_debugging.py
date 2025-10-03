@@ -846,6 +846,11 @@ class ConvertV2ShardingToV1Test(test_xla_sharding_base.XlaShardingTest):
         [str(i) for i in range(self.n_devices)]))
     self.run_test()
 
+    self.partition_spec = (1, 0)
+    self.expected_str = '{devices=[%d,1]%s}' % (self.n_devices, ','.join(
+        [str(i) for i in range(self.n_devices)]))
+    self.run_test()
+
   @unittest.skipIf(xr.global_runtime_device_count() < 2,
                    f"Requires at least 2 devices.")
   def test_tupled_tiled_sharding(self):
@@ -870,6 +875,11 @@ class ConvertV2ShardingToV1Test(test_xla_sharding_base.XlaShardingTest):
     self.tensor_shape = (4, 4)
     self.partition_spec = (0, None)
     self.expected_str = '{devices=[2,1,%d]%s last_tile_dim_replicate}' % (
+        self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices)))
+    self.run_test()
+
+    self.partition_spec = (None, 0)
+    self.expected_str = '{devices=[1,2,%d]%s last_tile_dim_replicate}' % (
         self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices)))
     self.run_test()
 
