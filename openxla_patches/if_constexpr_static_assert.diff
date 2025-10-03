@@ -1,0 +1,40 @@
+diff --git a/xla/python/ifrt/attribute_map.h b/xla/python/ifrt/attribute_map.h
+index a8c9f11c8d..e5bb70bcf8 100644
+--- a/xla/python/ifrt/attribute_map.h
++++ b/xla/python/ifrt/attribute_map.h
+@@ -106,7 +106,9 @@ class AttributeMap {
+     } else if constexpr (std::is_same_v<T, float>) {
+       return Get<T, FloatValue>(key);
+     } else {
+-      static_assert(false, "Unsupported type for AttributeMap::Get");
++    // Same as: static_assert(false).
++    // Make it compileable by GCC version < 13.
++      static_assert(!sizeof(T), "Unsupported type for AttributeMap::Get");
+     }
+   }
+
+diff --git a/xla/stream_executor/plugin_registry.cc b/xla/stream_executor/plugin_registry.cc
+index f16a4f6707..8bfd51b238 100644
+--- a/xla/stream_executor/plugin_registry.cc
++++ b/xla/stream_executor/plugin_registry.cc
+@@ -41,7 +41,9 @@ PluginKind GetPluginKind() {
+   } else if constexpr (std::is_same_v<FactoryT, PluginRegistry::FftFactory>) {
+     return PluginKind::kFft;
+   } else {
+-    static_assert(false, "Unsupported factory type");
++    // Same as: static_assert(false).
++    // Make it compileable by GCC version < 13.
++    static_assert(!sizeof(FactoryT), "Unsupported factory type");
+   }
+ }
+ template <typename FactoryT>
+@@ -53,7 +55,9 @@ absl::string_view GetPluginName() {
+   } else if constexpr (std::is_same_v<FactoryT, PluginRegistry::FftFactory>) {
+     return "FFT";
+   } else {
+-    static_assert(false, "Unsupported factory type");
++    // Same as: static_assert(false).
++    // Make it compileable by GCC version < 13.
++    static_assert(!sizeof(FactoryT), "Unsupported factory type");
+   }
+ }

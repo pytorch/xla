@@ -63,6 +63,7 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//openxla_patches:no_fortify.diff",
+        "//openxla_patches:if_constexpr_static_assert.diff",
     ],
     strip_prefix = "xla-" + xla_hash,
     urls = [
