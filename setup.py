@@ -399,7 +399,7 @@ class Develop(develop.develop):
 
     project_root = os.path.dirname(os.path.abspath(__file__))
     with open(pth_filename, "w", encoding='utf-8') as f:
-        f.write(project_root + "\n")
+      f.write(project_root + "\n")
 
 
 def _get_jax_install_requirements():
