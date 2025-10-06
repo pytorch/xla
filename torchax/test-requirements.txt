@@ -1,9 +1,0 @@
--r dev-requirements.txt
-absl-py==2.2.2
-immutabledict==4.2.1
-pytest==8.3.5
-sentencepiece
-expecttest==0.3.0
-optax==0.2.4
-pytest
-pytest-xdist
