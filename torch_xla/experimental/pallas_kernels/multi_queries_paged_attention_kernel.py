@@ -560,9 +560,9 @@ def paged_attention(
   in_specs = [
       q_block_spec,
       # Below 4 correspond to the 4 input: k_pages, k_scales_pages, q_pages, q_scales_pages.
-      pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
+      pl.BlockSpec(memory_space=pltpu.MemorySpace.ANY),
       None,
-      pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
+      pl.BlockSpec(memory_space=pltpu.MemorySpace.ANY),
       None,
   ]
 
@@ -639,7 +639,7 @@ def paged_attention(
           grid=grid,
           scratch_shapes=scratch_shapes,
       ),
-      compiler_params=pltpu.TPUCompilerParams(
+      compiler_params=pltpu.CompilerParams(
           # due to compute_block_indices, we loop batch, kv_head, q_blk, kv_blk, the order matters.
           dimension_semantics=(
               "arbitrary",

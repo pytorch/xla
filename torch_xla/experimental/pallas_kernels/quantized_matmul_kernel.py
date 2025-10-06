@@ -295,7 +295,7 @@ def quantized_matmul_int8(
           grid=(n_bs, n_out, n_in),
       ),
       out_shape=jax.ShapeDtypeStruct((padded_bs, padded_out_features), x.dtype),
-      compiler_params=pltpu.TPUCompilerParams(
+      compiler_params=pltpu.CompilerParams(
           dimension_semantics=("parallel", "arbitrary", "arbitrary"),
           vmem_limit_bytes=vmem_limit_bytes,
       ),

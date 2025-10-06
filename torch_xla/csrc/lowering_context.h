@@ -124,8 +124,8 @@ class LoweringContext : public torch::lazy::LoweringContext {
   };
 
   // Reports an XLA builder error for the given node.
-  TF_ATTRIBUTE_NORETURN void ReportBuilderError(const torch::lazy::Node& node,
-                                                absl::string_view error_msg);
+  ABSL_ATTRIBUTE_NORETURN void ReportBuilderError(const torch::lazy::Node& node,
+                                                  absl::string_view error_msg);
 
   xla::XlaBuilder builder_;
   std::unordered_map<torch::lazy::BackendData::Handle, Parameter>
