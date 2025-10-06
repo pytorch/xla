@@ -84,9 +84,12 @@ class HloMetadataSetter {
     }
     metadata.set_op_name(absl::StrCat(op_name_prefix, op_type));
 
-    // Sets file, line and stack_frame_id in metadata
-    lowering_context.stack_frame_index_builder()->AddStackFrameLocations(
-        nmeta.frame_info, static_cast<int>(max_stack_depth), metadata);
+    // NOTE: if max_stack_depth is 0, we are just renaming the op, so we don't need to add stack frame locations
+    if (max_stack_depth > 0) {
+      // Sets file, line and stack_frame_id in metadata
+      lowering_context.stack_frame_index_builder()->AddStackFrameLocations(
+      nmeta.frame_info, static_cast<int>(max_stack_depth), metadata);
+    }
 
     lowering_context.builder()->SetOpMetadata(std::move(metadata));
   }
