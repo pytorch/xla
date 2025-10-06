@@ -53,6 +53,7 @@ jobs:
 
           # Test dependencies 
           pip install --upgrade protobuf
+          pip install flax
 
           # PyTorch/XLA Optional Dependencies
           # =================================
