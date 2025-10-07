@@ -58,17 +58,16 @@ const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient() {
   static absl::StatusOr<std::unique_ptr<ComputationClient>> init_result =
       InitializeComputationClient();
 
-  static absl::StatusOr<ComputationClient* absl_nonnull> maybeClient = []() {
+  static absl::StatusOr<ComputationClient* absl_nonnull> maybe_client = []() {
     if (init_result.ok()) {
       return absl::StatusOr<ComputationClient * absl_nonnull>(
           init_result.value().get());
     } else {
-      // Return the same error from initialization
       return absl::StatusOr<ComputationClient * absl_nonnull>(
           init_result.status());
     }
   }();
-  return maybeClient;
+  return maybe_client;
 }
 
 ComputationClient* GetComputationClientIfInitialized() {
