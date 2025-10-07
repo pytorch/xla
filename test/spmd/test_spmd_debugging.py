@@ -842,13 +842,20 @@ class ConvertV2ShardingToV1Test(test_xla_sharding_base.XlaShardingTest):
     self.device_mesh_shape = (1, self.n_devices)
     self.tensor_shape = (1, 128)
     self.partition_spec = (0, 1)
-    self.expected_str = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
-        [str(i) for i in range(self.n_devices)]))
+    if self.n_devices == 1:
+      # Any tiled sharding on a single device should be treated as replicated.
+      self.expected_str = '{replicated}'
+    else:
+      self.expected_str = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
+          [str(i) for i in range(self.n_devices)]))
     self.run_test()
 
     self.partition_spec = (1, 0)
-    self.expected_str = '{devices=[%d,1]%s}' % (self.n_devices, ','.join(
-        [str(i) for i in range(self.n_devices)]))
+    if self.n_devices == 1:
+      self.expected_str = '{replicated}'
+    else:
+      self.expected_str = '{devices=[%d,1]%s}' % (self.n_devices, ','.join(
+          [str(i) for i in range(self.n_devices)]))
     self.run_test()
 
   @unittest.skipIf(xr.global_runtime_device_count() < 2,
@@ -893,6 +900,8 @@ class ConvertV2ShardingToV1Test(test_xla_sharding_base.XlaShardingTest):
         self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices)))
     self.run_test()
 
+  @unittest.skipIf(xr.global_runtime_device_count() < 4,
+                   f"Requires at least 4 devices.")
   def test_tupled_partial_replication_sharding_with_transpose(self):
     self.device_mesh_shape = (1, 2, self.n_devices // 2)
     self.tensor_shape = (16, 16)
