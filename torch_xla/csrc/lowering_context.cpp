@@ -78,7 +78,7 @@ class HloMetadataSetter {
       max_stack_depth = custom_opname_meta->max_stack_depth;
     }
 
-    if (!nmeta.scope.empty()) {
+    else if (!nmeta.scope.empty()) {
       op_name_prefix =
           absl::StrCat(absl::StrReplaceAll(nmeta.scope, {{":", "_"}}), "/");
     }
