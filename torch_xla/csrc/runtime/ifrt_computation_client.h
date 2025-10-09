@@ -172,6 +172,11 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
+  void SetCustomCompileOptions(
+      const std::unordered_map<std::string, std::string>& options) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   // Creates a new instance of IfrtComputationClient and initializes it.
   static absl::StatusOr<absl_nonnull std::unique_ptr<IfrtComputationClient>>
   Create();
