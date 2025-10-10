@@ -218,6 +218,26 @@ bool ShardingUtil::EqualOpShardings(const xla::OpSharding& a,
   return xla::protobuf_util::HaveSameSerialization(a, b);
 }
 
+xla::OpSharding ShardingUtil::CreateIotaOpSharding(
+    const py::list& dims, const py::list& reshape_dims,
+    const py::list& transpose_perm, const py::list& types) {
+  TORCH_LAZY_COUNTER("CreateIotaOpSharding", 1);
+  auto dims_vec = dims.cast<std::vector<int64_t>>();
+  auto reshape_dims_vec = reshape_dims.cast<std::vector<int64_t>>();
+  auto transpose_perm_vec = transpose_perm.cast<std::vector<int>>();
+  std::vector<xla::OpSharding::Type> subgroup_types_vec;
+  for (auto type : types) {
+    subgroup_types_vec.push_back(
+        static_cast<xla::OpSharding::Type>(type.cast<int>()));
+  }
+  CHECK_EQ(reshape_dims_vec.size(), transpose_perm_vec.size());
+  return xla::HloSharding::Subgroup(
+             xla::TileAssignment(dims_vec, reshape_dims_vec,
+                                 transpose_perm_vec),
+             subgroup_types_vec)
+      .ToProto();
+}
+
 xla::OpSharding ShardingUtil::CreateOpSharding(
     const py::list& tile_assignment, const py::list& group_assignment,
     const py::list& replication_groups, ShardingType sharding_type) {
@@ -872,4 +892,20 @@ bool ShardingUtil::GetAutoSharding() {
   }
   return use_auto_sharding;
 }
+
+xla::Shape ShardingUtil::GetAdjustedGlobalShape(const at::Tensor& tensor,
+                                                bool minibatch) {
+  xla::Shape global_shape = CreateComputationShapeFromTensor(tensor, nullptr);
+  if (minibatch) {
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                        runtime::GetComputationClient());
+    int num_local_devices = client->GetLocalDevices().size();
+    int num_global_devices = client->GetAllDevices().size();
+    int batch_dim_shape =
+        tensor.sizes()[0] * num_global_devices / num_local_devices;
+    global_shape.set_dimensions(0, batch_dim_shape);
+  }
+  return global_shape;
+}
+
 }  // namespace torch_xla
