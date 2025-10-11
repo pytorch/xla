@@ -30,6 +30,8 @@ namespace torch_xla {
 
 class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
  public:
+  ~XLAGraphExecutor();
+
   static XLAGraphExecutor* Get();
 
   // Override to use our own DeviceContextArena.
