@@ -329,8 +329,7 @@ class TestOpsErrorMessage(expecttest.TestCase):
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
         callable=test,
-        expect="""uniform_(): expected `from` (5) to be smaller or equal `to` (2)."""
-    )
+        expect="""uniform_(): expected `from` (5) <= `to` (2).""")
 
 
 if __name__ == "__main__":

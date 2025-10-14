@@ -596,9 +596,8 @@ absl::Status CheckBmmInputsAreValid(const std::string_view op,
 
 absl::Status CheckUniformRangeIsValid(double from, double to) {
   if (from > to) {
-    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
-        absl::StrCat("uniform_(): expected `from` (", from,
-                     ") to be smaller or equal `to` (", to, ").")));
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "uniform_(): expected `from` (", from, ") <= `to` (", to, ").")));
   }
   return absl::OkStatus();
 }
