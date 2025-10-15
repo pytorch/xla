@@ -235,6 +235,22 @@ class TestOpsErrorMessage(expecttest.TestCase):
         expect="""trace(): expected the input tensor f32[2,2,2] to be a matrix (i.e. a 2D tensor)."""
     )
 
+  def test_clamp_scalar_raises_error_on_no_min_and_max(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 5, device=device)
+
+    def test():
+      # Dispatch to `clamp()` overload explicitly.
+      # Otherwise, it's dispatched to `clamp.Tensor()`, which doesn't have
+      # this check.
+      return torch.ops.aten.clamp.default(a)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""clamp(): expected at least one of `min` or `max` arguments to be specified."""
+    )
+
 
 if __name__ == "__main__":
   unittest.main()
