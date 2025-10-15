@@ -1254,11 +1254,16 @@ at::Tensor XLANativeFunctions::baddbmm(const at::Tensor& self,
                                        const at::Scalar& beta,
                                        const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_batch1, bridge::GetXlaTensor(batch1));
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_batch2, bridge::GetXlaTensor(batch2));
-  return bridge::AtenFromXlaTensor(
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_batch1,
+                      bridge::GetXlaTensor(batch1));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_batch2,
+                      bridge::GetXlaTensor(batch2));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
       tensor_methods::baddbmm(xla_self, xla_batch1, xla_batch2, beta, alpha));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::bernoulli(
@@ -1338,9 +1343,13 @@ at::Tensor XLANativeFunctions::bitwise_xor(const at::Tensor& self,
 at::Tensor XLANativeFunctions::bmm(const at::Tensor& self,
                                    const at::Tensor& mat2) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
-  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mat2, bridge::GetXlaTensor(mat2));
-  return bridge::AtenFromXlaTensor(tensor_methods::bmm(xla_self, xla_mat2));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_mat2,
+                      bridge::GetXlaTensor(mat2));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::bmm(xla_self, xla_mat2));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::cat(const at::ITensorListRef& tensors,
