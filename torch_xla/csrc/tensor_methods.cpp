@@ -594,6 +594,14 @@ absl::Status CheckBmmInputsAreValid(const std::string_view op,
   return absl::OkStatus();
 }
 
+absl::Status CheckUniformRangeIsValid(double from, double to) {
+  if (from > to) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "uniform_(): expected `from` (", from, ") <= `to` (", to, ").")));
+  }
+  return absl::OkStatus();
+}
+
 }  // namespace
 
 //////////////////////////////////////////////////////////////////////////////
@@ -3759,15 +3767,16 @@ std::vector<XLATensorPtr> unbind(const XLATensorPtr& input, int64_t dim) {
   return slices;
 }
 
-void uniform_(XLATensorPtr& input, double from, double to) {
-  XLA_CHECK_LE(from, to);
-  auto input_shape = input->shape();
+absl::Status uniform_(XLATensorPtr& input, double from, double to) {
+  XLA_RETURN_IF_ERROR(CheckUniformRangeIsValid(from, to));
+  xla::Shape input_shape = input->shape();
   input->SetInPlaceIrValue(torch_xla::MakeNode<Uniform>(
       XLAGraphExecutor::Get()->GetIrValueForScalar(
-          from, input_shape.get().element_type(), input->GetDevice()),
+          from, input_shape.element_type(), input->GetDevice()),
       XLAGraphExecutor::Get()->GetIrValueForScalar(
-          to, input_shape.get().element_type(), input->GetDevice()),
+          to, input_shape.element_type(), input->GetDevice()),
       XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape));
+  return absl::OkStatus();
 }
 
 XLATensorPtr unsqueeze(const XLATensorPtr& input, int64_t dim) {

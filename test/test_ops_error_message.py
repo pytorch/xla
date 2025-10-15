@@ -317,6 +317,20 @@ class TestOpsErrorMessage(expecttest.TestCase):
         expect="""baddbmm(): cannot apply batch matrix-multiplication to `batch1` f32[2,3,8], the 2nd input tensor, and to `batch2` f32[2,4,3], the 3rd input tensor. Expected the size of dimension 2 of `batch1` (8) to be equal the size of dimension 1 of `batch2` (4)."""
     )
 
+  def test_uniform__raises_error_on_invalid_range(self):
+    device = torch_xla.device()
+    a = torch.empty(5, 5, device=device)
+    from_ = 5.
+    to_ = 2.
+
+    def test():
+      return a.uniform_(from_, to_)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""uniform_(): expected `from` (5) <= `to` (2).""")
+
 
 if __name__ == "__main__":
   unittest.main()
