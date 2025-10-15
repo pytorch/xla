@@ -336,7 +336,8 @@ class TestOpsErrorMessage(expecttest.TestCase):
     a = torch.rand(1, 1, 4, 4, 4, device=device)
 
     def gen_test_fn(kernel_size=[2, 2, 2], stride=[], padding=[0]):
-      return lambda: torch.nn.functional.avg_pool3d(a, kernel_size, stride, padding)
+      return lambda: torch.nn.functional.avg_pool3d(a, kernel_size, stride,
+                                                    padding)
 
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
