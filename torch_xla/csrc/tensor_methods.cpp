@@ -645,34 +645,51 @@ absl::Status CheckUniformRangeIsValid(double from, double to) {
   return absl::OkStatus();
 }
 
+// This check is used for both `custom_call()` and `tpu_custom_call()`.
+//
+// The `target` parameter is `std::nullopt` whenever it's being called from
+// a `tpu_custom_call()` context.
 absl::Status CheckCustomCallNonEmptyInputs(
     const std::vector<absl_nonnull XLATensorPtr>& inputs,
-    const std::string& target) {
+    const std::optional<std::string>& target) {
   if (inputs.empty()) {
-    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
-        "custom_call(", target, "): expected at least 1 input tensor.")));
+    std::string op = target.has_value()
+                         ? absl::StrCat("custom_call(", *target, ")")
+                         : "tpu_custom_call";
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat(op, ": expected at least 1 input tensor.")));
   }
   return absl::OkStatus();
 }
 
+// This check is used for both `custom_call()` and `tpu_custom_call()`.
+//
+// The `target` parameter is `std::nullopt` whenever it's being called from
+// a `tpu_custom_call()` context.
 absl::Status CheckCustomCallOutputPropertiesSize(
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes,
-    const std::string& target) {
+    const std::optional<std::string>& target) {
   if (output_shapes.size() != output_dtypes.size()) {
+    std::string op = target.has_value()
+                         ? absl::StrCat("custom_call(", *target, ")")
+                         : "tpu_custom_call()";
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
-        "custom_call(", target,
-        "): expected the given output shapes (size=", output_shapes.size(),
+        op, ": expected the given output shapes (size=", output_shapes.size(),
         ") to be of the same size as the given output dtypes (size=",
         output_dtypes.size(), ").")));
   }
   return absl::OkStatus();
 }
 
+// This check is used for both `custom_call()` and `tpu_custom_call()`.
+//
+// The `target` parameter is `std::nullopt` whenever it's being called from
+// a `tpu_custom_call()` context.
 template <class F>
 absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> CustomCallImpl(
     const std::vector<absl_nonnull XLATensorPtr>& inputs,
-    const std::string& target,
+    const std::optional<std::string>& target,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes, F&& make_node) {
   XLA_RETURN_IF_ERROR(CheckCustomCallNonEmptyInputs(inputs, target));
@@ -995,15 +1012,15 @@ absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> tpu_custom_call(
     const std::vector<at::ScalarType>& output_dtypes) {
   XLA_ASSIGN_OR_RETURN(
       std::vector<absl_nonnull XLATensorPtr> outputs,
-      CustomCallImpl(inputs, payload, output_shapes, output_dtypes,
-                     /* make_node= */
-                     [&](const std::vector<torch::lazy::Value>& values,
-                         const std::vector<xla::Shape>& output_xla_shapes) {
-                       return torch_xla::MakeNode<TpuCustomCall>(
-                           values,
-                           xla::ShapeUtil::MakeTupleShape(output_xla_shapes),
-                           payload);
-                     }));
+      CustomCallImpl(
+          inputs, /* target= */ std::nullopt, output_shapes, output_dtypes,
+          /* make_node= */
+          [&](const std::vector<torch::lazy::Value>& values,
+              const std::vector<xla::Shape>& output_xla_shapes) {
+            return torch_xla::MakeNode<TpuCustomCall>(
+                values, xla::ShapeUtil::MakeTupleShape(output_xla_shapes),
+                payload);
+          }));
 
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   if (graph_executor->UseEagerMode()) {

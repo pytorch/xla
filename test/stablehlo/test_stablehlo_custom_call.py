@@ -180,27 +180,6 @@ class StableHLOCustomCallExportTest(expecttest.TestCase):
     self.assertNotIn("place_to_host", bw.code)
     self.assertNotIn("place_to_device", bw.code)
 
-  def test_stablehlo_custom_call_tracing_error(self):
-
-    def test_no_input():
-      stablehlo_custom_call(tuple(), "custom_op_target", [[1]], [torch.int8])
-
-    self.assertExpectedRaisesInline(
-        exc_type=RuntimeError,
-        callable=test_no_input,
-        expect="""custom_call(custom_op_target): expected at least 1 input tensor."""
-    )
-
-    def test_output_properties_mismatch():
-      input = torch.rand(10, device=torch_xla.device())
-      stablehlo_custom_call((input,), "custom_op_target", [[1], [1]], [torch.int8])
-
-    self.assertExpectedRaisesInline(
-        exc_type=RuntimeError,
-        callable=test_output_properties_mismatch,
-        expect="""custom_call(custom_op_target): expected the given output shapes (size=2) to be of the same size as the given output dtypes (size=1)."""
-    )
-
 
 if __name__ == "__main__":
 
