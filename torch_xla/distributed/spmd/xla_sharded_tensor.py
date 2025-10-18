@@ -151,6 +151,34 @@ class XLAShardedTensor(DTensor):
     # Invalidate cached spec since the global_tensor data has changed
     self.invalidate_spec_cache()
 
+  def to_local(self):
+    """
+    Returns the local representation of the XLAShardedTensor.
+    
+    This method returns the global tensor representation, which contains
+    the combined data across all devices. The returned tensor is on the
+    same device as the original XLAShardedTensor. The returned tensor
+    will have the same requires_grad value as the XLAShardedTensor.
+    If the original tensor has gradients, those will be preserved.
+    
+    Returns:
+        torch.Tensor: The global tensor representation with appropriate requires_grad setting.
+    """
+
+    if not self.requires_grad:
+      #  When requires_grad is False, global_tensor is the original tensor
+      return self.global_tensor
+    else:
+      # When requires_grad is True, global_tensor is detached
+      # Create a new tensor with the same values of global_tensor
+      result = self.global_tensor.clone()
+      # Since global tensor is detached, add requires_grad and grad values back to the local tensor
+      if self.requires_grad:
+        result.requires_grad_(self.requires_grad)
+        result.grad = self.grad.clone() if self.grad is not None else None
+
+      return result
+
   @property
   def sharding_spec(self):
     return torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)
