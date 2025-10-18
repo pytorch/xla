@@ -347,21 +347,6 @@ std::vector<std::vector<int64_t>> CreateReduceGroups(const py::list& groups) {
   return replica_groups;
 }
 
-std::vector<at::Tensor> TpuCustomCall(
-    const std::vector<at::Tensor>& inputs, const std::string& payload,
-    const std::vector<std::vector<int64_t>>& output_shapes,
-    const std::vector<py::object>& output_dtypes) {
-  std::vector<at::ScalarType> dtypes;
-  dtypes.reserve(output_dtypes.size());
-  for (auto& dtype : output_dtypes) {
-    dtypes.push_back(reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
-  }
-  XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> xla_inputs,
-                      bridge::GetXlaTensors(inputs));
-  return bridge::AtenFromXlaTensors(tensor_methods::tpu_custom_call(
-      xla_inputs, payload, output_shapes, dtypes));
-}
-
 std::vector<std::vector<int>> ExtractXlaDotGeneralDimVectors(
     const py::tuple& dimension_numbers) {
   // Expect Python arg `dimension_numbers` to be
@@ -3116,30 +3101,33 @@ void InitXlaModuleBindings(py::module m) {
           "_xla_custom_call",
           [](const std::vector<at::Tensor>& inputs, const std::string& target,
              const std::vector<std::vector<int64_t>>& output_shapes,
-             const std::vector<py::object>& output_dtypes, bool has_side_effect,
+             const std::vector<at::ScalarType>& output_dtypes, bool has_side_effect,
              const std::string& backend_config, const int api_version,
              const std::unordered_map<std::string, std::string>&
                  frontend_attributes) -> std::vector<at::Tensor> {
-            std::vector<at::ScalarType> dtypes;
-            dtypes.reserve(output_dtypes.size());
-            for (auto& dtype : output_dtypes) {
-              dtypes.push_back(
-                  reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
-            }
 
-            XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> xla_inputs, bridge::GetXlaTensors(inputs));
-            auto xtensors = tensor_methods::custom_call(
-                xla_inputs, target,
-                output_shapes, dtypes, has_side_effect, backend_config,
-                api_version, frontend_attributes);
-            return bridge::AtenFromXlaTensors(std::move(xtensors));
+            XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> xla_inputs,
+                                bridge::GetXlaTensors(inputs));
+            XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> xla_outputs,
+                                tensor_methods::custom_call(
+                                  xla_inputs, target, output_shapes, output_dtypes,
+                                  has_side_effect, backend_config, api_version,
+                                  frontend_attributes));
+
+            return bridge::AtenFromXlaTensors(std::move(xla_outputs));
           })
       .def("_xla_tpu_custom_call",
            [](const std::vector<at::Tensor>& inputs, const std::string& payload,
               const std::vector<std::vector<int64_t>>& output_shapes,
-              const std::vector<py::object>& output_dtypes)
+              const std::vector<at::ScalarType>& output_dtypes)
                -> std::vector<at::Tensor> {
-            return TpuCustomCall(inputs, payload, output_shapes, output_dtypes);
+
+            XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> xla_inputs,
+                                bridge::GetXlaTensors(inputs));
+            XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> xla_outputs,
+                                tensor_methods::tpu_custom_call(xla_inputs, payload, output_shapes, output_dtypes));
+
+            return bridge::AtenFromXlaTensors(std::move(xla_outputs));
            })
       .def("_xla_register_custom_call_target",
            [](const std::string& fn_name, const py::capsule& function_ptr,
