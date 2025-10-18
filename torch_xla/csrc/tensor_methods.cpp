@@ -299,27 +299,6 @@ absl::StatusOr<PoolNdInputsOwner> FillAndCheckPoolNdInputs(
   return PoolNdInputsOwner{kernel_size, stride, padding};
 }
 
-// Resizes and / or checks whether a list is of the given size. The list is only
-// resized if its size is 1. If it's empty, it's replaced with the provided
-// default first.
-std::vector<int64_t> CheckIntList(absl::Span<const int64_t> list, size_t length,
-                                  const std::string& name,
-                                  std::vector<int64_t> def = {}) {
-  std::vector<int64_t> result;
-  if (list.empty()) {
-    result = std::move(def);
-  } else {
-    result = torch::lazy::ToVector<int64_t>(list);
-  }
-  if (result.size() == 1 && length > 1) {
-    result.resize(length, result[0]);
-    return result;
-  }
-  XLA_CHECK_EQ(result.size(), length)
-      << "Invalid length for the '" << name << "' attribute";
-  return result;
-}
-
 // Returns a 1-D shape for batch norm weight or bias based on the input shape.
 xla::Shape BatchNormFeaturesShape(const XLATensorPtr& input) {
   xla::PrimitiveType input_element_type =
@@ -666,6 +645,75 @@ absl::Status CheckUniformRangeIsValid(double from, double to) {
   return absl::OkStatus();
 }
 
+absl::Status CheckCustomCallNonEmptyInputs(
+    const std::vector<absl_nonnull XLATensorPtr>& inputs,
+    const std::string& target) {
+  if (inputs.empty()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "custom_call(", target, "): expected at least 1 input tensor.")));
+  }
+  return absl::OkStatus();
+}
+
+absl::Status CheckCustomCallOutputPropertiesSize(
+    const std::vector<std::vector<int64_t>>& output_shapes,
+    const std::vector<at::ScalarType>& output_dtypes,
+    const std::string& target) {
+  if (output_shapes.size() != output_dtypes.size()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "custom_call(", target,
+        "): expected the given output shapes (size=", output_shapes.size(),
+        ") to be of the same size as the given output dtypes (size=",
+        output_dtypes.size(), ").")));
+  }
+  return absl::OkStatus();
+}
+
+template <class F>
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> CustomCallImpl(
+    const std::vector<absl_nonnull XLATensorPtr>& inputs,
+    const std::string& target,
+    const std::vector<std::vector<int64_t>>& output_shapes,
+    const std::vector<at::ScalarType>& output_dtypes, F&& make_node) {
+  XLA_RETURN_IF_ERROR(CheckCustomCallNonEmptyInputs(inputs, target));
+  XLA_RETURN_IF_ERROR(CheckCustomCallOutputPropertiesSize(
+      output_shapes, output_dtypes, target));
+
+  const auto& first = inputs.front();
+  auto device = first->GetDevice();
+  auto output_range = c10::irange(output_shapes.size());
+
+  // `values`: vector with Lazy IR of `inputs`.
+  std::vector<torch::lazy::Value> values(inputs.size());
+  std::transform(
+      inputs.begin(), inputs.end(), values.begin(),
+      [](const XLATensorPtr& tensor) { return tensor->GetIrValue(); });
+
+  // `output_xla_shapes`: `xla::Shape` instances created from `output_shapes`
+  // and `output_dtypes`.
+  std::vector<xla::Shape> output_xla_shapes(output_shapes.size());
+  std::transform(output_range.begin(), output_range.end(),
+                 output_xla_shapes.begin(), [&](std::size_t i) {
+                   return xla::ShapeUtil::MakeShape(
+                       MakeXlaPrimitiveType(output_dtypes[i], &device),
+                       output_shapes[i]);
+                 });
+
+  auto node = make_node(values, output_xla_shapes);
+
+  // `outputs`: `XLATensorPtr` instances created from the `i`-th output of
+  // the `node` Lazy IR `Node`.
+  std::vector<XLATensorPtr> outputs(output_shapes.size());
+  std::transform(output_range.begin(), output_range.end(), outputs.begin(),
+                 [&](std::size_t i) {
+                   return first->CreateFrom(torch::lazy::Value(node, i),
+                                            output_dtypes[i],
+                                            /*delay_eager_execution=*/true);
+                 });
+
+  return outputs;
+}
+
 }  // namespace
 
 //////////////////////////////////////////////////////////////////////////////
@@ -886,40 +934,26 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
           torch::lazy::Value(node, 1)};
 }
 
-std::vector<XLATensorPtr> custom_call(
-    const std::vector<XLATensorPtr>& inputs, const std::string& target,
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> custom_call(
+    const std::vector<absl_nonnull XLATensorPtr>& inputs,
+    const std::string& target,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes, bool has_side_effect,
     const std::string& backend_config, const int api_version,
     const std::unordered_map<std::string, std::string>& frontend_attributes) {
-  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+  XLA_ASSIGN_OR_RETURN(
+      std::vector<absl_nonnull XLATensorPtr> outputs,
+      CustomCallImpl(inputs, target, output_shapes, output_dtypes,
+                     /* make_node= */
+                     [&](const std::vector<torch::lazy::Value>& values,
+                         const std::vector<xla::Shape>& output_xla_shapes) {
+                       return torch_xla::MakeNode<CustomCall>(
+                           values, target,
+                           xla::ShapeUtil::MakeTupleShape(output_xla_shapes),
+                           has_side_effect, backend_config, api_version,
+                           frontend_attributes);
+                     }));
 
-  std::vector<torch::lazy::Value> values;
-  values.reserve(inputs.size());
-  for (const auto& input : inputs) {
-    values.push_back(input->GetIrValue());
-  }
-
-  XLA_CHECK_EQ(output_shapes.size(), output_dtypes.size());
-  std::vector<xla::Shape> output_xla_shapes;
-  output_xla_shapes.reserve(output_shapes.size());
-  for (size_t i = 0; i < output_shapes.size(); ++i) {
-    output_xla_shapes.push_back(xla::ShapeUtil::MakeShape(
-        MakeXlaPrimitiveType(output_dtypes[i], &(inputs[0]->GetDevice())),
-        output_shapes[i]));
-  }
-
-  auto node = torch_xla::MakeNode<CustomCall>(
-      values, target, xla::ShapeUtil::MakeTupleShape(output_xla_shapes),
-      has_side_effect, backend_config, api_version, frontend_attributes);
-
-  std::vector<XLATensorPtr> outputs;
-  outputs.reserve(output_shapes.size());
-  for (size_t i = 0; i < output_shapes.size(); ++i) {
-    outputs.push_back(inputs[0]->CreateFrom(torch::lazy::Value(node, i),
-                                            output_dtypes[i],
-                                            /*delay_eager_execution=*/true));
-  }
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   if (graph_executor->UseEagerMode()) {
     // Execute the HLO that will run the `customcall` and in one graph
@@ -954,37 +988,23 @@ void custom_sharding_(
   input->SetShardingSpec(*sharding_spec);
 }
 
-std::vector<XLATensorPtr> tpu_custom_call(
-    const std::vector<XLATensorPtr>& inputs, const std::string& payload,
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> tpu_custom_call(
+    const std::vector<absl_nonnull XLATensorPtr>& inputs,
+    const std::string& payload,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes) {
-  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+  XLA_ASSIGN_OR_RETURN(
+      std::vector<absl_nonnull XLATensorPtr> outputs,
+      CustomCallImpl(inputs, payload, output_shapes, output_dtypes,
+                     /* make_node= */
+                     [&](const std::vector<torch::lazy::Value>& values,
+                         const std::vector<xla::Shape>& output_xla_shapes) {
+                       return torch_xla::MakeNode<TpuCustomCall>(
+                           values,
+                           xla::ShapeUtil::MakeTupleShape(output_xla_shapes),
+                           payload);
+                     }));
 
-  std::vector<torch::lazy::Value> values;
-  values.reserve(inputs.size());
-  for (const auto& input : inputs) {
-    values.push_back(input->GetIrValue());
-  }
-
-  XLA_CHECK_EQ(output_shapes.size(), output_dtypes.size());
-  std::vector<xla::Shape> output_xla_shapes;
-  output_xla_shapes.reserve(output_shapes.size());
-  for (size_t i = 0; i < output_shapes.size(); ++i) {
-    output_xla_shapes.push_back(xla::ShapeUtil::MakeShape(
-        MakeXlaPrimitiveType(output_dtypes[i], &(inputs[0]->GetDevice())),
-        output_shapes[i]));
-  }
-
-  auto node = torch_xla::MakeNode<TpuCustomCall>(
-      values, xla::ShapeUtil::MakeTupleShape(output_xla_shapes), payload);
-
-  std::vector<XLATensorPtr> outputs;
-  outputs.reserve(output_shapes.size());
-  for (size_t i = 0; i < output_shapes.size(); ++i) {
-    outputs.push_back(inputs[0]->CreateFrom(torch::lazy::Value(node, i),
-                                            output_dtypes[i],
-                                            /*delay_eager_execution=*/true));
-  }
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   if (graph_executor->UseEagerMode()) {
     // Execute the HLO that will run the `custom` and in one hlo
