@@ -161,8 +161,6 @@ IfrtComputationClient::Create() {
 }
 
 IfrtComputationClient::~IfrtComputationClient() {
-  // In the GPU case, the PjRtClient depends on the DistributedRuntimeClient
-  // tracked in XlaCoordinator, so the PjRtClient must be destroyed first.
   client_ = nullptr;
   coordinator_ = nullptr;
 }
@@ -177,7 +175,8 @@ void IfrtComputationClient::InitializeCoordinator(int global_rank,
                                                   std::string port) {
   XLA_CHECK(coordinator_ == nullptr)
       << "Can only initialize the XlaCoordinator once.";
-  coordinator_ = GetValueOrThrow(
+  XLA_ASSIGN_OR_THROW(
+      coordinator_,
       XlaCoordinator::Create(global_rank, world_size, master_addr, port));
 }
 
@@ -395,10 +394,10 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   auto instruction = XlaBuilderFriend::GetInstruction(y);
   *instruction->mutable_sharding() = xla::HloSharding::Replicate().ToProto();
 
-  xla::XlaComputation computation =
-      GetValueOrThrow(builder.Build(/*remove_dynamic_dimensions=*/false));
-  xla::ProgramShape program_shape =
-      GetValueOrThrow(computation.GetProgramShape());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation computation,
+                      builder.Build(/*remove_dynamic_dimensions=*/false));
+  XLA_ASSIGN_OR_THROW(xla::ProgramShape program_shape,
+                      computation.GetProgramShape());
 
   std::string device = GetDefaultDevice();
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
@@ -417,8 +416,9 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
       execute_options;
 
-  auto sharded_results = GetValueOrThrow(ExecuteReplicated(
-      *computations.front(), {{handle}}, GetLocalDevices(), execute_options));
+  XLA_ASSIGN_OR_THROW(std::vector<ComputationClient::DataPtr> sharded_results,
+                      ExecuteReplicated(*computations.front(), {{handle}},
+                                        GetLocalDevices(), execute_options));
   auto replicated_output =
       std::dynamic_pointer_cast<IfrtData>(sharded_results[0])
           ->buffer->FullyReplicatedShard(
@@ -516,14 +516,17 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
         mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
     torch_xla::ConvertHloToStableHlo(instance.computation.mutable_proto(),
                                      &mlir_module);
-    std::shared_ptr<xla::ifrt::LoadedExecutable> executable =
-        GetValueOrThrow(client_->GetDefaultCompiler()->CompileAndLoad(
+    XLA_ASSIGN_OR_THROW(
+        std::shared_ptr<xla::ifrt::LoadedExecutable> executable,
+        client_->GetDefaultCompiler()->CompileAndLoad(
             std::make_unique<xla::ifrt::HloProgram>(mlir_module),
             std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options,
                                                            devices_list)));
     StableHloCompileCounter()->AddValue(1);
 
-    const auto& hlo_modules = GetValueOrThrow(executable->GetHloModules());
+    XLA_ASSIGN_OR_THROW(
+        const std::vector<std::shared_ptr<xla::HloModule>>& hlo_modules,
+        executable->GetHloModules());
 
     std::shared_ptr<IfrtComputation> ifrt_computation =
         std::make_shared<IfrtComputation>(

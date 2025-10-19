@@ -38,7 +38,7 @@ the `runtime` tag.
 ## TL;DR
 
 -   To use the PJRT preview runtime, set the `PJRT_DEVICE` environment
-    variable to `CPU`, `TPU`, or `CUDA`
+    variable to `CPU`, or `TPU`
 -   In XRT, all distributed workloads are multiprocess, with one process
     per device. On TPU v2 and v3 in PJRT, workloads are multiprocess and
     multithreaded (4 processes with 2 threads each), so your workload
@@ -57,7 +57,7 @@ the `runtime` tag.
     -   To use `torch.distributed`, import
         `torch_xla.experimental.pjrt_backend` and use the `xla://`
         `init_method`.
-    -   These steps are optional for GPU and TPU v4.
+    -   These steps are optional for TPU v4.
 
 Sample diff from XRT to PJRT:
 
@@ -84,7 +84,7 @@ def _mp_fn(index):
   torch.manual_seed(42)
   model = nn.Linear(128, 10).to(device)
 
-+  # Optional for TPU v4 and GPU
++  # Optional for TPU v4
 +  xm.broadcast_master_param(model)
   model = DDP(model, gradient_as_bucket_view=True)
 
@@ -119,7 +119,7 @@ if __name__ == '__main__':
 ## Benefits
 
 -   Simple runtime configuration: just set `PJRT_DEVICE` to `TPU`,
-    `CPU`, or `CUDA` and start using XLA! Or, let PJRT select a device
+    or `CPU` and start using XLA! Or, let PJRT select a device
     automatically based on your environment.
 -   Improved performance: reduced overhead from gRPC means faster
     end-to-end execution. On TorchBench 2.0, we observed a \>35%
@@ -187,69 +187,6 @@ TPU pods is only supported with host networking `--net=host` at this
 time. See the [Cloud TPU
 documentation](https://cloud.google.com/tpu/docs/run-in-container) for
 more information.
-
-### GPU
-
-### Single-node GPU training
-
-To use GPUs with PJRT, simply set `PJRT_DEVICE=CUDA` and configure
-`GPU_NUM_DEVICES` to the number of devices on the host. For example:
-
-    PJRT_DEVICE=CUDA GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
-
-You can also use `torchrun` to initiate the single-node multi-GPU
-training. For example,
-
-    PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
-
-In the above example, `--nnodes` means how many machines (physical
-machines or VMs) to be used (it is 1 since we do single-node training).
-`--nproc-per-node` means how many GPU devices to be used.
-
-### Multi-node GPU training
-
-**Note that this feature only works for cuda 12+**. Similar to how
-PyTorch uses multi-node training, you can run the command as below:
-
-    PJRT_DEVICE=CUDA torchrun \
-    --nnodes=${NUMBER_GPU_VM} \
-    --node_rank=${CURRENT_NODE_RANK} \
-    --nproc_per_node=${NUMBER_LOCAL_GPU_DEVICES} \
-    --rdzv_endpoint=<internal_ip_address:port> multinode_training.py
-
--   `--nnodes`: how many GPU machines to be used.
--   `--node_rank`: the index of the current GPU machines. The value can
-    be 0, 1, ..., \${NUMBER_GPU_VM}-1.
--   `--nproc_per_node`: the number of GPU devices to be used on the
-    current machine.
--   `--rdzv_endpoint`: the endpoint of the GPU machine with
-    node_rank==0, in the form `host:port`. The `host` will be the
-    internal IP address. The `port` can be any available port on the
-    machine. For single-node training/inference, this parameter can be
-    omitted.
-
-For example, if you want to train on 2 GPU machines: machine_0 and
-machine_1, on the first GPU machine machine_0, run
-
-    # PJRT_DEVICE=CUDA torchrun \
-    --nnodes=2 \
-    --node_rank=0 \
-    --nproc_per_node=4 \
-    --rdzv_endpoint="<MACHINE_0_INTERNAL_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
-
-On the second GPU machine, run
-
-    # PJRT_DEVICE=CUDA torchrun \
-    --nnodes=2 \
-    --node_rank=1 \
-    --nproc_per_node=4 \
-    --rdzv_endpoint="<MACHINE_0_INTERNAL_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
-
-the difference between the 2 commands above are `--node_rank` and
-potentially `--nproc_per_node` if you want to use different number of
-GPU devices on each machine. All the rest are identical. For more
-information about `torchrun`, please refer to this
-[page](https://pytorch.org/docs/stable/elastic/run.html).
 
 ## Differences from XRT
 

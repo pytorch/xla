@@ -2,10 +2,6 @@ load(
     "//bazel:rules_def.bzl",
     "ptxla_cc_test",
 )
-load(
-    "@xla//xla/tsl/platform/default:cuda_build_defs.bzl",
-    "if_cuda_is_configured",
-)
 
 licenses(["notice"])  # Apache 2.0
 
@@ -134,7 +130,6 @@ cc_library(
         "@xla//xla:shape_util",
         "@xla//xla/hlo/builder:xla_computation",
         "@xla//xla/pjrt:pjrt_client",
-        "@xla//xla/pjrt/c:pjrt_c_api_gpu_extension_hdrs",
         "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
         "@xla//xla/pjrt/c:pjrt_c_api_wrapper_impl",
         "@xla//xla/pjrt:pjrt_c_api_client",
@@ -216,10 +211,9 @@ cc_library(
         "@torch//:headers",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:initialize",
+        "@xla//xla/pjrt/distributed:in_memory_key_value_store",
         "@xla//xla/pjrt:pjrt_c_api_client",
         "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
-        "@xla//xla/pjrt/gpu:se_gpu_pjrt_client",
-        "@xla//xla/service:gpu_plugin",
     ],
 )
 
@@ -295,9 +289,7 @@ cc_library(
     deps = [
         "@xla//xla/backends/profiler/cpu:host_tracer",
         "@xla//xla/backends/profiler/cpu:metadata_collector",
-    ] + if_cuda_is_configured([
-        "@xla//xla/backends/profiler/gpu:device_tracer",
-    ]),
+    ],
     alwayslink = True,
 )
 
@@ -366,6 +358,7 @@ cc_library(
         "@xla//xla/mlir_hlo:all_passes",
         "@xla//xla/hlo/translate/hlo_to_mhlo:hlo_to_mlir_hlo",
         "@xla//xla/hlo/translate/mhlo_to_hlo:mlir_hlo_to_hlo",
+        "@xla//xla/service/spmd/shardy/stablehlo_round_trip:stablehlo_import",
     ],
 )
 
@@ -390,17 +383,33 @@ cc_test(
 )
 
 cc_library(
+    name = "tsl_platform_logging",
+    srcs = ["tsl_platform_logging.cpp"],
+    hdrs = ["tsl_platform_logging.h"],
+    deps = [
+        "@xla//xla/tsl/platform:env_time",
+        "@xla//xla/tsl/platform:logging",
+        "@xla//xla/tsl/platform:macros",
+        "@xla//xla/tsl/platform:types",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/base:log_severity",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/strings:string_view",
+    ],
+)
+
+cc_library(
     name = "tf_logging",
     srcs = ["tf_logging.cpp"],
     hdrs = ["tf_logging.h"],
     deps = [
+        ":tsl_platform_logging",
         "//torch_xla/csrc:status",
         "@torch//:headers",
         "@torch//:runtime_headers",
-        "@tsl//tsl/platform:stacktrace",
-        "@tsl//tsl/platform:statusor",
-        "@xla//xla/service:platform_util",
         "@com_google_absl//absl/base:log_severity",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

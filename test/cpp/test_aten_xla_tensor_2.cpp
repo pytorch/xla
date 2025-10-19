@@ -1536,6 +1536,8 @@ TEST_F(AtenXlaTensorTest, TestGroupNorm) {
 }
 
 TEST_F(AtenXlaTensorTest, TestGroupNormBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int num_channels = 6;
   torch::Tensor input =
       torch::rand({20, num_channels, 10, 10},
@@ -1555,20 +1557,18 @@ TEST_F(AtenXlaTensorTest, TestGroupNormBackward) {
             /*cudnn_enabled=*/false);
       };
       torch::Tensor undef;
-      ForEachDevice({XlaDeviceType::CUDA, XlaDeviceType::TPU},
-                    [&](const torch::Device& device) {
-                      TestBackward({input, undef_weight ? undef : weight,
-                                    undef_weight ? undef : bias},
-                                   device, testfn,
-                                   /*rtol=*/1e-3, /*atol=*/1e-3,
-                                   /*derivative_level=*/2);
-                      ExpectCounterNotChanged("aten::.*",
-                                              cpp_test::GetIgnoredCounters());
-                      ExpectCounterChanged("xla::native_batch_norm",
-                                           cpp_test::GetIgnoredCounters());
-                      ExpectCounterChanged("xla::native_batch_norm_backward",
-                                           cpp_test::GetIgnoredCounters());
-                    });
+      ForEachDevice({XlaDeviceType::TPU}, [&](const torch::Device& device) {
+        TestBackward(
+            {input, undef_weight ? undef : weight, undef_weight ? undef : bias},
+            device, testfn,
+            /*rtol=*/1e-3, /*atol=*/1e-3,
+            /*derivative_level=*/2);
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::native_batch_norm",
+                             cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::native_batch_norm_backward",
+                             cpp_test::GetIgnoredCounters());
+      });
     }
   }
 }
@@ -1644,6 +1644,8 @@ TEST_F(AtenXlaTensorTest, TestLayerNorm) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLayerNormBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   torch::Tensor input = torch::rand(
       {2, 3, 3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   double eps = 1e-05;

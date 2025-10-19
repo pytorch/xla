@@ -31,6 +31,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
+    cls.convert_to_shardy = xu.check_env_flag("CONVERT_SHLO_TO_SHARDY")
 
   def test_xla_sharded_tensor(self):
     partition_spec = (0, 1)
@@ -238,6 +239,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     if self.n_devices > 1:
       annotation = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
           [str(i) for i in reversed(range(self.n_devices))]))
+      if self.convert_to_shardy:
+        annotation = '{devices=[1,%d]<=[%d]}' % (self.n_devices, self.n_devices)
       self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
   def test_mark_sharding_2d(self):
@@ -252,6 +255,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     if self.n_devices > 1:
       annotation = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
           [str(i) for i in range(self.n_devices)]))
+      if self.convert_to_shardy:
+        annotation = '{devices=[1,%d]<=[%d]}' % (self.n_devices, self.n_devices)
       self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(xt1))
 
     actual = (xt1 + xt2).cpu()
@@ -271,6 +276,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
       annotation = '{devices=[1,1,%d,%d]%s}' % (
           z_dim, self.n_devices // z_dim, ','.join(
               [str(i) for i in range(self.n_devices)]))
+      if self.convert_to_shardy:
+        annotation = '{devices=[1,1,%d,%d]<=[%d]}' % (z_dim, self.n_devices //
+                                                      z_dim, self.n_devices)
       self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
     actual = (xt + xt).cpu()
@@ -403,9 +411,11 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     mesh = self._get_mesh((2, self.n_devices // 2))
     t = torch.randn(16).to('xla')
     xs.mark_sharding(t, mesh, ((0, 1),))
-    self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(t), "{devices=[%d]%s}" %
-        (self.n_devices, ','.join(str(x) for x in range(self.n_devices))))
+    annotation = "{devices=[%d]%s}" % (self.n_devices, ','.join(
+        str(x) for x in range(self.n_devices)))
+    if self.convert_to_shardy:
+      annotation = "{devices=[%d]<=[%d]}" % (self.n_devices, self.n_devices)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(t), annotation)
 
   @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
                        "Multiple devices required for tupled partition spec")
@@ -415,34 +425,43 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Shard the first dimension on `r` and `b`, replicate the second dimension
     t = torch.randn(16, 16).to('xla')
     xs.mark_sharding(t, mesh, (('r', 'b'), None))
-    self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(t),
-        "{devices=[2,1,%d]%s last_tile_dim_replicate}" %
-        (self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices))))
+    annotation = "{devices=[2,1,%d]%s last_tile_dim_replicate}" % (
+        self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices)))
+    if self.convert_to_shardy:
+      annotation = "{devices=[2,1,%d]<=[%d] last_tile_dim_replicate}" % (
+          self.n_devices // 2, self.n_devices)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(t), annotation)
 
     # Replicate the first dimension, shard the second on `b` and `m`
     u = torch.randn(16, 16).to('xla')
     xs.mark_sharding(u, mesh, (None, ('b', 'm')))
-    self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(u), "{devices=[1,%d]%s}" %
-        (self.n_devices, ','.join(str(x) for x in range(self.n_devices))))
+    annotation = "{devices=[1,%d]%s}" % (self.n_devices, ','.join(
+        str(x) for x in range(self.n_devices)))
+    if self.convert_to_shardy:
+      annotation = "{devices=[1,%d]<=[%d]}" % (self.n_devices, self.n_devices)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(u), annotation)
 
     # Replicate the first dimension, shard the second on `r` and `m`
     v = torch.randn(16, 16).to('xla')
     xs.mark_sharding(v, mesh, (None, ('r', 'm')))
     device_order = mesh.get_logical_mesh().transpose((0, 2, 1)).flatten()
-    self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(v),
-        "{devices=[1,%d,2]%s last_tile_dim_replicate}" %
-        (self.n_devices // 2, ','.join(str(x) for x in device_order)))
+    annotation = "{devices=[1,%d,2]%s last_tile_dim_replicate}" % (
+        self.n_devices // 2, ','.join(str(x) for x in device_order))
+    if self.convert_to_shardy:
+      annotation = "{devices=[1,%d,2]<=[2,%d]T(1,0) last_tile_dim_replicate}" % (
+          self.n_devices // 2, self.n_devices // 2)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(v), annotation)
 
     # Replicate the first dimension, shard the second on `m` and `b`
     v = torch.randn(16, 16).to('xla')
     xs.mark_sharding(v, mesh, (None, ('m', 'b')))
     device_order = mesh.get_logical_mesh().transpose((2, 1, 0)).flatten()
-    self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(v), "{devices=[1,%d]%s}" %
-        (self.n_devices, ','.join(str(x) for x in device_order)))
+    annotation = "{devices=[1,%d]%s}" % (self.n_devices, ','.join(
+        str(x) for x in device_order))
+    if self.convert_to_shardy:
+      annotation = "{devices=[1,%d]<=[2,%d]T(1,0)}" % (self.n_devices,
+                                                       self.n_devices // 2)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(v), annotation)
 
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        'Multiple devices required for tupled partition spec')
@@ -452,9 +471,12 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         ('a', 'b', 'c', 'd'))
     t = torch.randn(2, 2).to('xla')
     xs.mark_sharding(t, mesh, (('a', 'b'), ('c', 'd')))
-    self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(t), "{devices=[2,%d]%s}" %
-        (self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices))))
+    annotation = "{devices=[2,%d]%s}" % (self.n_devices // 2, ','.join(
+        str(x) for x in range(self.n_devices)))
+    if self.convert_to_shardy:
+      annotation = "{devices=[2,%d]<=[%d]}" % (self.n_devices // 2,
+                                               self.n_devices)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(t), annotation)
 
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        'At least 2 devices needed for 2D mesh')
@@ -462,9 +484,12 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     mesh = self._get_mesh((2, self.n_devices // 2))
     t = torch.randn(16, 16, 16).to('xla')
     xs.mark_sharding(t, mesh, (None, 0, 1))
-    self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(t), '{devices=[1,2,%d]%s}' %
-        (self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices))))
+    annotation = '{devices=[1,2,%d]%s}' % (self.n_devices // 2, ','.join(
+        str(x) for x in range(self.n_devices)))
+    if self.convert_to_shardy:
+      annotation = '{devices=[1,2,%d]<=[%d]}' % (self.n_devices // 2,
+                                                 self.n_devices)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(t), annotation)
 
   def test_partial_replication_addmm(self):
     device = torch_xla.device()
@@ -613,7 +638,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt])
     self.assertIn(
-        '%custom-call.7 = f32[2,2]{1,0} custom-call(f32[2,2]{1,0} %add.6), custom_call_target="Sharding", sharding=',
+        '%custom-call.1 = f32[2,2]{1,0} custom-call(f32[2,2]{1,0} %add.1), custom_call_target="Sharding", sharding=',
         hlo)
 
   # avoid calling xr.addressable_device_count here otherwise it will init the test
@@ -713,7 +738,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                             partition_spec)
     xst2 = xst1 + 5
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xst2.global_tensor])
-    self.assertIn('%p1.3 = f32[1,8]{1,0} parameter(1), sharding', hlo)
+    print(hlo)
+    self.assertIn('%p1.1 = f32[1,8]{1,0} parameter(1), sharding', hlo)
     if torch_xla._XLAC._xla_get_auto_sharding():
       # scalar 5 should be implicitly replicated, so the pre-optimization HLO
       # shouldn't mark it with sharding.
@@ -828,13 +854,13 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                               (0, 1))
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([actual.global_tensor])
     self.assertIn(
-        '%custom-call.7 = f32[1,128]{1,0} custom-call(f32[1,128]{1,0} %add.6), custom_call_target="Sharding", sharding=',
+        '%custom-call.1 = f32[1,128]{1,0} custom-call(f32[1,128]{1,0} %add.1), custom_call_target="Sharding", sharding=',
         hlo)
 
     actual += 0
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([actual.global_tensor])
     self.assertIn(
-        '%add.12 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.9, f32[1,128]{1,0} %broadcast.11)',
+        '%add.3 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.1, f32[1,128]{1,0} %broadcast.3)',
         hlo)
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
@@ -983,18 +1009,20 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     t = torch.randn(1, self.n_devices).to('xla')
     xs.mark_sharding(t, mesh, (0, 1))
-    self.assertIn("CreateOpSharding", met.counter_names())
-    self.assertEqual(met.counter_value("CreateOpSharding"), 1)
+    counter_name = "CreateIotaOpSharding" if self.convert_to_shardy else "CreateOpSharding"
+    self.assertIn(counter_name, met.counter_names())
+    self.assertEqual(met.counter_value(counter_name), 1)
 
     # Sharding with the same partition spec should not result in another call
     u = torch.randn(1, self.n_devices).to('xla')
     xs.mark_sharding(u, mesh, (0, 1))
-    self.assertEqual(met.counter_value("CreateOpSharding"), 1)
+    self.assertEqual(met.counter_value(counter_name), 1)
 
-    # Changing the partition spec will result in another CreateOpSharding
+    # Changing the partition spec will result in another
+    # CreateOpSharding or CreatingIotaOpSharding call
     v = torch.randn(1, self.n_devices).to('xla')
     xs.mark_sharding(v, mesh, (0, None))
-    self.assertEqual(met.counter_value("CreateOpSharding"), 2)
+    self.assertEqual(met.counter_value(counter_name), 2)
 
   def test_from_cpu_shards_replicated(self):
     from_cpu_shards = torch_xla._XLAC._global_tensor_from_cpu_shards
@@ -1141,7 +1169,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([model.fc2.weight.grad])
     self.assertIn(
-        '%opt-barrier.37 = (f32[1,64]{0,1}, f32[1]{0}, f32[2,64]{1,0}) opt-barrier((f32[1,64]{0,1}, f32[1]{0}, f32[2,64]{1,0}) %tuple.36)',
+        '%opt-barrier.1 = (f32[1,64]{0,1}, f32[1]{0}, f32[2,64]{1,0}) opt-barrier((f32[1,64]{0,1}, f32[1]{0}, f32[2,64]{1,0}) %tuple.2)',
         hlo)
 
   def test_mark_shard_scalar(self):
@@ -1198,7 +1226,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
     self.assertEqual(xx.shape, (8, 8 // self.n_devices))
-    self.assertIn(f'%custom-call.2 = f32[8,{8//self.n_devices}]{{1,0}}', hlo)
+    self.assertIn(f'%custom-call.1 = f32[8,{8//self.n_devices}]{{1,0}}', hlo)
     self.assertIn(
         f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
@@ -1215,7 +1243,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
     self.assertEqual(xx.shape, (8, 4))
-    self.assertIn(f'%custom-call.2 = f32[8,4]{{1,0}}', hlo)
+    self.assertIn(f'%custom-call.1 = f32[8,4]{{1,0}}', hlo)
     self.assertIn(
         f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
@@ -1246,7 +1274,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
     self.assertEqual(xx.shape, x.shape)
-    self.assertIn('%custom-call.9 = f32[8,8]{1,0}', hlo)
+    self.assertIn('%custom-call.5 = f32[8,8]{1,0}', hlo)
     self.assertIn(
         'custom_call_target="SPMDShardToFullShape", sharding={replicated}', hlo)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{replicated}")
@@ -1297,7 +1325,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
     self.assertIn(
-        f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{0}}, to_apply=%AddComputation.3",
+        f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.3), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{0}}, to_apply=%AddComputation.1",
         hlo)
 
     expected_x = torch.ones(8 // self.n_devices, 8) * self.n_devices
@@ -1318,7 +1346,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
     self.assertIn(
-        f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{1}}, to_apply=%AddComputation.3",
+        f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.3), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{1}}, to_apply=%AddComputation.1",
         hlo)
 
     expected_x = torch.ones(8, 8 // self.n_devices) * self.n_devices
@@ -1338,7 +1366,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
     self.assertIn(
-        f"all-reduce(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, to_apply=%AddComputation.3",
+        f"all-reduce(f32[8,8]{{1,0}} %custom-call.3), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, to_apply=%AddComputation.1",
         hlo)
 
     expected_x = torch.ones(8, 8) * self.n_devices
@@ -1359,7 +1387,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
     self.assertIn(
-        f"all-reduce(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, to_apply=%AddComputation.3",
+        f"all-reduce(f32[8,8]{{1,0}} %custom-call.3), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, to_apply=%AddComputation.1",
         hlo)
 
     expected_x = torch.ones(8, 8) * int(self.n_devices * scale)
@@ -1397,10 +1425,10 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         input_sharding=xs.ShardingSpec(mesh, ('data', None, None, None)))
     data, _ = iter(train_device_loader).__next__()
     self.assertEqual(data.size(), torch.Size([8, 3, 64, 64]))
-    self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(data),
-        f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
-    )
+    annotation = f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
+    if self.convert_to_shardy:
+      annotation = f"{{devices=[{mesh.size()},1,1,1]<=[{mesh.size()}]}}"
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(data), annotation)
 
   @unittest.skipUnless(
       xr.global_runtime_device_count() > 1,
@@ -1420,10 +1448,10 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         input_sharding=xs.ShardingSpec(mesh, ('data', None, None, None)))
     data, _ = iter(train_device_loader).__next__()
     self.assertEqual(data.size(), torch.Size([mesh.size() - 1, 3, 64, 64]))
-    self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(data),
-        f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
-    )
+    annotation = f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
+    if self.convert_to_shardy:
+      annotation = f"{{devices=[{mesh.size()},1,1,1]<=[{mesh.size()}]}}"
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(data), annotation)
 
   @unittest.skipUnless(
       xr.global_runtime_device_count() > 1,
@@ -1713,7 +1741,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f'%p0.1 = f32[2,4,64,64]{{3,2,1,0}} parameter(0), sharding={original_sharding_spec}',
         hlo)
     self.assertIn(
-        f'%custom-call.2 = f32[2,4,64,64]{{3,2,1,0}} custom-call(f32[2,4,64,64]{{3,2,1,0}} %p0.1), custom_call_target="Sharding", sharding={custom_sharding_spec}',
+        f'%custom-call.1 = f32[2,4,64,64]{{3,2,1,0}} custom-call(f32[2,4,64,64]{{3,2,1,0}} %p0.1), custom_call_target="Sharding", sharding={custom_sharding_spec}',
         hlo)
     xm.mark_step()
     # Ensure that the resulting sharding spec is preserved

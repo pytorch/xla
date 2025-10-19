@@ -37,7 +37,7 @@ working with:
 
 Next, we need to clone the forked repos locally so that we can make changes.
 
-On your Linuc machine, decide a directory as your workspace. Make sure that
+On your Linux machine, decide a directory as your workspace. Make sure that
 this directory and all of its ancestors are publically readable. Then run
 the following commands on this machine:
 
@@ -56,6 +56,28 @@ cd $WORKSPACE_DIR
 git clone --recursive git@github.com:<your-github-user-name>/pytorch.git
 git clone --recursive git@github.com:<your-github-user-name>/vision.git
 git clone --recursive git@github.com:<your-github-user-name>/pytorch-xla.git pytorch/xla
+```
+
+### Pinned PyTorch Version
+
+Since PR #9654, PyTorch/XLA started pinnning a PyTorch version. The pinned
+commit can be found in `.torch_commit` file at the root directory. Note that
+the pinned PyTorch version guarantees all PyTorch/XLA tests are passing
+whenever the underlying PyTorch is compiled at that specific commit. Therefore,
+specially for development, it's recommended that PyTorch is compiled at that
+specific commit. Otherwise you might end up with all kinds of errors: from
+build errors, to segmentation faults. So, make sure to check out that version:
+
+```bash
+# Go to PyTorch directory.
+cd $WORKSPACE_DIR/pytorch
+
+# Retrieve the PyTorch commit pin inside PyTorch/XLA directory.
+# Note: it's located in the last line of `.torch_commit`.
+COMMIT=$(tail -1 "xla/.torch_commit")
+
+# Create a branch (optional) and jump at that commit.
+git checkout -b pin "$COMMIT"
 ```
 
 ### Setting up Remote Tracking
@@ -238,10 +260,6 @@ first time, you may need to build everything again, for example, after a
   python setup.py develop
   ```
 
-### Additional steps for GPU
-
-Please refer to this [guide](https://github.com/pytorch/xla/blob/master/plugins/cuda/README.md).
-
 ## Before Creating a Pull Request
 
 In `pytorch/xla` repo we enforce coding style for both C++ and Python files.
@@ -289,12 +307,6 @@ To run the tests, follow __one__ of the options below:
 
   ```shell
   export PJRT_DEVICE=TPU
-  ```
-
-* Run on GPU:
-
-  ```shell
-  export PJRT_DEVICE=CUDA GPU_NUM_DEVICES=${NUM_GPU}
   ```
 
 For more detail on configuring the runtime, please refer to [this doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#quickstart)

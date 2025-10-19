@@ -57,8 +57,10 @@ class AtenXlaDeviceMapper {
       devices_.emplace_back(ParseDeviceString("SPMD:0"));
       devices_ordinals_[devices_.back()] = 0;
     } else {
-      for (auto& device_str :
-           torch_xla::runtime::GetComputationClientOrDie()->GetLocalDevices()) {
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
+      for (auto& device_str : client->GetLocalDevices()) {
         devices_.emplace_back(ParseDeviceString(device_str));
         devices_ordinals_[devices_.back()] = devices_.size() - 1;
       }
@@ -170,7 +172,9 @@ torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
       (tensor.dim() == 0 && tensor.numel() == 1)) {
     return torch_xla::bridge::GetOrCreateXlaTensor(tensor, device);
   } else {
-    return GetValueOrThrow(torch_xla::bridge::GetXlaTensor(tensor));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor,
+                        torch_xla::bridge::GetXlaTensor(tensor));
+    return xla_tensor;
   }
 }
 
@@ -186,9 +190,13 @@ XLATensorPtr GetOrCreateXlaTensor(const at::Tensor& tensor,
   }
 
   auto xtensor = GetXlaTensor(tensor);
-  return xtensor.ok()
-             ? xtensor.value()
-             : GetValueOrThrow(XLATensor::Create(inner_tensor, device));
+  if (xtensor.ok()) {
+    return xtensor.value();
+  }
+
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor,
+                      XLATensor::Create(inner_tensor, device));
+  return xla_tensor;
 }
 
 XLATensorPtr GetOrCreateXlaTensor(const std::optional<at::Tensor>& tensor,
@@ -392,11 +400,15 @@ std::string ToXlaString(const c10::Device& device) {
 }
 
 const torch::lazy::BackendDevice* GetDefaultDevice() {
-  static std::string default_device_spec =
-      UseVirtualDevice()
-          ? "SPMD:0"
-          : runtime::GetComputationClientOrDie()->GetDefaultDevice();
-  XLA_CHECK(!default_device_spec.empty());
+  static std::string default_device_spec = []() -> std::string {
+    if (UseVirtualDevice()) {
+      return "SPMD:0";
+    }
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                        runtime::GetComputationClient());
+    return client->GetDefaultDevice();
+  }();
+  ABSL_CHECK(!default_device_spec.empty());
   static const torch::lazy::BackendDevice default_device =
       ParseDeviceString(default_device_spec);
   return &default_device;
@@ -479,8 +491,8 @@ at::Tensor CreateXlaTensor(
     at::Tensor tensor,
     const std::optional<torch::lazy::BackendDevice>& device) {
   if (tensor.defined() && device) {
-    XLATensorPtr xla_tensor =
-        GetValueOrThrow(XLATensor::Create(std::move(tensor), *device));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor,
+                        XLATensor::Create(std::move(tensor), *device));
     tensor = AtenFromXlaTensor(xla_tensor);
   }
   return tensor;

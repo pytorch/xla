@@ -77,7 +77,7 @@ Disable autoboost selecting clock rate based on thermal, and power budget effect
 Run the `experiment_runner.py` from the `pytorch` directory, which should be the
 parent of the `xla` directory.
 
-The following example runs the alexnet benchmark on GPU through the
+The following example runs the alexnet benchmark on CPU through the
 Pytorch/XLA-dynamo path and through the Inductor-dynamo with 5 repetitions each.
 The results will be stored in a json file (eg results.jsonl) in `experiment_results`.
 
@@ -88,7 +88,7 @@ python xla/benchmarks/experiment_runner.py  \
     --xla=PJRT --xla=None                   \
     --test=eval --test=train                \
     --suite-name=torchbench                 \
-    --accelerator=cuda                      \
+    --accelerator=cpu                       \
     --output-dirname=experiment_results     \
     --repeat=5                              \
     --print-subprocess                      \
@@ -118,7 +118,7 @@ python xla/benchmarks/experiment_runner.py \
     --suite-name=torchbench \
     --progress-bar  \
     --model-config='{"model_name":"BERT_pytorch"}' \
-    --experiment-config='{"accelerator":"cuda","xla":"PJRT","xla_flags":null,"dynamo":"openxla","torch_xla2":null,"test":"train","keep_model_data_on_cuda":false,"enable_functionalization":false}' \
+    --experiment-config='{"accelerator":"cpu","xla":"PJRT","xla_flags":null,"dynamo":"openxla","torch_xla2":null,"test":"train","enable_functionalization":false}' \
     --repeat 1
 ```
 
@@ -135,13 +135,13 @@ works only for inference now.
 
 ```
 cd pytorch
-PJRT_DEVICE=CUDA python3 new_xla/benchmarks/experiment_runner.py \
+PJRT_DEVICE=CPU python3 new_xla/benchmarks/experiment_runner.py \
     --xla=PJRT \
     --dynamo=openxla \
     --test=eval \
     --filter=BERT_pytorch$ \
     --suite-name=torchbench \
-    --accelerator=cuda \
+    --accelerator=cpu \
     --progress-bar \
     --output-dirname=/tmp/output \
     --repeat=2 \

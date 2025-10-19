@@ -14,7 +14,7 @@ def _mp_fn(index):
   device = torch_xla.device()
   world_size = xr.world_size()
   input_list_size = 5
-  if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):
+  if xm.xla_device_hw(device) in ('TPU', 'NEURON'):
     # Testing with a single replica group
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = xm.all_gather(ordinal_tensor, dim=0)
@@ -161,7 +161,7 @@ def _mp_fn(index):
     # TODO: add test for torch.compile when support for list input is ready
 
   else:
-    print(f'{device} is not a TPU or GPU device', file=sys.stderr)
+    print(f'{device} is not a TPU device', file=sys.stderr)
 
 
 if __name__ == '__main__':

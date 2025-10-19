@@ -6,7 +6,7 @@
   # - stage: build or release. Different packages are installed depending on
   #          the chosen stage.
   # - arch: aarch64 or amd64. Architecture of the built image and wheels.
-  # - accelerator: tpu or cuda. Available accelerator.
+  # - accelerator: tpu.
   pre_tasks:
     - name: "Validate required variables"
       ansible.builtin.assert:
@@ -16,11 +16,11 @@
           "Pass the required variable with: --e \"{{ item.name }}=<value>\""
       loop:
         - name: stage
-          pattern: ^(build|build_plugin|release)$
+          pattern: ^(build|release)$
         - name: arch
           pattern: ^(aarch64|amd64)$
         - name: accelerator
-          pattern: ^(tpu|cuda)$
+          pattern: ^tpu$
 
     - name: "Include vars from config files"
       ansible.builtin.include_vars:
@@ -28,8 +28,6 @@
       loop:
         # vars.yaml should be the first as other config files depend on it.
         - vars.yaml
-        # cuda_deps should be loaded before apt, since apt depends on it.
-        - cuda_deps.yaml
         - apt.yaml
         - pip.yaml
         - env.yaml
@@ -87,17 +85,6 @@
           }}"
       when: stage == "build"
       tags: build_srcs
-
-    - role: build_plugin
-      vars:
-        src_root: "/src"
-        env_vars: "{{
-            build_env.common | default({}, true) |
-            combine(build_env[arch] | default({}, true)) |
-            combine(build_env[accelerator] | default({}, true))
-          }}"
-      when: stage == "build_plugin"
-      tags: build_plugin
 
     - role: configure_env
       vars:

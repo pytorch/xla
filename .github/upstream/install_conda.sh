@@ -27,6 +27,10 @@ function install_and_setup_conda() {
   fi
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
+  # Accept Conda channels' ToS automatically.
+  # Ref: https://github.com/pytorch/pytorch/issues/158438#issuecomment-3084935777
+  export CONDA_PLUGINS_AUTO_ACCEPT_TOS="yes"
+
   conda update -y -n base conda
   conda install -y python=$PYTHON_VERSION
 

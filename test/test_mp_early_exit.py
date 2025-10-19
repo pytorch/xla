@@ -13,7 +13,7 @@ import torch_xla.utils.utils as xu
 def _mp_fn():
   dist.init_process_group('xla', init_method='xla://')
   device = torch_xla.device()
-  if xm.xla_device_hw(device) in ['TPU', 'CUDA']:
+  if xm.xla_device_hw(device) in ('TPU',):
     train_loader = xu.SampleGenerator(
         data=torch.zeros(1, 12), sample_count=1024)
     train_loader = pl.MpDeviceLoader(train_loader, device)
@@ -23,7 +23,7 @@ def _mp_fn():
       if step > max_steps:
         break
   else:
-    print(f'{device} is not a TPU or GPU device', file=sys.stderr)
+    print(f'{device} is not a TPU device', file=sys.stderr)
 
 
 if __name__ == '__main__':

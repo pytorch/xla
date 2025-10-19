@@ -116,9 +116,9 @@ class ComputationClient {
         : name_(name),
           computation_(std::move(computation)),
           devices_(std::move(devices)) {
-      program_shape_ = GetValueOrThrow(computation_.GetProgramShape());
+      XLA_ASSIGN_OR_THROW(program_shape_, computation_.GetProgramShape());
       const xla::HloModuleProto& proto = computation_.proto();
-      hash_ = GetValueOrThrow(ComputeHash(proto, name));
+      XLA_ASSIGN_OR_THROW(hash_, ComputeHash(proto, name));
     }
 
     Computation(std::string name, xla::XlaComputation computation,
@@ -191,7 +191,8 @@ class ComputationClient {
 
     const std::string to_string() const override {
       xla::HloModuleConfig hlo_config(program_shape());
-      std::unique_ptr<xla::HloModule> module = GetValueOrThrow(
+      XLA_ASSIGN_OR_THROW(
+          std::unique_ptr<xla::HloModule> module,
           xla::HloModule::CreateFromProto(computation().proto(), hlo_config));
       return module->ToString();
     }
@@ -374,8 +375,6 @@ class ComputationClient {
   virtual absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
       int local_device_id) const = 0;
 
-  virtual std::intptr_t GetCudaStreamForDevice(int local_device_id) const = 0;
-
   virtual size_t GetNumLocalDevices() const = 0;
 
   virtual size_t GetNumDevices() const = 0;
@@ -446,6 +445,14 @@ class ComputationClient {
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.
   static int64_t GetDeviceOrdinal(const std::string& device);
+
+  // Sets XLA compile option overrides used by the backend compiler.
+  // - The map keys are XLA compiler flag names (env option override keys).
+  // - The values are stringified flag values.
+  // - Calling this method **overwrites** any previously set options.
+  //   (Pass an empty map to clear.)
+  virtual void SetCustomCompileOptions(
+      const std::unordered_map<std::string, std::string>& options) = 0;
 
  protected:
   static constexpr auto spmd_device_str = "SPMD:0";

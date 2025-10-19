@@ -264,34 +264,39 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
   // Annotate HLO sharding selectively in the compuation.
   // This is no-op if an instruction doesn't have any sharding annotation.
   auto is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
-  xla::XlaComputation computation = GetValueOrThrow(lowering_ctx.BuildXla());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation computation, lowering_ctx.BuildXla());
 
   static bool dump_post_optimizations =
       runtime::sys_util::GetEnvBool("XLA_DUMP_POST_OPTIMIZATIONS", false);
   if (dump_post_optimizations) {
+    XLA_ASSIGN_OR_THROW(xla::ProgramShape program_shape,
+                        computation.GetProgramShape());
     xla::Shape shape = MakeShapeWithDeviceLayout(
-        GetValueOrThrow(computation.GetProgramShape()).result(),
-        static_cast<XlaDeviceType>(device.type()));
+        program_shape.result(), static_cast<XlaDeviceType>(device.type()));
     std::vector<runtime::ComputationClient::CompileInstance> instances;
-    instances.push_back(
-        {std::move(computation), device.toString(),
-         runtime::GetComputationClientOrDie()->GetCompilationDevices(
-             device.toString(), {}),
-         &shape,
-         /*parameter_is_tupled_arguments=*/false, is_sharded});
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                        runtime::GetComputationClient());
+    instances.push_back({std::move(computation), device.toString(),
+                         client->GetCompilationDevices(device.toString(), {}),
+                         &shape,
+                         /*parameter_is_tupled_arguments=*/false, is_sharded});
     std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
-        computations =
-            runtime::GetComputationClientOrDie()->Compile(std::move(instances));
+        computations = client->Compile(std::move(instances));
     computation = std::move(computations[0]->move_computation());
   }
 
   switch (mode) {
-    case EmitMode::kHloReadable:
-      return GetValueOrThrow(runtime::util::GetComputationHloText(computation));
-    case EmitMode::kHloProto:
-      return GetValueOrThrow(
-          runtime::util::GetDeterministicSerializedModuleProto(
-              computation.proto()));
+    case EmitMode::kHloReadable: {
+      XLA_ASSIGN_OR_THROW(std::string hlo_text,
+                          runtime::util::GetComputationHloText(computation));
+      return hlo_text;
+    }
+    case EmitMode::kHloProto: {
+      XLA_ASSIGN_OR_THROW(std::string serialized_proto,
+                          runtime::util::GetDeterministicSerializedModuleProto(
+                              computation.proto()));
+      return serialized_proto;
+    }
     case EmitMode::kStableHloReadable:
       return hloToStablehlo(&computation.proto(),
                             /* emit_bytecode = */ false);

@@ -60,13 +60,14 @@ const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient() {
   return maybe_client;
 }
 
-ComputationClient* absl_nonnull GetComputationClientOrDie() {
-  return GetValueOrThrow(GetComputationClient());
-}
-
 ComputationClient* GetComputationClientIfInitialized() {
-  return g_computation_client_initialized ? GetComputationClientOrDie()
-                                          : nullptr;
+  if (!g_computation_client_initialized) {
+    return nullptr;
+  }
+  const absl::StatusOr<ComputationClient* absl_nonnull>& client =
+      GetComputationClient();
+  XLA_CHECK_OK(client);
+  return client.value();
 }
 
 }  // namespace torch_xla::runtime

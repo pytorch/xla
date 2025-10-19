@@ -23,11 +23,11 @@ behavior (installed pip/apt packages and set environment variables):
 * `stage`: build or release. Different packages are installed depending on
   the chosen stage.
 * `arch`: aarch64 or amd64. Architecture of the built image and wheels.
-* `accelerator`: tpu or cuda. Available accelerator.
+* `accelerator`: tpu. Available accelerator.
 
 The variables can be passed through `-e` flag: `-e "<var>=<value>"`.
 
-Example: `ansible-playbook playbook.yaml -e "stage=build arch=amd64 accelerator=tpu"`
+Example: `ansible-playbook playbook.yaml -e "stage=build arch=amd64"`
 
 ## Config structure
 

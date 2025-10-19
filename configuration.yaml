@@ -15,11 +15,6 @@ variables:
         - Whether or not to create an async PJRT client for the CPU device(s).
       type: bool
       default_value: false
-    PJRT_GPU_ASYNC_CLIENT:
-      description:
-        - Whether or not to create an async PJRT client for the GPU device(s).
-      type: bool
-      default_value: false
     PJRT_TPU_MAX_INFLIGHT_COMPUTATIONS:
       description:
         - Max inflight computations that the PJRT client can handle for TPU.
@@ -228,10 +223,6 @@ variables:
     CPU_NUM_DEVICES:
       description:
         - Number of CPU devices being used by this instance of XRT.
-      type: int
-    GPU_NUM_DEVICES:
-      description:
-        - Number of GPU devices being used by this instance of XRT.
       type: int
   debug_variables:
     XLA_FNTRACKER_FILE:

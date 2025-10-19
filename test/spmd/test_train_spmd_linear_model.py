@@ -20,9 +20,6 @@ from utils.train_spmd_linear_model_grad_acc import train_and_evaluate_grad_acc
 # the gradient checkpointing A/B test run for it.
 SKIP_GRADIENT_CHECKPOINTING: bool = False
 
-skipOnGpu = unittest.skipIf(xr.device_type() == 'CUDA',
-                            'https://github.com/pytorch/xla/issues/9128')
-
 
 @contextmanager
 def extended_argv(args):

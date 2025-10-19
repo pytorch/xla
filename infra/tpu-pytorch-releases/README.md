@@ -39,13 +39,11 @@ consists of the following fields.
   sources when building image and wheels.
 * `package_version` (string) - Version of the built wheels. Passed to the
   build steps.
-* `accelerator` ("tpu"|"cuda") - Supported accelerator. Affects build
+* `accelerator` ("tpu") - Supported accelerator. Affects build
   process and installed dependencies, see [apt.yaml](../ansible/config/apt.yaml) and
   [pip.yaml](../ansible/config/pip.yaml).
 * `python_version` (optional, string, default = "3.8") - Python version used for
   the docker image base and build process.
-* `cuda_version` (optional, string, default = "11.8") - CUDA version to install.
-  Used only if `accelerator` is set to "cuda"
 * `arch` (optional, "amd64"|"aarch64", default = "amd64") - Architecture
   affects installed dependencies and build process, see [apt.yaml](../ansible/config/apt.yaml) and
   [pip.yaml](../ansible/config/pip.yaml).
@@ -71,7 +69,6 @@ unset properties of existing triggers.
         git_tag         = "v3.0.0"
         package_version = "3.0"
         accelerator     = "tpu"
-        cuda_version    = "11.8"  # optional
         python_version  = "3.8"   # optional
         arch            = "amd64" # optional
       },
@@ -86,6 +83,14 @@ unset properties of existing triggers.
 5. See section [Manually trigger a Cloud Build](#manually-trigger-a-cloud-build)
    to manually trigger the created build and produce all the artifacts.
 
+### Build development docker locally for testing
+
+Sample command to build the development docker container locally for testing:
+```
+cd infra/ansible
+docker build -f development.Dockerfile --build-arg=python_version=3.12 --build-arg=ansible_vars='{"xla_git_rev":"master", "pytorch_git_rev":"main", "accelerator":"tpu", "arch": "amd64", "python_version":"3.12"}'
+```
+
 
 ### Nightly releases
 
@@ -95,12 +100,10 @@ at midnight (`America/Los_Angeles` time zone).
 Nightly builds in the `nightly_builds` variable in
 [artifacts.auto.tfvars](./artifacts.auto.tfvars)
 consists of the following fields.
-* `accelerator` ("tpu"|"cuda") - Supported accelerator. Impacts build
+* `accelerator` ("tpu") - Supported accelerator. Impacts build
   process and installed dependencies.
 * `python_version` (optional, string, default = "3.8") - Python version used for
   the docker images base and build process.
-* `cuda_version` (optional, string, default = "11.8") - CUDA version to install.
-  Used only if `accelerator` is set to "cuda"
 * `arch` (optional, "amd64"|"aarch64", default = "amd64") - Architecture
   influences installed dependencies and build process.
 * `cxx11_abi` (optional, "0"|"1", default = "0") - Whether to use C++11 ABI or
@@ -115,9 +118,8 @@ unset properties of existing triggers.
 
 #### Modify or add a new nightly release
 
-1. Modify or add an entry with specific `accelerator`, `python_version` and (optionally)
-   `cuda_version` to the `nightly_builds` variable in the
-   [artifacts.auto.tfvars](./artifacts.auto.tfvars) file.
+1. Modify or add an entry with specific `accelerator`, and `python_version`
+   to the `nightly_builds` variable in the [artifacts.auto.tfvars](./artifacts.auto.tfvars) file.
    See all variables in the section above.
 
     **Example**
@@ -125,10 +127,13 @@ unset properties of existing triggers.
     ```hcl
     nightly_builds = [
       {
-        accelerator    = "cuda"
-        cuda_version   = "11.8"  # optional
-        python_version = "3.8"   # optional
-        arch           = "amd64" # optional
+        git_tag         = "v2.8.0"
+        package_version = "2.8.0"
+        pytorch_git_rev = "v2.8.0"
+        accelerator     = "tpu"
+        python_version  = "3.10"
+        bundle_libtpu   = "0"
+        cxx11_abi       = "1"
       },
       # ...
     ]

@@ -118,17 +118,6 @@ class PjRtComputationClient : public ComputationClient {
         xla::PjRtLocalDeviceId(local_device_id));
   }
 
-  std::intptr_t GetCudaStreamForDevice(int local_device_id) const override {
-    absl::StatusOr<xla::PjRtDevice*> pjrt_device =
-        client_->LookupAddressableDevice(
-            xla::PjRtLocalDeviceId(local_device_id));
-    XLA_CHECK(pjrt_device.ok()) << "Failed to get a PjRt device.";
-    absl::StatusOr<std::intptr_t> stream =
-        pjrt_device.value()->GetStreamForExternalReadyEvents();
-    XLA_CHECK(stream.ok()) << "Failed to get a stream.";
-    return stream.value();
-  }
-
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
@@ -169,10 +158,16 @@ class PjRtComputationClient : public ComputationClient {
       absl::Span<xla::PjRtDevice* const> devices) const;
 
   void RegisterCustomCall(const std::string& fn_name, void* function_ptr,
-                          const std::string& platform) override;
+                          const std::string& platform) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  };
 
   void OnReadyCallback(DataPtr data,
                        const std::function<void()>& callback) override;
+
+  // See base class for semantics. This call overwrites previously set options.
+  void SetCustomCompileOptions(
+      const std::unordered_map<std::string, std::string>& options) override;
 
   // Creates a new instance of PjRtComputationClient and initializes it.
   static absl::StatusOr<absl_nonnull std::unique_ptr<PjRtComputationClient>>
@@ -206,6 +201,7 @@ class PjRtComputationClient : public ComputationClient {
   // If not nullptr, invoke this instead of the actual XLA compilation. Used
   // only for testing.
   std::function<absl::Status()> fake_xla_compile_ = nullptr;
+  std::unordered_map<std::string, std::string> custom_compile_options_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 

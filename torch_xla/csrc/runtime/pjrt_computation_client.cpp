@@ -14,6 +14,7 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
@@ -23,7 +24,6 @@
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
-#include "xla/pjrt/c/pjrt_c_api_gpu_extension.h"
 #include "xla/pjrt/c/pjrt_c_api_wrapper_impl.h"
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
@@ -152,8 +152,6 @@ PjRtComputationClient::Create() {
 }
 
 PjRtComputationClient::~PjRtComputationClient() {
-  // In the GPU case, the PjRtClient depends on the DistributedRuntimeClient
-  // tracked in XlaCoordinator, so the PjRtClient must be destroyed first.
   client_ = nullptr;
   coordinator_ = nullptr;
 }
@@ -168,7 +166,8 @@ void PjRtComputationClient::InitializeCoordinator(int global_rank,
                                                   std::string port) {
   XLA_CHECK(coordinator_ == nullptr)
       << "Can only initialize the XlaCoordinator once.";
-  coordinator_ = GetValueOrThrow(
+  XLA_ASSIGN_OR_THROW(
+      coordinator_,
       XlaCoordinator::Create(global_rank, world_size, master_addr, port));
 }
 
@@ -367,10 +366,10 @@ PjRtComputationClient::ReplicateShardedData(
     auto instruction = XlaBuilderFriend::GetInstruction(y);
     *instruction->mutable_sharding() = xla::HloSharding::Replicate().ToProto();
 
-    xla::XlaComputation computation =
-        GetValueOrThrow(builder.Build(/*remove_dynamic_dimensions=*/false));
-    xla::ProgramShape program_shape =
-        GetValueOrThrow(computation.GetProgramShape());
+    XLA_ASSIGN_OR_THROW(xla::XlaComputation computation,
+                        builder.Build(/*remove_dynamic_dimensions=*/false));
+    XLA_ASSIGN_OR_THROW(xla::ProgramShape program_shape,
+                        computation.GetProgramShape());
 
     std::string device = GetDefaultDevice();
     std::vector<torch_xla::runtime::ComputationClient::CompileInstance>
@@ -386,8 +385,8 @@ PjRtComputationClient::ReplicateShardedData(
 
     torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
         execute_options;
-    auto sharded_results =
-        GetValueOrThrow(ExecuteReplicated(*computations.front(), {sharded_data},
+    XLA_ASSIGN_OR_THROW(std::vector<ComputationClient::DataPtr> sharded_results,
+                        ExecuteReplicated(*computations.front(), {sharded_data},
                                           GetLocalDevices(), execute_options));
     XLA_CHECK(sharded_results.size() > 0)
         << "empty ExecuteReplicated results returned.";
@@ -433,8 +432,9 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
     XLA_CHECK_NE(sharding.type(), xla::OpSharding::UNKNOWN)
         << "Resharding by UNKNOWN sharding type is not allowed.";
 
-    hlo_shardings.push_back(
-        GetValueOrThrow(xla::HloSharding::FromProto(sharding)));
+    XLA_ASSIGN_OR_THROW(xla::HloSharding hlo_sharding,
+                        xla::HloSharding::FromProto(sharding));
+    hlo_shardings.push_back(std::move(hlo_sharding));
 
     xla::OpSharding fallback_sharding;
     fallback_sharding.set_type(xla::OpSharding::REPLICATED);
@@ -457,9 +457,9 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
     root = xla::Tuple(&builder, param_ops);
   }
 
-  xla::XlaComputation xla_computation = GetValueOrThrow(builder.Build(root));
-  xla::ProgramShape program_shape =
-      GetValueOrThrow(xla_computation.GetProgramShape());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation xla_computation, builder.Build(root));
+  XLA_ASSIGN_OR_THROW(xla::ProgramShape program_shape,
+                      xla_computation.GetProgramShape());
 
   std::string device = GetDefaultDevice();
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
@@ -474,8 +474,9 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
 
   torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
       execute_options;
-  auto resharded_results = GetValueOrThrow(ExecuteReplicated(
-      *computation, handles, GetLocalDevices(), execute_options));
+  XLA_ASSIGN_OR_THROW(std::vector<ComputationClient::DataPtr> resharded_results,
+                      ExecuteReplicated(*computation, handles,
+                                        GetLocalDevices(), execute_options));
   return resharded_results;
 }
 
@@ -554,6 +555,9 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
   for (auto& instance : instances) {
     xla::CompileOptions compile_options;
+    for (const auto& [name, value] : custom_compile_options_) {
+      compile_options.env_option_overrides.push_back({name, value});
+    }
     if (enable_cm_in_mp) {
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
       compile_options.env_option_overrides.push_back(
@@ -561,6 +565,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       compile_options.env_option_overrides.push_back(
           {"xla_tpu_decompose_einsum_reduce_scatter", true});
     }
+
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
@@ -638,6 +643,9 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       mlir::ModuleOp mlir_module =
           mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
       ConvertHloToStableHlo(instance.computation.mutable_proto(), &mlir_module);
+      if (runtime::sys_util::GetEnvBool("CONVERT_SHLO_TO_SHARDY", false)) {
+        ConvertStableHloToSdy(&mlir_module);
+      }
       executable = util::RaisePythonValueErrorOnFailure([&] {
         return fake_xla_compile_
                    ? fake_xla_compile_()
@@ -660,7 +668,9 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       TF_VLOG(3) << "memory usage is not availiable";
     }
 
-    const auto& hlo_modules = GetValueOrThrow(executable->GetHloModules());
+    XLA_ASSIGN_OR_THROW(
+        const std::vector<std::shared_ptr<xla::HloModule>>& hlo_modules,
+        executable->GetHloModules());
     xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(
@@ -679,8 +689,9 @@ std::string PjRtComputationClient::SerializeComputation(
     const ComputationPtr computation) {
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(*computation);
-
-  return GetValueOrThrow(pjrt_computation.executable->SerializeExecutable());
+  XLA_ASSIGN_OR_THROW(std::string serialized_executable,
+                      pjrt_computation.executable->SerializeExecutable());
+  return serialized_executable;
 }
 
 ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
@@ -1032,45 +1043,6 @@ ComputationClient::MemoryInfo PjRtComputationClient::GetMemoryInfo(
   };
 }
 
-void PjRtComputationClient::RegisterCustomCall(const std::string& fn_name,
-                                               void* function_ptr,
-                                               const std::string& platform) {
-  if (platform != "CUDA") {
-    XLA_ERROR() << "Custom call targets can only be registered for "
-                   "PJRT CUDA runtime.";
-    return;
-  }
-
-  auto* c_api_client = dynamic_cast<xla::PjRtCApiClient*>(client_.get());
-  if (!c_api_client) {
-    XLA_REGISTER_CUSTOM_CALL_TARGET_WITH_SYM(fn_name, function_ptr, platform);
-    return;
-  }
-  const PJRT_Api* pjrt_api = c_api_client->pjrt_c_api();
-
-  // See openxla reference:
-  // https://github.com/openxla/xla/blob/b604c8d87df842002a7a8de79a434026329fbcb2/xla/pjrt/c/pjrt_c_api_gpu_test.cc#L414
-  const PJRT_Extension_Base* next =
-      reinterpret_cast<const PJRT_Extension_Base*>(pjrt_api->extension_start);
-  while (next != nullptr &&
-         next->type !=
-             PJRT_Extension_Type::PJRT_Extension_Type_Gpu_Custom_Call) {
-    next = next->next;
-  }
-  XLA_CHECK(next) << "Custom call extension not found";
-  PJRT_Gpu_Register_Custom_Call_Args args;
-  args.struct_size = PJRT_Gpu_Register_Custom_Call_Args_STRUCT_SIZE;
-  args.function_name = fn_name.c_str();
-  args.function_name_size = fn_name.size();
-  args.api_version = 0;
-  args.handler_execute = function_ptr;
-  PJRT_Error* error =
-      reinterpret_cast<const PJRT_Gpu_Custom_Call*>(next)->custom_call(&args);
-  if (error) {
-    XLA_ERROR() << error->status;
-  }
-}
-
 void PjRtComputationClient::OnReadyCallback(
     ComputationClient::DataPtr data, const std::function<void()>& callback) {
   std::shared_ptr<xla::PjRtBuffer> buffer;
@@ -1086,6 +1058,14 @@ void PjRtComputationClient::OnReadyCallback(
   XLA_CHECK(buffer) << "received placeholder data as argument";
   buffer->GetReadyFuture().OnReady(
       [callback](absl::Status unused) { callback(); });
+}
+
+void PjRtComputationClient::SetCustomCompileOptions(
+    const std::unordered_map<std::string, std::string>& options) {
+  custom_compile_options_.clear();
+  for (const auto& [key, value] : options) {
+    custom_compile_options_[key] = value;
+  }
 }
 
 }  // namespace runtime

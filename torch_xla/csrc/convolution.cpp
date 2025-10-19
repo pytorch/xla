@@ -218,9 +218,11 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed = xla::Transpose(
       kernel, FilterTransposePermutation(input_shape.dimensions_size()));
-  return GetValueOrThrow(MakeXlaBackpropInputConvOp(
-      "conv_backward_input", input_shape, kernel_transposed, grad_output,
-      conv_op_attrs));
+  XLA_ASSIGN_OR_THROW(xla::XlaOp conv_backward_input,
+                      MakeXlaBackpropInputConvOp("conv_backward_input",
+                                                 input_shape, kernel_transposed,
+                                                 grad_output, conv_op_attrs));
+  return conv_backward_input;
 }
 
 // Computes the kernel gradient for a convolution.
@@ -238,14 +240,15 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
       xla::InversePermutation(transpose_permutation);
   xla::Shape transposed_weight_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permutation, kernel_shape);
-  xla::XlaOp conv = GetValueOrThrow(MakeXlaBackpropFilterConvOp(
-      "conv_backward_weight", input, transposed_weight_shape, grad_output,
-      conv_op_attrs));
+  XLA_ASSIGN_OR_THROW(xla::XlaOp conv_backward_weight,
+                      MakeXlaBackpropFilterConvOp("conv_backward_weight", input,
+                                                  transposed_weight_shape,
+                                                  grad_output, conv_op_attrs));
 
   // Reorder the dimensions of the filter gradient to match the NCHW convention
   // of PyTorch. The original result of the convolution has the spatial and
   // feature dimensions swapped and the spatial dimensions reversed.
-  return xla::Transpose(conv, inv_transpose_permutation);
+  return xla::Transpose(conv_backward_weight, inv_transpose_permutation);
 }
 
 xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {

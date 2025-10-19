@@ -450,9 +450,9 @@ void DebugUtil::post_compilation_analysis(
   // This can be used to verify the hash of the underlying computation proto.
   // Note that for UserComputation computations, the protobuf is factored in
   // the graph hash.
-  std::string serialized_computation =
-      GetValueOrThrow(runtime::util::GetDeterministicSerializedModuleProto(
-          computation->computation().proto()));
+  XLA_ASSIGN_OR_THROW(std::string serialized_computation,
+                      runtime::util::GetDeterministicSerializedModuleProto(
+                          computation->computation().proto()));
   ss << "\n"
      << "Computation hash: "
      << torch::lazy::HashToString(torch::lazy::Hash(serialized_computation))

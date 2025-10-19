@@ -2,7 +2,7 @@
 
 Pytorch/XLA's AMP extends [Pytorch's AMP
 package](https://pytorch.org/docs/stable/amp.html) with support for
-automatic mixed precision on `XLA:GPU` and `XLA:TPU` devices. AMP is
+automatic mixed precision on `XLA:TPU` devices. AMP is
 used to accelerate training and inference by executing certain
 operations in `float32` and other operations in a lower precision
 datatype (`float16` or `bfloat16` depending on hardware support). This
@@ -95,61 +95,8 @@ unlisted ops run if they're downstream from autocasted ops.
 
 `stack`, `cat`, `index_copy`
 
-## AMP for XLA:GPU
-
-AMP on XLA:GPU devices reuse Pytorch's AMP rules. See [Pytorch's AMP
-documentation](https://pytorch.org/docs/stable/amp.html) for CUDA
-specific behavior. A simple CUDA AMP example is below:
-
-``` python
-from torch_xla.amp import syncfree
-import torch_xla.core.xla_model as xm
-
-# Creates model and optimizer in default precision
-model = Net().to('xla')
-# Pytorch/XLA provides sync-free optimizers for improved performance
-optimizer = syncfree.SGD(model.parameters(), ...)
-scaler = GradScaler()
-
-for input, target in data:
-    optimizer.zero_grad()
-
-    # Enables autocasting for the forward pass
-    with autocast(torch_xla.device()):
-        output = model(input)
-        loss = loss_fn(output, target)
-
-    # Exits the context manager before backward pass
-    scaler.scale(loss).backward()
-    gradients = xm._fetch_gradients(optimizer)
-    xm.all_reduce('sum', gradients, scale=1.0 / xr.world_size())
-    scaler.step(optimizer)
-    scaler.update()
-```
-
-`autocast(torch_xla.device())` aliases `torch.cuda.amp.autocast()` when the
-XLA Device is a CUDA device (XLA:GPU). Alternatively, if a script is
-only used with CUDA devices, then `torch.cuda.amp.autocast` can be
-directly used, but requires `torch` is compiled with `cuda` support for
-datatype of `torch.bfloat16`. We recommend using
-`autocast(torch_xla.device())` on XLA:GPU as it does not require
-`torch.cuda` support for any datatypes, including `torch.bfloat16`.
-
-### AMP for XLA:GPU Best Practices
-
-1.  `autocast` should wrap only the forward pass(es) and loss
-    computation(s) of the network. Backward ops run in the same type
-    that autocast used for the corresponding forward ops.
-2.  Do not set `XLA_USE_F16` flag when using AMP on Cuda devices. This
-    will override the per-operator precision settings provided by AMP
-    and cause all operators to execute in float16.
-3.  Use gradient scaling to prevent float16 gradients from underflowing.
-4.  Pytorch/XLA provides modified version of
-    [optimizers](https://github.com/pytorch/xla/tree/master/torch_xla/amp/syncfree)
-    that avoid the additional sync between device and host.
-
 ## Examples
 
 Our [mnist training script](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_amp.py)
 and [imagenet training script](https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_amp.py)
-demonstrate how AMP is used on both TPUs and GPUs.
+demonstrate how AMP is used on TPUs.

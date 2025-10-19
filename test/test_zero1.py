@@ -154,13 +154,12 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
 
 def _mp_fn(index):
   device = torch_xla.device()
-  if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
+  if xm.xla_device_hw(device) in ('TPU',):
     test = unittest.main(exit=False)
     sys.exit(0 if test.result.wasSuccessful() else 1)
   else:
     print(
-        'Default device {} is not a TPU or CUDA device'.format(device),
-        file=sys.stderr)
+        'Default device {} is not a TPU device'.format(device), file=sys.stderr)
 
 
 if __name__ == '__main__':

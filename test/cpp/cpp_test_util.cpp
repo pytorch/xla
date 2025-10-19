@@ -222,18 +222,19 @@ void WithAllDevices(
     const std::function<void(const std::vector<torch::lazy::BackendDevice>&,
                              const std::vector<torch::lazy::BackendDevice>&)>&
         devfn) {
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   for (auto device_type : device_types) {
     std::vector<torch::lazy::BackendDevice> devices;
     std::vector<torch::lazy::BackendDevice> all_devices;
-    for (const auto& device_str :
-         torch_xla::runtime::GetComputationClientOrDie()->GetLocalDevices()) {
+
+    for (const auto& device_str : client->GetLocalDevices()) {
       torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         devices.push_back(device);
       }
     }
-    for (const auto& device_str :
-         torch_xla::runtime::GetComputationClientOrDie()->GetAllDevices()) {
+    for (const auto& device_str : client->GetAllDevices()) {
       torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         all_devices.push_back(device);
@@ -246,17 +247,17 @@ void WithAllDevices(
 }
 
 std::string GetTensorTextGraph(at::Tensor tensor) {
-  XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(tensor));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xtensor, bridge::GetXlaTensor(tensor));
   return DumpUtil::ToText({xtensor->GetIrValue().node.get()});
 }
 
 std::string GetTensorDotGraph(at::Tensor tensor) {
-  XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(tensor));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xtensor, bridge::GetXlaTensor(tensor));
   return DumpUtil::ToDot({xtensor->GetIrValue().node.get()});
 }
 
 std::string GetTensorHloGraph(at::Tensor tensor) {
-  XLATensorPtr xtensor = GetValueOrThrow(bridge::GetXlaTensor(tensor));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xtensor, bridge::GetXlaTensor(tensor));
   return DumpUtil::ToHlo({xtensor->GetIrValue()}, xtensor->GetDevice());
 }
 
@@ -276,37 +277,39 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
     lowering_ctx.AddResult(root);
   }
 
-  xla::XlaComputation computation = GetValueOrThrow(lowering_ctx.BuildXla());
-  xla::ProgramShape program_shape =
-      GetValueOrThrow(computation.GetProgramShape());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation computation, lowering_ctx.BuildXla());
+  XLA_ASSIGN_OR_THROW(xla::ProgramShape program_shape,
+                      computation.GetProgramShape());
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
 
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
-  instances.push_back(
-      {std::move(computation), device.toString(),
-       torch_xla::runtime::GetComputationClientOrDie()->GetCompilationDevices(
-           device.toString(), {}),
-       &shape});
+  instances.push_back({std::move(computation), device.toString(),
+                       client->GetCompilationDevices(device.toString(), {}),
+                       &shape});
 
   std::vector<
       std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
-      computations = torch_xla::runtime::GetComputationClientOrDie()->Compile(
-          std::move(instances));
+      computations = client->Compile(std::move(instances));
 
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions options;
-  return GetValueOrThrow(
-      torch_xla::runtime::GetComputationClientOrDie()->ExecuteComputation(
-          *computations.front(),
-          UnwrapXlaData(lowering_ctx.GetParametersData()), device.toString(),
-          options));
+  XLA_ASSIGN_OR_THROW(std::vector<runtime::ComputationClient::DataPtr> outputs,
+                      client->ExecuteComputation(
+                          *computations.front(),
+                          UnwrapXlaData(lowering_ctx.GetParametersData()),
+                          device.toString(), options));
+  return outputs;
 }
 
 std::vector<at::Tensor> Fetch(
     absl::Span<const torch_xla::runtime::ComputationClient::DataPtr>
         device_data) {
-  std::vector<xla::Literal> literals = GetValueOrThrow(
-      runtime::GetComputationClientOrDie()->TransferFromDevice(device_data));
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
+  XLA_ASSIGN_OR_THROW(std::vector<xla::Literal> literals,
+                      client->TransferFromDevice(device_data));
   std::vector<at::Tensor> tensors;
   for (auto& literal : literals) {
     tensors.push_back(MakeTensorFromXlaLiteral(

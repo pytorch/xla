@@ -116,7 +116,7 @@ std::shared_ptr<torch::lazy::Value> CreateToken(
 at::Tensor all_reduce(const at::Tensor& self, std::string reduceOp,
                       std::string /*group_name*/) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr self_tensor, bridge::GetXlaTensor(self));
   // TODO(alanwaketan): Use group_name to generate groups. Currently we just
   // use {} as a workaround. Scale is always 1.0 here, and we always pin
   // layout.
@@ -270,7 +270,7 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
 at::Tensor all_gather_into_tensor(const at::Tensor& self, int64_t group_size,
                                   std::string group_name) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr self_tensor, bridge::GetXlaTensor(self));
   std::vector<int64_t> all_groups(group_size);
   std::iota(all_groups.begin(), all_groups.end(), 0);
   auto result = tensor_methods::all_gather(self_tensor, 0, group_size,
@@ -333,8 +333,9 @@ at::Tensor all_to_all_single(const at::Tensor& input,
   bool pin_layout = false;
   const torch::lazy::Value& token =
       GetAllReduceToken(bridge::GetCurrentDevice());
-  int64_t split_count =
-      runtime::GetComputationClientOrDie()->GetAllDevices().size();
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
+  int64_t split_count = client->GetAllDevices().size();
   std::vector<int64_t> all_groups(split_count);
   std::iota(all_groups.begin(), all_groups.end(), 0);
 
@@ -349,9 +350,9 @@ at::Tensor all_to_all_single(const at::Tensor& input,
   }
   XLATensorPtr result_ptr;
   torch::lazy::Value new_token;
+  XLA_ASSIGN_OR_THROW(XLATensorPtr input_tensor, bridge::GetXlaTensor(input));
   std::tie(result_ptr, new_token) = tensor_methods::all_to_all(
-      GetValueOrThrow(bridge::GetXlaTensor(input)), token, 0, 0, split_count,
-      {all_groups}, pin_layout);
+      input_tensor, token, 0, 0, split_count, {all_groups}, pin_layout);
   at::Tensor result = bridge::AtenFromXlaTensor(std::move(result_ptr));
 
   at::Tensor result_with_grad = torch::autograd::make_variable(
@@ -481,7 +482,7 @@ xla::XlaOp BuildReduceScatter(AllReduceType reduce_type, xla::XlaOp input,
 at::Tensor reduce_scatter_tensor(const at::Tensor& input, std::string reduce_op,
                                  int64_t group_size, std::string group_name) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto self = GetValueOrThrow(bridge::GetXlaTensor(input));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr self, bridge::GetXlaTensor(input));
   std::vector<int64_t> all_groups(group_size);
   std::iota(all_groups.begin(), all_groups.end(), 0);
   int64_t shard_count = group_size;

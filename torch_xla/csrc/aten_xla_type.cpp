@@ -14,11 +14,12 @@
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/util.h>
 
+#include <iterator>
 #include <mutex>
 #include <optional>
 
+#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
-#include "status.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/shape_inference.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
@@ -167,8 +168,8 @@ class OpConfig {
     // Transform the inputs into a list of XLATensorPtr.
     // For that, either get their corresponding XLATensorPtr, or use the found
     // XLA tensor's BackendDevice for creating a new one.
-    torch::lazy::BackendDevice device =
-        GetValueOrThrow(bridge::GetXlaTensor(*it))->GetDevice();
+    XLA_ASSIGN_OR_THROW(XLATensorPtr tensor, bridge::GetXlaTensor(*it));
+    torch::lazy::BackendDevice device = tensor->GetDevice();
     XLAInputVector xla_inputs(inputs.size());
     std::transform(inputs.begin(), inputs.end(), xla_inputs.begin(),
                    [&](const at::Tensor& tensor) {
@@ -347,7 +348,7 @@ std::pair<XLATensorPtr, XLATensorPtr> GetBinaryOperands(
   XLATensorPtr other_tensor;
   auto self_xtensor_status = bridge::GetXlaTensor(self);
   if (!self_xtensor_status.ok()) {
-    other_tensor = GetValueOrThrow(bridge::GetXlaTensor(other));
+    XLA_ASSIGN_OR_THROW(other_tensor, bridge::GetXlaTensor(other));
     self_tensor = bridge::GetOrCreateXlaTensor(self, other_tensor->GetDevice());
   } else {
     self_tensor = std::move(self_xtensor_status).value();
@@ -397,8 +398,8 @@ template <typename B>
 at::Tensor DoBinaryOp(const at::Tensor& self, const at::Scalar& other,
                       const B& bin_op) {
   at::ScalarType dtype = at::result_type(self, other);
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLATensorPtr result = bin_op(self_tensor, other, dtype);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLATensorPtr result = bin_op(xla_self, other, dtype);
   return bridge::AtenFromXlaTensor(result);
 }
 
@@ -406,8 +407,8 @@ template <typename B>
 at::Tensor DoBinaryOp(const at::Scalar& self, const at::Tensor& other,
                       const B& bin_op) {
   at::ScalarType dtype = at::result_type(self, other);
-  XLATensorPtr other_tensor = GetValueOrThrow(bridge::GetXlaTensor(other));
-  XLATensorPtr result = bin_op(self, other_tensor, dtype);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_other, bridge::GetXlaTensor(other));
+  XLATensorPtr result = bin_op(self, xla_other, dtype);
   return bridge::AtenFromXlaTensor(result);
 }
 
@@ -424,8 +425,8 @@ at::Tensor DoBinaryOpWithoutPromo(const at::Tensor& self,
 template <typename B>
 at::Tensor DoBinaryOpWithoutPromo(const at::Tensor& self,
                                   const at::Scalar& other, const B& bin_op) {
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLATensorPtr result = bin_op(self_tensor, other);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLATensorPtr result = bin_op(xla_self, other);
   return bridge::AtenFromXlaTensor(result);
 }
 
@@ -436,8 +437,8 @@ void DoBinaryOpOut(const at::Tensor& self, const at::Tensor& other,
   XLA_CHECK(at::canCast(/*from=*/dtype, /*to=*/out.scalar_type()));
   std::pair<XLATensorPtr, XLATensorPtr> operands =
       GetBinaryOperands(self, UnwrapNumber(other, dtype));
-  XLATensorPtr out_tensor = GetValueOrThrow(bridge::GetXlaTensor(out));
-  bin_op_out(operands.first, operands.second, out_tensor);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_out, bridge::GetXlaTensor(out));
+  bin_op_out(operands.first, operands.second, xla_out);
 }
 
 }  // namespace
@@ -445,8 +446,8 @@ void DoBinaryOpOut(const at::Tensor& self, const at::Tensor& other,
 at::Tensor& XLANativeFunctions::__ilshift__(at::Tensor& self,
                                             const at::Scalar& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::__ilshift__(self_tensor, other);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  tensor_methods::__ilshift__(xla_self, other);
   return self;
 }
 
@@ -454,9 +455,9 @@ at::Tensor& XLANativeFunctions::__ilshift__(at::Tensor& self,
                                             const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::__ilshift__(self_tensor,
-                              GetValueOrThrow(bridge::GetXlaTensor(other)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_other, bridge::GetXlaTensor(other));
+  tensor_methods::__ilshift__(xla_self, xla_other);
   return self;
 }
 
@@ -464,8 +465,8 @@ at::Tensor& XLANativeFunctions::__irshift__(at::Tensor& self,
                                             const at::Scalar& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::__irshift__(self_tensor, other);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  tensor_methods::__irshift__(xla_self, other);
   return self;
 }
 
@@ -473,9 +474,9 @@ at::Tensor& XLANativeFunctions::__irshift__(at::Tensor& self,
                                             const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::__irshift__(self_tensor,
-                              GetValueOrThrow(bridge::GetXlaTensor(other)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_other, bridge::GetXlaTensor(other));
+  tensor_methods::__irshift__(xla_self, xla_other);
   return self;
 }
 
@@ -530,8 +531,9 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d(
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   XLA_CHECK(common_device);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   torch::lazy::NodePtr node = torch_xla::MakeNode<AdaptiveAvgPool3d>(
-      GetValueOrThrow(bridge::GetXlaTensor(self))->GetIrValue(),
+      xla_self->GetIrValue(),
       std::vector<int64_t>(output_size.begin(), output_size.end()));
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(node), *common_device));
@@ -552,9 +554,11 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(grad_output, self);
   XLA_CHECK(common_device);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   torch::lazy::NodePtr node = torch_xla::MakeNode<AdaptiveAvgPool3dBackward>(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output))->GetIrValue(),
-      GetValueOrThrow(bridge::GetXlaTensor(self))->GetIrValue());
+      xla_grad_output->GetIrValue(), xla_self->GetIrValue());
 
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(node), *common_device));
@@ -569,8 +573,9 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d(
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(_adaptive_avg_pool2d)>::call(self, output_size);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::_adaptive_avg_pool2d(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), output_size_list));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::_adaptive_avg_pool2d(xla_self, output_size_list));
 }
 
 at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
@@ -585,10 +590,11 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
         &xla_fallback,
         ATEN_OP(_adaptive_avg_pool2d_backward)>::call(grad_output, self);
   }
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::_adaptive_avg_pool2d_backward(
-          GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-          GetValueOrThrow(bridge::GetXlaTensor(self))));
+      tensor_methods::_adaptive_avg_pool2d_backward(xla_grad_output, xla_self));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::adaptive_max_pool2d(
@@ -600,9 +606,9 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::adaptive_max_pool2d(
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(adaptive_max_pool2d)>::call(self, output_size);
   }
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   std::tuple<XLATensorPtr, XLATensorPtr> res =
-      tensor_methods::adaptive_max_pool2d(
-          GetValueOrThrow(bridge::GetXlaTensor(self)), output_size_list);
+      tensor_methods::adaptive_max_pool2d(xla_self, output_size_list);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(res)),
                          bridge::AtenFromXlaTensor(std::get<1>(res)));
 }
@@ -621,19 +627,24 @@ at::Tensor XLANativeFunctions::adaptive_max_pool2d_backward(
                                                                     self,
                                                                     indices);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::adaptive_max_pool2d_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::adaptive_max_pool2d_backward(xla_grad_output, xla_self));
 }
 
 void XLANativeFunctions::_amp_foreach_non_finite_check_and_unscale_(
     at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr found_inf_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(found_inf));
+  XLA_ASSIGN_OR_THROW(std::vector<XLATensorPtr> xla_self,
+                      bridge::GetXlaTensors(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_found_inf,
+                      bridge::GetXlaTensor(found_inf));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_inv_scale,
+                      bridge::GetXlaTensor(inv_scale));
   tensor_methods::_amp_foreach_non_finite_check_and_unscale_(
-      GetValueOrThrow(bridge::GetXlaTensors(self)), found_inf_tensor,
-      GetValueOrThrow(bridge::GetXlaTensor(inv_scale)));
+      xla_self, xla_found_inf, xla_inv_scale);
 }
 
 at::Tensor& XLANativeFunctions::_amp_update_scale_(at::Tensor& current_scale,
@@ -643,14 +654,15 @@ at::Tensor& XLANativeFunctions::_amp_update_scale_(at::Tensor& current_scale,
                                                    double scale_backoff_factor,
                                                    int64_t growth_interval) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr growth_tracker_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(growth_tracker));
-  XLATensorPtr current_scale_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(current_scale));
-  tensor_methods::_amp_update_scale_(
-      growth_tracker_tensor, current_scale_tensor,
-      GetValueOrThrow(bridge::GetXlaTensor(found_inf)), scale_growth_factor,
-      scale_backoff_factor, growth_interval);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_current_scale,
+                      bridge::GetXlaTensor(current_scale));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_growth_tracker,
+                      bridge::GetXlaTensor(growth_tracker));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_found_inf,
+                      bridge::GetXlaTensor(found_inf));
+  tensor_methods::_amp_update_scale_(xla_growth_tracker, xla_current_scale,
+                                     xla_found_inf, scale_growth_factor,
+                                     scale_backoff_factor, growth_interval);
   return current_scale;
 }
 
@@ -674,7 +686,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   } else {
     auto dst_tensor = std::move(dst_tensor_status).value();
     tensor_methods::copy_(dst_tensor, self_tensor_status.value());
-    OkOrThrow(bridge::ReplaceXlaTensor(dst, dst_tensor));
+    XLA_THROW_IF_ERROR(bridge::ReplaceXlaTensor(dst, dst_tensor));
   }
   return dst;
 }
@@ -741,8 +753,8 @@ at::Tensor XLANativeFunctions::_to_copy(
   if (device && device->type() != c10::kXLA) {
     XLA_CHECK(device->type() == c10::kCPU)
         << "only cpu device is supported in _to_copy.";
-    auto self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-    auto eager_tensor = self_tensor->ToTensor(/*detached=*/true);
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+    auto eager_tensor = xla_self->ToTensor(/*detached=*/true);
 
     // Use the eager .to on the eager tensor.
     return eager_tensor.to(options, non_blocking, /*copy=*/true);
@@ -773,8 +785,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_linalg_eigh(
                                         ATEN_OP(_linalg_eigh)>::call(self, uplo,
                                                                      compute_v);
   }
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  auto outputs = tensor_methods::eigh(self_tensor, uplo);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto outputs = tensor_methods::eigh(xla_self, uplo);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
@@ -782,8 +794,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_linalg_eigh(
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::_linalg_slogdet(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  auto outputs = tensor_methods::slogdet(self_tensor);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto outputs = tensor_methods::slogdet(xla_self);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)),
                          bridge::AtenFromXlaTensor(XLATensorPtr()),
@@ -798,18 +810,20 @@ at::Tensor XLANativeFunctions::_log_softmax(const at::Tensor& self, int64_t dim,
 
   std::vector<torch::lazy::Shape> shapes{
       torch::lazy::Shape(out_meta.scalar_type(), out_meta.sizes().vec())};
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::log_softmax(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                                  dim, std::nullopt, std::move(shapes)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::log_softmax(
+      xla_self, dim, std::nullopt, std::move(shapes)));
 }
 
 at::Tensor XLANativeFunctions::_log_softmax_backward_data(
     const at::Tensor& grad_output, const at::Tensor& output, int64_t dim,
     at::ScalarType /* input_dtype */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::log_softmax_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(output)), dim));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_output, bridge::GetXlaTensor(output));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::log_softmax_backward(xla_grad_output, xla_output, dim));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_pack_padded_sequence(
@@ -823,17 +837,20 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_pack_padded_sequence(
 at::Tensor XLANativeFunctions::_softmax(const at::Tensor& self, int64_t dim,
                                         bool /* half_to_float */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::softmax(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), dim, std::nullopt));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::softmax(xla_self, dim, std::nullopt));
 }
 
 at::Tensor XLANativeFunctions::_softmax_backward_data(
     const at::Tensor& grad_output, const at::Tensor& output, int64_t dim,
     at::ScalarType input_dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::softmax_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(output)), dim));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_output, bridge::GetXlaTensor(output));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::softmax_backward(xla_grad_output, xla_output, dim));
 }
 
 at::Tensor XLANativeFunctions::_unsafe_view(const at::Tensor& self,
@@ -882,16 +899,17 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
     return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(addmm)>::call(
         self, mat1, mat2, beta, alpha);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::addmm(
-      GetValueOrThrow(bridge::GetXlaTensor(mat1)),
-      /*weight=*/GetValueOrThrow(bridge::GetXlaTensor(mat2)),
-      /*bias=*/GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mat1, bridge::GetXlaTensor(mat1));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mat2, bridge::GetXlaTensor(mat2));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::addmm(xla_mat1, /*weight=*/xla_mat2, /*bias=*/xla_self));
 }
 
 at::Tensor XLANativeFunctions::alias(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::alias(GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::alias(xla_self));
 }
 
 at::Tensor XLANativeFunctions::alias_copy(const at::Tensor& self) {
@@ -904,8 +922,8 @@ at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
                                            const at::Scalar& step,
                                            at::Tensor& out) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr out_tensor = GetValueOrThrow(bridge::GetXlaTensor(out));
-  tensor_methods::arange_out(out_tensor, start, end, step, out.scalar_type());
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_out, bridge::GetXlaTensor(out));
+  tensor_methods::arange_out(xla_out, start, end, step, out.scalar_type());
   return out;
 }
 
@@ -964,10 +982,9 @@ static at::Tensor as_strided_eliminate_one_dim_fast_path(
         }
       }
     }
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor, bridge::GetXlaTensor(tensor));
     return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
-        tensor_methods::slice(GetValueOrThrow(bridge::GetXlaTensor(tensor)),
-                              skip_dim, 0, 1, 1),
-        skip_dim));
+        tensor_methods::slice(xla_tensor, skip_dim, 0, 1, 1), skip_dim));
   }
   // now tensor_dim.size() == stride.size()
   long reduce_size_location = -1;
@@ -998,9 +1015,9 @@ static at::Tensor as_strided_eliminate_one_dim_fast_path(
     // stride.
     K = 1;
   }
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor, bridge::GetXlaTensor(tensor));
   return bridge::AtenFromXlaTensor(tensor_methods::slice(
-      GetValueOrThrow(bridge::GetXlaTensor(tensor)), reduce_size_location, 0,
-      size[reduce_size_location] * K, K));
+      xla_tensor, reduce_size_location, 0, size[reduce_size_location] * K, K));
 }
 
 at::Tensor XLANativeFunctions::as_strided_copy(
@@ -1013,7 +1030,8 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   // Retrieve the base tensor, if there's one.
   // This function actually operates on the tensor's storage. Since XLA does not
   // expose the actual storage, we use the originally allocated tensor.
-  const at::Tensor& base = GetValueOrThrow(bridge::GetXlaTensor(self))->Base();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  const at::Tensor& base = xla_self->Base();
   at::Tensor tensor = base.defined() ? base : self;
 
   // Fast path: using slice to replace as_strided to avoid the index copy.
@@ -1029,11 +1047,11 @@ at::Tensor XLANativeFunctions::as_strided_copy(
     // Sets the base tensor as tensor.
     // Even though this function copies (without aliasing) tensor, it's still
     // treated as a view function in the functionalization layer.
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor, bridge::GetXlaTensor(tensor));
     return bridge::AtenFromXlaTensor(bridge::SetBaseTensor(
-        tensor_methods::as_strided(
-            GetValueOrThrow(bridge::GetXlaTensor(tensor)),
-            XlaHelpers::I64List(size), XlaHelpers::I64List(stride),
-            XlaHelpers::I64Optional(storage_offset)),
+        tensor_methods::as_strided(xla_tensor, XlaHelpers::I64List(size),
+                                   XlaHelpers::I64List(stride),
+                                   XlaHelpers::I64Optional(storage_offset)),
         tensor));
   }
 
@@ -1127,21 +1145,22 @@ at::Tensor XLANativeFunctions::as_strided_scatter(
     at::IntArrayRef size, at::IntArrayRef stride,
     std::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto base_ = GetValueOrThrow(bridge::GetXlaTensor(base));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_base, bridge::GetXlaTensor(base));
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(base_->shape(), xsize, xstride,
+  if (!AsStrided::StrideIsSupported(xla_base->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(as_strided_scatter)>::call(base, mutated_view,
                                                           size, stride,
                                                           storage_offset);
   }
-  auto mutated_view_ = GetValueOrThrow(bridge::GetXlaTensor(mutated_view));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mutated_view,
+                      bridge::GetXlaTensor(mutated_view));
   return bridge::AtenFromXlaTensor(
-      base_->CreateFrom(torch_xla::MakeNode<AsStridedViewUpdate>(
-          base_->GetIrValue(), mutated_view_->GetIrValue(),
-          torch::lazy::ToVector<int64_t>(base_->shape().get().dimensions()),
+      xla_base->CreateFrom(torch_xla::MakeNode<AsStridedViewUpdate>(
+          xla_base->GetIrValue(), xla_mutated_view->GetIrValue(),
+          torch::lazy::ToVector<int64_t>(xla_base->shape().get().dimensions()),
           xstride, storage_offset.value_or(0))));
 }
 
@@ -1150,9 +1169,10 @@ at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   auto common_device = torch_xla::bridge::GetXlaDevice(self, other);
   XLA_CHECK(common_device);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_other, bridge::GetXlaTensor(other));
   torch::lazy::NodePtr node = torch_xla::MakeNode<Atan2>(
-      GetValueOrThrow(bridge::GetXlaTensor(self))->GetIrValue(),
-      GetValueOrThrow(bridge::GetXlaTensor(other))->GetIrValue());
+      xla_self->GetIrValue(), xla_other->GetIrValue());
 
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(node), *common_device));
@@ -1163,11 +1183,14 @@ at::Tensor XLANativeFunctions::avg_pool2d(
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
     std::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), /*spatial_dim_count=*/2,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode, count_include_pad,
-      divisor_override));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::avg_pool_nd(xla_self, /*spatial_dim_count=*/2,
+                                  kernel_size, stride, padding, ceil_mode,
+                                  count_include_pad, divisor_override));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::avg_pool2d_backward(
@@ -1184,12 +1207,16 @@ at::Tensor XLANativeFunctions::avg_pool2d_backward(
                                                            count_include_pad,
                                                            divisor_override);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode,
-      count_include_pad));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::avg_pool_nd_backward(
+          xla_grad_output, xla_self, /*spatial_dim_count=*/2, kernel_size,
+          stride, padding, ceil_mode, count_include_pad));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::avg_pool3d(
@@ -1197,11 +1224,14 @@ at::Tensor XLANativeFunctions::avg_pool3d(
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
     std::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), /*spatial_dim_count=*/3,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode, count_include_pad,
-      divisor_override));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::avg_pool_nd(xla_self, /*spatial_dim_count=*/3,
+                                  kernel_size, stride, padding, ceil_mode,
+                                  count_include_pad, divisor_override));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::avg_pool3d_backward(
@@ -1218,12 +1248,16 @@ at::Tensor XLANativeFunctions::avg_pool3d_backward(
                                                            count_include_pad,
                                                            divisor_override);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      /*spatial_dim_count=*/3, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode,
-      count_include_pad));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::avg_pool_nd_backward(
+          xla_grad_output, xla_self, /*spatial_dim_count=*/3, kernel_size,
+          stride, padding, ceil_mode, count_include_pad));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::baddbmm(const at::Tensor& self,
@@ -1232,11 +1266,16 @@ at::Tensor XLANativeFunctions::baddbmm(const at::Tensor& self,
                                        const at::Scalar& beta,
                                        const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-
-  return bridge::AtenFromXlaTensor(tensor_methods::baddbmm(
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      GetValueOrThrow(bridge::GetXlaTensor(batch1)),
-      GetValueOrThrow(bridge::GetXlaTensor(batch2)), beta, alpha));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_batch1,
+                      bridge::GetXlaTensor(batch1));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_batch2,
+                      bridge::GetXlaTensor(batch2));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::baddbmm(xla_self, xla_batch1, xla_batch2, beta, alpha));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::bernoulli(
@@ -1247,8 +1286,8 @@ at::Tensor XLANativeFunctions::bernoulli(
                                         ATEN_OP(bernoulli)>::call(self,
                                                                   generator);
   }
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::bernoulli(self_tensor));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::bernoulli(xla_self));
 }
 
 at::Tensor XLANativeFunctions::bernoulli(
@@ -1258,8 +1297,8 @@ at::Tensor XLANativeFunctions::bernoulli(
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP2(bernoulli, p)>::call(self, p, generator);
   }
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::bernoulli(self_tensor, p));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::bernoulli(xla_self, p));
 }
 
 at::Tensor& XLANativeFunctions::bernoulli_(
@@ -1270,9 +1309,9 @@ at::Tensor& XLANativeFunctions::bernoulli_(
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP2(bernoulli_, Tensor)>::call(self, p, generator);
   }
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::bernoulli_(self_tensor,
-                             GetValueOrThrow(bridge::GetXlaTensor(p)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_p, bridge::GetXlaTensor(p));
+  tensor_methods::bernoulli_(xla_self, xla_p);
   return self;
 }
 
@@ -1316,16 +1355,22 @@ at::Tensor XLANativeFunctions::bitwise_xor(const at::Tensor& self,
 at::Tensor XLANativeFunctions::bmm(const at::Tensor& self,
                                    const at::Tensor& mat2) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::bmm(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                          GetValueOrThrow(bridge::GetXlaTensor(mat2))));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_mat2,
+                      bridge::GetXlaTensor(mat2));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::bmm(xla_self, xla_mat2));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::cat(const at::ITensorListRef& tensors,
                                    int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto xtensors = GetValueOrThrow(bridge::GetXlaTensors(tensors));
-  auto output = GetValueOrThrow(
+  XLA_ASSIGN_OR_THROW(std::vector<XLATensorPtr> xtensors,
+                      bridge::GetXlaTensors(tensors));
+  XLA_ASSIGN_OR_THROW(
+      XLATensorPtr output,
       tensor_methods::cat(xtensors, dim, at::native::result_type(tensors)));
   return bridge::AtenFromXlaTensor(std::move(output));
 }
@@ -1333,15 +1378,15 @@ at::Tensor XLANativeFunctions::cat(const at::ITensorListRef& tensors,
 at::Tensor XLANativeFunctions::celu(const at::Tensor& self,
                                     const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::celu(GetValueOrThrow(bridge::GetXlaTensor(self)), alpha));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::celu(xla_self, alpha));
 }
 
 at::Tensor& XLANativeFunctions::celu_(at::Tensor& self,
                                       const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::celu_(self_tensor, alpha);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  tensor_methods::celu_(xla_self, alpha);
   return self;
 }
 
@@ -1349,43 +1394,52 @@ at::Tensor XLANativeFunctions::clamp(const at::Tensor& self,
                                      const std::optional<at::Scalar>& min,
                                      const std::optional<at::Scalar>& max) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::clamp(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), min, max));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::clamp(xla_self, min, max));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::clamp_max(const at::Tensor& self,
                                          const at::Scalar& max) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::clamp(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), std::nullopt, max));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::clamp(xla_self, std::nullopt, max));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::clamp_min(const at::Tensor& self,
                                          const at::Scalar& min) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::clamp(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), min, std::nullopt));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::clamp(xla_self, min, std::nullopt));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::clone(
     const at::Tensor& self,
     std::optional<at::MemoryFormat> /* memory_format */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   if (self.is_conj()) {
     // Materialize the conjugate if necessary.
-    tensor = tensor_methods::conj(tensor);
+    xla_self = tensor_methods::conj(xla_self);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::clone(tensor));
+  return bridge::AtenFromXlaTensor(tensor_methods::clone(xla_self));
 }
 
 at::Tensor XLANativeFunctions::constant_pad_nd(const at::Tensor& self,
                                                at::IntArrayRef pad,
                                                const at::Scalar& value) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::constant_pad_nd(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), XlaHelpers::I64List(pad),
-      value));
+      xla_self, XlaHelpers::I64List(pad), value));
 }
 
 // This functions covers the whole convolution lowering.
@@ -1395,20 +1449,18 @@ at::Tensor XLANativeFunctions::convolution_overrideable(
     at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
     at::IntArrayRef output_padding, int64_t groups) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_input, bridge::GetXlaTensor(input));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_weight, bridge::GetXlaTensor(weight));
   if (IsDefined(bias)) {
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_bias, bridge::GetXlaTensor(*bias));
     return bridge::AtenFromXlaTensor(tensor_methods::convolution_overrideable(
-        GetValueOrThrow(bridge::GetXlaTensor(input)),
-        GetValueOrThrow(bridge::GetXlaTensor(weight)),
-        GetValueOrThrow(bridge::GetXlaTensor(*bias)),
-        XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
-        XlaHelpers::I64List(dilation), transposed,
+        xla_input, xla_weight, xla_bias, XlaHelpers::I64List(stride),
+        XlaHelpers::I64List(padding), XlaHelpers::I64List(dilation), transposed,
         XlaHelpers::I64List(output_padding), groups));
   } else {
     return bridge::AtenFromXlaTensor(tensor_methods::convolution_overrideable(
-        GetValueOrThrow(bridge::GetXlaTensor(input)),
-        GetValueOrThrow(bridge::GetXlaTensor(weight)),
-        XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
-        XlaHelpers::I64List(dilation), transposed,
+        xla_input, xla_weight, XlaHelpers::I64List(stride),
+        XlaHelpers::I64List(padding), XlaHelpers::I64List(dilation), transposed,
         XlaHelpers::I64List(output_padding), groups));
   }
 }
@@ -1421,12 +1473,13 @@ XLANativeFunctions::convolution_backward_overrideable(
     at::IntArrayRef dilation, bool transposed, at::IntArrayRef output_padding,
     int64_t groups, std::array<bool, 3> output_mask) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_input, bridge::GetXlaTensor(input));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_weight, bridge::GetXlaTensor(weight));
   auto gradients = tensor_methods::convolution_backward_overrideable(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(input)),
-      GetValueOrThrow(bridge::GetXlaTensor(weight)),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
-      XlaHelpers::I64List(dilation), transposed,
+      xla_grad_output, xla_input, xla_weight, XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding), XlaHelpers::I64List(dilation), transposed,
       XlaHelpers::I64List(output_padding), groups);
   return std::make_tuple(
       output_mask[0] ? bridge::AtenFromXlaTensor(std::get<0>(gradients))
@@ -1454,18 +1507,18 @@ at::Tensor XLANativeFunctions::cross(const at::Tensor& self,
                                      const at::Tensor& other,
                                      std::optional<int64_t> dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_other, bridge::GetXlaTensor(other));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::cross(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                            GetValueOrThrow(bridge::GetXlaTensor(other)),
-                            XlaHelpers::I64Optional(dim)));
+      tensor_methods::cross(xla_self, xla_other, XlaHelpers::I64Optional(dim)));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::cummax(
     const at::Tensor& self, int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   std::tuple<XLATensorPtr, XLATensorPtr> res =
-      tensor_methods::cummax(self_tensor, dim);
+      tensor_methods::cummax(xla_self, dim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(res)),
                          bridge::AtenFromXlaTensor(std::get<1>(res)));
 }
@@ -1473,64 +1526,64 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::cummax(
 at::Tensor XLANativeFunctions::cumprod(const at::Tensor& self, int64_t dim,
                                        std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   std::optional<at::ScalarType> promoted_dtype =
-      PromoteIntegralType(self_tensor->dtype(), dtype);
-  if (IsOperationOnType(promoted_dtype, self_tensor->dtype(),
+      PromoteIntegralType(xla_self->dtype(), dtype);
+  if (IsOperationOnType(promoted_dtype, xla_self->dtype(),
                         at::ScalarType::Long)) {
     // XLA reduce-window does not support S64 mode.
     return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(cumprod)>::call(
         self, dim, dtype);
   }
   return bridge::AtenFromXlaTensor(
-      tensor_methods::cumprod(self_tensor, dim, promoted_dtype));
+      tensor_methods::cumprod(xla_self, dim, promoted_dtype));
 }
 
 at::Tensor XLANativeFunctions::cumsum(const at::Tensor& self, int64_t dim,
                                       std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::cumsum(self_tensor, dim, dtype));
+      tensor_methods::cumsum(xla_self, dim, dtype));
 }
 
 // TODO(alanwaketan): Let's rewrite a without reusing other native functions.
 at::Tensor XLANativeFunctions::detach_copy(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(GetValueOrThrow(bridge::GetXlaTensor(self)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(xla_self);
 }
 
 at::Tensor XLANativeFunctions::diag(const at::Tensor& self, int64_t diagonal) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::diag(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), diagonal));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::diag(xla_self, diagonal));
 }
 
 at::Tensor XLANativeFunctions::diagonal_copy(const at::Tensor& self,
                                              int64_t offset, int64_t dim1,
                                              int64_t dim2) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::diagonal(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), offset, dim1, dim2));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::diagonal(xla_self, offset, dim1, dim2));
 }
 
 at::Tensor XLANativeFunctions::diagonal_scatter(const at::Tensor& base,
                                                 const at::Tensor& mutated_view,
                                                 int64_t offset, int64_t dim1,
                                                 int64_t dim2) {
-  auto base_ = GetValueOrThrow(bridge::GetXlaTensor(base));
-  auto mutated_view_ = GetValueOrThrow(bridge::GetXlaTensor(mutated_view));
-  int64_t base_rank = GetValueOrThrow(bridge::GetXlaTensor(base))
-                          ->shape()
-                          .get()
-                          .dimensions_size();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_base, bridge::GetXlaTensor(base));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mutated_view,
+                      bridge::GetXlaTensor(mutated_view));
+  int64_t base_rank = xla_base->shape().get().dimensions_size();
   int64_t canonical_dim1 =
       torch::lazy::GetCanonicalDimensionIndex(dim1, base_rank);
   int64_t canonical_dim2 =
       torch::lazy::GetCanonicalDimensionIndex(dim2, base_rank);
   return bridge::AtenFromXlaTensor(
-      base_->CreateFrom(torch_xla::MakeNode<DiagonalViewUpdate>(
-          base_->GetIrValue(), mutated_view_->GetIrValue(), offset,
+      xla_base->CreateFrom(torch_xla::MakeNode<DiagonalViewUpdate>(
+          xla_base->GetIrValue(), xla_mutated_view->GetIrValue(), offset,
           canonical_dim1, canonical_dim2)));
 }
 
@@ -1546,16 +1599,17 @@ at::Tensor XLANativeFunctions::div(
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   at::ScalarType dtype = at::result_type(self, other);
   auto operands = GetBinaryOperands(self, UnwrapNumber(other, dtype));
-  auto output = GetValueOrThrow(tensor_methods::div(
-      operands.first, operands.second, rounding_mode, dtype));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr output,
+                      tensor_methods::div(operands.first, operands.second,
+                                          rounding_mode, dtype));
   return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::div(const at::Tensor& self,
                                    const at::Scalar& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::div(GetValueOrThrow(bridge::GetXlaTensor(self)), other));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::div(xla_self, other));
 }
 
 at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
@@ -1577,9 +1631,10 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
     return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(dot)>::call(
         self, tensor);
   }
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_tensor, bridge::GetXlaTensor(tensor));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::matmul(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                             GetValueOrThrow(bridge::GetXlaTensor(tensor))));
+      tensor_methods::matmul(xla_self, xla_tensor));
 }
 
 at::Tensor XLANativeFunctions::einsum(std::string_view equation,
@@ -1624,18 +1679,23 @@ at::Tensor XLANativeFunctions::elu_backward(const at::Tensor& grad_output,
   XLA_CHECK(!self || alpha.to<double>() >= 0.0)
       << "In-place elu backward calculation is triggered with a negative slope "
          "which is not supported.";
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self_or_result,
+                      bridge::GetXlaTensor(self_or_result));
   return bridge::AtenFromXlaTensor(tensor_methods::elu_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)), alpha, scale,
-      input_scale, GetValueOrThrow(bridge::GetXlaTensor(self_or_result))));
+      xla_grad_output, alpha, scale, input_scale, xla_self_or_result));
 }
 
 at::Tensor XLANativeFunctions::embedding_dense_backward(
     const at::Tensor& grad_output, const at::Tensor& indices,
     int64_t num_weights, int64_t padding_idx, bool scale_grad_by_freq) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_indices, bridge::GetXlaTensor(indices));
   return bridge::AtenFromXlaTensor(tensor_methods::embedding_dense_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(indices)), num_weights, padding_idx,
+      xla_grad_output, xla_indices, num_weights, padding_idx,
       scale_grad_by_freq));
 }
 
@@ -1655,17 +1715,23 @@ XLANativeFunctions::_embedding_bag_forward_only(
                                                     include_last_offset,
                                                     padding_idx);
   }
-  auto indices_tensor = GetValueOrThrow(bridge::GetXlaTensor(indices));
-  auto sample_weights =
-      per_sample_weights.has_value() && per_sample_weights.value().defined()
-          ? GetValueOrThrow(bridge::GetXlaTensor(per_sample_weights.value()))
-          : tensor_methods::full_like(indices_tensor, 1.0,
-                                      *torch_xla::bridge::GetXlaDevice(weight),
-                                      at::ScalarType::Float);
-  auto result = tensor_methods::embedding_bag(
-      GetValueOrThrow(bridge::GetXlaTensor(weight)), indices_tensor,
-      GetValueOrThrow(bridge::GetXlaTensor(offsets)), mode, sample_weights,
-      include_last_offset);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_indices, bridge::GetXlaTensor(indices));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_weight, bridge::GetXlaTensor(weight));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_offsets, bridge::GetXlaTensor(offsets));
+
+  XLATensorPtr sample_weights;
+  if (per_sample_weights.has_value() && per_sample_weights.value().defined()) {
+    XLA_ASSIGN_OR_THROW(sample_weights,
+                        bridge::GetXlaTensor(per_sample_weights.value()));
+  } else {
+    sample_weights = tensor_methods::full_like(
+        xla_indices, 1.0, *torch_xla::bridge::GetXlaDevice(weight),
+        at::ScalarType::Float);
+  }
+
+  auto result =
+      tensor_methods::embedding_bag(xla_weight, xla_indices, xla_offsets, mode,
+                                    sample_weights, include_last_offset);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(result)),
                          bridge::AtenFromXlaTensor(std::get<1>(result)),
                          bridge::AtenFromXlaTensor(std::get<2>(result)),
@@ -1712,7 +1778,8 @@ at::Tensor XLANativeFunctions::empty_symint(
   // does not actually end up doing any memory initialization, we use that and
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
-  XLATensorPtr xla_tensor = GetValueOrThrow(
+  XLA_ASSIGN_OR_THROW(
+      XLATensorPtr xla_tensor,
       all_dims_static
           ? tensor_methods::full(XlaHelpers::I64List(int_sizes.value()), 0,
                                  GetXlaDeviceOrCurrent(device),
@@ -1747,19 +1814,21 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
 }
 
 at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
-                                                  at::SymIntArrayRef sym_size,
+                                                  at::SymIntArrayRef sym_sizes,
                                                   bool implicit) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  std::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
-  if (size.has_value()) {
-    return bridge::AtenFromXlaTensor(
-        tensor_methods::expand(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                               torch::lazy::ToVector<int64_t>(*size)));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  std::optional<at::IntArrayRef> sizes = c10::asIntArrayRefSlowOpt(sym_sizes);
+  if (sizes.has_value()) {
+    XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                        tensor_methods::expand(xla_self, *sizes));
+    return bridge::AtenFromXlaTensor(std::move(output));
   } else {
     // at least one of the dimension is symbolic, use the sym_int version of the
     // node
-    return bridge::AtenFromXlaTensor(tensor_methods::expand_symint(
-        GetValueOrThrow(bridge::GetXlaTensor(self)), sym_size));
+    return bridge::AtenFromXlaTensor(
+        tensor_methods::expand_symint(xla_self, sym_sizes));
   }
 }
 
@@ -1773,30 +1842,30 @@ at::Tensor& XLANativeFunctions::exponential_(
                                                                      generator);
   }
   XLA_CHECK_GE(lambd, 0.0);
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::exponential_(self_tensor, lambd);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  tensor_methods::exponential_(xla_self, lambd);
   return self;
 }
 
 at::Tensor& XLANativeFunctions::eye_out(int64_t n, at::Tensor& out) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr out_tensor = GetValueOrThrow(bridge::GetXlaTensor(out));
-  tensor_methods::eye_out(out_tensor, n, n);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_out, bridge::GetXlaTensor(out));
+  tensor_methods::eye_out(xla_out, n, n);
   return out;
 }
 
 at::Tensor& XLANativeFunctions::eye_out(int64_t n, int64_t m, at::Tensor& out) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr out_tensor = GetValueOrThrow(bridge::GetXlaTensor(out));
-  tensor_methods::eye_out(out_tensor, n, m);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_out, bridge::GetXlaTensor(out));
+  tensor_methods::eye_out(xla_out, n, m);
   return out;
 }
 
 at::Tensor& XLANativeFunctions::fill_(at::Tensor& self,
                                       const at::Scalar& value) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::fill_(self_tensor, value);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  tensor_methods::fill_(xla_self, value);
   return self;
 }
 
@@ -1812,10 +1881,11 @@ at::Tensor& XLANativeFunctions::fill_(at::Tensor& self,
 at::Tensor XLANativeFunctions::flip(const at::Tensor& self,
                                     at::IntArrayRef dims) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto xself = GetValueOrThrow(bridge::GetXlaTensor(self));
-  auto output =
-      GetValueOrThrow(tensor_methods::flip(xself, XlaHelpers::I64List(dims)));
-  return bridge::AtenFromXlaTensor(std::move(output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      XLATensorPtr xla_output,
+      tensor_methods::flip(xla_self, XlaHelpers::I64List(dims)));
+  return bridge::AtenFromXlaTensor(std::move(xla_output));
 }
 
 at::Tensor XLANativeFunctions::floor_divide(const at::Tensor& self,
@@ -1866,25 +1936,29 @@ at::Tensor XLANativeFunctions::full(at::IntArrayRef size,
   } else {
     intend_dtype = fill_value.type();
   }
-  return bridge::AtenFromXlaTensor(GetValueOrThrow(
+  XLA_ASSIGN_OR_THROW(
+      XLATensorPtr output,
       tensor_methods::full(absl::Span<const int64_t>(size), fill_value,
-                           GetXlaDeviceOrCurrent(device), intend_dtype)));
+                           GetXlaDeviceOrCurrent(device), intend_dtype));
+  return bridge::AtenFromXlaTensor(output);
 }
 
 at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
                                       const at::Tensor& index,
                                       bool /* sparse_grad */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(GetValueOrThrow(
-      tensor_methods::gather(GetValueOrThrow(bridge::GetXlaTensor(self)), dim,
-                             GetValueOrThrow(bridge::GetXlaTensor(index)))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_index, bridge::GetXlaTensor(index));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr output,
+                      tensor_methods::gather(xla_self, dim, xla_index));
+  return bridge::AtenFromXlaTensor(output);
 }
 
 at::Tensor XLANativeFunctions::gelu(const at::Tensor& self,
                                     std::string_view approximate) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::gelu(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), approximate));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::gelu(xla_self, approximate));
 }
 
 at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
@@ -1892,18 +1966,23 @@ at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
                                              std::string_view approximate) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   at::ScalarType result_type = at::result_type(grad, self);
-  return bridge::AtenFromXlaTensor(tensor_methods::gelu_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad.to(result_type))),
-      GetValueOrThrow(bridge::GetXlaTensor(self.to(result_type))),
-      approximate));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad,
+                      bridge::GetXlaTensor(grad.to(result_type)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self.to(result_type)));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::gelu_backward(xla_grad, xla_self, approximate));
 }
 
 at::Tensor XLANativeFunctions::hardtanh(const at::Tensor& self,
                                         const at::Scalar& min_val,
                                         const at::Scalar& max_val) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::clamp(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), min_val, max_val));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::clamp(xla_self, min_val, max_val));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
@@ -1911,9 +1990,11 @@ at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
                                                  const at::Scalar& min_val,
                                                  const at::Scalar& max_val) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::hardtanh_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)), min_val, max_val));
+      xla_grad_output, xla_self, min_val, max_val));
 }
 
 at::Tensor XLANativeFunctions::index(
@@ -1950,29 +2031,31 @@ at::Tensor XLANativeFunctions::index_add(const at::Tensor& self, int64_t dim,
                                          const at::Tensor& source,
                                          const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::index_add(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), dim,
-      GetValueOrThrow(bridge::GetXlaTensor(index)),
-      GetValueOrThrow(bridge::GetXlaTensor(source)), alpha));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_index, bridge::GetXlaTensor(index));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_source, bridge::GetXlaTensor(source));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::index_add(xla_self, dim, xla_index, xla_source, alpha));
 }
 
 at::Tensor XLANativeFunctions::index_copy(const at::Tensor& self, int64_t dim,
                                           const at::Tensor& index,
                                           const at::Tensor& source) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::index_copy(
-      self_tensor, dim, GetValueOrThrow(bridge::GetXlaTensor(index)),
-      GetValueOrThrow(bridge::GetXlaTensor(source))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_index, bridge::GetXlaTensor(index));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_source, bridge::GetXlaTensor(source));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::index_copy(xla_self, dim, xla_index, xla_source));
 }
 
 at::Tensor& XLANativeFunctions::index_fill_(at::Tensor& self, int64_t dim,
                                             const at::Tensor& index,
                                             const at::Scalar& value) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::index_fill_(
-      self_tensor, dim, GetValueOrThrow(bridge::GetXlaTensor(index)), value);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_index, bridge::GetXlaTensor(index));
+  tensor_methods::index_fill_(xla_self, dim, xla_index, value);
   return self;
 }
 
@@ -1980,10 +2063,10 @@ at::Tensor& XLANativeFunctions::index_fill_(at::Tensor& self, int64_t dim,
                                             const at::Tensor& index,
                                             const at::Tensor& value) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::index_fill_(self_tensor, dim,
-                              GetValueOrThrow(bridge::GetXlaTensor(index)),
-                              GetValueOrThrow(bridge::GetXlaTensor(value)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_index, bridge::GetXlaTensor(index));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_value, bridge::GetXlaTensor(value));
+  tensor_methods::index_fill_(xla_self, dim, xla_index, xla_value);
   return self;
 }
 
@@ -2011,9 +2094,9 @@ at::Tensor& XLANativeFunctions::index_put_(
     device = bridge::GetXlaDevice(canonical_index_info.indices);
   }
   XLA_CHECK(device.has_value());
-  XLATensorPtr self_tensor = bridge::GetOrCreateXlaTensor(self, *device);
+  XLATensorPtr xla_self = bridge::GetOrCreateXlaTensor(self, *device);
   tensor_methods::index_put_(
-      self_tensor,
+      xla_self,
       bridge::GetOrCreateXlaTensor(canonical_index_info.base, *device),
       bridge::GetOrCreateXlaTensors(canonical_index_info.indices, *device),
       canonical_index_info.start_dim,
@@ -2025,9 +2108,10 @@ at::Tensor& XLANativeFunctions::index_put_(
 at::Tensor XLANativeFunctions::index_select(const at::Tensor& self, int64_t dim,
                                             const at::Tensor& index) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::index_select(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), dim,
-      GetValueOrThrow(bridge::GetXlaTensor(index))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_index, bridge::GetXlaTensor(index));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::index_select(xla_self, dim, xla_index));
 }
 
 at::Tensor XLANativeFunctions::kl_div(const at::Tensor& self,
@@ -2040,8 +2124,8 @@ at::Tensor XLANativeFunctions::kl_div(const at::Tensor& self,
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::kthvalue(
     const at::Tensor& self, int64_t k, int64_t dim, bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto results = tensor_methods::kthvalue(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), k, dim, keepdim);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto results = tensor_methods::kthvalue(xla_self, k, dim, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
@@ -2056,9 +2140,11 @@ at::Tensor XLANativeFunctions::leaky_relu_backward(
   auto node_negative_slope =
       torch::lazy::LazyGraphExecutor::Get()->GetIrValueForScalarFromCodegen(
           negative_slope, *common_device);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   torch::lazy::NodePtr node = torch_xla::MakeNode<LeakyReluBackward>(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output))->GetIrValue(),
-      GetValueOrThrow(bridge::GetXlaTensor(self))->GetIrValue(),
+      xla_grad_output->GetIrValue(), xla_self->GetIrValue(),
       node_negative_slope, self_is_result);
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(node), *common_device));
@@ -2074,10 +2160,11 @@ at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
   XLA_CHECK_EQ(self.dtype(), weight.dtype())
       << "expected dtype " << self.dtype() << " for `weight` but got dtype "
       << weight.dtype();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_end, bridge::GetXlaTensor(end));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_weight, bridge::GetXlaTensor(weight));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::lerp(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                           GetValueOrThrow(bridge::GetXlaTensor(end)),
-                           GetValueOrThrow(bridge::GetXlaTensor(weight))));
+      tensor_methods::lerp(xla_self, xla_end, xla_weight));
 }
 
 at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
@@ -2087,9 +2174,10 @@ at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
   XLA_CHECK_EQ(self.dtype(), end.dtype())
       << "expected dtype " << self.dtype() << " for `end` but got dtype "
       << end.dtype();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_end, bridge::GetXlaTensor(end));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::lerp(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                           GetValueOrThrow(bridge::GetXlaTensor(end)), weight));
+      tensor_methods::lerp(xla_self, xla_end, weight));
 }
 
 at::Tensor XLANativeFunctions::lift(const at::Tensor& tensor) {
@@ -2118,8 +2206,9 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_inv_ex(
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   TORCH_INTERNAL_ASSERT(common_device);
-  torch::lazy::NodePtr node = torch_xla::MakeNode<Inverse>(
-      GetValueOrThrow(bridge::GetXlaTensor(self))->GetIrValue());
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  torch::lazy::NodePtr node =
+      torch_xla::MakeNode<Inverse>(xla_self->GetIrValue());
   auto result = torch_xla::XLATensor::Create(std::move(node), *common_device);
   auto info = tensor_methods::full_like(result, 0, result->GetDevice(),
                                         at::ScalarType::Int);
@@ -2148,68 +2237,68 @@ at::Tensor XLANativeFunctions::linspace(const at::Scalar& start,
 
 at::Tensor XLANativeFunctions::log(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::log(GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::log(xla_self));
 }
 
 at::Tensor XLANativeFunctions::logit(const at::Tensor& self,
                                      std::optional<double> eps) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::logit(GetValueOrThrow(bridge::GetXlaTensor(self)), eps));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::logit(xla_self, eps));
 }
 
 at::Tensor XLANativeFunctions::log10(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::log_base(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                               torch::lazy::OpKind(at::aten::log10), 10.0));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::log_base(
+      xla_self, torch::lazy::OpKind(at::aten::log10), 10.0));
 }
 
 at::Tensor XLANativeFunctions::log1p(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::log1p(GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::log1p(xla_self));
 }
 
 at::Tensor XLANativeFunctions::log2(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::log_base(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                               torch::lazy::OpKind(at::aten::log2), 2.0));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::log_base(
+      xla_self, torch::lazy::OpKind(at::aten::log2), 2.0));
 }
 
 at::Tensor XLANativeFunctions::logsumexp(const at::Tensor& self,
                                          at::IntArrayRef dim, bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::logsumexp(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                                torch::lazy::ToVector<int64_t>(dim),
+      tensor_methods::logsumexp(xla_self, torch::lazy::ToVector<int64_t>(dim),
                                 /*keep_reduced_dimensions=*/keepdim));
 }
 
 at::Tensor XLANativeFunctions::xlogy(const at::Tensor& self,
                                      const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::xlogy(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                            GetValueOrThrow(bridge::GetXlaTensor(other))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_other, bridge::GetXlaTensor(other));
+  return bridge::AtenFromXlaTensor(tensor_methods::xlogy(xla_self, xla_other));
 }
 
 at::Tensor XLANativeFunctions::masked_scatter(const at::Tensor& self,
                                               const at::Tensor& mask,
                                               const at::Tensor& source) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::masked_scatter(
-      self_tensor, GetValueOrThrow(bridge::GetXlaTensor(mask)),
-      GetValueOrThrow(bridge::GetXlaTensor(source))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mask, bridge::GetXlaTensor(mask));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_source, bridge::GetXlaTensor(source));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::masked_scatter(xla_self, xla_mask, xla_source));
 }
 
 at::Tensor XLANativeFunctions::masked_select(const at::Tensor& self,
                                              const at::Tensor& mask) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
   // Initially make XLA handled masked_select() handling experimental, and
   // opt-in.
   if (!DebugUtil::ExperimentEnabled("masked_select")) {
@@ -2217,21 +2306,23 @@ at::Tensor XLANativeFunctions::masked_select(const at::Tensor& self,
                                         ATEN_OP(masked_select)>::call(self,
                                                                       mask);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::masked_select(
-      self_tensor, GetValueOrThrow(bridge::GetXlaTensor(mask))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mask, bridge::GetXlaTensor(mask));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::masked_select(xla_self, xla_mask));
 }
 
 at::Tensor XLANativeFunctions::max(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::max(GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::max(xla_self));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max(
     const at::Tensor& self, int64_t dim, bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto outputs = tensor_methods::max(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), dim, keepdim);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto outputs = tensor_methods::max(xla_self, dim, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
@@ -2240,12 +2331,11 @@ std::tuple<at::Tensor&, at::Tensor&> XLANativeFunctions::max_out(
     const at::Tensor& self, int64_t dim, bool keepdim, at::Tensor& max,
     at::Tensor& max_values) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr max_tensor = GetValueOrThrow(bridge::GetXlaTensor(max));
-  XLATensorPtr max_values_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(max_values));
-  tensor_methods::max_out(max_tensor, max_values_tensor,
-                          GetValueOrThrow(bridge::GetXlaTensor(self)), dim,
-                          keepdim);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_max, bridge::GetXlaTensor(max));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_max_values,
+                      bridge::GetXlaTensor(max_values));
+  tensor_methods::max_out(xla_max, xla_max_values, xla_self, dim, keepdim);
   return std::forward_as_tuple(max, max_values);
 }
 
@@ -2270,12 +2360,14 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max_pool2d_with_indices(
                                                                dilation,
                                                                ceil_mode);
   }
-  auto outputs = tensor_methods::max_pool_nd(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), /*spatial_dim_count=*/2,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
-                         bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr> output;
+  XLA_ASSIGN_OR_THROW(output, tensor_methods::max_pool_nd(
+                                  xla_self, /*spatial_dim_count=*/2,
+                                  kernel_size, stride, padding, ceil_mode));
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(output)),
+                         bridge::AtenFromXlaTensor(std::get<1>(output)));
 }
 
 at::Tensor XLANativeFunctions::max_pool2d_with_indices_backward(
@@ -2293,11 +2385,15 @@ at::Tensor XLANativeFunctions::max_pool2d_with_indices_backward(
                                                          padding, dilation,
                                                          ceil_mode, indices);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::max_pool_nd_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::max_pool_nd_backward(
+                          xla_grad_output, xla_self, /*spatial_dim_count=*/2,
+                          kernel_size, stride, padding, ceil_mode));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::max_pool3d(
@@ -2323,11 +2419,15 @@ at::Tensor XLANativeFunctions::max_pool3d_with_indices_backward(
                                                          padding, dilation,
                                                          ceil_mode, indices);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::max_pool_nd_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      /*spatial_dim_count=*/3, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::max_pool_nd_backward(
+                          xla_grad_output, xla_self, /*spatial_dim_count=*/3,
+                          kernel_size, stride, padding, ceil_mode));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max_pool3d_with_indices(
@@ -2343,22 +2443,24 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max_pool3d_with_indices(
                                                                dilation,
                                                                ceil_mode);
   }
-  auto outputs = tensor_methods::max_pool_nd(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), /*spatial_dim_count=*/3,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
-                         bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr> output;
+  XLA_ASSIGN_OR_THROW(output, tensor_methods::max_pool_nd(
+                                  xla_self, /*spatial_dim_count=*/3,
+                                  kernel_size, stride, padding, ceil_mode));
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(output)),
+                         bridge::AtenFromXlaTensor(std::get<1>(output)));
 }
 
 at::Tensor XLANativeFunctions::max_unpool2d(const at::Tensor& self,
                                             const at::Tensor& indices,
                                             at::IntArrayRef output_size) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::max_unpool(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                                 GetValueOrThrow(bridge::GetXlaTensor(indices)),
-                                 torch::lazy::ToVector<int64_t>(output_size)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_indices, bridge::GetXlaTensor(indices));
+  return bridge::AtenFromXlaTensor(tensor_methods::max_unpool(
+      xla_self, xla_indices, torch::lazy::ToVector<int64_t>(output_size)));
 }
 
 at::Tensor XLANativeFunctions::max_unpool3d(const at::Tensor& self,
@@ -2367,19 +2469,19 @@ at::Tensor XLANativeFunctions::max_unpool3d(const at::Tensor& self,
                                             at::IntArrayRef stride,
                                             at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::max_unpool(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                                 GetValueOrThrow(bridge::GetXlaTensor(indices)),
-                                 torch::lazy::ToVector<int64_t>(output_size)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_indices, bridge::GetXlaTensor(indices));
+  return bridge::AtenFromXlaTensor(tensor_methods::max_unpool(
+      xla_self, xla_indices, torch::lazy::ToVector<int64_t>(output_size)));
 }
 
 at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
                                     std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::mean(
-      self_tensor,
-      torch::lazy::Iota<int64_t>(self_tensor->shape().get().dimensions_size()),
+      xla_self,
+      torch::lazy::Iota<int64_t>(xla_self->shape().get().dimensions_size()),
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
@@ -2387,64 +2489,66 @@ at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
                                     at::OptionalIntArrayRef dim, bool keepdim,
                                     std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::mean(
-      self_tensor,
-      dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(
-                self_tensor->shape().get().dimensions_size()),
-      keepdim, dtype));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::mean(xla_self,
+                           dim ? torch::lazy::ToVector<int64_t>(*dim)
+                               : torch::lazy::Iota<int64_t>(
+                                     xla_self->shape().get().dimensions_size()),
+                           keepdim, dtype));
 }
 
 at::Tensor XLANativeFunctions::min(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::min(GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::min(xla_self));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::min(
     const at::Tensor& self, int64_t dim, bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto outputs = tensor_methods::min(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), dim, keepdim);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto outputs = tensor_methods::min(xla_self, dim, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
 at::Tensor XLANativeFunctions::mish(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::mish(GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::mish(xla_self));
 }
 
 std::tuple<at::Tensor&, at::Tensor&> XLANativeFunctions::min_out(
     const at::Tensor& self, int64_t dim, bool keepdim, at::Tensor& min,
     at::Tensor& min_indices) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr min_tensor = GetValueOrThrow(bridge::GetXlaTensor(min));
-  XLATensorPtr min_indices_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(min_indices));
-  tensor_methods::min_out(min_tensor, min_indices_tensor,
-                          GetValueOrThrow(bridge::GetXlaTensor(self)), dim,
-                          keepdim);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_min, bridge::GetXlaTensor(min));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_min_indices,
+                      bridge::GetXlaTensor(min_indices));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  tensor_methods::min_out(xla_min, xla_min_indices, xla_self, dim, keepdim);
   return std::forward_as_tuple(min, min_indices);
 }
 
 at::Tensor XLANativeFunctions::mm(const at::Tensor& self,
                                   const at::Tensor& mat2) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::mm(
-      /*input=*/GetValueOrThrow(bridge::GetXlaTensor(self)),
-      /*weight=*/GetValueOrThrow(bridge::GetXlaTensor(mat2))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mat2, bridge::GetXlaTensor(mat2));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr output,
+                      tensor_methods::mm(xla_self, xla_mat2));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::mse_loss(const at::Tensor& self,
                                         const at::Tensor& target,
                                         int64_t reduction) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::mse_loss(
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      GetValueOrThrow(bridge::GetXlaTensor(target)), reduction));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_target, bridge::GetXlaTensor(target));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::mse_loss(xla_self, xla_target, reduction));
 }
 
 at::Tensor XLANativeFunctions::mse_loss_backward(const at::Tensor& grad_output,
@@ -2452,10 +2556,12 @@ at::Tensor XLANativeFunctions::mse_loss_backward(const at::Tensor& grad_output,
                                                  const at::Tensor& target,
                                                  int64_t reduction) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_target, bridge::GetXlaTensor(target));
   return bridge::AtenFromXlaTensor(tensor_methods::mse_loss_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      GetValueOrThrow(bridge::GetXlaTensor(target)), reduction));
+      xla_grad_output, xla_self, xla_target, reduction));
 }
 
 at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
@@ -2467,7 +2573,6 @@ at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
       .add_input(self)
       .add_input(other)
       .cast_inputs_to_common_dtype()
-      .use_opmathtype_for_compute()
       .run();
 }
 
@@ -2499,26 +2604,26 @@ at::Tensor XLANativeFunctions::multinomial(
                                                                     replacement,
                                                                     generator);
   }
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::multinomial(self_tensor, num_samples, replacement));
+      tensor_methods::multinomial(xla_self, num_samples, replacement));
 }
 
 at::Tensor XLANativeFunctions::mv(const at::Tensor& self,
                                   const at::Tensor& vec) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::mv(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                         GetValueOrThrow(bridge::GetXlaTensor(vec))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_vec, bridge::GetXlaTensor(vec));
+  return bridge::AtenFromXlaTensor(tensor_methods::mv(xla_self, xla_vec));
 }
 
 at::Tensor& XLANativeFunctions::mv_out(const at::Tensor& self,
                                        const at::Tensor& vec, at::Tensor& out) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr out_tensor = GetValueOrThrow(bridge::GetXlaTensor(out));
-  tensor_methods::mv_out(out_tensor,
-                         GetValueOrThrow(bridge::GetXlaTensor(self)),
-                         GetValueOrThrow(bridge::GetXlaTensor(vec)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_out, bridge::GetXlaTensor(out));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_vec, bridge::GetXlaTensor(vec));
+  tensor_methods::mv_out(xla_out, xla_self, xla_vec);
   return out;
 }
 
@@ -2531,8 +2636,8 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
   if (!at::native::is_floating_point(self)) {
     return torch::lazy::CopyTensor(self);
   }
-  XLATensorPtr input_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  const torch::lazy::BackendDevice& device = input_tensor->GetDevice();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  const torch::lazy::BackendDevice& device = xla_self->GetDevice();
   auto element_type = MakeXlaPrimitiveType(self.scalar_type(), &device);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
   at::Scalar nan_replacement = nan.has_value() ? *nan : 0.0;
@@ -2547,7 +2652,7 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
         << min_max.min.toDouble() << ", " << min_max.max.toDouble() << "].";
   }
   return bridge::AtenFromXlaTensor(tensor_methods::nan_to_num(
-      input_tensor, nan_replacement, posinf_replacement, neginf_replacement));
+      xla_self, nan_replacement, posinf_replacement, neginf_replacement));
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
@@ -2558,17 +2663,16 @@ XLANativeFunctions::native_batch_norm(
     const std::optional<at::Tensor>& running_var, bool training,
     double momentum, double eps) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr input_tensor = GetValueOrThrow(bridge::GetXlaTensor(input));
-  const torch::lazy::BackendDevice& device = input_tensor->GetDevice();
-  XLATensorPtr running_mean_tensor =
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_input, bridge::GetXlaTensor(input));
+  const torch::lazy::BackendDevice& device = xla_input->GetDevice();
+  XLATensorPtr xla_running_mean =
       bridge::GetOrCreateXlaTensor(running_mean, device);
-  XLATensorPtr running_var_tensor =
+  XLATensorPtr xla_running_var =
       bridge::GetOrCreateXlaTensor(running_var, device);
   auto outputs = tensor_methods::native_batch_norm(
-      GetValueOrThrow(bridge::GetXlaTensor(input)),
-      bridge::GetOrCreateXlaTensor(weight, device),
-      bridge::GetOrCreateXlaTensor(bias, device), running_mean_tensor,
-      running_var_tensor, training, momentum, eps);
+      xla_input, bridge::GetOrCreateXlaTensor(weight, device),
+      bridge::GetOrCreateXlaTensor(bias, device), xla_running_mean,
+      xla_running_var, training, momentum, eps);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<2>(outputs)));
@@ -2580,17 +2684,16 @@ XLANativeFunctions::_native_batch_norm_legit(
     const std::optional<at::Tensor>& bias, at::Tensor& running_mean,
     at::Tensor& running_var, bool training, double momentum, double eps) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr input_tensor = GetValueOrThrow(bridge::GetXlaTensor(input));
-  const torch::lazy::BackendDevice& device = input_tensor->GetDevice();
-  XLATensorPtr running_mean_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(running_mean));
-  XLATensorPtr running_var_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(running_var));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_input, bridge::GetXlaTensor(input));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_running_mean,
+                      bridge::GetXlaTensor(running_mean));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_running_var,
+                      bridge::GetXlaTensor(running_var));
+  const torch::lazy::BackendDevice& device = xla_input->GetDevice();
   auto outputs = tensor_methods::native_batch_norm(
-      GetValueOrThrow(bridge::GetXlaTensor(input)),
-      bridge::GetOrCreateXlaTensor(weight, device),
-      bridge::GetOrCreateXlaTensor(bias, device), running_mean_tensor,
-      running_var_tensor, training, momentum, eps);
+      xla_input, bridge::GetOrCreateXlaTensor(weight, device),
+      bridge::GetOrCreateXlaTensor(bias, device), xla_running_mean,
+      xla_running_var, training, momentum, eps);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<2>(outputs)));
@@ -2602,15 +2705,14 @@ XLANativeFunctions::_native_batch_norm_legit(
     const std::optional<at::Tensor>& bias, bool training, double momentum,
     double eps) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr input_tensor = GetValueOrThrow(bridge::GetXlaTensor(input));
-  const torch::lazy::BackendDevice& device = input_tensor->GetDevice();
-  XLATensorPtr null_running_mean_tensor = XLATensorPtr();
-  XLATensorPtr null_running_var_tensor = XLATensorPtr();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_input, bridge::GetXlaTensor(input));
+  XLATensorPtr xla_null_running_mean = XLATensorPtr();
+  XLATensorPtr xla_null_running_var = XLATensorPtr();
+  const torch::lazy::BackendDevice& device = xla_input->GetDevice();
   auto outputs = tensor_methods::native_batch_norm(
-      GetValueOrThrow(bridge::GetXlaTensor(input)),
-      bridge::GetOrCreateXlaTensor(weight, device),
-      bridge::GetOrCreateXlaTensor(bias, device), null_running_mean_tensor,
-      null_running_var_tensor, training, momentum, eps);
+      xla_input, bridge::GetOrCreateXlaTensor(weight, device),
+      bridge::GetOrCreateXlaTensor(bias, device), xla_null_running_mean,
+      xla_null_running_var, training, momentum, eps);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<2>(outputs)));
@@ -2626,13 +2728,12 @@ XLANativeFunctions::native_batch_norm_backward(
     const std::optional<at::Tensor>& save_invstd, bool train, double eps,
     std::array<bool, 3> output_mask) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr grad_out_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(grad_out));
-  const torch::lazy::BackendDevice& device = grad_out_tensor->GetDevice();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_out,
+                      bridge::GetXlaTensor(grad_out));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_input, bridge::GetXlaTensor(input));
+  const torch::lazy::BackendDevice& device = xla_grad_out->GetDevice();
   auto gradients = tensor_methods::native_batch_norm_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_out)),
-      GetValueOrThrow(bridge::GetXlaTensor(input)),
-      bridge::GetOrCreateXlaTensor(weight, device),
+      xla_grad_out, xla_input, bridge::GetOrCreateXlaTensor(weight, device),
       bridge::GetOrCreateXlaTensor(save_mean, device),
       bridge::GetOrCreateXlaTensor(save_invstd, device), train, eps);
   at::Tensor undefined;
@@ -2648,8 +2749,8 @@ XLANativeFunctions::native_batch_norm_backward(
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::native_dropout(
     const at::Tensor& self, double p, std::optional<bool> train) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  auto results = tensor_methods::native_dropout(self_tensor, p, train);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto results = tensor_methods::native_dropout(xla_self, p, train);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
@@ -2660,8 +2761,8 @@ at::Tensor XLANativeFunctions::neg(const at::Tensor& self) {
       << "Negation, the `-` operator, on a bool tensor is not supported. If "
          "you are trying to invert a mask, use the `~` or `logical_not()` "
          "operator instead.";
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::neg(GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::neg(xla_self));
 }
 
 at::Tensor XLANativeFunctions::nll_loss2d_backward(
@@ -2669,18 +2770,19 @@ at::Tensor XLANativeFunctions::nll_loss2d_backward(
     const at::Tensor& target, const std::optional<at::Tensor>& weight,
     int64_t reduction, int64_t ignore_index, const at::Tensor& total_weight) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLATensorPtr weight_tensor =
-      bridge::GetOrCreateXlaTensor(weight, self_tensor->GetDevice());
-  XLATensorPtr total_weight_tensor;
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_target, bridge::GetXlaTensor(target));
+  const torch::lazy::BackendDevice& device = xla_grad_output->GetDevice();
+  XLATensorPtr xla_weight = bridge::GetOrCreateXlaTensor(weight, device);
+  XLATensorPtr xla_total_weight;
   if (IsDefined(weight)) {
-    total_weight_tensor =
-        bridge::GetOrCreateXlaTensor(total_weight, self_tensor->GetDevice());
+    xla_total_weight = bridge::GetOrCreateXlaTensor(total_weight, device);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::nll_loss2d_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)), self_tensor,
-      GetValueOrThrow(bridge::GetXlaTensor(target)), weight_tensor, reduction,
-      ignore_index, total_weight_tensor));
+      xla_grad_output, xla_self, xla_target, xla_weight, reduction,
+      ignore_index, xla_total_weight));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss2d_forward(
@@ -2688,15 +2790,16 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss2d_forward(
     const std::optional<at::Tensor>& weight, int64_t reduction,
     int64_t ignore_index) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLATensorPtr total_weight = GetValueOrThrow(tensor_methods::full(
-      {}, 1, self_tensor->GetDevice(), self_tensor->dtype()));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_target, bridge::GetXlaTensor(target));
+  const torch::lazy::BackendDevice& device = xla_self->GetDevice();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_total_weight,
+                      tensor_methods::full({}, 1, device, xla_self->dtype()));
   return std::make_tuple(
       bridge::AtenFromXlaTensor(tensor_methods::nll_loss2d(
-          self_tensor, GetValueOrThrow(bridge::GetXlaTensor(target)),
-          bridge::GetOrCreateXlaTensor(weight, self_tensor->GetDevice()),
+          xla_self, xla_target, bridge::GetOrCreateXlaTensor(weight, device),
           reduction, ignore_index)),
-      bridge::AtenFromXlaTensor(total_weight));
+      bridge::AtenFromXlaTensor(xla_total_weight));
 }
 
 at::Tensor XLANativeFunctions::nll_loss_backward(
@@ -2704,18 +2807,19 @@ at::Tensor XLANativeFunctions::nll_loss_backward(
     const at::Tensor& target, const std::optional<at::Tensor>& weight,
     int64_t reduction, int64_t ignore_index, const at::Tensor& total_weight) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLATensorPtr weight_tensor =
-      bridge::GetOrCreateXlaTensor(weight, self_tensor->GetDevice());
-  XLATensorPtr total_weight_tensor;
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_target, bridge::GetXlaTensor(target));
+  const torch::lazy::BackendDevice& device = xla_grad_output->GetDevice();
+  XLATensorPtr xla_weight = bridge::GetOrCreateXlaTensor(weight, device);
+  XLATensorPtr xla_total_weight;
   if (IsDefined(weight)) {
-    total_weight_tensor =
-        bridge::GetOrCreateXlaTensor(total_weight, self_tensor->GetDevice());
+    xla_total_weight = bridge::GetOrCreateXlaTensor(total_weight, device);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::nll_loss_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)), self_tensor,
-      GetValueOrThrow(bridge::GetXlaTensor(target)), weight_tensor, reduction,
-      ignore_index, total_weight_tensor));
+      xla_grad_output, xla_self, xla_target, xla_weight, reduction,
+      ignore_index, xla_total_weight));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss_forward(
@@ -2723,26 +2827,27 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss_forward(
     const std::optional<at::Tensor>& weight, int64_t reduction,
     int64_t ignore_index) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLATensorPtr total_weight = GetValueOrThrow(tensor_methods::full(
-      {}, 1, self_tensor->GetDevice(), self_tensor->dtype()));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_target, bridge::GetXlaTensor(target));
+  const torch::lazy::BackendDevice& device = xla_self->GetDevice();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr total_weight,
+                      tensor_methods::full({}, 1, device, xla_self->dtype()));
   return std::make_tuple(
       bridge::AtenFromXlaTensor(tensor_methods::nll_loss(
-          self_tensor, GetValueOrThrow(bridge::GetXlaTensor(target)),
-          bridge::GetOrCreateXlaTensor(weight, self_tensor->GetDevice()),
+          xla_self, xla_target, bridge::GetOrCreateXlaTensor(weight, device),
           reduction, ignore_index)),
       bridge::AtenFromXlaTensor(total_weight));
 }
 
 at::Tensor XLANativeFunctions::nonzero(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   // Initially make XLA handled nonzero() handling experimental, and opt-in.
   if (!DebugUtil::ExperimentEnabled("nonzero")) {
     return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(nonzero)>::call(
         self);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::nonzero(self_tensor));
+  return bridge::AtenFromXlaTensor(tensor_methods::nonzero(xla_self));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
@@ -2755,9 +2860,9 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP2(norm, ScalarOpt_dtype)>::call(self, p, dtype);
   }
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::norm(GetValueOrThrow(bridge::GetXlaTensor(self)), p,
-                           dtype, {}, /*keepdim=*/false));
+      tensor_methods::norm(xla_self, p, dtype, {}, /*keepdim=*/false));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
@@ -2769,9 +2874,9 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
     return at::native::call_fallback_fn<&xla_fallback,
                                         ATEN_OP2(norm, Scalar)>::call(self, p);
   }
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::norm(GetValueOrThrow(bridge::GetXlaTensor(self)), p,
-                           std::nullopt, {}, /*keepdim=*/false));
+      tensor_methods::norm(xla_self, p, std::nullopt, {}, /*keepdim=*/false));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
@@ -2787,8 +2892,9 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
                                                                   keepdim,
                                                                   dtype);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::norm(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), p, dtype, dim, keepdim));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::norm(xla_self, p, dtype, dim, keepdim));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
@@ -2802,9 +2908,9 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
         &xla_fallback, ATEN_OP2(norm, ScalarOpt_dim)>::call(self, p, dim,
                                                             keepdim);
   }
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::norm(GetValueOrThrow(bridge::GetXlaTensor(self)), p,
-                           std::nullopt, dim, keepdim));
+      tensor_methods::norm(xla_self, p, std::nullopt, dim, keepdim));
 }
 
 at::Tensor XLANativeFunctions::normal(const at::Tensor& mean, double std,
@@ -2815,8 +2921,8 @@ at::Tensor XLANativeFunctions::normal(const at::Tensor& mean, double std,
         &xla_fallback, ATEN_OP2(normal, Tensor_float)>::call(mean, std,
                                                              generator);
   }
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::normal(GetValueOrThrow(bridge::GetXlaTensor(mean)), std));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mean, bridge::GetXlaTensor(mean));
+  return bridge::AtenFromXlaTensor(tensor_methods::normal(xla_mean, std));
 }
 
 at::Tensor XLANativeFunctions::normal(double mean, const at::Tensor& std,
@@ -2827,8 +2933,8 @@ at::Tensor XLANativeFunctions::normal(double mean, const at::Tensor& std,
         &xla_fallback, ATEN_OP2(normal, float_Tensor)>::call(mean, std,
                                                              generator);
   }
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::normal(mean, GetValueOrThrow(bridge::GetXlaTensor(std))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_std, bridge::GetXlaTensor(std));
+  return bridge::AtenFromXlaTensor(tensor_methods::normal(mean, xla_std));
 }
 
 at::Tensor XLANativeFunctions::normal(const at::Tensor& mean,
@@ -2840,9 +2946,9 @@ at::Tensor XLANativeFunctions::normal(const at::Tensor& mean,
         &xla_fallback, ATEN_OP2(normal, Tensor_Tensor)>::call(mean, std,
                                                               generator);
   }
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::normal(GetValueOrThrow(bridge::GetXlaTensor(mean)),
-                             GetValueOrThrow(bridge::GetXlaTensor(std))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mean, bridge::GetXlaTensor(mean));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_std, bridge::GetXlaTensor(std));
+  return bridge::AtenFromXlaTensor(tensor_methods::normal(xla_mean, xla_std));
 }
 
 at::Tensor& XLANativeFunctions::normal_(
@@ -2853,16 +2959,17 @@ at::Tensor& XLANativeFunctions::normal_(
     return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(normal_)>::call(
         self, mean, std, generator);
   }
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::normal_(self_tensor, mean, std);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  tensor_methods::normal_(xla_self, mean, std);
   return self;
 }
 
 at::Tensor XLANativeFunctions::permute_copy(const at::Tensor& self,
                                             at::IntArrayRef dims) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::permute(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), XlaHelpers::I64List(dims)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::permute(xla_self, XlaHelpers::I64List(dims)));
 }
 
 at::Tensor XLANativeFunctions::pow(const at::Tensor& self,
@@ -2908,11 +3015,10 @@ at::Tensor XLANativeFunctions::_prelu_kernel(const at::Tensor& self,
         << weight_num << " and channel size = " << channel_size;
   }
 
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLATensorPtr weight_tensor = GetValueOrThrow(bridge::GetXlaTensor(weight));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_weight, bridge::GetXlaTensor(weight));
 
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::prelu(self_tensor, weight_tensor));
+  return bridge::AtenFromXlaTensor(tensor_methods::prelu(xla_self, xla_weight));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_prelu_kernel_backward(
@@ -2920,13 +3026,13 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_prelu_kernel_backward(
     const at::Tensor& weight) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
 
-  XLATensorPtr grad_output_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output));
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  XLATensorPtr weight_tensor = GetValueOrThrow(bridge::GetXlaTensor(weight));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_weight, bridge::GetXlaTensor(weight));
 
-  auto outputs = tensor_methods::prelu_backward(grad_output_tensor, self_tensor,
-                                                weight_tensor);
+  auto outputs =
+      tensor_methods::prelu_backward(xla_grad_output, xla_self, xla_weight);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
@@ -2934,10 +3040,10 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_prelu_kernel_backward(
 at::Tensor XLANativeFunctions::prod(const at::Tensor& self,
                                     std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::prod(
-      self_tensor,
-      torch::lazy::Iota<int64_t>(self_tensor->shape().get().dimensions_size()),
+      xla_self,
+      torch::lazy::Iota<int64_t>(xla_self->shape().get().dimensions_size()),
       /*keep_reduced_dimensions=*/false,
       PromoteIntegralType(self.scalar_type(), dtype)));
 }
@@ -2946,9 +3052,10 @@ at::Tensor XLANativeFunctions::prod(const at::Tensor& self, int64_t dim,
                                     bool keepdim,
                                     std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::prod(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), {dim}, keepdim,
-      PromoteIntegralType(self.scalar_type(), dtype)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::prod(xla_self, {dim}, keepdim,
+                           PromoteIntegralType(self.scalar_type(), dtype)));
 }
 
 void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
@@ -2959,8 +3066,8 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
   // for in-place ops we have in hands.
 
   // 1) Aid XLA's InputOutputAlias.
-  auto input_tensor = GetValueOrThrow(bridge::GetXlaTensor(input));
-  auto output_tensor = GetValueOrThrow(bridge::GetXlaTensor(output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr input_tensor, bridge::GetXlaTensor(input));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr output_tensor, bridge::GetXlaTensor(output));
   if (input_tensor->CurrentDataHandle() != nullptr ||
       (input_tensor->CurrentIrValue().node != nullptr &&
        torch_xla::DeviceData::Cast(
@@ -3007,18 +3114,18 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
 at::Tensor& XLANativeFunctions::put_(at::Tensor& self, const at::Tensor& index,
                                      const at::Tensor& source,
                                      bool accumulate) {
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::put_(
-      self_tensor, GetValueOrThrow(bridge::GetXlaTensor(index)),
-      GetValueOrThrow(bridge::GetXlaTensor(source)), accumulate);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_index, bridge::GetXlaTensor(index));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_source, bridge::GetXlaTensor(source));
+  tensor_methods::put_(xla_self, xla_index, xla_source, accumulate);
   return self;
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::qr(
     const at::Tensor& self, bool some) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto results =
-      tensor_methods::qr(GetValueOrThrow(bridge::GetXlaTensor(self)), some);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto results = tensor_methods::qr(xla_self, some);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
@@ -3033,16 +3140,17 @@ at::Tensor& XLANativeFunctions::random_(
         &xla_fallback, ATEN_OP2(random_, from)>::call(self, from, to,
                                                       generator);
   }
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  at::ScalarType dtype = self_tensor->dtype();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  at::ScalarType dtype = xla_self->dtype();
 
   // Prevent "to_val" from overflowing with at::ScalarType::Long.
   int64_t inc = (dtype == at::ScalarType::Long) ? 0 : 1;
   int64_t to_val = (to) ? *to : GetIntegerUpperLimitForType(dtype) + inc;
 
-  OkOrThrow(CheckValueWithinTypeRange("random_", "from", dtype, from));
-  OkOrThrow(CheckValueWithinTypeRange("random_", "to", dtype, to_val - 1));
-  OkOrThrow(tensor_methods::random_(self_tensor, from, to_val));
+  XLA_THROW_IF_ERROR(CheckValueWithinTypeRange("random_", "from", dtype, from));
+  XLA_THROW_IF_ERROR(
+      CheckValueWithinTypeRange("random_", "to", dtype, to_val - 1));
+  XLA_THROW_IF_ERROR(tensor_methods::random_(xla_self, from, to_val));
   return self;
 }
 
@@ -3055,12 +3163,11 @@ at::Tensor& XLANativeFunctions::random_(
                                         ATEN_OP2(random_, to)>::call(self, to,
                                                                      generator);
   }
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  at::ScalarType dtype = xla_self->dtype();
 
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  at::ScalarType dtype = self_tensor->dtype();
-
-  OkOrThrow(CheckValueWithinTypeRange("random_", "to", dtype, to - 1));
-  OkOrThrow(tensor_methods::random_(self_tensor, 0, to));
+  XLA_THROW_IF_ERROR(CheckValueWithinTypeRange("random_", "to", dtype, to - 1));
+  XLA_THROW_IF_ERROR(tensor_methods::random_(xla_self, 0, to));
   return self;
 }
 
@@ -3072,14 +3179,14 @@ at::Tensor& XLANativeFunctions::random_(
     return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(random_)>::call(
         self, generator);
   }
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  at::ScalarType dtype = self_tensor->dtype();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  at::ScalarType dtype = xla_self->dtype();
 
   // Prevent "to_val" from overflowing with at::ScalarType::Long.
   int64_t inc = (dtype == at::ScalarType::Long) ? 0 : 1;
   int64_t to_val = GetIntegerUpperLimitForType(dtype) + inc;
 
-  OkOrThrow(tensor_methods::random_(self_tensor, 0, to_val));
+  XLA_THROW_IF_ERROR(tensor_methods::random_(xla_self, 0, to_val));
   return self;
 }
 
@@ -3110,132 +3217,139 @@ at::Tensor XLANativeFunctions::randperm(int64_t n,
 at::Tensor XLANativeFunctions::reflection_pad1d(const at::Tensor& self,
                                                 at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad1d(
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      torch::lazy::ToVector<int64_t>(padding)));
+      xla_self, torch::lazy::ToVector<int64_t>(padding)));
 }
 
 at::Tensor XLANativeFunctions::reflection_pad1d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad1d_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      torch::lazy::ToVector<int64_t>(padding)));
+      xla_grad_output, xla_self, torch::lazy::ToVector<int64_t>(padding)));
 }
 
 at::Tensor XLANativeFunctions::reflection_pad2d(const at::Tensor& self,
                                                 at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad2d(
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      torch::lazy::ToVector<int64_t>(padding)));
+      xla_self, torch::lazy::ToVector<int64_t>(padding)));
 }
 
 at::Tensor XLANativeFunctions::reflection_pad2d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad2d_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      torch::lazy::ToVector<int64_t>(padding)));
+      xla_grad_output, xla_self, torch::lazy::ToVector<int64_t>(padding)));
 }
 
 at::Tensor XLANativeFunctions::reflection_pad3d(const at::Tensor& self,
                                                 at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad3d(
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      torch::lazy::ToVector<int64_t>(padding)));
+      xla_self, torch::lazy::ToVector<int64_t>(padding)));
 }
 
 at::Tensor XLANativeFunctions::reflection_pad3d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad3d_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      torch::lazy::ToVector<int64_t>(padding)));
+      xla_grad_output, xla_self, torch::lazy::ToVector<int64_t>(padding)));
 }
 
 at::Tensor XLANativeFunctions::remainder(const at::Tensor& self,
                                          const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_other, bridge::GetXlaTensor(other));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::remainder(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                                GetValueOrThrow(bridge::GetXlaTensor(other))));
+      tensor_methods::remainder(xla_self, xla_other));
 }
 
 at::Tensor XLANativeFunctions::remainder(const at::Tensor& self,
                                          const at::Scalar& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::remainder(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), other));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::remainder(xla_self, other));
 }
 
 at::Tensor XLANativeFunctions::replication_pad1d(const at::Tensor& self,
                                                  at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::replication_pad1d(
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      XlaHelpers::I64List(padding)));
+      xla_self, XlaHelpers::I64List(padding)));
 }
 
 at::Tensor XLANativeFunctions::replication_pad1d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::replication_pad1d_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      XlaHelpers::I64List(padding)));
+      xla_grad_output, xla_self, XlaHelpers::I64List(padding)));
 }
 
 at::Tensor XLANativeFunctions::replication_pad2d(const at::Tensor& self,
                                                  at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::replication_pad2d(
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      XlaHelpers::I64List(padding)));
+      xla_self, XlaHelpers::I64List(padding)));
 }
 
 at::Tensor XLANativeFunctions::replication_pad2d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::replication_pad2d_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      XlaHelpers::I64List(padding)));
+      xla_grad_output, xla_self, XlaHelpers::I64List(padding)));
 }
 
 at::Tensor XLANativeFunctions::replication_pad3d(const at::Tensor& self,
                                                  at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::replication_pad3d(
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      XlaHelpers::I64List(padding)));
+      xla_self, XlaHelpers::I64List(padding)));
 }
 
 at::Tensor XLANativeFunctions::replication_pad3d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::replication_pad3d_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      XlaHelpers::I64List(padding)));
+      xla_grad_output, xla_self, XlaHelpers::I64List(padding)));
 }
 
 const at::Tensor& XLANativeFunctions::resize_(
     const at::Tensor& self, at::IntArrayRef size,
     std::optional<at::MemoryFormat> /* memory_format */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::resize_(self_tensor, XlaHelpers::I64List(size));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  tensor_methods::resize_(xla_self, XlaHelpers::I64List(size));
   return self;
 }
 
@@ -3243,9 +3357,13 @@ at::Tensor XLANativeFunctions::roll(const at::Tensor& self,
                                     at::IntArrayRef shifts,
                                     at::IntArrayRef dims) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::roll(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), XlaHelpers::I64List(shifts),
-      XlaHelpers::I64List(dims)));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(
+      absl_nonnull XLATensorPtr output,
+      tensor_methods::roll(xla_self, XlaHelpers::I64List(shifts),
+                           XlaHelpers::I64List(dims)));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::rrelu_with_noise(
@@ -3261,10 +3379,10 @@ at::Tensor XLANativeFunctions::rrelu_with_noise(
                                                         upper, training,
                                                         generator);
   }
-  XLATensorPtr noise_tensor = GetValueOrThrow(bridge::GetXlaTensor(noise));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_noise, bridge::GetXlaTensor(noise));
   return bridge::AtenFromXlaTensor(tensor_methods::rrelu_with_noise(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), noise_tensor, lower, upper,
-      training));
+      xla_self, xla_noise, lower, upper, training));
 }
 
 at::Tensor XLANativeFunctions::rrelu_with_noise_backward(
@@ -3274,11 +3392,12 @@ at::Tensor XLANativeFunctions::rrelu_with_noise_backward(
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   double negative_slope = (lower.to<double>() + upper.to<double>()) / 2;
   XLA_CHECK(!self_is_result || negative_slope > 0.0);
-  XLATensorPtr noise_tensor = GetValueOrThrow(bridge::GetXlaTensor(noise));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_noise, bridge::GetXlaTensor(noise));
   return bridge::AtenFromXlaTensor(tensor_methods::rrelu_with_noise_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)), noise_tensor, lower, upper,
-      training));
+      xla_grad_output, xla_self, xla_noise, lower, upper, training));
 }
 
 at::Tensor XLANativeFunctions::rsub(const at::Tensor& self,
@@ -3308,15 +3427,15 @@ at::Tensor XLANativeFunctions::rsub(const at::Tensor& self,
 at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index, const at::Tensor& src,
                                  std::optional<std::string_view> reduce) {
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_index, bridge::GetXlaTensor(index));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_src, bridge::GetXlaTensor(src));
   if (!reduce.has_value()) {
-    return bridge::AtenFromXlaTensor(tensor_methods::scatter(
-        self_tensor, dim, GetValueOrThrow(bridge::GetXlaTensor(index)),
-        GetValueOrThrow(bridge::GetXlaTensor(src))));
+    return bridge::AtenFromXlaTensor(
+        tensor_methods::scatter(xla_self, dim, xla_index, xla_src));
   } else if (*reduce == "add") {
-    return bridge::AtenFromXlaTensor(tensor_methods::scatter_add(
-        self_tensor, dim, GetValueOrThrow(bridge::GetXlaTensor(index)),
-        GetValueOrThrow(bridge::GetXlaTensor(src))));
+    return bridge::AtenFromXlaTensor(
+        tensor_methods::scatter_add(xla_self, dim, xla_index, xla_src));
   } else {
     // TODO: implement scatter_mul
     return at::native::call_fallback_fn<
@@ -3330,13 +3449,14 @@ at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
                                  const at::Scalar& value,
                                  std::optional<std::string_view> reduce) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_index, bridge::GetXlaTensor(index));
   if (!reduce.has_value()) {
-    return bridge::AtenFromXlaTensor(tensor_methods::scatter(
-        self_tensor, dim, GetValueOrThrow(bridge::GetXlaTensor(index)), value));
+    return bridge::AtenFromXlaTensor(
+        tensor_methods::scatter(xla_self, dim, xla_index, value));
   } else if (*reduce == "add") {
-    return bridge::AtenFromXlaTensor(tensor_methods::scatter_add(
-        self_tensor, dim, GetValueOrThrow(bridge::GetXlaTensor(index)), value));
+    return bridge::AtenFromXlaTensor(
+        tensor_methods::scatter_add(xla_self, dim, xla_index, value));
   } else {
     // TODO: implement scatter_mul
     return at::native::call_fallback_fn<
@@ -3388,13 +3508,14 @@ at::Tensor XLANativeFunctions::scatter_reduce(
     const at::Tensor& self, int64_t dim, const at::Tensor& index,
     const at::Tensor& src, std::string_view reduce, bool include_self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_index, bridge::GetXlaTensor(index));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_src, bridge::GetXlaTensor(src));
   if ((reduce == "sum" || reduce == "prod" || reduce == "amin" ||
        reduce == "amax") &&
       include_self) {
     return bridge::AtenFromXlaTensor(tensor_methods::scatter_reduce(
-        GetValueOrThrow(bridge::GetXlaTensor(self)), dim,
-        GetValueOrThrow(bridge::GetXlaTensor(index)),
-        GetValueOrThrow(bridge::GetXlaTensor(src)), reduce, include_self));
+        xla_self, dim, xla_index, xla_src, reduce, include_self));
   } else {
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP2(scatter_reduce, two)>::call(self, dim, index,
@@ -3406,62 +3527,63 @@ at::Tensor XLANativeFunctions::scatter_reduce(
 at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
                                            int64_t index) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::select(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), dim, index));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::select(xla_self, dim, index));
 }
 
 at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
                                               const at::Tensor& mutated_view,
                                               int64_t dim, int64_t index) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto base_tensor = GetValueOrThrow(bridge::GetXlaTensor(base));
-  auto base_tensor_shape = base_tensor->shape();
-  auto mutated_view_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(mutated_view));
-  auto mutated_view_tensor_shape = mutated_view_tensor->shape();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_base, bridge::GetXlaTensor(base));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mutated_view,
+                      bridge::GetXlaTensor(mutated_view));
+  xla::Shape xla_base_shape = xla_base->shape();
+  xla::Shape xla_mutated_view_shape = xla_mutated_view->shape();
   auto common_device = torch_xla::bridge::GetXlaDevice(base);
 
   dim = torch::lazy::GetCanonicalDimensionIndex(
-      dim, base_tensor_shape.get().dimensions_size());
-  xla::Shape narrow_shape = base_tensor_shape;
+      dim, xla_base_shape.dimensions_size());
+  xla::Shape narrow_shape = xla_base_shape;
   narrow_shape.set_dimensions(dim, 1);
-  torch::lazy::NodePtr mutated_view_tensor_reshaped_node =
-      torch_xla::MakeNode<ViewOp>(
-          mutated_view_tensor->GetIrValue(),
-          torch::lazy::ToVector<int64_t>(narrow_shape.dimensions()));
+  torch::lazy::NodePtr mutated_view_reshaped_node = torch_xla::MakeNode<ViewOp>(
+      xla_mutated_view->GetIrValue(),
+      torch::lazy::ToVector<int64_t>(narrow_shape.dimensions()));
 
-  std::vector<int64_t> indices(base_tensor_shape.get().dimensions_size(), 0);
+  std::vector<int64_t> indices(xla_base_shape.dimensions_size(), 0);
   indices[dim] = torch::lazy::GetCanonicalPosition(
-      runtime::util::ToVector<int64_t>(base_tensor_shape.get().dimensions()),
-      dim, index);
+      runtime::util::ToVector<int64_t>(xla_base_shape.dimensions()), dim,
+      index);
   return bridge::AtenFromXlaTensor(
-      base_tensor->CreateFrom(torch_xla::MakeNode<UpdateSlice>(
-          base_tensor->GetIrValue(), mutated_view_tensor_reshaped_node,
-          indices)));
+      xla_base->CreateFrom(torch_xla::MakeNode<UpdateSlice>(
+          xla_base->GetIrValue(), mutated_view_reshaped_node, indices)));
 }
 
 // TODO(JackCaoG): Remove after elu being codegened
 at::Tensor& XLANativeFunctions::selu_(at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::selu_(self_tensor);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  tensor_methods::selu_(xla_self);
   return self;
 }
 
 at::Tensor& XLANativeFunctions::set_(at::Tensor& self,
                                      const at::Tensor& source) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr source_tensor = GetValueOrThrow(bridge::GetXlaTensor(source));
-  OkOrThrow(bridge::ReplaceXlaTensor(self, source_tensor));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_source, bridge::GetXlaTensor(source));
+  XLA_THROW_IF_ERROR(bridge::ReplaceXlaTensor(self, xla_source));
   return self;
 }
 
 at::Tensor XLANativeFunctions::sigmoid_backward(const at::Tensor& grad_output,
                                                 const at::Tensor& output) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::sigmoid_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(output))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_output, bridge::GetXlaTensor(output));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::sigmoid_backward(xla_grad_output, xla_output));
 }
 
 at::Tensor XLANativeFunctions::slice_copy(const at::Tensor& self, int64_t dim,
@@ -3469,24 +3591,24 @@ at::Tensor XLANativeFunctions::slice_copy(const at::Tensor& self, int64_t dim,
                                           std::optional<int64_t> end,
                                           int64_t step) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   int64_t start_val = start.has_value() ? start.value() : 0;
   int64_t end_val = end.has_value() ? end.value() : INT64_MAX;
   return bridge::AtenFromXlaTensor(bridge::SetBaseTensor(
-      tensor_methods::slice(GetValueOrThrow(bridge::GetXlaTensor(self)), dim,
-                            start_val, end_val, step),
-      self));
+      tensor_methods::slice(xla_self, dim, start_val, end_val, step), self));
 }
 
 at::Tensor XLANativeFunctions::slice_scatter(
     const at::Tensor& base, const at::Tensor& mutated_view, int64_t dim,
     std::optional<int64_t> start, std::optional<int64_t> end, int64_t step) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto base_ = GetValueOrThrow(bridge::GetXlaTensor(base));
-  auto mutated_view_ = GetValueOrThrow(bridge::GetXlaTensor(mutated_view));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_base, bridge::GetXlaTensor(base));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_mutated_view,
+                      bridge::GetXlaTensor(mutated_view));
   int64_t start_val = start.has_value() ? start.value() : 0;
   int64_t end_val = end.has_value() ? end.value() : INT64_MAX;
 
-  auto input_shape = base_->shape();
+  auto input_shape = xla_base->shape();
   dim = torch::lazy::GetCanonicalDimensionIndex(
       dim, input_shape.get().dimensions_size());
   start_val = torch::lazy::GetCanonicalPosition(
@@ -3502,36 +3624,40 @@ at::Tensor XLANativeFunctions::slice_scatter(
   step = std::min(step, end_val - start_val);
 
   return bridge::AtenFromXlaTensor(
-      base_->CreateFrom(torch_xla::MakeNode<Unselect>(
-          base_->GetIrValue(), mutated_view_->GetIrValue(), dim, start_val,
-          end_val, step)));
+      xla_base->CreateFrom(torch_xla::MakeNode<Unselect>(
+          xla_base->GetIrValue(), xla_mutated_view->GetIrValue(), dim,
+          start_val, end_val, step)));
 }
 
 at::Tensor XLANativeFunctions::smooth_l1_loss(const at::Tensor& self,
                                               const at::Tensor& target,
                                               int64_t reduction, double beta) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::smooth_l1_loss(
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      GetValueOrThrow(bridge::GetXlaTensor(target)), reduction, beta));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_target, bridge::GetXlaTensor(target));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::smooth_l1_loss(xla_self, xla_target, reduction, beta));
 }
 
 at::Tensor XLANativeFunctions::smooth_l1_loss_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Tensor& target, int64_t reduction, double beta) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_target, bridge::GetXlaTensor(target));
   return bridge::AtenFromXlaTensor(tensor_methods::smooth_l1_loss_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      GetValueOrThrow(bridge::GetXlaTensor(target)), reduction, beta));
+      xla_grad_output, xla_self, xla_target, reduction, beta));
 }
 
 at::Tensor XLANativeFunctions::softplus(const at::Tensor& self,
                                         const at::Scalar& beta,
                                         const at::Scalar& threshold) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::softplus(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), beta, threshold));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::softplus(xla_self, beta, threshold));
 }
 
 at::Tensor XLANativeFunctions::softplus_backward(const at::Tensor& grad_output,
@@ -3539,17 +3665,19 @@ at::Tensor XLANativeFunctions::softplus_backward(const at::Tensor& grad_output,
                                                  const at::Scalar& beta,
                                                  const at::Scalar& threshold) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::softplus_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)), beta, threshold));
+      xla_grad_output, xla_self, beta, threshold));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
     const at::Tensor& self, int64_t dim, bool descending) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto results = tensor_methods::topk(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), self.size(dim), dim,
-      descending, /*sorted=*/true, /*stable=*/false);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto results = tensor_methods::topk(xla_self, self.size(dim), dim, descending,
+                                      /*sorted=*/true, /*stable=*/false);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
@@ -3558,10 +3686,9 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
     const at::Tensor& self, std::optional<bool> stable, int64_t dim,
     bool descending) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   auto results = tensor_methods::topk(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), self.size(dim), dim,
-      descending,
-      /*sorted=*/false,
+      xla_self, self.size(dim), dim, descending, /*sorted=*/false,
       /*stable=*/stable.has_value() ? stable.value() : false);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
@@ -3571,57 +3698,62 @@ std::vector<at::Tensor> XLANativeFunctions::split_copy(const at::Tensor& self,
                                                        int64_t split_size,
                                                        int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto xla_tensors = tensor_methods::split(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), split_size, dim);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto xla_tensors = tensor_methods::split(xla_self, split_size, dim);
   return bridge::AtenFromXlaTensors(xla_tensors);
 }
 
 std::vector<at::Tensor> XLANativeFunctions::split_with_sizes_copy(
     const at::Tensor& self, at::IntArrayRef split_sizes, int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   auto xla_tensors = tensor_methods::split_with_sizes(
-      GetValueOrThrow(bridge::GetXlaTensor(self)),
-      XlaHelpers::I64List(split_sizes), dim);
+      xla_self, XlaHelpers::I64List(split_sizes), dim);
   return bridge::AtenFromXlaTensors(xla_tensors);
 }
 
 at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::squeeze(GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::squeeze(xla_self));
 }
 
 at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
                                             int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), dim));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::squeeze(xla_self, dim));
 }
 
 at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
                                             at::IntArrayRef dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::squeeze(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                              torch::lazy::ToVector<int64_t>(dim)));
+      tensor_methods::squeeze(xla_self, torch::lazy::ToVector<int64_t>(dim)));
 }
 
 at::Tensor XLANativeFunctions::stack(at::TensorList tensors, int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   at::ScalarType result_type = at::native::result_type(tensors);
-  std::vector<at::Tensor> c_tensors(tensors.size());
-  std::transform(tensors.begin(), tensors.end(), c_tensors.begin(),
-                 [=](const at::Tensor& t) { return t.to(result_type); });
-  return bridge::AtenFromXlaTensor(tensor_methods::stack(
-      GetValueOrThrow(bridge::GetXlaTensors(c_tensors)), dim));
+  std::vector<absl_nonnull XLATensorPtr> xla_tensors;
+  std::transform(tensors.begin(), tensors.end(),
+                 std::back_inserter(xla_tensors), [=](const at::Tensor& t) {
+                   XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_t,
+                                       bridge::GetXlaTensor(t.to(result_type)));
+                   return xla_t;
+                 });
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::stack(xla_tensors, dim));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::std(
-      self_tensor,
-      torch::lazy::Iota<int64_t>(self_tensor->shape().get().dimensions_size()),
+      xla_self,
+      torch::lazy::Iota<int64_t>(xla_self->shape().get().dimensions_size()),
       /*keep_reduced_dimensions=*/false, /*correction=*/unbiased ? 1.0 : 0.0));
 }
 
@@ -3629,13 +3761,13 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self,
                                    at::OptionalIntArrayRef dim, bool unbiased,
                                    bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::std(
-      self_tensor,
-      dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(
-                self_tensor->shape().get().dimensions_size()),
-      keepdim, /*correction=*/unbiased ? 1.0 : 0.0));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::std(xla_self,
+                          dim ? torch::lazy::ToVector<int64_t>(*dim)
+                              : torch::lazy::Iota<int64_t>(
+                                    xla_self->shape().get().dimensions_size()),
+                          keepdim, /*correction=*/unbiased ? 1.0 : 0.0));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self,
@@ -3643,25 +3775,25 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self,
                                    const std::optional<c10::Scalar>& correction,
                                    bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::std(
-      self_tensor,
-      dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(
-                self_tensor->shape().get().dimensions_size()),
-      keepdim, correction ? correction->toDouble() : 1.0));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::std(xla_self,
+                          dim ? torch::lazy::ToVector<int64_t>(*dim)
+                              : torch::lazy::Iota<int64_t>(
+                                    xla_self->shape().get().dimensions_size()),
+                          keepdim, correction ? correction->toDouble() : 1.0));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::std_mean(
     const at::Tensor& self, at::OptionalIntArrayRef dim,
     const std::optional<c10::Scalar>& correction, bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   auto results = tensor_methods::std_mean(
-      self_tensor,
+      xla_self,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
           : torch::lazy::Iota<int64_t>(
-                self_tensor->shape().get().dimensions_size()),
+                xla_self->shape().get().dimensions_size()),
       correction ? correction->toDouble() : 1.0, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
@@ -3702,10 +3834,10 @@ at::Tensor XLANativeFunctions::sub(const at::Tensor& self,
 at::Tensor XLANativeFunctions::sum(const at::Tensor& self,
                                    std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::sum(
-      self_tensor,
-      torch::lazy::Iota<int64_t>(self_tensor->shape().get().dimensions_size()),
+      xla_self,
+      torch::lazy::Iota<int64_t>(xla_self->shape().get().dimensions_size()),
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
@@ -3713,20 +3845,20 @@ at::Tensor XLANativeFunctions::sum(const at::Tensor& self,
                                    at::OptionalIntArrayRef dim, bool keepdim,
                                    std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(tensor_methods::sum(
-      self_tensor,
-      dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(
-                self_tensor->shape().get().dimensions_size()),
-      keepdim, dtype));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::sum(xla_self,
+                          dim ? torch::lazy::ToVector<int64_t>(*dim)
+                              : torch::lazy::Iota<int64_t>(
+                                    xla_self->shape().get().dimensions_size()),
+                          keepdim, dtype));
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::svd(
     const at::Tensor& self, bool some, bool compute_uv) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto results = tensor_methods::svd(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), some, compute_uv);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto results = tensor_methods::svd(xla_self, some, compute_uv);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)),
                          bridge::AtenFromXlaTensor(std::get<2>(results)));
@@ -3734,57 +3866,65 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::svd(
 
 at::Tensor XLANativeFunctions::t_copy(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::transpose(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), 0, 1));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::transpose(xla_self, 0, 1));
 }
 
 at::Tensor XLANativeFunctions::tanh_backward(const at::Tensor& grad_output,
                                              const at::Tensor& output) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::tanh_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(output))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_output, bridge::GetXlaTensor(output));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::tanh_backward(xla_grad_output, xla_output));
 }
 
 at::Tensor XLANativeFunctions::threshold(const at::Tensor& self,
                                          const at::Scalar& threshold,
                                          const at::Scalar& value) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::threshold(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                                threshold.to<double>(), value.to<double>()));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::threshold(
+      xla_self, threshold.to<double>(), value.to<double>()));
 }
 
 at::Tensor XLANativeFunctions::threshold_backward(const at::Tensor& grad_output,
                                                   const at::Tensor& self,
                                                   const at::Scalar& threshold) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::threshold_backward(
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output)),
-      GetValueOrThrow(bridge::GetXlaTensor(self)), threshold.to<double>()));
+      xla_grad_output, xla_self, threshold.to<double>()));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::topk(
     const at::Tensor& self, int64_t k, int64_t dim, bool largest, bool sorted) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   auto results =
-      tensor_methods::topk(GetValueOrThrow(bridge::GetXlaTensor(self)), k, dim,
-                           largest, sorted, /*stable=*/false);
+      tensor_methods::topk(xla_self, k, dim, largest, sorted, /*stable=*/false);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
 at::Tensor XLANativeFunctions::trace(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::trace(GetValueOrThrow(bridge::GetXlaTensor(self))));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::trace(xla_self));
+  return bridge::AtenFromXlaTensor(std::move(output));
 }
 
 at::Tensor XLANativeFunctions::transpose_copy(const at::Tensor& self,
                                               int64_t dim0, int64_t dim1) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::transpose(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), dim0, dim1));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::transpose(xla_self, dim0, dim1));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::triangular_solve(
@@ -3793,10 +3933,10 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::triangular_solve(
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // Currently, ATen doesn't have a left_side option. Once this
   // is added, this API will have to be changed.
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_b, bridge::GetXlaTensor(b));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_A, bridge::GetXlaTensor(A));
   auto results = tensor_methods::triangular_solve(
-      GetValueOrThrow(bridge::GetXlaTensor(b)),
-      GetValueOrThrow(bridge::GetXlaTensor(A)), /*left_side=*/true, upper,
-      transpose, unitriangular);
+      xla_b, xla_A, /*left_side=*/true, upper, transpose, unitriangular);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
@@ -3804,8 +3944,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::triangular_solve(
 std::vector<at::Tensor> XLANativeFunctions::unbind_copy(const at::Tensor& self,
                                                         int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensors(
-      tensor_methods::unbind(GetValueOrThrow(bridge::GetXlaTensor(self)), dim));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensors(tensor_methods::unbind(xla_self, dim));
 }
 
 at::Tensor& XLANativeFunctions::uniform_(
@@ -3816,25 +3956,25 @@ at::Tensor& XLANativeFunctions::uniform_(
     return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(uniform_)>::call(
         self, from, to, generator);
   }
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::uniform_(self_tensor, from, to);
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  XLA_THROW_IF_ERROR(tensor_methods::uniform_(xla_self, from, to));
   return self;
 }
 
 at::Tensor XLANativeFunctions::unsqueeze_copy(const at::Tensor& self,
                                               int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::unsqueeze(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), dim));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::unsqueeze(xla_self, dim));
 }
 
 at::Tensor XLANativeFunctions::upsample_bilinear2d(
     const at::Tensor& self, at::IntArrayRef output_size, bool align_corners,
     std::optional<double> scales_h, std::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  absl::Span<const int64_t> input_dims =
-      self_tensor->shape().get().dimensions();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  absl::Span<const int64_t> input_dims = xla_self->shape().get().dimensions();
   std::vector<int64_t> scaled_output_size =
       torch::lazy::ToVector<int64_t>(output_size);
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
@@ -3847,7 +3987,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
     }
   }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_bilinear2d(
-      self_tensor, scaled_output_size, align_corners));
+      xla_self, scaled_output_size, align_corners));
 }
 
 at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
@@ -3855,12 +3995,12 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
     at::IntArrayRef input_size, bool align_corners,
     std::optional<double> scales_h, std::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr grad_output_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
   XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
+      static_cast<XlaDeviceType>(xla_grad_output->GetDevice().type());
   if (!CheckTpuDevice(hw_type)) {
     return at::native::call_fallback_fn<
         &xla_fallback,
@@ -3880,7 +4020,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
     }
   }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_bilinear2d_backward(
-      grad_output_tensor, torch::lazy::ToVector<int64_t>(scaled_output_size),
+      xla_grad_output, torch::lazy::ToVector<int64_t>(scaled_output_size),
       torch::lazy::ToVector<int64_t>(input_size), align_corners));
 }
 
@@ -3888,9 +4028,8 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
     const at::Tensor& self, at::IntArrayRef output_size,
     std::optional<double> scales_h, std::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  absl::Span<const int64_t> input_dims =
-      self_tensor->shape().get().dimensions();
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  absl::Span<const int64_t> input_dims = xla_self->shape().get().dimensions();
   std::vector<int64_t> scaled_output_size =
       torch::lazy::ToVector<int64_t>(output_size);
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
@@ -3903,7 +4042,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
     }
   }
   return bridge::AtenFromXlaTensor(
-      tensor_methods::upsample_nearest2d(self_tensor, scaled_output_size));
+      tensor_methods::upsample_nearest2d(xla_self, scaled_output_size));
 }
 
 at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
@@ -3911,12 +4050,12 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
     at::IntArrayRef input_size, std::optional<double> scales_h,
     std::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr grad_output_tensor =
-      GetValueOrThrow(bridge::GetXlaTensor(grad_output));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_grad_output,
+                      bridge::GetXlaTensor(grad_output));
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
   XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
+      static_cast<XlaDeviceType>(xla_grad_output->GetDevice().type());
   if (!CheckTpuDevice(hw_type) && !CheckNeuronDevice(hw_type)) {
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(upsample_nearest2d_backward)>::call(grad_output,
@@ -3937,7 +4076,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
     }
   }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_nearest2d_backward(
-      grad_output_tensor, torch::lazy::ToVector<int64_t>(scaled_output_size),
+      xla_grad_output, torch::lazy::ToVector<int64_t>(scaled_output_size),
       torch::lazy::ToVector<int64_t>(input_size)));
 }
 
@@ -3946,15 +4085,12 @@ at::Tensor XLANativeFunctions::var(const at::Tensor& self,
                                    const std::optional<c10::Scalar>& correction,
                                    bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::var(self_tensor,
+      tensor_methods::var(xla_self,
                           dim ? XlaHelpers::I64List(*dim)
                               : torch::lazy::Iota<int64_t>(
-                                    GetValueOrThrow(bridge::GetXlaTensor(self))
-                                        ->shape()
-                                        .get()
-                                        .dimensions_size()),
+                                    xla_self->shape().get().dimensions_size()),
                           correction ? correction->toDouble() : 1.0, keepdim));
 }
 
@@ -3962,12 +4098,12 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
     const at::Tensor& self, at::OptionalIntArrayRef dim,
     const std::optional<c10::Scalar>& correction, bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   auto results = tensor_methods::var_mean(
-      self_tensor,
+      xla_self,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
           : torch::lazy::Iota<int64_t>(
-                self_tensor->shape().get().dimensions_size()),
+                xla_self->shape().get().dimensions_size()),
       correction ? correction->toDouble() : 1.0, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
@@ -3983,9 +4119,9 @@ at::Tensor XLANativeFunctions::view_as_complex_copy(const at::Tensor& self) {
          "tensors, but got a tensor of scalar type: "
       << self.scalar_type();
 
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::view_as_complex_copy(self_tensor));
+      tensor_methods::view_as_complex_copy(xla_self));
 }
 
 at::Tensor XLANativeFunctions::view_as_real_copy(const at::Tensor& self) {
@@ -3995,9 +4131,8 @@ at::Tensor XLANativeFunctions::view_as_real_copy(const at::Tensor& self) {
                                   "tensors, but got a tensor of scalar type: "
                                << self.scalar_type();
 
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::view_as_real_copy(self_tensor));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(tensor_methods::view_as_real_copy(xla_self));
 }
 
 at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
@@ -4005,7 +4140,7 @@ at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   std::optional<at::IntArrayRef> int_shape = c10::asIntArrayRefSlowOpt(shape);
   bool input_shape_static = int_shape.has_value();
-  XLATensorPtr xla_input = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_input, bridge::GetXlaTensor(self));
   bool input_has_dyn_shape = xla_input->shape().get().is_dynamic();
 
   XLA_CHECK(!(input_has_dyn_shape && input_shape_static))
@@ -4023,16 +4158,18 @@ at::Tensor XLANativeFunctions::where(const at::Tensor& condition,
   c10::MaybeOwned<at::Tensor> b_condition, b_self, b_other;
   std::tie(b_condition, b_self, b_other) =
       xla_expand_outplace(condition, self, other, "where");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_condition,
+                      bridge::GetXlaTensor(*b_condition));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(*b_self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_other, bridge::GetXlaTensor(*b_other));
   return bridge::AtenFromXlaTensor(
-      tensor_methods::where(GetValueOrThrow(bridge::GetXlaTensor(*b_condition)),
-                            GetValueOrThrow(bridge::GetXlaTensor(*b_self)),
-                            GetValueOrThrow(bridge::GetXlaTensor(*b_other))));
+      tensor_methods::where(xla_condition, xla_self, xla_other));
 }
 
 at::Tensor& XLANativeFunctions::zero_(at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  tensor_methods::zero_(self_tensor);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  tensor_methods::zero_(xla_self);
   return self;
 }
 
@@ -4044,18 +4181,18 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
   // As per https://pytorch.org/docs/stable/generated/torch.svd.html,
   // The second boolean argument is exactly opposite between
   // torch::svd and torch::_linalg_svd, hence the negation of full_matrices.
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-  auto results = tensor_methods::svd(self_tensor, !full_matrices, compute_uv);
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  auto results = tensor_methods::svd(xla_self, !full_matrices, compute_uv);
   auto u = std::get<0>(results);
   auto s = std::get<1>(results);
   auto vh = tensor_methods::transpose(std::get<2>(results), 0, 1);
   if (!compute_uv) {
     // When compute_uv is false, torch::_linalg_svd returns an empty tensor for
     // u and vh.
-    u = GetValueOrThrow(tensor_methods::full({0}, 0, self_tensor->GetDevice(),
-                                             self_tensor->dtype()));
-    vh = GetValueOrThrow(tensor_methods::full({0}, 0, self_tensor->GetDevice(),
-                                              self_tensor->dtype()));
+    XLA_ASSIGN_OR_THROW(u, tensor_methods::full({0}, 0, xla_self->GetDevice(),
+                                                xla_self->dtype()));
+    XLA_ASSIGN_OR_THROW(vh, tensor_methods::full({0}, 0, xla_self->GetDevice(),
+                                                 xla_self->dtype()));
   }
   return std::make_tuple(bridge::AtenFromXlaTensor(u),
                          bridge::AtenFromXlaTensor(s),
@@ -4065,8 +4202,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
 at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
   if (DebugUtil::ExperimentEnabled("early_sync")) {
     // sync tensors in order to save computation when step is marked later.
-    XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
-    XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&self_tensor->GetDevice(),
+    XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+    XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&xla_self->GetDevice(),
                                                   /*devices=*/{},
                                                   /*wait=*/true);
     TORCH_LAZY_COUNTER("EarlySyncLiveTensorsCount", 1);
@@ -4106,23 +4243,21 @@ at::Tensor XLANativeFunctions::_cdist_forward(
   // (compute_mode is 0 or 1) is achieved through composite ops from
   // native pytorch.
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_x1, bridge::GetXlaTensor(x1));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_x2, bridge::GetXlaTensor(x2));
   XLA_CHECK(p >= 0) << "p value for the p-norm distance must be >= 0";
-  return bridge::AtenFromXlaTensor(tensor_methods::cdist_forward(
-      GetValueOrThrow(bridge::GetXlaTensor(x1)),
-      GetValueOrThrow(bridge::GetXlaTensor(x2)), p));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::cdist_forward(xla_x1, xla_x2, p));
 }
 
 at::Tensor XLANativeFunctions::_pdist_forward(const at::Tensor& self,
                                               double p) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   XLA_CHECK(p >= 0) << "p value for the p-norm distance must be >= 0";
-  XLA_CHECK(GetValueOrThrow(bridge::GetXlaTensor(self))
-                ->shape()
-                .get()
-                .dimensions_size() == 2)
+  XLA_CHECK(xla_self->shape().get().dimensions_size() == 2)
       << "pdist only support 2d dimension";
-  return bridge::AtenFromXlaTensor(tensor_methods::pdist_forward(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), p));
+  return bridge::AtenFromXlaTensor(tensor_methods::pdist_forward(xla_self, p));
 }
 
 // All of the below ops correspond to CompositeExplicitAutograd kernels from
@@ -4206,24 +4341,24 @@ XLANativeFunctions::convolution_backward(
 at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
                                              std::optional<int64_t> dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr xla_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   std::vector<int64_t> dims;
   if (dim) {
     dims = torch::lazy::GetCanonicalDimensionIndices(
-        {dim.value()}, xla_tensor->shape().get().dimensions_size());
+        {dim.value()}, xla_self->shape().get().dimensions_size());
   }
   return bridge::AtenFromXlaTensor(
-      tensor_methods::count_nonzero(xla_tensor, dims));
+      tensor_methods::count_nonzero(xla_self, dims));
 }
 
 at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
                                              at::IntArrayRef dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr xla_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
 
   std::vector<int64_t> canonical_dims =
       torch::lazy::GetCanonicalDimensionIndices(
-          dim, xla_tensor->shape().get().dimensions_size());
+          dim, xla_self->shape().get().dimensions_size());
   std::unordered_set<int64_t> dims_set;
   for (int dim : canonical_dims) {
     XLA_CHECK(dims_set.find(dim) == dims_set.end())
@@ -4232,7 +4367,7 @@ at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
   }
 
   return bridge::AtenFromXlaTensor(
-      tensor_methods::count_nonzero(xla_tensor, XlaHelpers::I64List(dim)));
+      tensor_methods::count_nonzero(xla_self, XlaHelpers::I64List(dim)));
 }
 
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
@@ -4257,9 +4392,10 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
 
   // TODO: We need to make use of the TPU embedding core here eventually.
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::embedding(
-      GetValueOrThrow(bridge::GetXlaTensor(weight)),
-      GetValueOrThrow(bridge::GetXlaTensor(indices))));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_weight, bridge::GetXlaTensor(weight));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_indices, bridge::GetXlaTensor(indices));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::embedding(xla_weight, xla_indices));
 }
 
 at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor& x1,
@@ -4296,8 +4432,9 @@ at::Tensor XLANativeFunctions::narrow_copy_symint(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::pixel_shuffle(const at::Tensor& self,
                                              int64_t upscale_factor) {
-  return bridge::AtenFromXlaTensor(tensor_methods::pixel_shuffle(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), upscale_factor));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::pixel_shuffle(xla_self, upscale_factor));
 }
 
 at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
@@ -4382,12 +4519,12 @@ at::Tensor XLANativeFunctions::linalg_vector_norm(
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLA_CHECK(at::isFloatingType(self.scalar_type()))
       << "Input must be a floating type";
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   return bridge::AtenFromXlaTensor(tensor_methods::linalg_vector_norm(
-      self_tensor, ord,
+      xla_self, ord,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
           : torch::lazy::Iota<int64_t>(
-                self_tensor->shape().get().dimensions_size()),
+                xla_self->shape().get().dimensions_size()),
       keepdim, dtype));
 }
 
@@ -4428,34 +4565,34 @@ at::Tensor XLANativeFunctions::as_strided(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     std::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
+  if (!AsStrided::StrideIsSupported(xla_self->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
                                                   storage_offset);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::as_strided(
-      self_tensor, std::move(xsize), std::move(xstride),
-      XlaHelpers::I64Optional(storage_offset)));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::as_strided(xla_self, std::move(xsize), std::move(xstride),
+                                 XlaHelpers::I64Optional(storage_offset)));
 }
 
 const at::Tensor& XLANativeFunctions::as_strided_(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     std::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = GetValueOrThrow(bridge::GetXlaTensor(self));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
+  if (!AsStrided::StrideIsSupported(xla_self->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(as_strided_)>::call(self, size, stride,
                                                    storage_offset);
   }
-  tensor_methods::as_strided_(self_tensor, std::move(xsize), std::move(xstride),
+  tensor_methods::as_strided_(xla_self, std::move(xsize), std::move(xstride),
                               XlaHelpers::I64Optional(storage_offset));
   return self;
 }
@@ -4463,24 +4600,27 @@ const at::Tensor& XLANativeFunctions::as_strided_(
 at::Tensor XLANativeFunctions::diagonal(const at::Tensor& self, int64_t offset,
                                         int64_t dim1, int64_t dim2) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::diagonal(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), offset, dim1, dim2));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::diagonal(xla_self, offset, dim1, dim2));
 }
 
 at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
-                                             at::SymIntArrayRef sym_size,
+                                             at::SymIntArrayRef sym_sizes,
                                              bool implicit) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  std::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
-  if (size.has_value()) {
-    return bridge::AtenFromXlaTensor(
-        tensor_methods::expand(GetValueOrThrow(bridge::GetXlaTensor(self)),
-                               torch::lazy::ToVector<int64_t>(*size)));
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr xla_self,
+                      bridge::GetXlaTensor(self));
+  std::optional<at::IntArrayRef> sizes = c10::asIntArrayRefSlowOpt(sym_sizes);
+  if (sizes.has_value()) {
+    XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                        tensor_methods::expand(xla_self, *sizes));
+    return bridge::AtenFromXlaTensor(std::move(output));
   } else {
     // at least one of the dimension is symbolic, use the sym_int version of the
     // node
-    return bridge::AtenFromXlaTensor(tensor_methods::expand_symint(
-        GetValueOrThrow(bridge::GetXlaTensor(self)), sym_size));
+    return bridge::AtenFromXlaTensor(
+        tensor_methods::expand_symint(xla_self, sym_sizes));
   }
 }
 
@@ -4491,8 +4631,9 @@ at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
   // support dynamic shape.
   auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::view(
-      GetValueOrThrow(bridge::GetXlaTensor(self)), XlaHelpers::I64List(size)));
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::view(xla_self, XlaHelpers::I64List(size)));
 }
 
 }  // namespace torch_xla

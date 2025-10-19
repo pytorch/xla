@@ -112,12 +112,14 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = True  # Whether to use nightly or stable libtpu and JAX.
 
-_libtpu_version = '0.0.21'
-_libtpu_date = '20250813'
+_libtpu_version = '0.0.24'
+_libtpu_date = '20250929'
 
-_jax_version = '0.7.1'
-_jaxlib_version = '0.7.1'
-_jax_date = '20250813'  # Date for jax and jaxlib.
+_jax_version = '0.8.0'
+_jaxlib_version = '0.8.0'
+_jax_date = '20251001'  # Date for jax and jaxlib.
+
+_torchax_version = '0.0.7'  # likely stay the same
 
 if USE_NIGHTLY:
   _libtpu_version += f".dev{_libtpu_date}+nightly"
@@ -335,19 +337,6 @@ with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
 # 1. Find `torch_xla` and its subpackages automatically from the root.
 packages_to_include = find_packages(include=['torch_xla', 'torch_xla.*'])
 
-# 2. Explicitly find the contents of the nested `torchax` package.
-#    Find all sub-packages within the torchax directory (e.g., 'ops').
-torchax_source_dir = 'torchax/torchax'
-torchax_subpackages = find_packages(where=torchax_source_dir)
-#    Construct the full list of packages, starting with the top-level
-#    'torchax' and adding all the discovered sub-packages.
-packages_to_include.extend(['torchax'] +
-                           ['torchax.' + pkg for pkg in torchax_subpackages])
-
-# 3. The package_dir mapping explicitly tells setuptools where the 'torchax'
-#    package's source code begins. `torch_xla` source code is inferred.
-package_dir_mapping = {'torchax': torchax_source_dir}
-
 
 class Develop(develop.develop):
   """
@@ -372,7 +361,7 @@ class Develop(develop.develop):
     and `.pth` files. setuptools uses `.egg-link` by default. However, `.egg-link`
     only supports linking a single directory containg one editable package.
     This function removes the `.egg-link` file and generates a `.pth` file that can
-    be used to link multiple packages, in particular, `torch_xla` and `torchax`.
+    be used to link multiple packages.
 
     Note that this function is only relevant in the editable package development path
     (`python setup.py develop`). Nightly and release wheel builds work out of the box
@@ -409,18 +398,13 @@ class Develop(develop.develop):
     pth_filename = os.path.join(target_dir, f"{dist_name}.pth")
 
     project_root = os.path.dirname(os.path.abspath(__file__))
-    paths_to_add = {
-        project_root,  # For `torch_xla`
-        os.path.abspath(os.path.join(project_root, 'torchax')),  # For `torchax`
-    }
-
     with open(pth_filename, "w", encoding='utf-8') as f:
-      for path in sorted(paths_to_add):
-        f.write(path + "\n")
+      f.write(project_root + "\n")
 
 
 def _get_jax_install_requirements():
   return [
+      f'torchax=={_torchax_version}',
       f'jaxlib=={_jaxlib_version}',
       f'jax=={_jax_version}',
   ]
@@ -452,7 +436,6 @@ setup(
     ],
     python_requires=">=3.10.0",
     packages=packages_to_include,
-    package_dir=package_dir_mapping,
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
     ],
@@ -466,7 +449,10 @@ setup(
         'importlib_metadata>=4.6;python_version<"3.10"',
     ],
     package_data={
-        'torch_xla': ['lib/*.so*',],
+        'torch_xla': [
+            'lib/*.so*',
+            'py.typed',
+        ],
     },
     entry_points={
         'console_scripts': [
