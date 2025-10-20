@@ -60,6 +60,6 @@ namespace detail {
 const at::Generator& getDefaultXLAGenerator(c10::DeviceIndex device_index = -1);
 at::Generator createXLAGenerator(c10::DeviceIndex device_index = -1);
 
-} // namespace detail
+}  // namespace detail
 
 }  // namespace at

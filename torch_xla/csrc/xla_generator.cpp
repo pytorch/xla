@@ -5,18 +5,18 @@
 #include <ATen/core/Tensor.h>
 #include <c10/core/Device.h>
 #include <c10/core/DeviceType.h>
-#include <c10/core/TensorImpl.h>
 #include <c10/core/GeneratorImpl.h>
-#include <c10/util/intrusive_ptr.h>
+#include <c10/core/TensorImpl.h>
 #include <c10/util/CallOnce.h>
+#include <c10/util/intrusive_ptr.h>
 
 // XLA headers
-#include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/aten_xla_bridge.h"
-
 #include <cstring>
 #include <deque>
 #include <vector>
+
+#include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 
 namespace at {
 
@@ -55,7 +55,7 @@ static void initXLAGenVector() {
   }();
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 /**
  * PyTorch maintains a collection of default generators that get
@@ -69,7 +69,7 @@ const at::Generator& getDefaultXLAGenerator(c10::DeviceIndex device_index) {
   initXLAGenVector();
   c10::DeviceIndex idx = device_index;
   if (idx == -1) {
-    idx = 0; // Default to device 0 for XLA
+    idx = 0;  // Default to device 0 for XLA
   } else {
     TORCH_CHECK(idx >= 0 && idx < num_xla_devices);
   }
@@ -87,17 +87,19 @@ at::Generator createXLAGenerator(c10::DeviceIndex device_index) {
   initXLAGenVector();
   c10::DeviceIndex idx = device_index;
   if (idx == -1) {
-    idx = torch_xla::bridge::GetCurrentAtenDevice().index(); // Use current XLA device
+    idx = torch_xla::bridge::GetCurrentAtenDevice()
+              .index();  // Use current XLA device
   }
-  TORCH_CHECK(idx >= 0 && idx < num_xla_devices, "The device_index is invalid.");
+  TORCH_CHECK(idx >= 0 && idx < num_xla_devices,
+              "The device_index is invalid.");
   auto gen = at::make_generator<XLAGeneratorImpl>(idx);
   auto xla_gen = at::check_generator<XLAGeneratorImpl>(gen);
   xla_gen->set_current_seed(c10::default_rng_seed_val);
   return gen;
 }
 
-} // namespace detail
-} // namespace at
+}  // namespace detail
+}  // namespace at
 
 namespace at {
 
