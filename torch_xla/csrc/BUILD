@@ -270,7 +270,6 @@ ptxla_cc_library(
         ":status",
         ":tensor",
         ":version",
-        ":xla_hooks",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:pjrt_computation_client",
         "//torch_xla/csrc/runtime:metrics",
@@ -375,21 +374,3 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
     ],
 )
-
-ptxla_cc_library(
-    name = "xla_hooks",
-    srcs = [
-        "xla_hooks.cpp",
-    ],
-    hdrs = [
-        "xla_hooks.h",
-    ],
-    deps = [
-        "//torch_xla/csrc:device",
-        "//torch_xla/csrc:tensor", 
-        "//torch_xla/csrc/runtime:computation_client",
-        "//torch_xla/csrc/runtime",
-        "//torch_xla/csrc/runtime:xla_util",
-    ],
-)
-
