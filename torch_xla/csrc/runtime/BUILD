@@ -382,33 +382,17 @@ cc_test(
 )
 
 cc_library(
-    name = "tsl_platform_logging",
-    srcs = ["tsl_platform_logging.cpp"],
-    hdrs = ["tsl_platform_logging.h"],
-    deps = [
-        "@xla//xla/tsl/platform:env_time",
-        "@xla//xla/tsl/platform:logging",
-        "@xla//xla/tsl/platform:macros",
-        "@xla//xla/tsl/platform:types",
-        "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/base:log_severity",
-        "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/strings:string_view",
-    ],
-)
-
-cc_library(
     name = "tf_logging",
     srcs = ["tf_logging.cpp"],
     hdrs = ["tf_logging.h"],
     deps = [
-        ":tsl_platform_logging",
         "//torch_xla/csrc:status",
         "@torch//:headers",
         "@torch//:runtime_headers",
+        "@tsl//tsl/platform:stacktrace",
+        "@tsl//tsl/platform:statusor",
+        "@xla//xla/service:platform_util",
         "@com_google_absl//absl/base:log_severity",
-        "@com_google_absl//absl/log:absl_log",
     ],
 )
 

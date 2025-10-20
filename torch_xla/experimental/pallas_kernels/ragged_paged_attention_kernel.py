@@ -854,7 +854,7 @@ def ragged_paged_attention(
   cur_page_indices_spec = pl.BlockSpec(
       (None, None, num_kv_pages_per_block),
       cur_page_indices_index_map,
-      memory_space=pltpu.MemorySpace.SMEM,
+      memory_space=pltpu.TPUMemorySpace.SMEM,
   )
 
   page_size = k_pages.shape[2]
@@ -874,14 +874,14 @@ def ragged_paged_attention(
   next_page_indices_spec = pl.BlockSpec(
       (None, None, num_kv_pages_per_block),
       next_kv_blk_page_indices_index_map,
-      memory_space=pltpu.MemorySpace.SMEM,
+      memory_space=pltpu.TPUMemorySpace.SMEM,
   )
   in_specs = [
       q_block_spec,
       # Below 4 correspond to the 4 input: k_pages, k_scales_pages, q_pages, q_scales_pages.
-      pl.BlockSpec(memory_space=pltpu.MemorySpace.ANY),
+      pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
       None,
-      pl.BlockSpec(memory_space=pltpu.MemorySpace.ANY),
+      pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
       None,
       cur_page_indices_spec,
       next_page_indices_spec,
@@ -955,7 +955,7 @@ def ragged_paged_attention(
           grid=grid,
           scratch_shapes=scratch_shapes,
       ),
-      compiler_params=pltpu.CompilerParams(
+      compiler_params=pltpu.TPUCompilerParams(
           # due to compute_block_indices, we loop kv_head, q_blk, kv_blk, the order matters.
           dimension_semantics=(
               "arbitrary",

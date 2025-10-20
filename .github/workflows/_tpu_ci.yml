@@ -51,14 +51,10 @@ jobs:
           pip install fsspec
           pip install rich
 
-          # Test dependencies 
-          pip install --upgrade protobuf
-          pip install flax
-
           # PyTorch/XLA Optional Dependencies
           # =================================
           #
-          # Install `jax` and `libtpu` dependencies for pallas and TPU tests.
+          # Install `JAX` and `libtpu` dependencies for pallas and TPU tests.
           #
           # Note that we might need to install pre-release versions of both, in
           # external artifact repositories.
@@ -73,6 +69,18 @@ jobs:
 
           pip install "$WHL[pallas]" --pre --index-url $INDEX --find-links $LINKS
           pip install "$WHL[tpu]"    --pre --index-url $INDEX --find-links $LINKS
+
+          pip install --upgrade protobuf
+
+          # Flax Pin
+          # ========
+          #
+          # Be careful when bumping the `flax` version, since it can cause tests that
+          # depend on `jax` to start breaking.
+          #
+          # Newer `flax` versions might pull newer `jax` versions, which might be incompatible
+          # with the current version of PyTorch/XLA.
+          pip install flax==0.11.2
 
       - name: Run Tests (${{ matrix.test_script }})
         if: inputs.has_code_changes == 'true'

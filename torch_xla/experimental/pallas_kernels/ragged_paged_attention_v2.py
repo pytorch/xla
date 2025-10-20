@@ -2339,7 +2339,7 @@ def ragged_paged_attention(
           grid=grid,
           scratch_shapes=scratch_shapes,
       ),
-      compiler_params=pltpu.CompilerParams(
+      compiler_params=pltpu.TPUCompilerParams(
           dimension_semantics=(
               "arbitrary",
               "arbitrary",
