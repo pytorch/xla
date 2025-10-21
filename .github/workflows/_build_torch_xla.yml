@@ -54,7 +54,9 @@ jobs:
             - name: "Cache: Bazel Repository Cache"
               uses: actions/cache@v4
               with:
-                  key: bazel-repository-cache-${{ hashFiles("WORKSPACE") }}
+                  # Key should change whenever WORKSPACE file changes.
+                  # It might change due to archive pin updates or archive patch updates.
+                  key: bazel-repository-cache-${{ hashFiles("pytorch/xla/WORKSPACE") }}
                   path: ${{ env.BAZEL_REPOSITORY_CACHE_RELATIVE_DIR }}
                   enableCrossOsArchive: true
 
