@@ -17,6 +17,7 @@
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 
 namespace at {
 
