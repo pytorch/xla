@@ -36,6 +36,10 @@ def bazel_options_from_env() -> Iterable[str]:
     bazel_flags.append('--remote_default_exec_properties=cache-silo-key=%s' %
                        cache_silo_name)
 
+  repository_cache_name = os.getenv('BAZEL_REPOSITORY_CACHE_DIR')
+  if repository_cache_name:
+    bazel_flags.append('--repository_cache=%s' % repository_cache_name)
+
   bazel_jobs = os.getenv('BAZEL_JOBS', default='')
   if bazel_jobs:
     bazel_flags.append('--jobs=%s' % bazel_jobs)

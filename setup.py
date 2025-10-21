@@ -43,6 +43,9 @@
 #   CXX_ABI=""
 #     value for cxx_abi flag; if empty, it is inferred from `torch._C`.
 #
+#   BAZEL_REPOSITORY_CACHE_DIR
+#     path to the directory to be used as bazel repository cache
+#
 from setuptools import setup, find_packages, distutils, Extension, command
 from setuptools.command import develop, build_ext
 import posixpath

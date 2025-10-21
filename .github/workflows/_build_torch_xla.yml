@@ -35,6 +35,7 @@ jobs:
             GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
             BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
             BAZEL_JOBS: "" # Let bazel decide the parallelism based on the number of CPUs.
+            BAZEL_REPOSITORY_CACHE_RELATIVE_DIR: ".cache/repository-cache"
             BUILD_CPP_TESTS: 1
         steps:
             # Need to check out local composite actions before using them
@@ -43,30 +44,46 @@ jobs:
               if: inputs.has_code_changes == 'true'
               uses: actions/checkout@v4
               with:
-                  sparse-checkout: |
-                      .github/workflows/setup
+                  sparse-checkout: .github/workflows/setup
                   path: .actions
+
             - name: Setup
               if: inputs.has_code_changes == 'true'
               uses: ./.actions/.github/workflows/setup
+
+            - name: "Cache: Bazel Repository Cache"
+              uses: actions/cache@v4
+              with:
+                  key: bazel-repository-cache-${{ hashFiles("WORKSPACE") }}
+                  path: ${{ env.BAZEL_REPOSITORY_CACHE_RELATIVE_DIR }}
+                  enableCrossOsArchive: true
+
             - name: Build
               if: inputs.has_code_changes == 'true'
+              env:
+                  # Actual environment variable that is read by our build_utils.py for setting
+                  # the repository cache. Since we will be changing directories, we need to
+                  # provide the absolute path.
+                  BAZEL_REPOSITORY_CACHE_DIR: "${{ github.workspace }}/${{ env.BAZEL_REPOSITORY_CACHE_RELATIVE_DIR }}"
               shell: bash
               run: |
                   cd pytorch/xla/infra/ansible
                   ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
+
             - name: Upload wheel
               if: inputs.has_code_changes == 'true'
               uses: actions/upload-artifact@v4
               with:
                   name: torch-xla-wheels
                   path: /dist/*.whl
+
             - name: Upload CPP test binaries
               if: inputs.has_code_changes == 'true'
               uses: actions/upload-artifact@v4
               with:
                   name: cpp-test-bin
                   path: /tmp/test/bin
+
             - name: Report no code changes
               if: inputs.has_code_changes == 'false'
               run: |
