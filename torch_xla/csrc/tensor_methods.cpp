@@ -655,7 +655,7 @@ absl::Status CheckCustomCallNonEmptyInputs(
   if (inputs.empty()) {
     std::string op = target.has_value()
                          ? absl::StrCat("custom_call(", *target, ")")
-                         : "tpu_custom_call";
+                         : "tpu_custom_call()";
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
         absl::StrCat(op, ": expected at least 1 input tensor.")));
   }
