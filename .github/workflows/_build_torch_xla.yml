@@ -27,7 +27,6 @@ on:
                 description: Secret to access Bazel build cache
 jobs:
     build:
-        if: false
         runs-on: ${{ inputs.runner }}
         timeout-minutes: ${{ inputs.timeout-minutes }}
         container:
