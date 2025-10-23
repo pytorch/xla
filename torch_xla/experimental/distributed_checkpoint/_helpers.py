@@ -152,38 +152,6 @@ def flatten_state_dict(
 
 
 # TODO(jonbolin): Take a dependency on the upstream implementation when the APIs
-# are stable.
-# https://github.com/pytorch/pytorch/blob/d1cecd9c32ba700c27f2b0716bf2cbef41469495/torch/distributed/checkpoint/_dedup_tensors.py#L29
-def dedup_tensors(all_plans: List[SavePlan]) -> List[SavePlan]:
-  all_plans = list(all_plans)
-  key_to_plan: Dict[MetadataIndex, List[int]] = {}
-  for plan_idx, plan in enumerate(all_plans):
-    for write_item in plan.items:
-      key_to_plan.setdefault(write_item.index, []).append(plan_idx)
-
-  replicated_items = {k: v for k, v in key_to_plan.items() if len(v) > 1}
-
-  # Remove duplicates by always keeping the first entry.
-  # Compute the per-rank remove set.
-  plan_to_keys: Dict[int, List[MetadataIndex]] = {}
-  for key, plans in replicated_items.items():
-    for plan_idx in plans[1:]:
-      plan_to_keys.setdefault(plan_idx, []).append(key)
-
-  for plan_idx, keys in plan_to_keys.items():
-    key_set = set(keys)
-    # rewrite items and remove elements
-    new_items = [
-        write_item for write_item in all_plans[plan_idx].items
-        if write_item.index not in key_set
-    ]
-    all_plans[plan_idx] = dataclasses.replace(
-        all_plans[plan_idx], items=new_items)
-
-  return all_plans
-
-
-# TODO(jonbolin): Take a dependency on the upstream implementation when the APIs
 # are stable
 # https://github.com/pytorch/pytorch/blob/d1cecd9c32ba700c27f2b0716bf2cbef41469495/torch/distributed/_shard/_utils.py#L7
 def narrow_tensor_by_index(tensor: torch.Tensor, offsets: Sequence[int],
