@@ -92,8 +92,9 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
-std::vector<XLATensorPtr> custom_call(
-    const std::vector<XLATensorPtr>& inputs, const std::string& target,
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> custom_call(
+    const std::vector<absl_nonnull XLATensorPtr>& inputs,
+    const std::string& target,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes, bool has_side_effect,
     const std::string& backend_config, const int api_version,
@@ -104,8 +105,9 @@ void custom_sharding_(
     const std::shared_ptr<XLATensor::ShardingSpec>& spec,
     const CustomSharding::Type& type = CustomSharding::Type::kSharding);
 
-std::vector<XLATensorPtr> tpu_custom_call(
-    const std::vector<XLATensorPtr>& inputs, const std::string& payload,
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> tpu_custom_call(
+    const std::vector<absl_nonnull XLATensorPtr>& inputs,
+    const std::string& payload,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes);
 
