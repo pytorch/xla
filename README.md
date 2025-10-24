@@ -154,6 +154,11 @@ The changes above should get your model to train on the TPU.
 
 ### Multi processing
 
+To install torch 2.1 for cpu without cuda, and torch_xla 2.1, please use:
+```
+pip install torch~=2.1.0 torch_xla[tpu]~=2.1.0 -f https://storage.googleapis.com/libtpu-releases/index.html --index-url https://download.pytorch.org/whl/cpu
+```
+
 To update your existing training loop, make the following changes:
 
 ```diff
