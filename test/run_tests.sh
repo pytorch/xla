@@ -266,6 +266,10 @@ function run_xla_op_tests3 {
 
 function run_xla_op_tests4 {
   run_test "$_TEST_DIR/test_jax_interop.py"
+  # issue #9691: random crashes with sentencepiece protobuf; run multiple times to trigger
+  for i in $(seq 1 5); do
+    run_test "$_TEST_DIR/test_sentencepiece_interop.py"
+  done
 }
 
 function run_xla_op_tests5 {

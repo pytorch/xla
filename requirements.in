@@ -9,3 +9,4 @@ pyyaml
 sympy
 typing-extensions
 setuptools; python_version >= "3.12"
+sentencepiece
