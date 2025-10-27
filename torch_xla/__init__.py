@@ -7,6 +7,15 @@ import warnings
 
 import torch
 
+# issue 9691: ensure sentencepiece protobuf init happen between
+# torch/torch-xla protobuf inits to work-around protobuf crash
+try:
+    import sentencepiece as spm
+    sp_model = spm.SentencePieceProcessor()
+    sp_model.load('')
+except:
+    pass
+
 import _XLAC
 from ._internal import tpu
 from .version import __version__
