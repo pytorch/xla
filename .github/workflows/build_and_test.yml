@@ -41,6 +41,7 @@ jobs:
     needs: [check_code_changes]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.12_tpuvm
+      # Test change for triggering build timeout.
       timeout-minutes: 45  # Takes ~20m as of 2025/5/30.
       # We should build PyTorch and PyTorch/XLA if:
       #   1. There are code changes.
