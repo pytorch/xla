@@ -55,17 +55,27 @@ jobs:
             # Restore the disk cache associated with the base branch and the commit SHA
             # that was used for merging with the current pr.
             - name: Retrieve disk cache
+              id: cache
               # Only runs for 'pull_request' events.
               # We want to create a new disk cache on 'push' events.
               if: github.event_name == 'pull_request' && inputs.has_code_changes == 'true'
               uses: actions/cache/restore@v4
               with:
-                path: ${{ env.BAZEL_DISK_CACHE_PATH }}
-                key: ${{ runner.os }}-${{ github.base_ref }}-${{ github.event.pull_request.base.sha }}
+                  path: ${{ env.BAZEL_DISK_CACHE_PATH }}
+                  key: ${{ runner.os }}-${{ github.base_ref }}-${{ github.event.pull_request.base.sha }}
 
             - name: Build
               if: inputs.has_code_changes == 'true'
               shell: bash
+              env:
+                  # Only actually build with the disk cache if:
+                  #
+                  # 1. This is not a 'pull_request' event, e.g.: 'push'
+                  # 2. We did restore a cache in the previous step
+                  #
+                  # Otherwise, (e.g. a 'pull_request' event that didn't find a cache
+                  # to restore) it doesn't make sense to use the disk cache.
+                  BAZEL_DISK_CACHE_PATH: ${{ (github.event_name != 'pull_request' || steps.cache.outputs.cache-hit) && env.BAZEL_DISK_CACHE_PATH }}
               run: |
                   cd pytorch/xla/infra/ansible
                   ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
@@ -91,8 +101,8 @@ jobs:
               if: github.event_name == 'push' && inputs.has_code_changes == 'true'
               uses: actions/cache/save@v4
               with:
-                key: ${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
-                path: ${{ env.BAZEL_DISK_CACHE_PATH }}
+                  key: ${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+                  path: ${{ env.BAZEL_DISK_CACHE_PATH }}
 
             - name: Report no code changes
               if: inputs.has_code_changes == 'false'
