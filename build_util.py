@@ -46,6 +46,10 @@ def bazel_options_from_env() -> Iterable[str]:
   if check_env_flag('XLA_CPU_USE_ACL'):
     bazel_flags.append('--config=acl')
 
+  disk_cache = os.getenv('BAZEL_DISK_CACHE_PATH')
+  if disk_cache is not None:
+    bazel_flags.append('--disk_cache=%s' % disk_cache)
+
   return bazel_flags
 
 
