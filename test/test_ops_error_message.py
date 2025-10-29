@@ -1,3 +1,4 @@
+from typing import Callable
 import expecttest
 import os
 import torch
@@ -355,6 +356,56 @@ class TestOpsErrorMessage(expecttest.TestCase):
         exc_type=RuntimeError,
         callable=gen_test_fn(padding=[1, 2]),
         expect="""avg_pool3d(): expected argument padding [1, 2] (size: 2) to have size of 3."""
+    )
+
+  def _get_custom_call_properties(self, mode):
+    match mode:
+      case "tpu":
+        return (torch_xla._XLAC._xla_tpu_custom_call, "", [])
+      case "stablehlo":
+        return (torch_xla._XLAC._xla_custom_call, "custom_op_target",
+                [False, "", 0, {}])
+
+    self.fail(f"expected `mode` ({mode}) to be either of ['tpu', 'stablehlo'].")
+
+  def _gen_custom_call_no_input(self, mode):
+    lib_custom_call, payload, args = self._get_custom_call_properties(
+        mode)  # type: ignore[attr-defined]
+    return lambda: lib_custom_call([], payload, [[1]], [torch.int8], *args)
+
+  def _gen_custom_call_output_properties_size_mismatch(self, mode):
+    lib_custom_call, payload, args = self._get_custom_call_properties(
+        mode)  # type: ignore[attr-defined]
+    input = torch.rand(10, device=torch_xla.device())
+    return lambda: lib_custom_call(
+        (input,), payload, [[1], [1]], [torch.int8], *args)
+
+  def test_stablehlo_custom_call(self):
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=self._gen_custom_call_no_input("stablehlo"),
+        expect="""custom_call(custom_op_target): expected at least 1 input tensor."""
+    )
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=self._gen_custom_call_output_properties_size_mismatch(
+            "stablehlo"),
+        expect="""custom_call(custom_op_target): expected the given output shapes (size=2) to be of the same size as the given output dtypes (size=1)."""
+    )
+
+  def test_tpu_custom_call(self):
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=self._gen_custom_call_no_input("tpu"),
+        expect="""tpu_custom_call(): expected at least 1 input tensor.""")
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=self._gen_custom_call_output_properties_size_mismatch("tpu"),
+        expect="""tpu_custom_call(): expected the given output shapes (size=2) to be of the same size as the given output dtypes (size=1)."""
     )
 
 
