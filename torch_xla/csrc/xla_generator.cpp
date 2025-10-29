@@ -43,7 +43,8 @@ static void InitXLAGenVector() {
   // Ensures we only call deviceCount only once.
   static bool num_xla_device_init_flag [[maybe_unused]] = []() {
     // Get local num of XLA devices
-    XLA_ASSIGN_OR_THROW(auto c_client, torch_xla::runtime::GetComputationClient());
+    XLA_ASSIGN_OR_THROW(auto c_client,
+                        torch_xla::runtime::GetComputationClient());
     num_xla_devices = static_cast<int64_t>(c_client->GetNumDevices());
     xla_gens_init_flag.resize(num_xla_devices);
     default_gens_xla.resize(num_xla_devices);
@@ -61,13 +62,16 @@ static void InitXLAGenVector() {
  * GetDefaultXLAGenerator gets the default generator for a particular
  * XLA device.
  */
-absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(c10::DeviceIndex device_index) {
+absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(
+    c10::DeviceIndex device_index) {
   InitXLAGenVector();
   c10::DeviceIndex idx = device_index;
   if (idx == -1) {
     idx = 0;  // Default to device 0 for XLA
   } else if (idx < -1 || idx >= num_xla_devices) {
-    return absl::InvalidArgumentError("Invalid device index for XLA generator. Provided index: " + std::to_string(idx));
+    return absl::InvalidArgumentError(
+        "Invalid device index for XLA generator. Provided index: " +
+        std::to_string(idx));
   }
   c10::call_once(xla_gens_init_flag[idx], [&] {
     default_gens_xla[idx] = at::make_generator<XLAGeneratorImpl>(idx);
@@ -79,15 +83,17 @@ absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(c10::DeviceIndex dev
 /**
  * Utility to create a XLAGeneratorImpl. Returns a shared_ptr
  */
-absl::StatusOr<at::Generator> CreateXLAGenerator(c10::DeviceIndex device_index) {
+absl::StatusOr<at::Generator> CreateXLAGenerator(
+    c10::DeviceIndex device_index) {
   InitXLAGenVector();
   c10::DeviceIndex idx = device_index;
   if (idx == -1) {
     idx = torch_xla::bridge::GetCurrentAtenDevice()
               .index();  // Use current XLA device
-  }
-  else if (idx < -1 || idx >= num_xla_devices) {
-    return absl::InvalidArgumentError("Invalid device index for XLA generator. Provided index: " + std::to_string(idx));
+  } else if (idx < -1 || idx >= num_xla_devices) {
+    return absl::InvalidArgumentError(
+        "Invalid device index for XLA generator. Provided index: " +
+        std::to_string(idx));
   }
   auto gen = at::make_generator<XLAGeneratorImpl>(idx);
   auto xla_gen = at::check_generator<XLAGeneratorImpl>(gen);

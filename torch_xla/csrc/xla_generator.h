@@ -7,6 +7,7 @@
 #include <c10/core/GeneratorImpl.h>
 #include <c10/core/TensorImpl.h>
 #include <c10/util/intrusive_ptr.h>
+
 #include <cstdint>
 
 #include "absl/status/status.h"
@@ -61,8 +62,10 @@ struct TORCH_API XLAGeneratorImpl : public c10::GeneratorImpl {
 
 namespace detail {
 
-absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(c10::DeviceIndex device_index = -1);
-absl::StatusOr<at::Generator> CreateXLAGenerator(c10::DeviceIndex device_index = -1);
+absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(
+    c10::DeviceIndex device_index = -1);
+absl::StatusOr<at::Generator> CreateXLAGenerator(
+    c10::DeviceIndex device_index = -1);
 
 }  // namespace detail
 
