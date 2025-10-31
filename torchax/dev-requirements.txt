@@ -2,4 +2,5 @@
 torch==2.8.0 ; sys_platform == 'darwin'  # macOS
 torch==2.8.0+cpu; sys_platform != 'darwin' # Non-macOS (CPU-only), like on TPU
 yapf==0.40.2  # N.B.: keep in sync with `infra/ansible/config/pip.yaml`, `.github/workflows/lintercheck.yml`
+jax==0.7.2  # N.B.: torchax breaks on newer JAX versions that would be pulled from `flax` dependencies
 flax==0.10.6
