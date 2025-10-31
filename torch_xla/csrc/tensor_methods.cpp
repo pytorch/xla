@@ -645,35 +645,21 @@ absl::Status CheckUniformRangeIsValid(double from, double to) {
   return absl::OkStatus();
 }
 
-// This check is used for both `custom_call()` and `tpu_custom_call()`.
-//
-// The `target` parameter is `std::nullopt` whenever it's being called from
-// a `tpu_custom_call()` context.
-absl::Status CheckCustomCallNonEmptyInputs(
-    const std::vector<absl_nonnull XLATensorPtr>& inputs,
-    const std::optional<std::string>& target) {
+absl::Status CheckNonEmptyInputs(
+    const std::string_view op,
+    absl::Span<const absl_nonnull XLATensorPtr> inputs) {
   if (inputs.empty()) {
-    std::string op = target.has_value()
-                         ? absl::StrCat("custom_call(", *target, ")")
-                         : "tpu_custom_call()";
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
         absl::StrCat(op, ": expected at least 1 input tensor.")));
   }
   return absl::OkStatus();
 }
 
-// This check is used for both `custom_call()` and `tpu_custom_call()`.
-//
-// The `target` parameter is `std::nullopt` whenever it's being called from
-// a `tpu_custom_call()` context.
 absl::Status CheckCustomCallOutputPropertiesSize(
+    const std::string_view op,
     const std::vector<std::vector<int64_t>>& output_shapes,
-    const std::vector<at::ScalarType>& output_dtypes,
-    const std::optional<std::string>& target) {
+    const std::vector<at::ScalarType>& output_dtypes) {
   if (output_shapes.size() != output_dtypes.size()) {
-    std::string op = target.has_value()
-                         ? absl::StrCat("custom_call(", *target, ")")
-                         : "tpu_custom_call()";
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
         op, ": expected the given output shapes (size=", output_shapes.size(),
         ") to be of the same size as the given output dtypes (size=",
@@ -685,16 +671,20 @@ absl::Status CheckCustomCallOutputPropertiesSize(
 // This check is used for both `custom_call()` and `tpu_custom_call()`.
 //
 // The `target` parameter is `std::nullopt` whenever it's being called from
-// a `tpu_custom_call()` context.
+// the `tpu_custom_call()` function. Otherwise, it's correctly filled with the
+// custom call target.
 template <class F>
 absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> CustomCallImpl(
     const std::vector<absl_nonnull XLATensorPtr>& inputs,
     const std::optional<std::string>& target,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes, F&& make_node) {
-  XLA_RETURN_IF_ERROR(CheckCustomCallNonEmptyInputs(inputs, target));
-  XLA_RETURN_IF_ERROR(CheckCustomCallOutputPropertiesSize(
-      output_shapes, output_dtypes, target));
+  const std::string& op = target.has_value()
+                              ? absl::StrCat("custom_call(", *target, ")")
+                              : "tpu_custom_call()";
+  XLA_RETURN_IF_ERROR(CheckNonEmptyInputs(op, inputs));
+  XLA_RETURN_IF_ERROR(
+      CheckCustomCallOutputPropertiesSize(op, output_shapes, output_dtypes));
 
   const auto& first = inputs.front();
   auto device = first->GetDevice();
@@ -1143,16 +1133,21 @@ void adam_optimizer_step_(const XLATensorPtr& found_inf, XLATensorPtr& step,
   }
 }
 
-std::vector<XLATensorPtr> user_computation(
-    const std::string& opname, absl::Span<const XLATensorPtr> inputs,
+absl::StatusOr<std::vector<XLATensorPtr>> user_computation(
+    const std::string& opname,
+    absl::Span<const absl_nonnull XLATensorPtr> inputs,
     runtime::ComputationClient::ComputationPtr computation) {
-  XLA_CHECK(!inputs.empty());
-  std::vector<torch::lazy::Value> input_values;
-  for (auto& input : inputs) {
-    input_values.push_back(input->GetIrValue());
-  }
+  const std::string& op = absl::StrCat("user_computation(", opname, ")");
+  XLA_RETURN_IF_ERROR(CheckNonEmptyInputs(op, inputs));
+
+  std::vector<torch::lazy::Value> values(inputs.size());
+  std::transform(
+      inputs.begin(), inputs.end(), values.begin(),
+      [](const XLATensorPtr& tensor) { return tensor->GetIrValue(); });
+
   torch::lazy::NodePtr node = torch_xla::MakeNode<UserComputation>(
-      torch::lazy::OpKind::Get(opname), input_values, std::move(computation));
+      torch::lazy::OpKind::Get(opname), values, std::move(computation));
+
   // Cast can be one of the user computation and we don't want to inherit the
   // logical_element_type in this case
   return inputs.front()->MakeOutputTensors(node,
@@ -1490,7 +1485,8 @@ std::vector<XLATensorPtr> broadcast_tensors(
 }
 
 absl::StatusOr<absl_nonnull XLATensorPtr> cat(
-    absl::Span<const XLATensorPtr> tensors, int64_t dim, at::ScalarType dtype) {
+    absl::Span<const absl_nonnull XLATensorPtr> tensors, int64_t dim,
+    at::ScalarType dtype) {
   // Shape checks for cat:
   // - If not empty, every tensor shape must be the same.
   // - Empty tensor passes but is simply ignore in implementation,
