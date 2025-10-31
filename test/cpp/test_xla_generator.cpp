@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <torch/torch.h>
 
+#include <cstdlib>
+
 #include "test/cpp/torch_xla_test.h"
 #include "torch_xla/csrc/xla_generator.h"
 
@@ -17,6 +19,20 @@ class XLAGeneratorTest : public ::torch_xla::cpp_test::TorchXlaTest {
 
   at::Generator gen_;
 };
+
+// Ensure PJRT is configured to a CPU backend for tests that touch the PJRT
+// runtime.
+static void EnsurePjrtCpuBackend() {
+  const char* pjrt = std::getenv("PJRT_DEVICE");
+  if (pjrt == nullptr || pjrt[0] == '\0') {
+    // Use CPU backend with a single device by default.
+    setenv("PJRT_DEVICE", "CPU", 1);
+  }
+  const char* cpu_devices = std::getenv("CPU_NUM_DEVICES");
+  if (cpu_devices == nullptr || cpu_devices[0] == '\0') {
+    setenv("CPU_NUM_DEVICES", "1", 0);
+  }
+}
 
 TEST_F(XLAGeneratorTest, Constructor) {
   // Check that the generator was created for the correct device
@@ -100,6 +116,107 @@ TEST_F(XLAGeneratorTest, Clone) {
   gen_.set_current_seed(9999);
   ASSERT_EQ(cloned_gen.current_seed(), seed_val);
   ASSERT_NE(cloned_gen.current_seed(), gen_.current_seed());
+}
+
+TEST_F(XLAGeneratorTest, GetDefaultXLAGenerator) {
+  EnsurePjrtCpuBackend();
+  // Test getting default generator for device 0
+  auto result = at::detail::GetDefaultXLAGenerator(0);
+  ASSERT_TRUE(result.ok()) << "Failed to get default generator: "
+                           << result.status();
+
+  const at::Generator& default_gen = result.value();
+  ASSERT_EQ(default_gen.device().type(), at::DeviceType::XLA);
+  ASSERT_EQ(default_gen.device().index(), 0);
+
+  // Test getting default generator with -1 (should default to device 0)
+  auto result_default = at::detail::GetDefaultXLAGenerator(-1);
+  ASSERT_TRUE(result_default.ok())
+      << "Failed to get default generator with -1: " << result_default.status();
+
+  const at::Generator& default_gen_neg1 = result_default.value();
+  ASSERT_EQ(default_gen_neg1.device().type(), at::DeviceType::XLA);
+  ASSERT_EQ(default_gen_neg1.device().index(), 0);
+
+  // Test that subsequent calls return the same generator instance
+  auto result2 = at::detail::GetDefaultXLAGenerator(0);
+  ASSERT_TRUE(result2.ok());
+  const at::Generator& default_gen2 = result2.value();
+  ASSERT_EQ(std::addressof(default_gen), std::addressof(default_gen2));
+}
+
+TEST_F(XLAGeneratorTest, GetDefaultXLAGeneratorInvalidDevice) {
+  EnsurePjrtCpuBackend();
+  // Test with invalid device indices
+  auto result_neg2 = at::detail::GetDefaultXLAGenerator(-2);
+  ASSERT_FALSE(result_neg2.ok());
+  ASSERT_TRUE(absl::IsInvalidArgument(result_neg2.status()));
+
+  // Test with very large device index (assuming there aren't 1000 XLA devices)
+  auto result_large = at::detail::GetDefaultXLAGenerator(1000);
+  ASSERT_FALSE(result_large.ok());
+  ASSERT_TRUE(absl::IsInvalidArgument(result_large.status()));
+}
+
+TEST_F(XLAGeneratorTest, CreateXLAGenerator) {
+  EnsurePjrtCpuBackend();
+  // Test creating generator for device 0
+  auto result = at::detail::CreateXLAGenerator(0);
+  ASSERT_TRUE(result.ok()) << "Failed to create generator: " << result.status();
+
+  at::Generator created_gen = result.value();
+  ASSERT_EQ(created_gen.device().type(), at::DeviceType::XLA);
+  ASSERT_EQ(created_gen.device().index(), 0);
+
+  // Test that the generator is initialized with default seed
+  ASSERT_EQ(created_gen.current_seed(), c10::default_rng_seed_val);
+
+  // Test creating generator with -1 (should use current device)
+  auto result_default = at::detail::CreateXLAGenerator(-1);
+  ASSERT_TRUE(result_default.ok())
+      << "Failed to create generator with -1: " << result_default.status();
+
+  at::Generator created_gen_neg1 = result_default.value();
+  ASSERT_EQ(created_gen_neg1.device().type(), at::DeviceType::XLA);
+  // Device index should be >= 0 (actual device depends on current XLA device)
+  ASSERT_GE(created_gen_neg1.device().index(), 0);
+}
+
+TEST_F(XLAGeneratorTest, CreateXLAGeneratorUniqueness) {
+  EnsurePjrtCpuBackend();
+  // Test that each call creates a new generator instance
+  auto result1 = at::detail::CreateXLAGenerator(0);
+  auto result2 = at::detail::CreateXLAGenerator(0);
+
+  ASSERT_TRUE(result1.ok());
+  ASSERT_TRUE(result2.ok());
+
+  at::Generator gen1 = result1.value();
+  at::Generator gen2 = result2.value();
+
+  // Should be different instances
+  ASSERT_NE(std::addressof(gen1), std::addressof(gen2));
+
+  // But should have same device and initial seed
+  ASSERT_EQ(gen1.device(), gen2.device());
+  ASSERT_EQ(gen1.current_seed(), gen2.current_seed());
+
+  // Modifying one should not affect the other
+  gen1.set_current_seed(12345);
+  ASSERT_NE(gen1.current_seed(), gen2.current_seed());
+}
+
+TEST_F(XLAGeneratorTest, CreateXLAGeneratorInvalidDevice) {
+  EnsurePjrtCpuBackend();
+  // Test with invalid device indices
+  auto result_neg2 = at::detail::CreateXLAGenerator(-2);
+  ASSERT_FALSE(result_neg2.ok());
+  ASSERT_TRUE(absl::IsInvalidArgument(result_neg2.status()));
+
+  // Test with very large device index (assuming there aren't 1000 XLA devices)
+  auto result_large = at::detail::CreateXLAGenerator(1000);
+  ASSERT_FALSE(result_large.ok());
+  ASSERT_TRUE(absl::IsInvalidArgument(result_large.status()));
 }
 
 }  // namespace cpp_test
