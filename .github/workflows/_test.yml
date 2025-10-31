@@ -107,7 +107,6 @@ jobs:
                   pip install fsspec
                   pip install rich
                   pip install flax
-                  pip install sentencepiece
             - name: Extra CI deps
               if: inputs.has_code_changes == 'true'
               shell: bash
