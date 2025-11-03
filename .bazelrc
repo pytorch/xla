@@ -64,6 +64,38 @@ build:clang --spawn_strategy=sandboxed
 
 ###########################################################################
 
+# Make all symbols hidden, by default.
+# Ref: https://github.com/pytorch/xla/pull/9693
+#
+# Without this flag, GCC was associating some variables as "global unique".
+# Meaning that the linker would make sure that there was only one instance
+# of that variable per process.
+#
+# Which Variables?
+# ================
+# - Function-local static variables
+# - Inside an inline function (e.g. class member functions)
+# - Inside an non-internal linkage context
+#
+# One example is: `protobuf` holds [a `ShutdownData`][1] which is function-local
+# and static, living inside an inline function, which lives inside a class with
+# external linkage.
+#
+# What Happens?
+# =============
+# [GCC marks those variables with STB_GNU_UNIQUE binding][2], making sure those
+# variables are unique for the entire process.
+#
+# Alternatives
+# ============
+# There is also the `--no-gnu-unique` option, which disables exactly that.
+# However, I believe this is a good opportunity to make everything hidden, unless
+# otherwise specified.
+#
+# [1]: https://github.com/protocolbuffers/protobuf/blob/13fe37f25f187b7a2e79faa962df6a69bdb3d5b8/src/google/protobuf/message_lite.cc#L776
+# [2]: https://gcc.gnu.org/onlinedocs/gcc/Code-Gen-Options.html?utm_source=chatgpt.com#index-fno-gnu-unique
+build:posix --copt=-fvisibility=hidden
+
 build:posix --copt=-Wno-sign-compare
 build:posix --cxxopt=-std=c++17
 build:posix --host_cxxopt=-std=c++17
