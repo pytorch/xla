@@ -39,17 +39,41 @@ static std::vector<at::Generator> default_gens_xla;
  * Populates the global variables related to XLA generators
  * Warning: this function must only be called once!
  */
-static void InitXLAGenVector() {
-  // Ensures we only call deviceCount only once.
-  static bool num_xla_device_init_flag [[maybe_unused]] = []() {
+static absl::Status InitXLAGenVector() {
+  // Ensure we only perform initialization once and propagate status
+  static c10::once_flag init_once_flag;
+  static absl::Status init_status;
+  c10::call_once(init_once_flag, [&] {
     // Get local num of XLA devices
-    XLA_ASSIGN_OR_THROW(auto c_client,
-                        torch_xla::runtime::GetComputationClient());
+    auto c_client_or = torch_xla::runtime::GetComputationClient();
+    if (!c_client_or.ok()) {
+      init_status = c_client_or.status();
+      return;
+    }
+    auto c_client = *c_client_or;
     num_xla_devices = static_cast<int64_t>(c_client->GetNumDevices());
     xla_gens_init_flag.resize(num_xla_devices);
     default_gens_xla.resize(num_xla_devices);
-    return true;
-  }();
+    init_status = absl::OkStatus();
+  });
+  return init_status;
+}
+
+// Validates and normalizes an XLA device index.
+// If requested_index == -1, fallback_index will be used.
+// Returns InvalidArgument if the resolved index is out of range.
+static absl::StatusOr<c10::DeviceIndex> NormalizeXLADeviceIndex(
+    c10::DeviceIndex requested_index) {
+  c10::DeviceIndex idx = requested_index;
+  if (idx == -1) {
+    idx = torch_xla::bridge::GetCurrentAtenDevice().index();
+  }
+  if (idx < 0 || idx >= num_xla_devices) {
+    return absl::InvalidArgumentError(
+        "Invalid device index for XLA generator. Provided index: " +
+        std::to_string(idx));
+  }
+  return idx;
 }
 
 }  // anonymous namespace
@@ -64,15 +88,13 @@ static void InitXLAGenVector() {
  */
 absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(
     c10::DeviceIndex device_index) {
-  InitXLAGenVector();
-  c10::DeviceIndex idx = device_index;
-  if (idx == -1) {
-    idx = 0;  // Default to device 0 for XLA
-  } else if (idx < -1 || idx >= num_xla_devices) {
-    return absl::InvalidArgumentError(
-        "Invalid device index for XLA generator. Provided index: " +
-        std::to_string(idx));
-  }
+  XLA_RETURN_IF_ERROR(InitXLAGenVector(),
+                      "Failed to initialize XLA generators");
+  // Normalize and validate the target device index; default to current device
+  // when unspecified
+  XLA_ASSIGN_OR_RETURN(c10::DeviceIndex idx,
+                       NormalizeXLADeviceIndex(device_index),
+                       "Invalid XLA device index");
   c10::call_once(xla_gens_init_flag[idx], [&] {
     default_gens_xla[idx] = at::make_generator<XLAGeneratorImpl>(idx);
     default_gens_xla[idx].seed();
@@ -85,16 +107,13 @@ absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(
  */
 absl::StatusOr<at::Generator> CreateXLAGenerator(
     c10::DeviceIndex device_index) {
-  InitXLAGenVector();
-  c10::DeviceIndex idx = device_index;
-  if (idx == -1) {
-    idx = torch_xla::bridge::GetCurrentAtenDevice()
-              .index();  // Use current XLA device
-  } else if (idx < -1 || idx >= num_xla_devices) {
-    return absl::InvalidArgumentError(
-        "Invalid device index for XLA generator. Provided index: " +
-        std::to_string(idx));
-  }
+  XLA_RETURN_IF_ERROR(InitXLAGenVector(),
+                      "Failed to initialize XLA generators");
+  // Normalize and validate the target device index; default to current device
+  // when unspecified
+  XLA_ASSIGN_OR_RETURN(c10::DeviceIndex idx,
+                       NormalizeXLADeviceIndex(device_index),
+                       "Invalid XLA device index");
   auto gen = at::make_generator<XLAGeneratorImpl>(idx);
   auto xla_gen = at::check_generator<XLAGeneratorImpl>(gen);
   xla_gen->set_current_seed(c10::default_rng_seed_val);
