@@ -1,5 +1,9 @@
 # PyTorch/XLA
 
+> [!NOTE]
+> <b>10/2025</b>: Based on community feedback, we have proposed a more native direction for PyTorch on TPU. Read the RFC and comment at [#9684](https://github.com/pytorch/xla/issues/9684).
+>
+
 <b>Current CI status:</b>  ![GitHub Actions
 status](https://github.com/pytorch/xla/actions/workflows/build_and_test.yml/badge.svg)
 

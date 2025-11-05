@@ -34,6 +34,7 @@ jobs:
         env:
             GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
             BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+            BAZEL_DISK_CACHE_PATH: "${{ github.workspace }}/disk-cache"
             BAZEL_JOBS: "" # Let bazel decide the parallelism based on the number of CPUs.
             BUILD_CPP_TESTS: 1
         steps:
@@ -46,27 +47,63 @@ jobs:
                   sparse-checkout: |
                       .github/workflows/setup
                   path: .actions
+
             - name: Setup
               if: inputs.has_code_changes == 'true'
               uses: ./.actions/.github/workflows/setup
+
+            # Restore the disk cache associated with the base branch and the commit SHA
+            # that was used for merging with the current pr.
+            - name: Retrieve disk cache
+              id: cache
+              # Only runs for 'pull_request' events.
+              # We want to create a new disk cache on 'push' events.
+              if: github.event_name == 'pull_request' && inputs.has_code_changes == 'true'
+              uses: actions/cache/restore@v4
+              with:
+                  path: ${{ env.BAZEL_DISK_CACHE_PATH }}
+                  key: ${{ runner.os }}-${{ github.base_ref }}-${{ github.event.pull_request.base.sha }}
+
             - name: Build
               if: inputs.has_code_changes == 'true'
               shell: bash
+              env:
+                  # Only actually build with the disk cache if:
+                  #
+                  # 1. This is not a 'pull_request' event, e.g.: 'push'
+                  # 2. We did restore a cache in the previous step
+                  #
+                  # Otherwise, (e.g. a 'pull_request' event that didn't find a cache
+                  # to restore) it doesn't make sense to use the disk cache.
+                  BAZEL_DISK_CACHE_PATH: ${{ (github.event_name != 'pull_request' || steps.cache.outputs.cache-hit) && env.BAZEL_DISK_CACHE_PATH }}
               run: |
                   cd pytorch/xla/infra/ansible
                   ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
+
             - name: Upload wheel
               if: inputs.has_code_changes == 'true'
               uses: actions/upload-artifact@v4
               with:
                   name: torch-xla-wheels
                   path: /dist/*.whl
+
             - name: Upload CPP test binaries
               if: inputs.has_code_changes == 'true'
               uses: actions/upload-artifact@v4
               with:
                   name: cpp-test-bin
                   path: /tmp/test/bin
+
+            # Save the disk cache, associating it to the current branch and commit SHA.
+            - name: Save disk cache
+              # Only create new caches only on 'push' events, so that pull requests that
+              # can take advantage of those.
+              if: github.event_name == 'push' && inputs.has_code_changes == 'true'
+              uses: actions/cache/save@v4
+              with:
+                  key: ${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+                  path: ${{ env.BAZEL_DISK_CACHE_PATH }}
+
             - name: Report no code changes
               if: inputs.has_code_changes == 'false'
               run: |

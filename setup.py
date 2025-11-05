@@ -34,6 +34,10 @@
 #   BAZEL_REMOTE_CACHE=""
 #     whether to use remote cache for builds
 #
+#   BAZEL_DISK_CACHE_PATH=""
+#     path to the bazel disk cache to use for caching builds. If this is empty, the
+#     build won't use a local disk cache.
+#
 #   TPUVM_MODE=0
 #     whether to build for TPU
 #

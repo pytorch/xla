@@ -1,3 +1,4 @@
+from typing import Callable
 import expecttest
 import os
 import torch
@@ -233,6 +234,178 @@ class TestOpsErrorMessage(expecttest.TestCase):
         exc_type=RuntimeError,
         callable=test,
         expect="""trace(): expected the input tensor f32[2,2,2] to be a matrix (i.e. a 2D tensor)."""
+    )
+
+  def test_clamp_scalar_raises_error_on_no_min_and_max(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 5, device=device)
+
+    def test():
+      # Dispatch to `clamp()` overload explicitly.
+      # Otherwise, it's dispatched to `clamp.Tensor()`, which doesn't have
+      # this check.
+      return torch.ops.aten.clamp.default(a)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""clamp(): expected at least one of `min` or `max` arguments to be specified."""
+    )
+
+  def test_bmm_raises_error_on_non_3D_tensor_input(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 3, 4, device=device)
+    b = torch.rand(2, 4, 3, device=device)
+
+    def test_a():
+      torch.bmm(a[0], b)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test_a,
+        expect="""bmm(): expected `input` f32[3,4] (a 2D tensor), the 1st input tensor, to be a 3D tensor."""
+    )
+
+    def test_b():
+      torch.bmm(a, b[0])
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test_b,
+        expect="""bmm(): expected `mat2` f32[4,3] (a 2D tensor), the 2nd input tensor, to be a 3D tensor."""
+    )
+
+  def test_bmm_raises_error_on_different_batch_dimension(self):
+    device = torch_xla.device()
+    a = torch.rand(4, 3, 4, device=device)
+    b = torch.rand(2, 4, 3, device=device)
+
+    def test():
+      torch.bmm(a, b)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""bmm(): expected the size of the batch dimension (i.e. dimension 0) of `input` f32[4,3,4] (batch dimension size: 4), the 1st input tensor, to be the same as the size of the batch dimension of `mat2` f32[2,4,3] (batch dimension size: 2), the 2nd input tensor."""
+    )
+
+  def test_bmm_raises_error_on_incompatible_shapes(self):
+    device = torch_xla.device()
+    a = torch.rand(2, 3, 8, device=device)
+    b = torch.rand(2, 4, 3, device=device)
+
+    def test():
+      torch.bmm(a, b)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""bmm(): cannot apply batch matrix-multiplication to `input` f32[2,3,8], the 1st input tensor, and to `mat2` f32[2,4,3], the 2nd input tensor. Expected the size of dimension 2 of `input` (8) to be equal the size of dimension 1 of `mat2` (4)."""
+    )
+
+  def test_baddbmm_raises_error_on_incompatible_shapes(self):
+    device = torch_xla.device()
+    input = torch.rand(3, 3, device=device)
+    a = torch.rand(2, 3, 8, device=device)
+    b = torch.rand(2, 4, 3, device=device)
+
+    def test():
+      torch.baddbmm(input, a, b)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""baddbmm(): cannot apply batch matrix-multiplication to `batch1` f32[2,3,8], the 2nd input tensor, and to `batch2` f32[2,4,3], the 3rd input tensor. Expected the size of dimension 2 of `batch1` (8) to be equal the size of dimension 1 of `batch2` (4)."""
+    )
+
+  def test_uniform__raises_error_on_invalid_range(self):
+    device = torch_xla.device()
+    a = torch.empty(5, 5, device=device)
+    from_ = 5.
+    to_ = 2.
+
+    def test():
+      return a.uniform_(from_, to_)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""uniform_(): expected `from` (5) <= `to` (2).""")
+
+  def test_avg_pool_3d_raises_error_on_bad_spec(self):
+    device = torch_xla.device()
+    a = torch.rand(1, 1, 4, 4, 4, device=device)
+
+    def gen_test_fn(kernel_size=[2, 2, 2], stride=[], padding=[0]):
+      return lambda: torch.nn.functional.avg_pool3d(a, kernel_size, stride,
+                                                    padding)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=gen_test_fn(kernel_size=[2, 2]),
+        expect="""avg_pool3d(): expected argument kernel_size [2, 2] (size: 2) to have size of 3."""
+    )
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=gen_test_fn(stride=[1, 2]),
+        expect="""avg_pool3d(): expected argument stride [1, 2] (size: 2) to have size of 3."""
+    )
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=gen_test_fn(padding=[1, 2]),
+        expect="""avg_pool3d(): expected argument padding [1, 2] (size: 2) to have size of 3."""
+    )
+
+  def _get_custom_call_properties(self, mode):
+    match mode:
+      case "tpu":
+        return (torch_xla._XLAC._xla_tpu_custom_call, "", [])
+      case "stablehlo":
+        return (torch_xla._XLAC._xla_custom_call, "custom_op_target",
+                [False, "", 0, {}])
+
+    self.fail(f"expected `mode` ({mode}) to be either of ['tpu', 'stablehlo'].")
+
+  def _gen_custom_call_no_input(self, mode):
+    lib_custom_call, payload, args = self._get_custom_call_properties(
+        mode)  # type: ignore[attr-defined]
+    return lambda: lib_custom_call([], payload, [[1]], [torch.int8], *args)
+
+  def _gen_custom_call_output_properties_size_mismatch(self, mode):
+    lib_custom_call, payload, args = self._get_custom_call_properties(
+        mode)  # type: ignore[attr-defined]
+    input = torch.rand(10, device=torch_xla.device())
+    return lambda: lib_custom_call(
+        (input,), payload, [[1], [1]], [torch.int8], *args)
+
+  def test_stablehlo_custom_call(self):
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=self._gen_custom_call_no_input("stablehlo"),
+        expect="""custom_call(custom_op_target): expected at least 1 input tensor."""
+    )
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=self._gen_custom_call_output_properties_size_mismatch(
+            "stablehlo"),
+        expect="""custom_call(custom_op_target): expected the given output shapes (size=2) to be of the same size as the given output dtypes (size=1)."""
+    )
+
+  def test_tpu_custom_call(self):
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=self._gen_custom_call_no_input("tpu"),
+        expect="""tpu_custom_call(): expected at least 1 input tensor.""")
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=self._gen_custom_call_output_properties_size_mismatch("tpu"),
+        expect="""tpu_custom_call(): expected the given output shapes (size=2) to be of the same size as the given output dtypes (size=1)."""
     )
 
 

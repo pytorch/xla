@@ -41,8 +41,15 @@ jobs:
     needs: [check_code_changes]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.12_tpuvm
-      timeout-minutes: 45  # Takes ~20m as of 2025/5/30.
-      has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
+      timeout-minutes: 50  # Takes ~50m as of 2025/10/28 (without the remote cache).
+      # We should build PyTorch and PyTorch/XLA if:
+      #   1. There are code changes.
+      #   2. This is a `push` event to `master` or release branches.
+      #
+      # The reason for (2) is that `push-docs` job below is run precisely on (2) condition.
+      # In order for it (the `push-docs` job) to be successful, it needs to install the PyTorch
+      # and PyTorch/XLA wheels. Therefore, we need to build their wheels by running this job.
+      has_code_changes: ${{ (needs.check_code_changes.outputs.has_code_changes == 'true' || github.event_name == 'push') && 'true' || 'false' }}
       runner: linux.24xlarge
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
