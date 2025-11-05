@@ -416,15 +416,18 @@ class TestOpsErrorMessage(expecttest.TestCase):
 
     device = torch_xla.device()
     input = torch.rand(3, 3, device=device)
-    computation = xb.create_computation("computation_test", op, [xb.tensor_shape(input)])
+    computation = xb.create_computation("computation_test", op,
+                                        [xb.tensor_shape(input)])
 
     def test():
-      return torch_xla._XLAC._xla_user_computation("xla::computation_test", [], computation)
+      return torch_xla._XLAC._xla_user_computation("xla::computation_test", [],
+                                                   computation)
 
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
         callable=test,
-        expect="""user_computation(xla::computation_test): expected at least 1 input tensor.""")
+        expect="""user_computation(xla::computation_test): expected at least 1 input tensor."""
+    )
 
 
 if __name__ == "__main__":
