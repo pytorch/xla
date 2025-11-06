@@ -3,6 +3,7 @@
 #include <torch/csrc/lazy/core/helpers.h>
 #include <torch/csrc/lazy/core/util.h>
 
+#include "absl/base/nullability.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -82,7 +83,8 @@ XLATensorPtr MakeMatrixWithDiagonal(const XLATensorPtr& input,
 XLATensorPtr SmoothL1Loss(const XLATensorPtr& input, const XLATensorPtr& target,
                           ReductionMode reduction, double beta) {
   torch::lazy::ScopePusher ir_scope(at::aten::smooth_l1_loss.toQualString());
-  auto broadcasted_inputs = tensor_methods::broadcast_tensors({input, target});
+  XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> broadcasted_inputs,
+                      tensor_methods::broadcast_tensors({input, target}));
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
   const XLATensorPtr& broadcasted_input = broadcasted_inputs[0];
   const XLATensorPtr& broadcasted_target = broadcasted_inputs[1];
@@ -121,7 +123,8 @@ XLATensorPtr SmoothL1LossBackward(const XLATensorPtr& grad_output,
                                   ReductionMode reduction, double beta) {
   torch::lazy::ScopePusher ir_scope(
       at::aten::smooth_l1_loss_backward.toQualString());
-  auto broadcasted_inputs = tensor_methods::broadcast_tensors({input, target});
+  XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> broadcasted_inputs,
+                      tensor_methods::broadcast_tensors({input, target}));
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
   const XLATensorPtr& broadcasted_input = broadcasted_inputs[0];
   const XLATensorPtr& broadcasted_target = broadcasted_inputs[1];

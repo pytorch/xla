@@ -721,6 +721,27 @@ absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> CustomCallImpl(
   return outputs;
 }
 
+absl::Status CheckCatCompatibleShapes(xla::Shape s1, xla::Shape s2,
+                                      int64_t dim) {
+  xla::Shape s1_without_dim = s1;
+  xla::Shape s2_without_dim = s2;
+
+  dim = torch::lazy::GetCanonicalDimensionIndex(dim, s1.dimensions().size());
+  s1_without_dim.DeleteDimension(dim);
+  s2_without_dim.DeleteDimension(dim);
+
+  if (!xla::ShapeUtil::CompatibleIgnoringElementType(s1_without_dim,
+                                                     s2_without_dim)) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "cat(): cannot concatenate tensors of shape ", s1.ToString(), " with ",
+        s2.ToString(), " at dimension ", dim,
+        ". Expected shapes to be equal (except at dimension ", dim,
+        ") or that either of them was a 1D empty tensor of size (0,).")));
+  }
+
+  return absl::OkStatus();
+}
+
 }  // namespace
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1473,15 +1494,17 @@ absl::StatusOr<absl_nonnull XLATensorPtr> bmm(const XLATensorPtr& input,
   return matmul(input, mat2);
 }
 
-std::vector<XLATensorPtr> broadcast_tensors(
-    absl::Span<const XLATensorPtr> tensors) {
-  XLA_CHECK(!tensors.empty()) << "broadcast_tensors cannot take an empty list";
-  std::vector<torch::lazy::Value> tensor_ir_values;
-  for (const auto& tensor : tensors) {
-    tensor_ir_values.push_back(tensor->GetIrValue());
-  }
-  torch::lazy::NodePtr node = BroadcastTensors(tensor_ir_values);
-  return tensors.front()->MakeOutputTensors(node);
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> broadcast_tensors(
+    absl::Span<const absl_nonnull XLATensorPtr> tensors) {
+  XLA_RETURN_IF_ERROR(CheckNonEmptyInputs("broadcast_tensors()", tensors));
+
+  std::vector<torch::lazy::Value> values(tensors.size());
+  std::transform(
+      tensors.begin(), tensors.end(), values.begin(),
+      [](const XLATensorPtr& tensor) { return tensor->GetIrValue(); });
+
+  torch::lazy::NodePtr node = BroadcastTensors(values);
+  return tensors.front()->MakeOutputTensors(std::move(node));
 }
 
 absl::StatusOr<absl_nonnull XLATensorPtr> cat(
@@ -1494,39 +1517,44 @@ absl::StatusOr<absl_nonnull XLATensorPtr> cat(
   // - If empty dimension, other dimensions must be the same.
   //   e.g. ([4, 0, 32, 32], [4, 2, 32, 32], dim=1) passes.
   //   ([4, 0, 32, 32], [4, 2, 31, 32], dim=1) throws.
-  ABSL_CHECK(tensors.size() > 0);
+  XLA_RETURN_IF_ERROR(CheckNonEmptyInputs("cat()", tensors));
+
+  // Lazy ir values of all tensors that are not empty
   std::vector<torch::lazy::Value> values;
-  std::vector<xla::Shape> shapes;
-  size_t last_tensor_index;
+  // Index of the last non-empty tensor.
+  std::size_t last_tensor_index = -1;
+
+  // Gather the lazy ir value of all non-empty tensor, and check that
+  // all of them have the same shape.
   for (size_t i = 0; i < tensors.size(); ++i) {
     xla::Shape tensor_shape = tensors[i]->shape();
-    if (tensor_shape.dimensions_size() == 1 &&
-        tensor_shape.dimensions()[0] == 0) {
+
+    // Ignore empty tensors.
+    if (tensor_shape.dimensions().size() == 1 &&
+        tensor_shape.dimensions(0) == 0) {
       continue;
     }
-    dim = torch::lazy::GetCanonicalDimensionIndex(
-        dim, tensor_shape.dimensions_size());
-    tensor_shape.DeleteDimension(dim);
-    if (!shapes.empty() && !xla::ShapeUtil::CompatibleIgnoringElementType(
-                               shapes.back(), tensor_shape)) {
-      auto last_tensor = tensors[last_tensor_index];
-      auto tensor = tensors[i];
-      return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
-          "cat(): cannot concatenate tensors of shape ",
-          last_tensor->shape().get().ToString(), " with ",
-          tensor->shape().get().ToString(), " at dimension ", dim,
-          ". Expected shapes to be equal (except at dimension ", dim,
-          ") or that either of them was a 1D empty tensor of size (0,).")));
+
+    // Check that the current tensor has compatible shapes with the
+    // previously found non-empty tensors.
+    if (last_tensor_index != -1) {
+      xla::Shape last_tensor_shape = tensors[last_tensor_index]->shape();
+      XLA_RETURN_IF_ERROR(
+          CheckCatCompatibleShapes(tensor_shape, last_tensor_shape, dim));
     }
-    shapes.push_back(tensor_shape);
-    values.push_back(tensors[i]->GetIrValue());
+
     last_tensor_index = i;
+    values.push_back(tensors[i]->GetIrValue());
   }
+
+  // If there are no non-empty tensors, just return an empty tensor.
+  // e.g. the first one from the list.
   if (values.empty()) {
     return tensors[0];
   }
-  return tensors[0]->CreateFrom(torch_xla::MakeNode<Cat>(values, dim, dtype),
-                                dtype);
+
+  torch::lazy::NodePtr node = torch_xla::MakeNode<Cat>(values, dim, dtype);
+  return tensors[0]->CreateFrom(std::move(node), dtype);
 }
 
 XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
