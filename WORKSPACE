@@ -42,12 +42,6 @@ new_local_repository(
     path = PYTORCH_LOCAL_DIR,
 )
 
-new_local_repository(
-    name = "fmt",
-    build_file = "//bazel:fmt.BUILD",
-    path = PYTORCH_LOCAL_DIR + "/third_party/fmt",
-)
-
 ############################# OpenXLA Setup ###############################
 
 # To build PyTorch/XLA with a new revison of OpenXLA, update the xla_hash to
