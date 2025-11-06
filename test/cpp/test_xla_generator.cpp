@@ -142,7 +142,6 @@ TEST_F(XLAGeneratorTest, Clone) {
 }
 
 TEST_F(XLAGeneratorTest, GetDefaultXLAGenerator) {
-  EnsurePjrtCpuBackend();
   // Test getting default generator for device 0
   auto result = at::detail::GetDefaultXLAGenerator(0);
   ASSERT_TRUE(result.ok()) << "Failed to get default generator: "
@@ -160,6 +159,7 @@ TEST_F(XLAGeneratorTest, GetDefaultXLAGenerator) {
   const at::Generator& default_gen_neg1 = result_default.value();
   ASSERT_EQ(default_gen_neg1.device().type(), at::DeviceType::XLA);
   ASSERT_EQ(default_gen_neg1.device().index(), 0);
+  ASSERT_EQ(default_gen, default_gen_neg1);
 
   // Test that subsequent calls return the same generator instance
   auto result2 = at::detail::GetDefaultXLAGenerator(0);
@@ -180,7 +180,6 @@ TEST_F(XLAGeneratorTest, GetDefaultXLAGenerator) {
 }
 
 TEST_F(XLAGeneratorTest, GetDefaultXLAGeneratorInvalidDevice) {
-  EnsurePjrtCpuBackend();
   // Test with invalid device indices
   auto result_neg2 = at::detail::GetDefaultXLAGenerator(-2);
   ASSERT_FALSE(result_neg2.ok());
@@ -197,8 +196,7 @@ TEST_F(XLAGeneratorTest, GetDefaultXLAGeneratorInvalidDevice) {
 }
 
 TEST_F(XLAGeneratorTest, CreateXLAGenerator) {
-  EnsurePjrtCpuBackend("CPU", "2");
-  // Test creating generator for device 0
+  // Test creating generator for device 1
   auto result = at::detail::CreateXLAGenerator(1);
   ASSERT_TRUE(result.ok()) << "Failed to create generator: " << result.status();
 
@@ -221,7 +219,6 @@ TEST_F(XLAGeneratorTest, CreateXLAGenerator) {
 }
 
 TEST_F(XLAGeneratorTest, CreateXLAGeneratorUniqueness) {
-  EnsurePjrtCpuBackend();
   // Test that each call creates a new generator instance
   auto result1 = at::detail::CreateXLAGenerator(0);
   auto result2 = at::detail::CreateXLAGenerator(0);
@@ -246,7 +243,6 @@ TEST_F(XLAGeneratorTest, CreateXLAGeneratorUniqueness) {
 }
 
 TEST_F(XLAGeneratorTest, CreateXLAGeneratorInvalidDevice) {
-  EnsurePjrtCpuBackend();
   // Test with invalid device indices
   auto result_neg2 = at::detail::CreateXLAGenerator(-2);
   ASSERT_FALSE(result_neg2.ok());
