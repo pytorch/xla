@@ -135,8 +135,9 @@ void adam_optimizer_step_(const XLATensorPtr& found_inf, XLATensorPtr& step,
                           double eps, bool amsgrad, bool maximize,
                           bool use_adamw);
 
-std::vector<XLATensorPtr> user_computation(
-    const std::string& opname, absl::Span<const XLATensorPtr> inputs,
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> user_computation(
+    const std::string& opname,
+    absl::Span<const absl_nonnull XLATensorPtr> inputs,
     runtime::ComputationClient::ComputationPtr computation);
 
 //////////////////////////////////////////////////////////////////////////////
@@ -308,7 +309,8 @@ std::vector<XLATensorPtr> broadcast_tensors(
     absl::Span<const XLATensorPtr> tensors);
 
 absl::StatusOr<absl_nonnull XLATensorPtr> cat(
-    absl::Span<const XLATensorPtr> tensors, int64_t dim, at::ScalarType dtype);
+    absl::Span<const absl_nonnull XLATensorPtr> tensors, int64_t dim,
+    at::ScalarType dtype);
 
 XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
                            double p);

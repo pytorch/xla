@@ -12,6 +12,7 @@
 #include <torch/csrc/lazy/core/ir_util.h>
 #include <torch/csrc/lazy/core/lazy_graph_executor.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
@@ -927,19 +928,21 @@ py::object GetRevisions() {
   return py_dict;
 }
 
-std::vector<at::Tensor> XlaUserComputation(
+absl::StatusOr<std::vector<at::Tensor>> XlaUserComputation(
     const std::string& opname, const std::vector<at::Tensor>& inputs,
     runtime::ComputationClient::ComputationPtr computation) {
-  XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> xinputs,
-                      bridge::GetXlaTensors(inputs));
-  std::vector<XLATensorPtr> xresults =
-      tensor_methods::user_computation(opname, xinputs, std::move(computation));
-  std::vector<at::Tensor> results;
-  for (auto& xresult : xresults) {
-    at::Tensor tensor = bridge::AtenFromXlaTensor(std::move(xresult));
-    results.push_back(
-        torch::autograd::make_variable(tensor, /*requires_grad=*/false));
-  }
+  XLA_ASSIGN_OR_RETURN(std::vector<absl_nonnull XLATensorPtr> xla_inputs,
+                       bridge::GetXlaTensors(inputs));
+  XLA_ASSIGN_OR_RETURN(std::vector<absl_nonnull XLATensorPtr> xla_results,
+                       tensor_methods::user_computation(
+                           opname, xla_inputs, std::move(computation)));
+
+  std::vector<at::Tensor> results(xla_results.size());
+  std::transform(xla_results.begin(), xla_results.end(), results.begin(),
+                 [](const XLATensorPtr& xla_result) {
+                   return bridge::AtenFromXlaTensor(std::move(xla_result));
+                 });
+
   return results;
 }
 
@@ -1623,8 +1626,8 @@ void InitXlaModuleBindings(py::module m) {
               const runtime::ComputationClient::ComputationPtr& computation) {
             std::vector<at::Tensor> results;
             {
-              NoGilSection nogil;
-              results = XlaUserComputation(opname, inputs, computation);
+              py::gil_scoped_release gil;
+              XLA_ASSIGN_OR_THROW(results, XlaUserComputation(opname, inputs, computation));
             }
             return results;
            })

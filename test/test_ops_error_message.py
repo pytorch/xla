@@ -408,6 +408,27 @@ class TestOpsErrorMessage(expecttest.TestCase):
         expect="""tpu_custom_call(): expected the given output shapes (size=2) to be of the same size as the given output dtypes (size=1)."""
     )
 
+  def test_user_computation_empty_inputs(self):
+    import torch_xla.core.xla_builder as xb
+
+    def op(a):
+      return xb.Op.sin(a)
+
+    device = torch_xla.device()
+    input = torch.rand(3, 3, device=device)
+    computation = xb.create_computation("computation_test", op,
+                                        [xb.tensor_shape(input)])
+
+    def test():
+      return torch_xla._XLAC._xla_user_computation("xla::computation_test", [],
+                                                   computation)
+
+    self.assertExpectedRaisesInline(
+        exc_type=RuntimeError,
+        callable=test,
+        expect="""user_computation(xla::computation_test): expected at least 1 input tensor."""
+    )
+
 
 if __name__ == "__main__":
   unittest.main()
