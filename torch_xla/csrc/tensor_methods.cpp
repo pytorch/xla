@@ -726,7 +726,6 @@ absl::Status CheckCatCompatibleShapes(xla::Shape s1, xla::Shape s2,
   xla::Shape s1_without_dim = s1;
   xla::Shape s2_without_dim = s2;
 
-  dim = torch::lazy::GetCanonicalDimensionIndex(dim, s1.dimensions().size());
   s1_without_dim.DeleteDimension(dim);
   s2_without_dim.DeleteDimension(dim);
 
@@ -1523,6 +1522,9 @@ absl::StatusOr<absl_nonnull XLATensorPtr> cat(
   std::vector<torch::lazy::Value> values;
   // Index of the last non-empty tensor.
   std::size_t last_tensor_index = -1;
+  // Cache the canonical dimension, so that we won't have to recompute
+  // it every time.
+  std::optional<int64_t> cannonical_dim;
 
   // Gather the lazy ir value of all non-empty tensor, and check that
   // all of them have the same shape.
@@ -1535,12 +1537,17 @@ absl::StatusOr<absl_nonnull XLATensorPtr> cat(
       continue;
     }
 
+    if (!cannonical_dim.has_value()) {
+      cannonical_dim = torch::lazy::GetCanonicalDimensionIndex(
+          dim, tensor_shape.dimensions().size());
+    }
+
     // Check that the current tensor has compatible shapes with the
     // previously found non-empty tensors.
     if (last_tensor_index != -1) {
       xla::Shape last_tensor_shape = tensors[last_tensor_index]->shape();
-      XLA_RETURN_IF_ERROR(
-          CheckCatCompatibleShapes(tensor_shape, last_tensor_shape, dim));
+      XLA_RETURN_IF_ERROR(CheckCatCompatibleShapes(
+          tensor_shape, last_tensor_shape, *cannonical_dim));
     }
 
     last_tensor_index = i;
@@ -1553,7 +1560,8 @@ absl::StatusOr<absl_nonnull XLATensorPtr> cat(
     return tensors[0];
   }
 
-  torch::lazy::NodePtr node = torch_xla::MakeNode<Cat>(values, dim, dtype);
+  torch::lazy::NodePtr node =
+      torch_xla::MakeNode<Cat>(values, *cannonical_dim, dtype);
   return tensors[0]->CreateFrom(std::move(node), dtype);
 }
 
