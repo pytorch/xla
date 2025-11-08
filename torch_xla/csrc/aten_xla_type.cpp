@@ -2529,13 +2529,26 @@ at::Tensor XLANativeFunctions::mse_loss_backward(const at::Tensor& grad_output,
 at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
                                    const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  using FnType = XLATensorPtr(const XLATensorPtr&, const XLATensorPtr&,
-                              std::optional<at::ScalarType>);
-  return OpConfig::From(static_cast<FnType*>(tensor_methods::mul))
-      .add_input(self)
-      .add_input(other)
-      .cast_inputs_to_common_dtype()
-      .run();
+
+  // Check device type to determine if we need opmathtype for mixed-precision
+  XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(xla_self->GetDevice().type());
+
+  auto config =
+      OpConfig([](const XLAInputVector& inputs, at::ScalarType dtype) {
+        return tensor_methods::mul(inputs[0], inputs[1], dtype);
+      })
+          .add_input(self)
+          .add_input(other)
+          .cast_inputs_to_common_dtype();
+
+  // Only use opmathtype for CPU or Neuron backend
+  if (hw_type == XlaDeviceType::CPU || hw_type == XlaDeviceType::NEURON) {
+    config.use_opmathtype_for_compute();
+  }
+
+  return config.run();
 }
 
 at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
