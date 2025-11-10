@@ -46,8 +46,8 @@ jobs:
         shell: bash
         working-directory: torchax
         run: |
-          pip install -r test-requirements.txt
           pip install -e .[cpu]
+          pip install -r test-requirements.txt
       - name: Run tests
         if: needs.check_code_changes.outputs.has_code_changes == 'true'
         working-directory: torchax
