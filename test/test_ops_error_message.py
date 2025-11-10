@@ -52,7 +52,7 @@ class TestOpsErrorMessage(expecttest.TestCase):
     self.assertExpectedRaisesInline(
         exc_type=RuntimeError,
         callable=test,
-        expect="""cat(): cannot concatenate tensors of shape f32[2,2] with f32[5,1] at dimension 0. Expected shapes to be equal (except at dimension 0) or that either of them was a 1D empty tensor of size (0,)."""
+        expect="""cat(): cannot concatenate tensors of shape f32[5,1] with f32[2,2] at dimension 0. Expected shapes to be equal (except at dimension 0) or that either of them was a 1D empty tensor of size (0,)."""
     )
 
   def test_div_raises_error_on_invalid_rounding_mode(self):

@@ -305,8 +305,8 @@ absl::StatusOr<absl_nonnull XLATensorPtr> bmm(const XLATensorPtr& input,
                                               const XLATensorPtr& mat2);
 
 // Broadcasts the given tensors according to broadcasting semantics.
-std::vector<XLATensorPtr> broadcast_tensors(
-    absl::Span<const XLATensorPtr> tensors);
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> broadcast_tensors(
+    absl::Span<const absl_nonnull XLATensorPtr> tensors);
 
 absl::StatusOr<absl_nonnull XLATensorPtr> cat(
     absl::Span<const absl_nonnull XLATensorPtr> tensors, int64_t dim,
