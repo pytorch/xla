@@ -112,7 +112,27 @@ class XlaNode : public torch::lazy::Node {
 
   virtual torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const;
 
-  virtual XlaOpVector Lower(LoweringContext* loctx) const;
+  // Lowers the current XlaNode using `loctx`.
+  //
+  // Prefer its safer version (i.e. XlaNode::SafeLower), since this function
+  // throws an exception on error, instead of returning a status instance.
+  [[deprecated("Use XlaNode::SafeLower instead.")]] virtual XlaOpVector Lower(
+      LoweringContext* loctx) const;
+
+  // Lowers the current XlaNode using `loctx`.
+  virtual absl::StatusOr<XlaOpVector> SafeLower(LoweringContext* loctx) const;
+
+  // Calls XlaNode::SafeLower, and, on error, wraps the message with a prefix
+  // for making the fact that it is a lowering error more clear.
+  //
+  // You almost always want to call this function, instead of XlaNode::SafeLower
+  // directly.
+  //
+  // Example:
+  //
+  // RuntimeError: Error while lowering xla::device_data: <error message>
+  //
+  absl::StatusOr<XlaOpVector> LowerOrWrapError(LoweringContext* loctx) const;
 
   XlaOpVector ReturnOp(xla::XlaOp op, LoweringContext* loctx) const;
 

@@ -8,6 +8,8 @@
 #include <functional>
 #include <sstream>
 
+#include "absl/log/absl_log.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/cache.h"
@@ -157,6 +159,53 @@ torch::lazy::NodePtr XlaNode::Clone(torch::lazy::OpList operands) const {
 
 XlaOpVector XlaNode::Lower(LoweringContext* loctx) const {
   XLA_ERROR() << "Lowering not implemented for node: " << *this;
+}
+
+absl::StatusOr<XlaOpVector> XlaNode::LowerOrWrapError(
+    LoweringContext* loctx) const {
+  absl::StatusOr<XlaOpVector> r = SafeLower(loctx);
+
+  // Do nothing if there were no errors.
+  if (r.ok()) {
+    return r;
+  }
+
+  const torch::lazy::MetaData& meta = metadata();
+
+  // Show more information about the lowering error.
+  ABSL_LOG(ERROR) << "Error lowering node: " << ToString();
+  ABSL_LOG(ERROR) << "  |- scope: " << meta.scope;
+  ABSL_LOG(ERROR) << "  |- frame info: " << meta.frame_info;
+
+  // Keep only the main message in the status error.
+  // Copy the message, since we will be moving from it, next.
+  std::string message(r.status().message());
+  // Even though, at this point, `r` is guaranteed to be an error status,
+  // we use `XLA_RETURN_IF_ERROR` for 2 reasons:
+  //
+  //   1. Prepend the context string to indicate failure in the lowering phase
+  //   2. Add the current frame to the status propagation trace
+  XLA_RETURN_IF_ERROR(
+      std::move(r),
+      absl::StrCat("Error while lowering ", op().ToString(), ": ", message));
+
+  ABSL_UNREACHABLE();
+}
+
+absl::StatusOr<XlaOpVector> XlaNode::SafeLower(LoweringContext* loctx) const {
+  // This default implementation of `SafeLower` is only temporary.
+  //
+  // It deals with the, now deprecated, `Lower` function by catching the
+  // thrown exception, if any, and wrapping it with an `absl::StatusOr<T>`
+  // instance.
+  //
+  // Idealy, we should not use `Lower`, at all. Instead, migrate all
+  // lowerings so that they override `SafeLower`.
+  try {
+    return Lower(loctx);
+  } catch (const std::exception& ex) {
+    return absl::UnknownError(ex.what());
+  }
 }
 
 torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,

@@ -90,7 +90,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
 
   // Lowers a single IR node. All the inputs to the node must have a lowering
   // before calling this API. Returns the generated XLA operations.
-  XlaOpVector LowerNode(const torch::lazy::Node& node);
+  absl::StatusOr<XlaOpVector> LowerNode(const torch::lazy::Node& node);
 
   void SetUpAlias(const std::vector<int64_t>& output_index,
                   int64_t param_number, const std::vector<int64_t>& param_index,
@@ -122,10 +122,6 @@ class LoweringContext : public torch::lazy::LoweringContext {
     xla::XlaOp param;
     size_t index = 0;
   };
-
-  // Reports an XLA builder error for the given node.
-  ABSL_ATTRIBUTE_NORETURN void ReportBuilderError(const torch::lazy::Node& node,
-                                                  absl::string_view error_msg);
 
   xla::XlaBuilder builder_;
   std::unordered_map<torch::lazy::BackendData::Handle, Parameter>

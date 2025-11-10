@@ -115,7 +115,7 @@ LoweringContext::LoweringContext(
       builder_(name),
       stack_frame_index_builder_(std::make_shared<StackFrameIndexBuilder>()) {
   for (const auto* node : post_order) {
-    LowerNode(*node);
+    XLA_THROW_IF_ERROR(LowerNode(*node));
   }
 }
 
@@ -230,7 +230,7 @@ xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
     const auto post_order =
         torch::lazy::Util::ComputePostOrder(output.node, &emit_status_);
     for (const auto* const node : post_order) {
-      LowerNode(*node);
+      XLA_THROW_IF_ERROR(LowerNode(*node));
     }
     // At this point the output better be present, otherwise there is an issue
     // with the lowering code.
@@ -241,54 +241,32 @@ xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
   return it->second;
 }
 
-XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node& node) {
-  XlaOpVector result_ops;
-  try {
-    const HloMetadataSetter meta_setter(*this, node);
-    const XlaNode* const casted = dynamic_cast<const XlaNode*>(&node);
+absl::StatusOr<XlaOpVector> LoweringContext::LowerNode(
+    const torch::lazy::Node& node) {
+  const HloMetadataSetter meta_setter(*this, node);
+  const XlaNode* const casted = dynamic_cast<const XlaNode*>(&node);
 
-    result_ops = casted->Lower(this);
-    if (!casted->dynamic_dims().empty()) {
-      const xla::internal::XlaBuilderFriend builder_friend;
-      auto* const inst = builder_friend.GetInstruction(result_ops[0]);
-      auto* const mutable_dynamic =
-          inst->mutable_shape()->mutable_is_dynamic_dimension();
-      if (mutable_dynamic->empty()) {
-        for (int i = 0; i < inst->dimensions_size(); i++) {
-          mutable_dynamic->Add(false);
-        }
-      }
-      auto* const mutable_dims = inst->mutable_shape()->mutable_dimensions();
-      for (const auto dim : casted->dynamic_dims()) {
-        mutable_dynamic->Set(dim, true);
-        mutable_dims->Set(dim, xla::Shape::kUnboundedSize);
+  XLA_ASSIGN_OR_RETURN(XlaOpVector output, casted->LowerOrWrapError(this));
+
+  if (!casted->dynamic_dims().empty()) {
+    const xla::internal::XlaBuilderFriend builder_friend;
+    auto* const inst = builder_friend.GetInstruction(output[0]);
+    auto* const mutable_dynamic =
+        inst->mutable_shape()->mutable_is_dynamic_dimension();
+    if (mutable_dynamic->empty()) {
+      for (int i = 0; i < inst->dimensions_size(); i++) {
+        mutable_dynamic->Add(false);
       }
     }
-  } catch (const std::exception& ex) {
-    ReportBuilderError(node, ex.what());
+    auto* const mutable_dims = inst->mutable_shape()->mutable_dimensions();
+    for (const auto dim : casted->dynamic_dims()) {
+      mutable_dynamic->Set(dim, true);
+      mutable_dims->Set(dim, xla::Shape::kUnboundedSize);
+    }
   }
-  if (!builder()->first_error().ok()) {
-    ReportBuilderError(node, /*error_msg=*/"");
-  }
-  return result_ops;
-}
 
-void LoweringContext::ReportBuilderError(const torch::lazy::Node& node,
-                                         const absl::string_view error_msg) {
-  std::stringstream ss;
-  ss << "Error while lowering: " << node.ToString() << "\n";
-  if (!builder()->first_error().ok()) {
-    ss << "XLA builder error: " << builder()->GetCurrentStatus() << "\n";
-  }
-  if (!error_msg.empty()) {
-    ss << "Error: " << error_msg << "\n";
-  }
-  const torch::lazy::MetaData& nmeta = node.metadata();
-  if (!nmeta.scope.empty()) {
-    ss << "Scope: " << nmeta.scope << "\n";
-  }
-  ss << nmeta.frame_info;
-  throw std::runtime_error(ss.str());
+  XLA_RETURN_IF_ERROR(builder()->first_error());
+  return output;
 }
 
 void LoweringContext::SetUpAlias(const std::vector<int64_t>& output_index,
