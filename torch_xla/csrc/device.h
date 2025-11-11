@@ -36,7 +36,22 @@ struct DeviceType : public torch::lazy::BackendDeviceType {
   static XlaDeviceType StringToXlaDeviceType(const std::string& type_name);
 };
 
-torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec);
+// Parses the given `device_spec` into a new `BackendDevice`.
+//
+// Prefer its safer version (i.e. SafeParseDeviceString), since this function
+// throws an exception on error, instead of returning a status instance.
+[[deprecated("Use SafeParseDeviceString for better error handling.")]] torch::
+    lazy::BackendDevice
+    ParseDeviceString(const std::string& device_spec);
+
+// Parses the given `device_spec` into a new `BackendDevice`.
+//
+// This function returns an error status if:
+//   1. `device_spec` is not in the format: `<type>:<index>`
+//   2. `<type>` is not any of `XlaDeviceType`
+//   3. `<index>` is not an integer
+absl::StatusOr<torch::lazy::BackendDevice> SafeParseDeviceString(
+    const std::string& device_spec);
 
 torch::lazy::BackendDevice GetVirtualDevice();
 
