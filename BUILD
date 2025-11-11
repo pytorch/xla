@@ -50,6 +50,7 @@ test_suite(
         "//test/cpp:test_aten_xla_tensor_5",
         "//test/cpp:test_aten_xla_tensor_6",
         "//test/cpp:test_debug_macros",
+        "//test/cpp:test_device",
         "//test/cpp:test_ir",
         "//test/cpp:test_lazy",
         "//test/cpp:test_replication",

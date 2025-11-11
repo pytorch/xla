@@ -101,7 +101,8 @@ if [[ "$RUN_CPP_TESTS" == "cpp_tests" ]]; then
               "test_runtime"
               "test_status_dont_show_cpp_stacktraces"
               "test_status_show_cpp_stacktraces"
-              "test_debug_macros")
+              "test_debug_macros"
+              "test_device")
 fi
 for name in "${test_names[@]}"; do
   echo "Running $name cpp test..."

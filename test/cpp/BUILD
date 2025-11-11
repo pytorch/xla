@@ -209,3 +209,12 @@ ptxla_cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+ptxla_cc_test(
+    name = "test_device",
+    srcs = ["test_device.cpp"],
+    deps = [
+        "//torch_xla/csrc:device",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
