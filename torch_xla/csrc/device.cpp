@@ -74,7 +74,8 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
 }
 
 torch::lazy::BackendDevice GetVirtualDevice() {
-  return ParseDeviceString("SPMD:0");
+  return torch::lazy::BackendDevice(
+      std::make_shared<DeviceType>(XlaDeviceType::SPMD), 0);
 }
 
 bool ShouldUseVirtualDevice() {
