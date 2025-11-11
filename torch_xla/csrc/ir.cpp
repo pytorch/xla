@@ -16,7 +16,6 @@
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
-#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 namespace {
@@ -181,7 +180,8 @@ absl::StatusOr<XlaOpVector> XlaNode::SafeLower(LoweringContext* loctx) const {
 
 absl::StatusOr<XlaOpVector> XlaNode::CheckedLower(
     LoweringContext* loctx) const {
-  absl::StatusOr<XlaOpVector> output = CheckLoweringOutput(SafeLower(loctx));
+  absl::StatusOr<XlaOpVector> output =
+      CheckLoweringOutput(SafeLower(loctx), loctx);
 
   if (output.ok()) {
     return output;
@@ -297,21 +297,28 @@ void XlaNode::UpdateShardingHash() {
 }
 
 absl::StatusOr<XlaOpVector> XlaNode::CheckLoweringOutput(
-    absl::StatusOr<XlaOpVector>&& output) const {
+    absl::StatusOr<XlaOpVector>&& output, LoweringContext* loctx) const {
+  // If `output` is already an error, return them, since there are no
+  // valid outputs for us to check.
   XLA_ASSIGN_OR_RETURN(XlaOpVector unwrapped_output, std::move(output));
 
-  xla::XlaOp first = unwrapped_output.front();
-  xla::XlaBuilder* builder = first.builder();
+  // Make sure all output XlaBuilder instances are the same as the top-level
+  // one in `loctx`.
+  xla::XlaBuilder* builder = loctx->builder();
 
   XlaOpVector::iterator it =
       std::find_if(unwrapped_output.begin(), unwrapped_output.end(),
                    [=](xla::XlaOp op) { return builder != op.builder(); });
 
   if (it != unwrapped_output.end()) {
-    return XLA_ERROR_WITH_LOCATION(absl::InternalError(
-        absl::StrCat("expected all outputs of ", op().ToString(),
-                     " to have the same builder. However, found at least 2 "
-                     "different builders for ")));
+    return XLA_ERROR_WITH_LOCATION(absl::InternalError(absl::StrCat(
+        "expected all outputs of ", op().ToString(),
+        " to reference the top-level builder in the used LoweringContext "
+        "(builder: ",
+        builder->name(),
+        "). However, found 1 output referencing a different builder: ",
+        xla::internal::XlaBuilderFriend::GetInstruction(*it)->name(),
+        " (builder: ", it->builder()->name(), ").")));
   }
 
   XLA_RETURN_IF_ERROR(builder->first_error());

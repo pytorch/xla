@@ -201,7 +201,7 @@ class XlaNode : public torch::lazy::Node {
   // of the `SafeLower` call. The intended use of this function is to be
   // called on the result of a `SafeLower` call.
   absl::StatusOr<XlaOpVector> CheckLoweringOutput(
-      absl::StatusOr<XlaOpVector>&& output) const;
+      absl::StatusOr<XlaOpVector>&& output, LoweringContext* loctx) const;
 
   xla::Shape xla_shape_;
   torch::lazy::hash_t node_hash_ = 0;
