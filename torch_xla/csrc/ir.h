@@ -122,17 +122,9 @@ class XlaNode : public torch::lazy::Node {
   // Lowers the current XlaNode using `loctx`.
   virtual absl::StatusOr<XlaOpVector> SafeLower(LoweringContext* loctx) const;
 
-  // Calls XlaNode::SafeLower, and, on error, wraps the message with a prefix
-  // for making the fact that it is a lowering error more clear.
-  //
-  // You almost always want to call this function, instead of XlaNode::SafeLower
-  // directly.
-  //
-  // Example:
-  //
-  // RuntimeError: Error while lowering xla::device_data: <error message>
-  //
-  absl::StatusOr<XlaOpVector> LowerOrWrapError(LoweringContext* loctx) const;
+  // Lowers the current XlaNode by calling `SafeLower`, and checks the
+  // underlying XlaBuilder for errors.
+  absl::StatusOr<XlaOpVector> CheckedLower(LoweringContext* loctx) const;
 
   XlaOpVector ReturnOp(xla::XlaOp op, LoweringContext* loctx) const;
 
@@ -193,6 +185,14 @@ class XlaNode : public torch::lazy::Node {
   static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
   void UpdateShardingHash();
+
+  // Wraps the lowering error message, if any, with a prefix, indicating that
+  // the error was triggered by lowering.
+  //
+  // Example:
+  //
+  // RuntimeError: Error while lowering <operation>: <error message>
+  absl::Status WrapLoweringError(const absl::Status& status) const;
 
   xla::Shape xla_shape_;
   torch::lazy::hash_t node_hash_ = 0;

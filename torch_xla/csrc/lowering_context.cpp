@@ -246,7 +246,7 @@ absl::StatusOr<XlaOpVector> LoweringContext::LowerNode(
   const HloMetadataSetter meta_setter(*this, node);
   const XlaNode* const casted = dynamic_cast<const XlaNode*>(&node);
 
-  XLA_ASSIGN_OR_RETURN(XlaOpVector output, casted->LowerOrWrapError(this));
+  XLA_ASSIGN_OR_RETURN(XlaOpVector output, casted->CheckedLower(this));
 
   if (!casted->dynamic_dims().empty()) {
     const xla::internal::XlaBuilderFriend builder_friend;
@@ -265,7 +265,6 @@ absl::StatusOr<XlaOpVector> LoweringContext::LowerNode(
     }
   }
 
-  XLA_RETURN_IF_ERROR(builder()->first_error());
   return output;
 }
 

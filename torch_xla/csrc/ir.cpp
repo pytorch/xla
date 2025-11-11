@@ -161,37 +161,6 @@ XlaOpVector XlaNode::Lower(LoweringContext* loctx) const {
   XLA_ERROR() << "Lowering not implemented for node: " << *this;
 }
 
-absl::StatusOr<XlaOpVector> XlaNode::LowerOrWrapError(
-    LoweringContext* loctx) const {
-  absl::StatusOr<XlaOpVector> r = SafeLower(loctx);
-
-  // Do nothing if there were no errors.
-  if (r.ok()) {
-    return r;
-  }
-
-  const torch::lazy::MetaData& meta = metadata();
-
-  // Show more information about the lowering error.
-  ABSL_LOG(ERROR) << "Error lowering node: " << ToString();
-  ABSL_LOG(ERROR) << "  |- scope: " << meta.scope;
-  ABSL_LOG(ERROR) << "  |- frame info: " << meta.frame_info;
-
-  // Keep only the main message in the status error.
-  // Copy the message, since we will be moving from it, next.
-  std::string message(r.status().message());
-  // Even though, at this point, `r` is guaranteed to be an error status,
-  // we use `XLA_RETURN_IF_ERROR` for 2 reasons:
-  //
-  //   1. Prepend the context string to indicate failure in the lowering phase
-  //   2. Add the current frame to the status propagation trace
-  XLA_RETURN_IF_ERROR(
-      std::move(r),
-      absl::StrCat("Error while lowering ", op().ToString(), ": ", message));
-
-  ABSL_UNREACHABLE();
-}
-
 absl::StatusOr<XlaOpVector> XlaNode::SafeLower(LoweringContext* loctx) const {
   // This default implementation of `SafeLower` is only temporary.
   //
@@ -206,6 +175,14 @@ absl::StatusOr<XlaOpVector> XlaNode::SafeLower(LoweringContext* loctx) const {
   } catch (const std::exception& ex) {
     return absl::UnknownError(ex.what());
   }
+}
+
+absl::StatusOr<XlaOpVector> XlaNode::CheckedLower(
+    LoweringContext* loctx) const {
+  absl::StatusOr<XlaOpVector> output = SafeLower(loctx);
+  XLA_RETURN_IF_ERROR(WrapLoweringError(output.status()));
+  XLA_RETURN_IF_ERROR(WrapLoweringError(loctx->builder()->first_error()));
+  return output;
 }
 
 torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,
@@ -293,6 +270,33 @@ void XlaNode::UpdateShardingHash() {
           torch::lazy::HashCombine(sharding_hash_, (uint32_t)is_dyn_dim);
     }
   }
+}
+
+absl::Status XlaNode::WrapLoweringError(const absl::Status& status) const {
+  if (status.ok()) {
+    return absl::OkStatus();
+  }
+
+  const torch::lazy::MetaData& meta = metadata();
+
+  // Show more information about the lowering error.
+  ABSL_LOG(ERROR) << "Error lowering node: " << ToString();
+  ABSL_LOG(ERROR) << "  |- scope: " << meta.scope;
+  ABSL_LOG(ERROR) << "  |- frame info: " << meta.frame_info;
+
+  // Keep only the main message in the status error.
+  // Copy the message, since we will be moving from it, next.
+  std::string message(status.message());
+  // Even though, at this point, `status` is guaranteed to be an error status,
+  // we use `XLA_RETURN_IF_ERROR` for 2 reasons:
+  //
+  //   1. Prepend the context string to indicate failure in the lowering phase
+  //   2. Add the current frame to the status propagation trace
+  XLA_RETURN_IF_ERROR(
+      std::move(status),
+      absl::StrCat("Error while lowering ", op().ToString(), ": ", message));
+
+  ABSL_UNREACHABLE();
 }
 
 std::shared_ptr<torch::lazy::UserMetaData> XlaNode::SetUserMetadataForSubGraph(
