@@ -5,6 +5,7 @@
 #include <torch/csrc/lazy/core/ir_metadata.h>
 #include <torch/csrc/lazy/python/python_util.h>
 
+#include <algorithm>
 #include <functional>
 #include <sstream>
 
@@ -15,6 +16,7 @@
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 namespace {
@@ -173,16 +175,38 @@ absl::StatusOr<XlaOpVector> XlaNode::SafeLower(LoweringContext* loctx) const {
   try {
     return Lower(loctx);
   } catch (const std::exception& ex) {
-    return absl::UnknownError(ex.what());
+    return XLA_ERROR_WITH_LOCATION(absl::UnknownError(ex.what()));
   }
 }
 
 absl::StatusOr<XlaOpVector> XlaNode::CheckedLower(
     LoweringContext* loctx) const {
-  absl::StatusOr<XlaOpVector> output = SafeLower(loctx);
-  XLA_RETURN_IF_ERROR(WrapLoweringError(output.status()));
-  XLA_RETURN_IF_ERROR(WrapLoweringError(loctx->builder()->first_error()));
-  return output;
+  absl::StatusOr<XlaOpVector> output = CheckLoweringOutput(SafeLower(loctx));
+
+  if (output.ok()) {
+    return output;
+  }
+
+  const torch::lazy::MetaData& meta = metadata();
+
+  // Show more information about the lowering error.
+  ABSL_LOG(ERROR) << "Error lowering node: " << ToString();
+  ABSL_LOG(ERROR) << "  |- scope: " << meta.scope;
+  ABSL_LOG(ERROR) << "  |- frame info: " << meta.frame_info;
+
+  // Keep only the main message in the status error.
+  // Copy the message, since we will be moving from it, next.
+  std::string message(output.status().message());
+  // Even though, at this point, `status` is guaranteed to be an error status,
+  // we use `XLA_RETURN_IF_ERROR` for 2 reasons:
+  //
+  //   1. Prepend the context string to indicate failure in the lowering phase
+  //   2. Add the current frame to the status propagation trace
+  XLA_RETURN_IF_ERROR(
+      std::move(output),
+      absl::StrCat("Error while lowering ", op().ToString(), ": ", message));
+
+  ABSL_UNREACHABLE();
 }
 
 torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,
@@ -272,31 +296,26 @@ void XlaNode::UpdateShardingHash() {
   }
 }
 
-absl::Status XlaNode::WrapLoweringError(const absl::Status& status) const {
-  if (status.ok()) {
-    return absl::OkStatus();
+absl::StatusOr<XlaOpVector> XlaNode::CheckLoweringOutput(
+    absl::StatusOr<XlaOpVector>&& output) const {
+  XLA_ASSIGN_OR_RETURN(XlaOpVector unwrapped_output, std::move(output));
+
+  xla::XlaOp first = unwrapped_output.front();
+  xla::XlaBuilder* builder = first.builder();
+
+  XlaOpVector::iterator it =
+      std::find_if(unwrapped_output.begin(), unwrapped_output.end(),
+                   [=](xla::XlaOp op) { return builder != op.builder(); });
+
+  if (it != unwrapped_output.end()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InternalError(
+        absl::StrCat("expected all outputs of ", op().ToString(),
+                     " to have the same builder. However, found at least 2 "
+                     "different builders for ")));
   }
 
-  const torch::lazy::MetaData& meta = metadata();
-
-  // Show more information about the lowering error.
-  ABSL_LOG(ERROR) << "Error lowering node: " << ToString();
-  ABSL_LOG(ERROR) << "  |- scope: " << meta.scope;
-  ABSL_LOG(ERROR) << "  |- frame info: " << meta.frame_info;
-
-  // Keep only the main message in the status error.
-  // Copy the message, since we will be moving from it, next.
-  std::string message(status.message());
-  // Even though, at this point, `status` is guaranteed to be an error status,
-  // we use `XLA_RETURN_IF_ERROR` for 2 reasons:
-  //
-  //   1. Prepend the context string to indicate failure in the lowering phase
-  //   2. Add the current frame to the status propagation trace
-  XLA_RETURN_IF_ERROR(
-      std::move(status),
-      absl::StrCat("Error while lowering ", op().ToString(), ": ", message));
-
-  ABSL_UNREACHABLE();
+  XLA_RETURN_IF_ERROR(builder->first_error());
+  return unwrapped_output;
 }
 
 std::shared_ptr<torch::lazy::UserMetaData> XlaNode::SetUserMetadataForSubGraph(
