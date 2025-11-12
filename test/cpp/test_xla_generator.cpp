@@ -10,45 +10,9 @@
 namespace torch_xla {
 namespace cpp_test {
 
-// Ensure PJRT is configured to a CPU backend for tests that touch the PJRT
-// runtime. Optionally allow overriding the environment values by passing
-// `pjrt_device` and/or `cpu_num_devices`.
-static void EnsurePjrtCpuBackend(const char* pjrt_device = nullptr,
-                                 const char* cpu_num_devices = nullptr) {
-  // PJRT_DEVICE: override if provided, otherwise set default if not present
-  if (pjrt_device != nullptr && pjrt_device[0] != '\0') {
-    // Force override of any existing value
-    setenv("PJRT_DEVICE", pjrt_device, 1);
-  } else {
-    const char* pjrt = std::getenv("PJRT_DEVICE");
-    if (pjrt == nullptr || pjrt[0] == '\0') {
-      // Use CPU backend with a single device by default.
-      setenv("PJRT_DEVICE", "CPU", 1);
-    }
-  }
-
-  // CPU_NUM_DEVICES: override if provided, otherwise set default if not present
-  if (cpu_num_devices != nullptr && cpu_num_devices[0] != '\0') {
-    // Force override of any existing value
-    setenv("CPU_NUM_DEVICES", cpu_num_devices, 1);
-  } else {
-    const char* cpu_devices = std::getenv("CPU_NUM_DEVICES");
-    if (cpu_devices == nullptr || cpu_devices[0] == '\0') {
-      // Default to a single CPU device. Preserve existing behavior of not
-      // overwriting if already present (use overwrite=0 to match previous
-      // semantics).
-      setenv("CPU_NUM_DEVICES", "1", 0);
-    }
-  }
-}
-
 // Test fixture for XLAGenerator tests
 class XLAGeneratorTest : public ::torch_xla::cpp_test::TorchXlaTest {
  protected:
-  // Runs once before the test suite / test case to ensure PJRT is configured
-  // before any XLA runtime initialization happens in per-test SetUp().
-  static void SetUpTestCase() { EnsurePjrtCpuBackend("CPU", "2"); }
-
   void SetUp() {
     // Create a generator for XLA device 0
     gen_ = at::make_generator<at::XLAGeneratorImpl>(0);
