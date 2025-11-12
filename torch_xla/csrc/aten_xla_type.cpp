@@ -2535,6 +2535,7 @@ at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
       .add_input(self)
       .add_input(other)
       .cast_inputs_to_common_dtype()
+      .use_opmathtype_for_compute()
       .run();
 }
 
