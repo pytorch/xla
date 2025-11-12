@@ -399,7 +399,7 @@ std::string ToXlaString(const c10::Device& device) {
   return absl::StrCat("xla:", device.index());
 }
 
-static absl::StatusOr<torch::lazy::BackendDevice>
+static absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>
 InitializeDefaultBackendDevice() {
   std::string spec;
 
@@ -415,19 +415,21 @@ InitializeDefaultBackendDevice() {
   XLA_ASSIGN_OR_RETURN(torch::lazy::BackendDevice device,
                        SafeParseDeviceString(spec));
 
+  return new torch::lazy::BackendDevice(device);
+}
+
+const torch::lazy::BackendDevice* absl_nonnull GetDefaultDevice() {
+  XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* absl_nonnull device,
+                      SafeGetDefaultDevice());
   return device;
 }
 
-const torch::lazy::BackendDevice* GetDefaultDevice() {
-  XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice& device,
-                      SafeGetDefaultDevice());
-  return &device;
-}
-
-const absl::StatusOr<const torch::lazy::BackendDevice>& SafeGetDefaultDevice() {
-  static absl::StatusOr<torch::lazy::BackendDevice>& default_backend_device =
-      *new absl::StatusOr<torch::lazy::BackendDevice>(
-          InitializeDefaultBackendDevice());
+const absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>&
+SafeGetDefaultDevice() {
+  static absl::StatusOr<torch::lazy::BackendDevice* absl_nonnull>&
+      default_backend_device =
+          *new absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>(
+              InitializeDefaultBackendDevice());
   return default_backend_device;
 }
 
