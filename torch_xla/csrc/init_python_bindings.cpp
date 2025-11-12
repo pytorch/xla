@@ -1733,8 +1733,7 @@ void InitXlaModuleBindings(py::module m) {
                 bridge::GetCurrentDevice();
             std::vector<XLATensorPtr> xtensors =
                 XLAGraphExecutor::Get()->GetLiveTensors(&current_device);
-            torch::lazy::BackendDevice spmd_device =
-                ParseDeviceString("SPMD:0");
+            torch::lazy::BackendDevice spmd_device = GetVirtualDevice();
             for (auto xtensor : xtensors) {
               XlaDeviceType xla_device_type =
                   static_cast<XlaDeviceType>(xtensor->GetDevice().type());

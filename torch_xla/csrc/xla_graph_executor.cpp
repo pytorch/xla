@@ -471,7 +471,7 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
     }
   } else {
     if (UseVirtualDevice()) {
-      wait_devices.insert(ParseDeviceString("SPMD:0"));
+      wait_devices.insert(GetVirtualDevice());
     } else {
       XLA_ASSIGN_OR_THROW(
           runtime::ComputationClient * absl_nonnull const client,

@@ -47,14 +47,14 @@ class AtenXlaDeviceMapper {
         return;
       }
     }
-    devices_.emplace_back(ParseDeviceString("SPMD:0"));
+    devices_.emplace_back(GetVirtualDevice());
     devices_ordinals_[devices_.back()] = 0;
   }
 
  private:
   AtenXlaDeviceMapper() {
     if (UseVirtualDevice()) {
-      devices_.emplace_back(ParseDeviceString("SPMD:0"));
+      devices_.emplace_back(GetVirtualDevice());
       devices_ordinals_[devices_.back()] = 0;
     } else {
       XLA_ASSIGN_OR_THROW(
