@@ -4,15 +4,21 @@
 #include "torch_xla/csrc/device.h"
 
 static void CheckFormatError(const std::string& spec) {
-  absl::StatusOr<torch::lazy::BackendDevice> r = torch_xla::SafeParseDeviceString(spec);
+  absl::StatusOr<torch::lazy::BackendDevice> r =
+      torch_xla::SafeParseDeviceString(spec);
   EXPECT_FALSE(r.ok());
-  EXPECT_EQ(r.status().message(), absl::StrCat("expected the device string `", spec, "` to be in the format: `<type>:<index>`."));
+  EXPECT_EQ(r.status().message(),
+            absl::StrCat("expected the device string `", spec,
+                         "` to be in the format: `<type>:<index>`."));
 }
 
 static void CheckIndexParseError(const std::string& spec) {
-  absl::StatusOr<torch::lazy::BackendDevice> r = torch_xla::SafeParseDeviceString(spec);
+  absl::StatusOr<torch::lazy::BackendDevice> r =
+      torch_xla::SafeParseDeviceString(spec);
   EXPECT_FALSE(r.ok());
-  EXPECT_EQ(r.status().message(), absl::StrCat("error while parsing the device spec `", spec, "`: stoi"));
+  EXPECT_EQ(
+      r.status().message(),
+      absl::StrCat("error while parsing the device spec `", spec, "`: stoi"));
 }
 
 TEST(DeviceTest, ParseDeviceStringFormatError) {
