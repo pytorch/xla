@@ -39,7 +39,7 @@ static std::vector<at::Generator> default_gens_xla;
  * Populates the global variables related to XLA generators
  * Warning: this function must only be called once!
  */
-static absl::Status InitXLAGenVector() {
+static absl::Status InitGlobalVars() {
   static const absl::Status* init_status = new absl::Status([]() {
     XLA_ASSIGN_OR_RETURN(auto c_client,
                          torch_xla::runtime::GetComputationClient());
@@ -80,7 +80,7 @@ static absl::StatusOr<c10::DeviceIndex> NormalizeXLADeviceIndex(
  */
 absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(
     c10::DeviceIndex device_index) {
-  XLA_RETURN_IF_ERROR(InitXLAGenVector(),
+  XLA_RETURN_IF_ERROR(InitGlobalVars(),
                       "Failed to initialize XLA generators");
   // Normalize and validate the target device index; default to current device
   // when unspecified
@@ -99,7 +99,7 @@ absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(
  */
 absl::StatusOr<at::Generator> CreateXLAGenerator(
     c10::DeviceIndex device_index) {
-  XLA_RETURN_IF_ERROR(InitXLAGenVector(),
+  XLA_RETURN_IF_ERROR(InitGlobalVars(),
                       "Failed to initialize XLA generators");
   // Normalize and validate the target device index; default to current device
   // when unspecified

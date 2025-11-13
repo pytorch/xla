@@ -31,6 +31,7 @@ function run_torch_xla_cpp_tests() {
   TORCH_DIR=$(python -c "import pkgutil; import os; print(os.path.dirname(pkgutil.get_loader('torch').get_filename()))")
   export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${TORCH_DIR}/lib
   export PJRT_DEVICE=CPU
+  export CPU_NUM_DEVICES=2
   export XLA_EXPERIMENTAL="nonzero:masked_select:nms"
 
   test_names=("test_aten_xla_tensor_1"
