@@ -80,8 +80,7 @@ static absl::StatusOr<c10::DeviceIndex> NormalizeXLADeviceIndex(
  */
 absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(
     c10::DeviceIndex device_index) {
-  XLA_RETURN_IF_ERROR(InitGlobalVars(),
-                      "Failed to initialize XLA generators");
+  XLA_RETURN_IF_ERROR(InitGlobalVars(), "Failed to initialize XLA generators");
   // Normalize and validate the target device index; default to current device
   // when unspecified
   XLA_ASSIGN_OR_RETURN(c10::DeviceIndex idx,
@@ -99,8 +98,7 @@ absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(
  */
 absl::StatusOr<at::Generator> CreateXLAGenerator(
     c10::DeviceIndex device_index) {
-  XLA_RETURN_IF_ERROR(InitGlobalVars(),
-                      "Failed to initialize XLA generators");
+  XLA_RETURN_IF_ERROR(InitGlobalVars(), "Failed to initialize XLA generators");
   // Normalize and validate the target device index; default to current device
   // when unspecified
   XLA_ASSIGN_OR_RETURN(c10::DeviceIndex idx,
