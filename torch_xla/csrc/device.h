@@ -8,32 +8,60 @@
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/util.h>
 
-#include "torch_xla/csrc/runtime/util.h"
-
 namespace torch_xla {
+
+// Convenient macro for applying another macro to all native device types.
+//
+// Add new device type
+// ===================
+//
+// Add a new line to the macro below:
+//
+//     _(<DEVICE>, <INDEX>)
+//
+// Where <DEVICE> is the enum of the given device, and <INDEX> is the
+// previous number plus 1.
+//
+#define XLA_FOR_ALL_NATIVE_DEVICE_TYPES_(_) \
+  _(CPU, 0)                                 \
+  _(CUDA, 1)                                \
+  _(TPU, 2)                                 \
+  _(NEURON, 3)                              \
+  _(SPMD, 4)
 
 // TODO(yeounoh) `SPMD` is a virtual device that defers data `TransferToDevice`
 // until after the paritioning pass. This avoids transfering  the full input
 // tensor to the device.
-enum class XlaDeviceType { CPU, CUDA, TPU, NEURON, SPMD, PLUGIN };
+enum class XlaDeviceType : int8_t {
+#define XLA_DECLARE_ENUM(name, value) name = value,
+  XLA_FOR_ALL_NATIVE_DEVICE_TYPES_(XLA_DECLARE_ENUM)
+#undef XLA_DECLARE_ENUM
+
+  // Plugin is not considered a native device type.
+  // It has a special treatment for some functions.
+  PLUGIN,
+};
 
 struct DeviceType : public torch::lazy::BackendDeviceType {
-  DeviceType(XlaDeviceType xla_device_type)
-      : torch::lazy::BackendDeviceType(static_cast<int>(xla_device_type)),
-        type_name_(XlaDeviceTypeToString(xla_device_type)) {}
-  DeviceType(const std::string& type_name)
-      : torch::lazy::BackendDeviceType(
-            static_cast<int>(StringToXlaDeviceType(type_name))),
-        type_name_(type_name) {}
+  DeviceType(XlaDeviceType xla_device_type);
+
+  // Constructor parses the `type_name` into an `XlaDeviceType`.
+  //
+  // This should in 2 cases:
+  //
+  //   1. When using non-native device types.
+  //      Although `XlaDeviceType::PLUGIN` will be used, the `type_name`
+  //      parameter will be stored internally.
+  //
+  //   2. When parsing string device types.
+  //
+  DeviceType(std::string_view type_name);
 
   std::string toString() const override;
   XlaDeviceType getType() const;
 
  private:
   std::string type_name_;
-
-  static std::string XlaDeviceTypeToString(XlaDeviceType hw_type);
-  static XlaDeviceType StringToXlaDeviceType(const std::string& type_name);
 };
 
 // Parses the given `device_spec` into a new `BackendDevice`.
