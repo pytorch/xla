@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+git85600f7 )
+                  master (2.9.0+git329c2e7 )
                 </div>
               
             
@@ -486,13 +486,17 @@ to specify a semicolon separated list of source files for which you want to
 generate debug symbols. This lets you generate debug symbols for only the source
 files you want to debug. All other source files are built and optimized as usual.</p>
 <p>We suggest the following steps:</p>
-<ol class="arabic simple">
+<ol class="arabic">
 <li><p>Identify the source file you want to debug.</p></li>
-<li><p>Build that file with debug symbols using a command similar to <code class="docutils literal notranslate"><span class="pre">USE_CUSTOM_DEBINFO=&quot;aten/src/ATen/native/Linear.cpp&quot;</span> <span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">develop</span></code>.</p></li>
+<li><p>Build that file with debug symbols using a command similar to</p>
+<p><code class="docutils literal notranslate"><span class="pre">USE_CUSTOM_DEBINFO=&quot;aten/src/ATen/native/Linear.cpp&quot;</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">--no-build-isolation</span> <span class="pre">-v</span> <span class="pre">-e</span> <span class="pre">.</span></code></p>
+</li>
 <li><p>Set a breakpoint and start a debugger session. As you debug you will discover
 additional files you want to debug.</p></li>
 <li><p>Add those files to the <code class="docutils literal notranslate"><span class="pre">USE_CUSTOM_DEBINFO</span></code> environment variable.</p></li>
-<li><p>Rebuild with a command similar to <code class="docutils literal notranslate"><span class="pre">USE_CUSTOM_DEBINFO=&quot;aten/src/ATen/native/Linear.cpp;newfile.cpp&quot;</span> <span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">develop</span></code>.</p></li>
+<li><p>Rebuild with a command similar to</p>
+<p><code class="docutils literal notranslate"><span class="pre">USE_CUSTOM_DEBINFO=&quot;aten/src/ATen/native/Linear.cpp;newfile.cpp&quot;</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">--no-build-isolation</span> <span class="pre">-v</span> <span class="pre">-e</span> <span class="pre">.</span></code></p>
+</li>
 <li><p>Start your debugger session again.</p></li>
 </ol>
 <p>At this point, your PyTorch is built with debugging symbols and ready to debug
@@ -503,7 +507,7 @@ with GDB. However, we recommend debugging with VSCode. For more information, see
 <p>For PyTorch, we recommend you do a full clean and rebuild each time.
 Unfortunately, touching a file to update its timestamp does not reliably cause
 that file to be rebuilt.</p>
-<p>In the output of the <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">develop</span></code> command, look for a line that
+<p>In the output of the <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">--no-build-isolation</span> <span class="pre">-v</span> <span class="pre">-e</span> <span class="pre">.</span></code> command, look for a line that
 starts with <code class="docutils literal notranslate"><span class="pre">Source</span> <span class="pre">files</span> <span class="pre">with</span> <span class="pre">custom</span> <span class="pre">debug</span> <span class="pre">infos</span></code> to make sure your file was
 built with debug symbols. For example:</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--<span class="w">  </span>USE_ROCM_KERNEL_ASSERT<span class="w"> </span>:<span class="w"> </span>OFF
@@ -615,7 +619,7 @@ information is displayed on the left.</p>
 building certain libraries to speed up builds, or adding diagnostics. The following
 settings turns off building CUDA and turns on handling an environment variable
 to print dispatcher traces.</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">USE_CUSTOM_DEBINFO</span><span class="o">=</span><span class="s2">&quot;aten/src/ATen/native/Linear.cpp&quot;</span><span class="w"> </span><span class="nv">USE_CUDA</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/home/USERNAME/miniconda3/envs/torch310/lib<span class="w"> </span><span class="nv">CFLAGS</span><span class="o">=</span><span class="s2">&quot;-DHAS_TORCH_SHOW_DISPATCH_TRACE&quot;</span><span class="w"> </span>python<span class="w"> </span>setup.py<span class="w"> </span>develop
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">USE_CUSTOM_DEBINFO</span><span class="o">=</span><span class="s2">&quot;aten/src/ATen/native/Linear.cpp&quot;</span><span class="w"> </span><span class="nv">USE_CUDA</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/home/USERNAME/miniconda3/envs/torch310/lib<span class="w"> </span><span class="nv">CFLAGS</span><span class="o">=</span><span class="s2">&quot;-DHAS_TORCH_SHOW_DISPATCH_TRACE&quot;</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-build-isolation<span class="w"> </span>-v<span class="w"> </span>-e<span class="w"> </span>.
 </pre></div>
 </div>
 </section>
