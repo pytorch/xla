@@ -54,7 +54,8 @@ function run_torch_xla_cpp_tests() {
                "test_runtime"
                "test_status_dont_show_cpp_stacktraces"
                "test_status_show_cpp_stacktraces"
-               "test_debug_macros")
+               "test_debug_macros"
+               "test_device")
   for name in "${test_names[@]}"; do
     echo "Running $name cpp test..."
     /tmp/test/bin/${name}

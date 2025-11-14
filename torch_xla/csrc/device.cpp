@@ -1,10 +1,15 @@
 #include "torch_xla/csrc/device.h"
 
+#include <memory>
+#include <string_view>
+#include <utility>
+
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "absl/types/optional.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/status.h"
 
 namespace torch_xla {
 namespace {
@@ -60,17 +65,32 @@ XlaDeviceType DeviceType::getType() const {
 }
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
-  XLA_CHECK(!device_spec.empty()) << "empty device spec";
-  XLA_CHECK(device_spec[0] != ':')
-      << "No device type in device specification: " << device_spec;
-  std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec, ':');
-  XLA_CHECK_EQ(device_spec_parts.size(), 2)
-      << "Invalid device specification: " << device_spec;
+  XLA_ASSIGN_OR_THROW(torch::lazy::BackendDevice device,
+                      SafeParseDeviceString(device_spec));
+  return device;
+}
 
-  int ordinal = std::stoi(device_spec_parts[1]);
-  auto device_type = std::make_shared<DeviceType>(device_spec_parts[0]);
+absl::StatusOr<torch::lazy::BackendDevice> SafeParseDeviceString(
+    const std::string& device_spec) {
+  std::vector<std::string> parts = absl::StrSplit(device_spec, ':');
 
-  return torch::lazy::BackendDevice(std::move(device_type), ordinal);
+  if (parts.size() != 2) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("expected the device string `", device_spec,
+                     "` to be in the format: `<type>:<index>`.")));
+  }
+
+  const std::string& type_str = parts[0];
+  const std::string& index_str = parts[1];
+
+  try {
+    return torch::lazy::BackendDevice(std::make_shared<DeviceType>(type_str),
+                                      std::stoi(index_str));
+  } catch (const std::exception& e) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("error while parsing the device spec `", device_spec,
+                     "`: ", e.what())));
+  }
 }
 
 torch::lazy::BackendDevice GetVirtualDevice() {

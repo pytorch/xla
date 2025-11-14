@@ -143,7 +143,16 @@ c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device);
 
 std::string ToXlaString(const c10::Device& device);
 
-const torch::lazy::BackendDevice* GetDefaultDevice();
+[[deprecated(
+    "Use SafeGetDefaultDevice for better error handling.")]] const torch::lazy::
+    BackendDevice* absl_nonnull
+    GetDefaultDevice();
+
+// Returns the default `BackendDevice`.
+// This function returns an error if the `ComputationClient` wasn't correctly
+// initialized.
+const absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>&
+SafeGetDefaultDevice();
 
 c10::Device AtenDefaultDevice();
 
