@@ -2,13 +2,20 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
+#include <cstdint>
+#include <exception>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
+
+#include <torch/csrc/lazy/backend/backend_device.h>
 
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 

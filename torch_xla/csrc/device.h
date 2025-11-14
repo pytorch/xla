@@ -1,12 +1,14 @@
 #ifndef XLA_TORCH_XLA_CSRC_DEVICE_H_
 #define XLA_TORCH_XLA_CSRC_DEVICE_H_
 
-#include <iostream>
 #include <string>
+#include <string_view>
 
 #include <torch/csrc/lazy/backend/backend_device.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/util.h>
+
+#include "absl/status/statusor.h"
 
 namespace torch_xla {
 

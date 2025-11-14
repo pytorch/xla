@@ -3,7 +3,7 @@
 
 #include "absl/types/span.h"
 #include "xla/shape.h"
-#include "xla/types.h"
+#include "xla/xla_data.pb.h"
 
 #include "torch_xla/csrc/device.h"
 
