@@ -16,7 +16,7 @@ class DeviceData : public XlaNode {
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
-  XlaOpVector Lower(LoweringContext* loctx) const override;
+  absl::StatusOr<XlaOpVector> SafeLower(LoweringContext* loctx) const override;
 
   const std::shared_ptr<torch::lazy::BackendData>& data() const {
     return data_;
