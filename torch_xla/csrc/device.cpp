@@ -1,16 +1,14 @@
 #include "torch_xla/csrc/device.h"
 
-#include <memory>
-#include <string_view>
-#include <utility>
 #include <algorithm>
 #include <array>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include "absl/status/status.h"
 #include "absl/log/absl_check.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 
