@@ -34,7 +34,7 @@ constexpr std::array<std::pair<XlaDeviceType, std::string_view>,
 #undef XLA_DEVICE_NAME_PAIR
     }};
 
-std::string_view XlaDeviceTypeToString(XlaDeviceType type) {
+std::string_view NativeXlaDeviceTypeToString(XlaDeviceType type) {
   int8_t value = static_cast<int8_t>(type);
   // This check makes sure we are not dealing with:
   //
@@ -75,7 +75,7 @@ DeviceType::DeviceType(std::string_view type_name)
 std::string DeviceType::toString() const {
   std::string_view str = (getType() == XlaDeviceType::PLUGIN)
                              ? type_name_
-                             : XlaDeviceTypeToString(getType());
+                             : NativeXlaDeviceTypeToString(getType());
   return absl::StrCat(str, ":");
 }
 

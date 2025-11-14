@@ -47,14 +47,13 @@ struct DeviceType : public torch::lazy::BackendDeviceType {
 
   // Constructor parses the `type_name` into an `XlaDeviceType`.
   //
-  // This should in 2 cases:
+  // This should be used in 2 cases:
   //
   //   1. When using non-native device types.
   //      Although `XlaDeviceType::PLUGIN` will be used, the `type_name`
   //      parameter will be stored internally.
   //
   //   2. When parsing string device types.
-  //
   DeviceType(std::string_view type_name);
 
   std::string toString() const override;
