@@ -2,9 +2,9 @@
 # Define common configuration parameters for 2.8 release and nightly
 locals {
   tpu_python_versions = ["3.10", "3.11", "3.12", "3.13"]
-  release_git_tag         = "v2.9.0-rc1"
-  release_package_version = "2.9.0-rc1"
-  release_pytorch_git_rev = "v2.9.0-rc5"
+  release_git_tag         = "v2.9.0-rc2"
+  release_package_version = "2.9.0-rc2"
+  release_pytorch_git_rev = "v2.9.1"
   nightly_package_version = "2.10.0"
 
   # Built once a day from master
