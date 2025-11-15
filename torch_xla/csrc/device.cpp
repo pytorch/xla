@@ -1,13 +1,23 @@
 #include "torch_xla/csrc/device.h"
 
+#include <torch/csrc/lazy/backend/backend_device.h>
+
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <exception>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
+#include "absl/log/absl_check.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/status.h"
 
@@ -19,45 +29,71 @@ namespace {
 static bool spmd_config_is_locked = false;
 static bool use_virtual_device = false;
 
-}  // namespace
+constexpr std::size_t kNativeXlaDeviceTypeNumber = 5;
+constexpr std::array<std::pair<XlaDeviceType, std::string_view>,
+                     kNativeXlaDeviceTypeNumber>
+    kNativeXlaDeviceTypeWithName = {{
+#define XLA_DEVICE_NAME_PAIR(name, _) {XlaDeviceType::name, #name},
+        XLA_FOR_ALL_NATIVE_DEVICE_TYPES_(XLA_DEVICE_NAME_PAIR)
+#undef XLA_DEVICE_NAME_PAIR
+    }};
 
-std::string DeviceType::XlaDeviceTypeToString(XlaDeviceType hw_type) {
-  XLA_CHECK(hw_type != XlaDeviceType::PLUGIN) << "PLUGIN type name unknown";
-
-  switch (hw_type) {
-    case XlaDeviceType::CPU:
-      return "CPU";
-    case XlaDeviceType::CUDA:
-      return "CUDA";
-    case XlaDeviceType::TPU:
-      return "TPU";
-    case XlaDeviceType::NEURON:
-      return "NEURON";
-    case XlaDeviceType::SPMD:
-      return "SPMD";
-    default:
-      XLA_ERROR() << "Invalid device type";
+absl::Status CheckIsNativeXlaDeviceType(int8_t value) {
+  if (value < 0 || value >= kNativeXlaDeviceTypeNumber) {
+    return XLA_ERROR_WITH_LOCATION(absl::InternalError(
+        absl::StrCat("invalid native XlaDeviceType value: ", value,
+                     " (casted to int). It should be non-negative, less than ",
+                     kNativeXlaDeviceTypeNumber,
+                     " (number of native XlaDeviceType). This shouldn't be "
+                     "called for XlaDeviceType::PLUGIN (",
+                     static_cast<int8_t>(XlaDeviceType::PLUGIN), ").")));
   }
+  return absl::OkStatus();
 }
 
-XlaDeviceType DeviceType::StringToXlaDeviceType(const std::string& type_name) {
-  if (type_name == "SPMD") {
-    return XlaDeviceType::SPMD;
-  } else if (type_name == "TPU") {
-    return XlaDeviceType::TPU;
-  } else if (type_name == "CPU") {
-    return XlaDeviceType::CPU;
-  } else if (type_name == "CUDA") {
-    return XlaDeviceType::CUDA;
-  } else if (type_name == "NEURON") {
-    return XlaDeviceType::NEURON;
-  }
+std::string_view NativeXlaDeviceTypeToString(XlaDeviceType type) {
+  int8_t value = static_cast<int8_t>(type);
+  // This check makes sure we are not dealing with:
+  //
+  //   1. Invalid XlaDeviceType (i.e. result of conversion of a number bigger
+  //      than PLUGIN -- the last enum value)
+  //
+  //   2. The XlaDeviceType::PLUGIN enum, since it's not considered a "native"
+  //      device type
+  XLA_CHECK_OK(CheckIsNativeXlaDeviceType(value));
+  return kNativeXlaDeviceTypeWithName[value].second;
+}
 
+XlaDeviceType StringToXlaDeviceType(std::string_view type_name) {
+  std::array<std::pair<XlaDeviceType, std::string_view>,
+             kNativeXlaDeviceTypeNumber>::const_iterator it =
+      std::find_if(kNativeXlaDeviceTypeWithName.begin(),
+                   kNativeXlaDeviceTypeWithName.end(),
+                   [=](const std::pair<XlaDeviceType, std::string_view>& pair) {
+                     return pair.second == type_name;
+                   });
+  if (it != kNativeXlaDeviceTypeWithName.end()) {
+    return it->first;
+  }
   return XlaDeviceType::PLUGIN;
 }
 
+}  // namespace
+
+DeviceType::DeviceType(XlaDeviceType xla_device_type)
+    : torch::lazy::BackendDeviceType(static_cast<int8_t>(xla_device_type)),
+      type_name_() {}
+
+DeviceType::DeviceType(std::string_view type_name)
+    : torch::lazy::BackendDeviceType(
+          static_cast<int8_t>(StringToXlaDeviceType(type_name))),
+      type_name_(type_name) {}
+
 std::string DeviceType::toString() const {
-  return absl::StrCat(type_name_, ":");
+  std::string_view str = (getType() == XlaDeviceType::PLUGIN)
+                             ? type_name_
+                             : NativeXlaDeviceTypeToString(getType());
+  return absl::StrCat(str, ":");
 }
 
 XlaDeviceType DeviceType::getType() const {
