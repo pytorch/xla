@@ -1,10 +1,10 @@
 #ifndef XLA_TORCH_XLA_CSRC_DEVICE_H_
 #define XLA_TORCH_XLA_CSRC_DEVICE_H_
 
+#include <torch/csrc/lazy/backend/backend_device.h>
+
 #include <string>
 #include <string_view>
-
-#include <torch/csrc/lazy/backend/backend_device.h>
 
 #include "absl/status/statusor.h"
 

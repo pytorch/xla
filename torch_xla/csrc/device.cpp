@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/device.h"
 
+#include <torch/csrc/lazy/backend/backend_device.h>
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -11,14 +13,11 @@
 #include <utility>
 #include <vector>
 
-#include <torch/csrc/lazy/backend/backend_device.h>
-
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/status.h"
 
@@ -39,6 +38,19 @@ constexpr std::array<std::pair<XlaDeviceType, std::string_view>,
 #undef XLA_DEVICE_NAME_PAIR
     }};
 
+absl::Status CheckIsNativeXlaDeviceType(int8_t value) {
+  if (value < 0 || value >= kNativeXlaDeviceTypeNumber) {
+    return XLA_ERROR_WITH_LOCATION(absl::InternalError(
+        absl::StrCat("invalid native XlaDeviceType value: ", value,
+                     " (casted to int). It should be non-negative, less than ",
+                     kNativeXlaDeviceTypeNumber,
+                     " (number of native XlaDeviceType). This shouldn't be "
+                     "called for XlaDeviceType::PLUGIN (",
+                     static_cast<int8_t>(XlaDeviceType::PLUGIN), ").")));
+  }
+  return absl::OkStatus();
+}
+
 std::string_view NativeXlaDeviceTypeToString(XlaDeviceType type) {
   int8_t value = static_cast<int8_t>(type);
   // This check makes sure we are not dealing with:
@@ -48,7 +60,7 @@ std::string_view NativeXlaDeviceTypeToString(XlaDeviceType type) {
   //
   //   2. The XlaDeviceType::PLUGIN enum, since it's not considered a "native"
   //      device type
-  ABSL_CHECK(value < kNativeXlaDeviceTypeNumber);
+  XLA_CHECK_OK(CheckIsNativeXlaDeviceType(value));
   return kNativeXlaDeviceTypeWithName[value].second;
 }
 
