@@ -1,12 +1,22 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
-#include <torch/csrc/lazy/core/helpers.h>
-#include <torch/csrc/lazy/core/util.h>
-
 #include <algorithm>
 #include <vector>
 
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/status/status.h"
+#include "xla/hlo/builder/lib/arithmetic.h"
+#include "xla/hlo/builder/lib/comparators.h"
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/lib/loops.h"
+#include "xla/hlo/builder/lib/math.h"
+#include "xla/hlo/builder/lib/slicing.h"
+#include "xla/shape_util.h"
+#include "xla/stream_executor/dnn.h"
+#include "xla/util.h"
+
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
@@ -19,15 +29,6 @@
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "xla/hlo/builder/lib/arithmetic.h"
-#include "xla/hlo/builder/lib/comparators.h"
-#include "xla/hlo/builder/lib/constants.h"
-#include "xla/hlo/builder/lib/loops.h"
-#include "xla/hlo/builder/lib/math.h"
-#include "xla/hlo/builder/lib/slicing.h"
-#include "xla/shape_util.h"
-#include "xla/stream_executor/dnn.h"
-#include "xla/util.h"
 
 namespace torch_xla {
 namespace {

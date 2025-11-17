@@ -1,9 +1,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "test/cpp/cpp_test_util.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
+
+#include "test/cpp/cpp_test_util.h"
 
 namespace torch_xla::cpp_test {
 namespace {

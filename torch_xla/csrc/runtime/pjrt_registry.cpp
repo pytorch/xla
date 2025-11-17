@@ -4,13 +4,6 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/log/initialize.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/env_vars.h"
-#include "torch_xla/csrc/runtime/profiler.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/xla_coordinator.h"
-#include "torch_xla/csrc/status.h"
 #include "xla/pjrt/c/pjrt_c_api.h"
 #include "xla/pjrt/cpu/cpu_client.h"
 #include "xla/pjrt/distributed/client.h"
@@ -18,6 +11,14 @@
 #include "xla/pjrt/distributed/in_memory_key_value_store.h"
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
+
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/profiler.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
+#include "torch_xla/csrc/runtime/xla_coordinator.h"
+#include "torch_xla/csrc/status.h"
 
 namespace torch_xla {
 namespace runtime {

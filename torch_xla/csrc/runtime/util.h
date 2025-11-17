@@ -17,9 +17,10 @@
 #include "absl/status/statusor.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "torch_xla/csrc/runtime/types.h"
 #include "tsl/platform/errors.h"
 #include "tsl/platform/hash.h"
+
+#include "torch_xla/csrc/runtime/types.h"
 
 namespace torch_xla {
 namespace runtime {

@@ -1,10 +1,11 @@
 #include "torch_xla/csrc/ops/all_to_all.h"
 
 #include "absl/strings/str_join.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

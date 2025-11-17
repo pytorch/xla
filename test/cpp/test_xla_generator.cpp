@@ -1,11 +1,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <torch/torch.h>
 
 #include <cstdlib>
 
-#include "test/cpp/torch_xla_test.h"
+#include <torch/torch.h>
+
 #include "torch_xla/csrc/xla_generator.h"
+
+#include "test/cpp/torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {

@@ -3,8 +3,9 @@
 
 #include <string_view>
 
-#include "torch_xla/csrc/ir.h"
 #include "xla/types.h"
+
+#include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 

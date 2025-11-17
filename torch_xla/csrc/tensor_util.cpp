@@ -2,8 +2,6 @@
 
 #include <ATen/Formatting.h>
 #include <ATen/Functions.h>
-#include <torch/csrc/lazy/core/hash.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include <algorithm>
 #include <cstring>
@@ -12,7 +10,14 @@
 #include <numeric>
 #include <thread>
 
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/synchronization/blocking_counter.h"
+#include "tsl/platform/bfloat16.h"
+#include "xla/literal_util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
@@ -29,9 +34,6 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
-#include "tsl/platform/bfloat16.h"
-#include "xla/literal_util.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

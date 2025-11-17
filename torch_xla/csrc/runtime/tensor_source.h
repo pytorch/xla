@@ -2,18 +2,20 @@
 #define XLA_CLIENT_TENSOR_SOURCE_H_
 
 #include <ATen/Tensor.h>
-#include <torch/csrc/lazy/core/metrics.h>
 
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "torch_xla/csrc/dtype.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/status.h"
+#include <torch/csrc/lazy/core/metrics.h>
+
 #include "xla/literal.h"
 #include "xla/shape.h"
 #include "xla/shape_util.h"
+
+#include "torch_xla/csrc/dtype.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/status.h"
 
 namespace torch_xla {
 namespace runtime {

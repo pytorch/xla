@@ -1,10 +1,12 @@
 #include "torch_xla/csrc/cross_replica_reduces.h"
 
-#include <torch/csrc/lazy/core/util.h>
-
 #include <map>
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include "torch/csrc/lazy/core/util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"
@@ -17,7 +19,6 @@
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/token_handler.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

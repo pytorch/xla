@@ -1,9 +1,9 @@
 #ifndef XLA_TORCH_XLA_CSRC_DYNAMIC_SHAPE_DETECTOR_H_
 #define XLA_TORCH_XLA_CSRC_DYNAMIC_SHAPE_DETECTOR_H_
 
-#include <torch/csrc/lazy/core/hash.h>
-
 #include <map>
+
+#include <torch/csrc/lazy/core/hash.h>
 
 #include "absl/types/span.h"
 

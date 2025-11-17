@@ -1,8 +1,6 @@
 #ifndef XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_
 #define XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_
 
-#include <torch/csrc/lazy/core/dynamic_ir.h>
-
 #include <functional>
 #include <memory>
 #include <set>
@@ -12,8 +10,11 @@
 #include <utility>
 #include <vector>
 
+#include <torch/csrc/lazy/core/dynamic_ir.h>
+
 #include "absl/log/absl_log.h"
 #include "torch/csrc/lazy/core/dynamic_ir.h"
+
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"

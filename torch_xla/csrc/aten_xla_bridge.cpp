@@ -1,14 +1,16 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 
 #include <ATen/FunctionalTensorWrapper.h>
-#include <torch/csrc/lazy/core/tensor_util.h>
 
 #include <map>
 #include <string>
 #include <vector>
 
+#include <torch/csrc/lazy/core/tensor_util.h>
+
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
+
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"

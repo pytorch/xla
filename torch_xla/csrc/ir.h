@@ -2,10 +2,6 @@
 #define XLA_TORCH_XLA_CSRC_IR_H_
 
 #include <ATen/core/interned_strings.h>
-#include <torch/csrc/lazy/core/hash.h>
-#include <torch/csrc/lazy/core/ir.h>
-#include <torch/csrc/lazy/core/ir_builder.h>
-#include <torch/csrc/lazy/core/ir_metadata.h>
 
 #include <functional>
 #include <iostream>
@@ -16,12 +12,18 @@
 #include <utility>
 #include <vector>
 
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/ir.h>
+#include <torch/csrc/lazy/core/ir_builder.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
+
 #include "absl/container/inlined_vector.h"
 #include "absl/hash/hash.h"
 #include "absl/types/span.h"
+#include "xla/hlo/builder/xla_builder.h"
+
 #include "torch_xla/csrc/dynamic_shape_detector.h"
 #include "torch_xla/csrc/runtime/types.h"
-#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 

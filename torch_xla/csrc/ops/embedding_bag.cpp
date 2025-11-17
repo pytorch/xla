@@ -1,16 +1,17 @@
 #include "torch_xla/csrc/ops/embedding_bag.h"
 
+#include "tsl/platform/stacktrace.h"
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/lib/loops.h"
+#include "xla/hlo/builder/lib/slicing.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/xla_lower_util.h"
-#include "tsl/platform/stacktrace.h"
-#include "xla/hlo/builder/lib/constants.h"
-#include "xla/hlo/builder/lib/loops.h"
-#include "xla/hlo/builder/lib/slicing.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

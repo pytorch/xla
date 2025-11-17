@@ -8,15 +8,6 @@
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
-#include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/env_hash.h"
-#include "torch_xla/csrc/runtime/env_vars.h"
-#include "torch_xla/csrc/runtime/pjrt_registry.h"
-#include "torch_xla/csrc/runtime/stablehlo_helper.h"
-#include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/xla_coordinator.h"
-#include "torch_xla/csrc/status.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/builder/xla_computation.h"
@@ -37,6 +28,16 @@
 #include "xla/python/pjrt_ifrt/pjrt_client.h"
 #include "xla/python/pjrt_ifrt/xla_sharding.h"
 #include "xla/shape.h"
+
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/env_hash.h"
+#include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/pjrt_registry.h"
+#include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
+#include "torch_xla/csrc/runtime/xla_coordinator.h"
+#include "torch_xla/csrc/status.h"
 
 using xla::internal::XlaBuilderFriend;
 

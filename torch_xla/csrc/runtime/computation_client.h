@@ -2,11 +2,6 @@
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
 #include <ATen/Tensor.h>
-#include <torch/csrc/lazy/backend/backend_data.h>
-#include <torch/csrc/lazy/backend/lowering_context.h>
-#include <torch/csrc/lazy/core/hash.h>
-#include <torch/csrc/lazy/core/shape.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include <algorithm>
 #include <cmath>
@@ -15,10 +10,23 @@
 #include <string>
 #include <vector>
 
+#include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/backend/lowering_context.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/shape.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "xla/hlo/builder/xla_computation.h"
+#include "xla/hlo/ir/hlo_module.h"
+#include "xla/literal_util.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "xla/pjrt/pjrt_common.h"
+#include "xla/types.h"
+
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
@@ -26,12 +34,6 @@
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/status.h"
-#include "xla/hlo/builder/xla_computation.h"
-#include "xla/hlo/ir/hlo_module.h"
-#include "xla/literal_util.h"
-#include "xla/pjrt/pjrt_client.h"
-#include "xla/pjrt/pjrt_common.h"
-#include "xla/types.h"
 
 namespace torch_xla {
 namespace runtime {

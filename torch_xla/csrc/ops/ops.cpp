@@ -1,9 +1,16 @@
 #include "torch_xla/csrc/ops/ops.h"
 
+#include <cmath>
+
 #include <torch/csrc/lazy/core/helpers.h>
 #include <torch/csrc/lazy/core/util.h>
 
-#include <cmath>
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/lib/logdet.h"
+#include "xla/hlo/builder/lib/math.h"
+#include "xla/hlo/builder/lib/matrix.h"
+#include "xla/hlo/builder/lib/slicing.h"
+#include "xla/shape_util.h"
 
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/convert_ops.h"
@@ -31,12 +38,6 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
-#include "xla/hlo/builder/lib/constants.h"
-#include "xla/hlo/builder/lib/logdet.h"
-#include "xla/hlo/builder/lib/math.h"
-#include "xla/hlo/builder/lib/matrix.h"
-#include "xla/hlo/builder/lib/slicing.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 

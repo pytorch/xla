@@ -1,7 +1,8 @@
+#include "xla/shape.h"
+
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
-#include "xla/shape.h"
 
 namespace torch_xla {
 

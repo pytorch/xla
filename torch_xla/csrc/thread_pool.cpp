@@ -2,9 +2,10 @@
 
 #include <functional>
 
-#include "torch_xla/csrc/runtime/sys_util.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/threadpool.h"
+
+#include "torch_xla/csrc/runtime/sys_util.h"
 
 namespace torch_xla {
 namespace thread {

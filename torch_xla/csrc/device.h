@@ -1,12 +1,12 @@
 #ifndef XLA_TORCH_XLA_CSRC_DEVICE_H_
 #define XLA_TORCH_XLA_CSRC_DEVICE_H_
 
+#include <iostream>
+#include <string>
+
 #include <torch/csrc/lazy/backend/backend_device.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/util.h>
-
-#include <iostream>
-#include <string>
 
 #include "torch_xla/csrc/runtime/util.h"
 

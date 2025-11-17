@@ -2,12 +2,14 @@
 #include <google/protobuf/repeated_field.h>
 #include <gtest/gtest.h>
 #include <stdlib.h>
-#include <torch/csrc/lazy/core/lazy_graph_executor.h>
 
 #include <iostream>
 
-#include "test/cpp/cpp_test_util.h"
-#include "test/cpp/torch_xla_test.h"
+#include <torch/csrc/lazy/core/lazy_graph_executor.h>
+
+#include "xla/protobuf_util.h"
+#include "xla/xla_data.pb.h"
+
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -19,8 +21,9 @@
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
-#include "xla/protobuf_util.h"
-#include "xla/xla_data.pb.h"
+
+#include "test/cpp/cpp_test_util.h"
+#include "test/cpp/torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {

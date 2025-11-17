@@ -1,12 +1,13 @@
+#include <memory>
+#include <vector>
+
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/backend_interface.h>
 #include <torch/csrc/lazy/core/metrics.h>
 #include <torch/csrc/lazy/core/util.h>
 
-#include <memory>
-#include <vector>
-
 #include "absl/types/span.h"
+
 #include "torch_xla/csrc/runtime/computation_client.h"
 
 namespace torch_xla {
