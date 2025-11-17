@@ -66,15 +66,30 @@ ForEachMacros:
   - Q_FOREACH
   - BOOST_FOREACH
 IncludeBlocks:   Regroup
+# Include Groups (by priority):
+#   1. C system headers:    `#include <*.h>`
+#   2. C++ system headers:  `#include <*>`
+#   3. PyTorch API headers: `#include <torch/*.h>`
+#     - All PyTorch source files under `torch/csrc` already include PyTorch
+#       headers with angle-brackets
+#     - Make this into its own group (insted of, say, (4)), since it's the only
+#       external dependency using angle-brackets
+#   4. Anything that's not (5) or (6)
+#   5. Project headers:     `#include "torch_xla/*.h"`
+#   6. Test headers:        `#include "test/*.h"`
 IncludeCategories:
-  - Regex:           '^<ext/.*\.h>'
-    Priority:        2
+  - Regex:           '^<torch/.*>'
+    Priority:        3
   - Regex:           '^<.*\.h>'
     Priority:        1
   - Regex:           '^<.*'
     Priority:        2
+  - Regex:           '"torch_xla/.*"'
+    Priority:        5
+  - Regex:           '"test/.*"'
+    Priority:        6
   - Regex:           '.*'
-    Priority:        3
+    Priority:        4
 IncludeIsMainRegex: '([-_](test|unittest))?$'
 IndentCaseLabels: true
 IndentPPDirectives: None
