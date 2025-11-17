@@ -24,7 +24,7 @@ started:
 ### TPU
 
 To install PyTorch/XLA stable build in a new TPU VM:
-Note: Builds are available for Python 3.8 to 3.11; please use one of the supported versions.
+Note: Builds are available for Python 3.10 to 3.13; please use one of the supported versions.
 
 ```sh
 # - for venv
@@ -32,13 +32,13 @@ Note: Builds are available for Python 3.8 to 3.11; please use one of the support
 # - for conda
 # conda create -n py311 python=3.11
 
-pip install torch==2.8.0 'torch_xla[tpu]==2.8.0'
+pip install torch==2.9.0 'torch_xla[tpu]==2.9.0'
 
 # Optional: if you're using custom kernels, install pallas dependencies
 pip install --pre torch_xla[pallas] --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
 ```
 **As of 07/16/2025 and starting from Pytorch/XLA 2.8 release, PyTorch/XLA will 
-provide nightly and release wheels for Python 3.11 to 3.13**
+provide nightly and release wheels for Python 3.10 to 3.13**
 To install PyTorch/XLA nightly build in a new TPU VM:
 
 ```sh
@@ -280,14 +280,13 @@ The torch wheel version `2.9.0.dev20250423+cpu` can be found at https://download
 
 | Version | Cloud TPU VMs Wheel |
 |---------|-------------------|
+| 2.9 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
+| 2.8 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.7 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.6 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.5 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.4 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.4.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.3 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.3.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
-| 2.2 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.2.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
-| 2.1 (XRT + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/xrt/tpuvm/torch_xla-2.1.0%2Bxrt-cp310-cp310-manylinux_2_28_x86_64.whl` |
-| 2.1 (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.1.0-cp38-cp38-linux_x86_64.whl` |
 
 </details>
 
@@ -295,14 +294,14 @@ The torch wheel version `2.9.0.dev20250423+cpu` can be found at https://download
 NOTE: Since PyTorch/XLA 2.7, all builds will use the C++11 ABI by default
 | Version | Cloud TPU VMs Docker |
 | --- | ----------- |
+| 2.9 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.9.0_3.10_tpuvm` |
+| 2.8 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.8.0_3.10_tpuvm` |
 | 2.7 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.7.0_3.10_tpuvm` |
 | 2.6 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm` |
 | 2.6 (C++11 ABI) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm_cxx11` |
 | 2.5 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.5.0_3.10_tpuvm` |
 | 2.4 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm` |
 | 2.3 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.3.0_3.10_tpuvm` |
-| 2.2 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm` |
-| 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_tpuvm` |
 | nightly python | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm` |
 
 To use the above dockers, please pass `--privileged --net host --shm-size=16G` along. Here is an example:
