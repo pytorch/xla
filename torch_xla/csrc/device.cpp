@@ -83,7 +83,9 @@ XlaDeviceType StringToXlaDeviceType(std::string_view type_name) {
 
 DeviceType::DeviceType(XlaDeviceType xla_device_type)
     : torch::lazy::BackendDeviceType(static_cast<int8_t>(xla_device_type)),
-      type_name_() {}
+      type_name_() {
+  XLA_CHECK_OK(CheckIsNativeXlaDeviceType(type));
+}
 
 DeviceType::DeviceType(std::string_view type_name)
     : torch::lazy::BackendDeviceType(
