@@ -8,11 +8,12 @@
 #include <string>
 #include <unordered_map>
 
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include "absl/synchronization/blocking_counter.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/types.h"
-#include <torch/csrc/autograd/variable.h>
-#include <torch/csrc/lazy/core/ir_util.h>
 
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/debug_util.h"

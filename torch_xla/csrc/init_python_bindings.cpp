@@ -17,6 +17,15 @@
 #include <unordered_map>
 #include <vector>
 
+#include <torch/csrc/Exceptions.h>
+#include <torch/csrc/autograd/utils/wrap_outputs.h>
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/jit/python/pybind.h>
+#include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/core/config.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+#include <torch/csrc/lazy/core/lazy_graph_executor.h>
+
 #include "absl/base/nullability.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
@@ -37,14 +46,6 @@
 #include "xla/hlo/parser/hlo_parser.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
-#include <torch/csrc/Exceptions.h>
-#include <torch/csrc/autograd/utils/wrap_outputs.h>
-#include <torch/csrc/autograd/variable.h>
-#include <torch/csrc/jit/python/pybind.h>
-#include <torch/csrc/lazy/backend/backend_data.h>
-#include <torch/csrc/lazy/core/config.h>
-#include <torch/csrc/lazy/core/ir_util.h>
-#include <torch/csrc/lazy/core/lazy_graph_executor.h>
 
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"

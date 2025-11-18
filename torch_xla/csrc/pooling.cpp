@@ -1,13 +1,14 @@
 #include "torch_xla/csrc/pooling.h"
 
+#include <torch/csrc/lazy/core/tensor_util.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/status/status.h"
 #include "xla/hlo/builder/lib/arithmetic.h"
 #include "xla/hlo/builder/lib/constants.h"
 #include "xla/hlo/builder/lib/loops.h"
 #include "xla/hlo/builder/lib/pooling.h"
 #include "xla/hlo/builder/lib/slicing.h"
-#include <torch/csrc/lazy/core/tensor_util.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"

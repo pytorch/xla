@@ -3,8 +3,9 @@
 
 #include <map>
 
-#include "absl/types/span.h"
 #include <torch/csrc/lazy/core/hash.h>
+
+#include "absl/types/span.h"
 
 namespace torch_xla {
 

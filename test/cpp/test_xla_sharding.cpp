@@ -5,9 +5,10 @@
 
 #include <iostream>
 
+#include <torch/csrc/lazy/core/lazy_graph_executor.h>
+
 #include "xla/protobuf_util.h"
 #include "xla/xla_data.pb.h"
-#include <torch/csrc/lazy/core/lazy_graph_executor.h>
 
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"

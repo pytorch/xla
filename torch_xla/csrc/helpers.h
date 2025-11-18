@@ -8,6 +8,9 @@
 #include <tuple>
 #include <vector>
 
+#include <torch/csrc/lazy/core/shape.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/types/optional.h"
@@ -17,8 +20,6 @@
 #include "xla/literal_util.h"
 #include "xla/permutation_util.h"
 #include "xla/types.h"
-#include <torch/csrc/lazy/core/shape.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"

@@ -1,7 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "xla/shape.h"
 #include <torch/csrc/lazy/core/shape.h>
+
+#include "xla/shape.h"
 
 #include "test/cpp/torch_xla_test.h"
 #include "torch_xla/csrc/helpers.h"

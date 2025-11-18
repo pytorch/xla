@@ -4,9 +4,10 @@
 #include <string_view>
 #include <tuple>
 
+#include <torch/csrc/lazy/core/ir_metadata.h>  // SourceLocation
+
 #include "xla/service/hlo.pb.h"
 #include "xla/types.h"
-#include <torch/csrc/lazy/core/ir_metadata.h>  // SourceLocation
 
 namespace torch_xla {
 

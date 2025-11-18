@@ -9,14 +9,15 @@
 #include <utility>
 #include <vector>
 
+#include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/backend/lowering_context.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include "absl/status/status.h"
 #include "absl/types/span.h"
 #include "tsl/platform/macros.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/types.h"
-#include <torch/csrc/lazy/backend/backend_data.h>
-#include <torch/csrc/lazy/backend/lowering_context.h>
-#include <torch/csrc/lazy/core/ir_util.h>
 
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"

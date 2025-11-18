@@ -7,11 +7,12 @@
 #include <sstream>
 #include <unordered_set>
 
-#include "absl/memory/memory.h"
-#include "absl/strings/str_split.h"
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/unique.h>
 #include <torch/csrc/lazy/python/python_util.h>
+
+#include "absl/memory/memory.h"
+#include "absl/strings/str_split.h"
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"

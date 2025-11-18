@@ -3,9 +3,10 @@
 #include <iostream>
 #include <tuple>
 
+#include <torch/torch.h>
+
 #include "xla/permutation_util.h"
 #include "xla/util.h"
-#include <torch/torch.h>
 
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"

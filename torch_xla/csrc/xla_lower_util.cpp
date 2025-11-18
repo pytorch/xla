@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <vector>
 
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/status/status.h"
 #include "xla/hlo/builder/lib/arithmetic.h"
 #include "xla/hlo/builder/lib/comparators.h"
@@ -13,8 +16,6 @@
 #include "xla/shape_util.h"
 #include "xla/stream_executor/dnn.h"
 #include "xla/util.h"
-#include <torch/csrc/lazy/core/helpers.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"

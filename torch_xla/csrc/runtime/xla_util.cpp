@@ -6,12 +6,13 @@
 #include <stdexcept>
 #include <thread>
 
+#include <torch/csrc/lazy/core/hash.h>
+
 #include "tsl/platform/errors.h"
 #include "tsl/platform/stacktrace.h"
 #include "xla/shape_util.h"
 #include "xla/tsl/lib/strings/proto_serialization.h"
 #include "xla/util.h"
-#include <torch/csrc/lazy/core/hash.h>
 
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"

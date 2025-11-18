@@ -10,12 +10,13 @@
 #include <numeric>
 #include <thread>
 
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/synchronization/blocking_counter.h"
 #include "tsl/platform/bfloat16.h"
 #include "xla/literal_util.h"
 #include "xla/shape_util.h"
-#include <torch/csrc/lazy/core/hash.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/dtype.h"

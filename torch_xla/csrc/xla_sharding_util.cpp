@@ -5,6 +5,8 @@
 #include <cmath>
 #include <unordered_map>
 
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include "absl/synchronization/blocking_counter.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/execution_options_util.h"
@@ -17,7 +19,6 @@
 #include "xla/service/spmd/spmd_partitioner.h"
 #include "xla/xla.pb.h"
 #include "xla_sharding_util.h"
-#include <torch/csrc/lazy/core/ir_util.h>
 
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"

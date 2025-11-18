@@ -10,8 +10,9 @@
 #include <utility>
 #include <vector>
 
-#include "absl/log/absl_log.h"
 #include <torch/csrc/lazy/core/dynamic_ir.h>
+
+#include "absl/log/absl_log.h"
 
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/scalar.h"

@@ -10,9 +10,6 @@
 #include <stdexcept>
 #include <unordered_set>
 
-#include "tsl/platform/errors.h"
-#include "tsl/profiler/lib/traceme.h"
-#include "xla/shape_util.h"
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/helpers.h>
@@ -21,6 +18,10 @@
 #include <torch/csrc/lazy/core/metrics.h>
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/util.h>
+
+#include "tsl/platform/errors.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/shape_util.h"
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"

@@ -7,6 +7,10 @@
 #include <functional>
 #include <iterator>
 
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
@@ -15,9 +19,6 @@
 #include "absl/strings/str_split.h"
 #include "absl/types/span.h"
 #include "xla/literal_util.h"
-#include <torch/csrc/autograd/variable.h>
-#include <torch/csrc/lazy/core/helpers.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"

@@ -6,12 +6,13 @@
 #include <string>
 #include <vector>
 
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/hash.h>
+
 #include "absl/types/span.h"
 #include "xla/literal.h"
 #include "xla/shape.h"
 #include "xla/types.h"
-#include <torch/csrc/autograd/variable.h>
-#include <torch/csrc/lazy/core/hash.h>
 
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
