@@ -30,10 +30,9 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 
+#include "test/cpp/cpp_test_util.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/status.h"
-
-#include "test/cpp/cpp_test_util.h"
 
 namespace torch_xla {
 

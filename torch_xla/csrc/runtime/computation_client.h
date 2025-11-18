@@ -10,12 +10,6 @@
 #include <string>
 #include <vector>
 
-#include <torch/csrc/lazy/backend/backend_data.h>
-#include <torch/csrc/lazy/backend/lowering_context.h>
-#include <torch/csrc/lazy/core/hash.h>
-#include <torch/csrc/lazy/core/shape.h>
-#include <torch/csrc/lazy/core/util.h>
-
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/types/optional.h"
@@ -26,6 +20,11 @@
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_common.h"
 #include "xla/types.h"
+#include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/backend/lowering_context.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/shape.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"

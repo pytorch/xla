@@ -5,12 +5,11 @@
 #include <c10/core/impl/LocalDispatchKeySet.h>
 #include <c10/macros/Macros.h>
 
+#include "absl/log/absl_check.h"
 #include <torch/csrc/lazy/backend/backend_interface.h>
 #include <torch/csrc/lazy/core/tensor.h>
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/util.h>
-
-#include "absl/log/absl_check.h"
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"

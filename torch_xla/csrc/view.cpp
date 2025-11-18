@@ -4,10 +4,9 @@
 #include <functional>
 #include <numeric>
 
-#include <torch/csrc/lazy/core/util.h>
-
 #include "xla/shape_util.h"
 #include "xla/util.h"
+#include <torch/csrc/lazy/core/util.h>
 
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"

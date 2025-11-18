@@ -5,9 +5,8 @@
 #include <string>
 #include <vector>
 
-#include <torch/csrc/jit/python/pybind.h>
-
 #include "xla/hlo/builder/xla_builder.h"
+#include <torch/csrc/jit/python/pybind.h>
 
 namespace torch_xla {
 namespace op_builder {

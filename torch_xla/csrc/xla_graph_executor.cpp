@@ -14,6 +14,14 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_join.h"
+#include "stablehlo/dialect/Serialization.h"  // from @stablehlo
+#include "tsl/platform/errors.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/literal_util.h"
+#include "xla/shape_util.h"
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/helpers.h>
@@ -23,15 +31,6 @@
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/unique.h>
 #include <torch/csrc/lazy/core/util.h>
-
-#include "absl/container/flat_hash_map.h"
-#include "absl/memory/memory.h"
-#include "absl/strings/str_join.h"
-#include "stablehlo/dialect/Serialization.h"  // from @stablehlo
-#include "tsl/platform/errors.h"
-#include "tsl/profiler/lib/traceme.h"
-#include "xla/literal_util.h"
-#include "xla/shape_util.h"
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/dtype.h"

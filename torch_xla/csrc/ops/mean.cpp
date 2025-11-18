@@ -1,8 +1,7 @@
 #include "torch_xla/csrc/ops/mean.h"
 
-#include <torch/csrc/lazy/core/tensor_util.h>
-
 #include "absl/strings/str_join.h"
+#include <torch/csrc/lazy/core/tensor_util.h>
 
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"

@@ -8,9 +8,8 @@
 #include <string>
 #include <unordered_set>
 
-#include <torch/torch.h>
-
 #include "absl/types/span.h"
+#include <torch/torch.h>
 
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"

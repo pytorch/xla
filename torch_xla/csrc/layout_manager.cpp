@@ -8,10 +8,9 @@
 #include <string>
 #include <unordered_map>
 
-#include <torch/csrc/lazy/core/util.h>
-
 #include "absl/strings/str_split.h"
 #include "xla/shape_util.h"
+#include <torch/csrc/lazy/core/util.h>
 
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"

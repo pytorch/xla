@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "torch/csrc/lazy/core/ir.h"
 #include "xla/hlo/builder/xla_builder.h"
+#include <torch/csrc/lazy/core/ir.h>
 
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"

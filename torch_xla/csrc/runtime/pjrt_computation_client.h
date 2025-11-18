@@ -5,8 +5,6 @@
 #include <mutex>
 #include <shared_mutex>
 
-#include <torch/csrc/lazy/backend/backend_data.h>
-
 #include "absl/types/span.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/threadpool.h"
@@ -16,6 +14,7 @@
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
 #include "xla/shape.h"
+#include <torch/csrc/lazy/backend/backend_data.h>
 
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"

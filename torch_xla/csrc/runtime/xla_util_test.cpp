@@ -18,7 +18,6 @@
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/tsl/lib/core/status_test_util.h"
 #include "xla/tsl/protobuf/error_codes.pb.h"
-#include "xla_util.h"
 
 #include "torch_xla/csrc/runtime/debug_macros.h"
 

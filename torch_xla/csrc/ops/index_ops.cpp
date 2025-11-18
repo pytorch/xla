@@ -4,9 +4,8 @@
 #include <ATen/Functions.h>
 #include <ATen/ops/select_copy.h>
 
-#include <torch/csrc/lazy/core/util.h>
-
 #include "xla/permutation_util.h"
+#include <torch/csrc/lazy/core/util.h>
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"

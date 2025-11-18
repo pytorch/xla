@@ -6,10 +6,9 @@
 #include <string>
 #include <vector>
 
-#include <torch/csrc/lazy/core/tensor_util.h>
-
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
+#include <torch/csrc/lazy/core/tensor_util.h>
 
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"

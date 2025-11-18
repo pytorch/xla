@@ -5,15 +5,14 @@
 #include <vector>
 
 #include "absl/base/nullability.h"
-#include "torch/csrc/autograd/variable.h"
+#include <torch/csrc/autograd/variable.h>
 
+#include "test/cpp/cpp_test_util.h"
+#include "test/cpp/torch_xla_test.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
-
-#include "test/cpp/cpp_test_util.h"
-#include "test/cpp/torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {

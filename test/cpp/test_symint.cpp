@@ -2,14 +2,13 @@
 
 #include <iostream>
 
+#include "test/cpp/cpp_test_util.h"
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/torch_util.h"
-
-#include "test/cpp/cpp_test_util.h"
 
 namespace torch_xla {
 namespace cpp_test {

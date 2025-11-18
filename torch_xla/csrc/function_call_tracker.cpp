@@ -7,10 +7,9 @@
 #include <thread>
 #include <unordered_set>
 
-#include <torch/csrc/lazy/python/python_util.h>
-
 #include "absl/strings/str_split.h"
 #include "tsl/platform/stacktrace.h"
+#include <torch/csrc/lazy/python/python_util.h>
 
 #include "torch_xla/csrc/runtime/sys_util.h"
 

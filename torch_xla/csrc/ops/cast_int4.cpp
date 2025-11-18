@@ -1,8 +1,7 @@
 #include "torch_xla/csrc/ops/cast_int4.h"
 
-#include <torch/csrc/lazy/core/tensor_util.h>
-
 #include "xla/literal_util.h"
+#include <torch/csrc/lazy/core/tensor_util.h>
 
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"

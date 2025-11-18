@@ -5,8 +5,6 @@
 #include <mutex>
 #include <shared_mutex>
 
-#include <torch/csrc/lazy/backend/backend_data.h>
-
 #include "absl/types/span.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
@@ -18,6 +16,7 @@
 #include "xla/python/pjrt_ifrt/pjrt_dtype.h"
 #include "xla/python/pjrt_ifrt/xla_compiler.h"
 #include "xla/shape.h"
+#include <torch/csrc/lazy/backend/backend_data.h>
 
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"

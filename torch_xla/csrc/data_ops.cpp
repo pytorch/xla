@@ -4,14 +4,13 @@
 #include <functional>
 #include <numeric>
 
-#include <torch/csrc/lazy/core/tensor_util.h>
-#include <torch/csrc/lazy/core/util.h>
-
 #include "absl/strings/str_join.h"
 #include "xla/hlo/builder/lib/constants.h"
 #include "xla/hlo/builder/lib/slicing.h"
 #include "xla/shape_util.h"
 #include "xla/util.h"
+#include <torch/csrc/lazy/core/tensor_util.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
