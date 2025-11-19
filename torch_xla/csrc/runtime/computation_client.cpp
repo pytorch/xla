@@ -8,11 +8,12 @@
 #include <string>
 #include <vector>
 
+#include <torch/csrc/lazy/backend/backend_data.h>
+
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "torch/csrc/lazy/backend/backend_data.h"
 #include "tsl/platform/stacktrace_handler.h"
 #include "xla/status_macros.h"
 
