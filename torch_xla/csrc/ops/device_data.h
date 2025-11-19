@@ -1,16 +1,24 @@
 #ifndef XLA_TORCH_XLA_CSRC_OPS_DEVICE_DATA_H_
 #define XLA_TORCH_XLA_CSRC_OPS_DEVICE_DATA_H_
 
+#include <memory>
+#include <string>
+
 #include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/core/ir.h>
+
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 
 namespace torch_xla {
 
 class DeviceData : public XlaNode {
  public:
-  DeviceData(std::shared_ptr<torch::lazy::BackendData> data);
+  DeviceData(torch::lazy::BackendDataPtr data);
 
   std::string ToString() const override;
 
@@ -32,20 +40,14 @@ class DeviceData : public XlaNode {
         ->should_donate_buffer();
   }
 
-  // With SPMD sharding propagation, we need to update the unpartitioned
-  // backend data with a partitioned one in the node operands. Note that
-  // this is permitted only if the node holds a placeholder.
-  void Assign(std::shared_ptr<torch::lazy::BackendData> data) {
-    XLA_CHECK(data->shape() == data_->shape())
-        << "Shape mismatch: expected (" << data_->shape().to_string()
-        << "), actual (" << data->shape().to_string() << ")";
-    data_.reset(data.get());
-  }
-
   static DeviceData* Cast(const torch::lazy::Node* node);
 
  private:
-  std::shared_ptr<torch::lazy::BackendData> data_;
+  // Propagates the sharding stored in `data_` to this node.
+  // Specifically, populates `XlaNode::output_shardings_` appropriately.
+  absl::Status PropagateShardingFromData();
+
+  torch::lazy::BackendDataPtr data_;
 };
 
 }  // namespace torch_xla

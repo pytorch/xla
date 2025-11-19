@@ -50,9 +50,9 @@ class LoweringContext : public torch::lazy::LoweringContext {
   // If a parameter associated with data has already been declared, it will be
   // returned. Otherwise a new one will be created, associated with the tensor
   // held in data.
-  xla::XlaOp GetParameter(
-      const std::shared_ptr<torch::lazy::BackendData>& backend_data,
-      const std::unordered_set<uint32_t>& dynamic_dims = {});
+  absl::StatusOr<xla::XlaOp> GetParameter(
+      const torch::lazy::BackendDataPtr& backend_data,
+      const std::unordered_set<uint32_t>& unbounded_dynamic_dims = {});
 
   // If a parameter associated with data has already been declared, returns its
   // ID. Otherwise, returns `std::nullopt`.

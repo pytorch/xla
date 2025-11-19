@@ -4,12 +4,15 @@
 #include <cstdlib>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "absl/memory/memory.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "torch/csrc/lazy/backend/backend_data.h"
 #include "tsl/platform/stacktrace_handler.h"
 #include "xla/status_macros.h"
 
@@ -20,6 +23,16 @@
 
 namespace torch_xla {
 namespace runtime {
+
+absl::StatusOr<torch::lazy::BackendData::Handle>
+ComputationClient::Data::SafeGetHandle() {
+  try {
+    return GetHandle();
+  } catch (const std::exception& ex) {
+    return XLA_ERROR_WITH_LOCATION(absl::UnknownError(absl::StrCat(
+        "ComputationClient::Data::GetHandle() failed with: ", ex.what())));
+  }
+}
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
     xla::XlaComputation computation, std::string compilation_device,
@@ -207,6 +220,18 @@ ComputationClient::Computation::ComputeHash(xla::HloModuleProto proto,
   TF_ASSIGN_OR_RETURN(auto serialized_status,
                       util::GetDeterministicSerializedModuleProto(proto));
   return torch::lazy::MHash(name, serialized_status);
+}
+
+absl::StatusOr<absl_nonnull ComputationClient::DataPtr> AsComputationClientData(
+    const torch::lazy::BackendDataPtr& backend_data) {
+  ComputationClient::DataPtr data =
+      std::dynamic_pointer_cast<ComputationClient::Data>(backend_data);
+  if (data.get() == nullptr) {
+    return XLA_ERROR_WITH_LOCATION(absl::InternalError(absl::StrCat(
+        "given BackendData instance class (", typeid(*backend_data).name(),
+        ") not a ComputationClient::Data.")));
+  }
+  return data;
 }
 
 }  // namespace runtime

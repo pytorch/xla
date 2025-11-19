@@ -78,6 +78,11 @@ class ComputationClient {
       should_donate_buffer_ = should_donate_buffer;
     }
 
+    // Calls `GetHandle()` while catching exceptions, and turning them into
+    // `Status` errors. This is as much we can do, since `GetHandle()` is
+    // defined in PyTorch upstream.
+    absl::StatusOr<Handle> SafeGetHandle();
+
     virtual std::string ToString() const = 0;
 
     virtual bool HasSharding() const = 0;
@@ -484,6 +489,14 @@ class ComputationClient {
   static metrics::Metric* InboundDataMetric();
   static metrics::Metric* OutboundDataMetric();
 };
+
+// Attempts to cast a `BackendData` shared pointer into a
+// `ComputationClient::Data` shared pointer.
+//
+// This function returns an error if the `BackendData` pointer is not a
+// `ComputationClient::Data` instance.
+absl::StatusOr<absl_nonnull ComputationClient::DataPtr> AsComputationClientData(
+    const torch::lazy::BackendDataPtr& backend_data);
 
 }  // namespace runtime
 }  // namespace torch_xla

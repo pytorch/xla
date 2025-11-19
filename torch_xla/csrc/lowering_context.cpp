@@ -1,8 +1,10 @@
 #include "torch_xla/csrc/lowering_context.h"
 
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 #include <torch/csrc/lazy/core/ir_metadata.h>
@@ -11,6 +13,7 @@
 #include "absl/log/absl_log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 
 #include "torch_xla/csrc/ir.h"
@@ -22,7 +25,6 @@
 #include "torch_xla/csrc/status.h"
 
 namespace torch_xla {
-
 namespace {
 
 class HloMetadataSetter {
@@ -99,6 +101,16 @@ class HloMetadataSetter {
   LoweringContext& lowering_context_;
 };
 
+absl::Status CheckEmptyUnboundedDynamicDims(
+    const std::unordered_set<uint32_t>& unbounded_dynamic_dims) {
+  if (!unbounded_dynamic_dims.empty()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InternalError(absl::StrCat(
+        "expected no unbounded dynamic dims, but got: { ",
+        absl::StrJoin(unbounded_dynamic_dims, /* separator= */ ", "), " }")));
+  }
+  return absl::OkStatus();
+}
+
 }  // namespace
 
 LoweringContext::LoweringContext(const std::string& name,
@@ -120,20 +132,22 @@ LoweringContext::LoweringContext(
   }
 }
 
-xla::XlaOp LoweringContext::GetParameter(
-    const std::shared_ptr<torch::lazy::BackendData>& backend_data,
+absl::StatusOr<xla::XlaOp> LoweringContext::GetParameter(
+    const torch::lazy::BackendDataPtr& backend_data,
     const std::unordered_set<uint32_t>& unbounded_dynamic_dims) {
-  const torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
+  XLA_ASSIGN_OR_RETURN(absl_nonnull runtime::ComputationClient::DataPtr data,
+                       runtime::AsComputationClientData(backend_data));
+  XLA_ASSIGN_OR_RETURN(const torch::lazy::BackendData::Handle handle,
+                       data->SafeGetHandle());
+
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
-    auto* const data =
-        dynamic_cast<runtime::ComputationClient::Data*>(backend_data.get());
-    ABSL_CHECK(data != nullptr);
     xla::Shape shape = data->shape();
     for (const int dim : unbounded_dynamic_dims) {
       shape.set_dynamic_dimension(dim, true);
       shape.set_dimensions(dim, xla::Shape::kUnboundedSize);
     }
+
     const size_t param_index = parameters_.size();
     const std::string param_name = absl::StrCat("p", param_index);
     xla::XlaOp param;
@@ -145,13 +159,16 @@ xla::XlaOp LoweringContext::GetParameter(
     } else {
       param = xla::Parameter(builder(), param_index, shape, param_name);
     }
+
     it = parameters_map_.emplace(handle, Parameter{param, param_index}).first;
     parameters_.push_back(backend_data);
   } else {
-    ABSL_CHECK(unbounded_dynamic_dims.empty())
-        << "The unbounded dynamic dims can only be set when Parameter is "
-           "created.";
+    XLA_RETURN_IF_ERROR(
+        CheckEmptyUnboundedDynamicDims(unbounded_dynamic_dims),
+        "unbounded dynamic dims can only be set when calling GetParameter for "
+        "a BackendData instance for the first time.");
   }
+
   parameter_sequence_.push_back(it->second.index);
   return it->second.param;
 }
