@@ -1,12 +1,16 @@
 #include "torch_xla/csrc/helpers.h"
 
-#include <torch/csrc/lazy/core/helpers.h>
-#include <torch/csrc/lazy/core/util.h>
-
 #include <iterator>
 #include <limits>
 
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/strings/str_join.h"
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/primitive_util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -15,9 +19,6 @@
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "xla/hlo/builder/lib/constants.h"
-#include "xla/primitive_util.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

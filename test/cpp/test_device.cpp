@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "absl/strings/str_cat.h"
+
 #include "torch_xla/csrc/device.h"
 
 static void CheckFormatError(const std::string& spec) {

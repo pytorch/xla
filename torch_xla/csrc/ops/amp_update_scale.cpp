@@ -1,10 +1,11 @@
 #include "torch_xla/csrc/ops/amp_update_scale.h"
 
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

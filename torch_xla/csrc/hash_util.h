@@ -3,9 +3,9 @@
 #ifndef XLA_TORCH_XLA_CSRC_HASH_UTIL_H_
 #define XLA_TORCH_XLA_CSRC_HASH_UTIL_H_
 
-#include <torch/csrc/lazy/core/hash.h>
-
 #include <initializer_list>
+
+#include <torch/csrc/lazy/core/hash.h>
 
 namespace torch_xla {
 

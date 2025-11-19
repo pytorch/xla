@@ -6,9 +6,10 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
+#include "tsl/platform/macros.h"
+
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
-#include "tsl/platform/macros.h"
 
 namespace torch_xla {
 namespace runtime {

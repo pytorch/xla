@@ -2,13 +2,14 @@
 
 #include <ATen/OpMathType.h>
 #include <ATen/core/Reduction.h>
-#include <torch/csrc/autograd/variable.h>
-#include <torch/csrc/lazy/core/helpers.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include <algorithm>
 #include <functional>
 #include <iterator>
+
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
@@ -17,6 +18,8 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "absl/types/span.h"
+#include "xla/literal_util.h"
+
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -160,7 +163,6 @@
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
-#include "xla/literal_util.h"
 
 namespace torch_xla {
 namespace tensor_methods {

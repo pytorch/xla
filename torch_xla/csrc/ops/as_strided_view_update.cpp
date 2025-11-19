@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/ops/as_strided_view_update.h"
 
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -9,7 +11,6 @@
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

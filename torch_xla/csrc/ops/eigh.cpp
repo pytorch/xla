@@ -2,12 +2,13 @@
 
 #include <array>
 
+#include "xla/hlo/builder/lib/self_adjoint_eig.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "xla/hlo/builder/lib/self_adjoint_eig.h"
 
 namespace torch_xla {
 

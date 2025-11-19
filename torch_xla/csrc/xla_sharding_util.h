@@ -1,17 +1,18 @@
 #ifndef XLA_TORCH_XLA_CSRC_XLA_SHARDING_UTIL_H_
 #define XLA_TORCH_XLA_CSRC_XLA_SHARDING_UTIL_H_
 
+#include <tuple>
+
 #include <torch/csrc/jit/python/pybind.h>
 
-#include <tuple>
+#include "xla/hlo/builder/xla_builder.h"
+#include "xla/hlo/builder/xla_computation.h"
+#include "xla/service/hlo.pb.h"
 
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
-#include "xla/hlo/builder/xla_builder.h"
-#include "xla/hlo/builder/xla_computation.h"
-#include "xla/service/hlo.pb.h"
 
 namespace torch_xla {
 

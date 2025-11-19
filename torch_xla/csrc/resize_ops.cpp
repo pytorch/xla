@@ -1,6 +1,10 @@
 #include "torch_xla/csrc/resize_ops.h"
 
 #include "absl/strings/str_cat.h"
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
+
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
@@ -8,9 +12,6 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_builder.h"
 #include "torch_xla/csrc/shape_helper.h"
-#include "xla/hlo/builder/lib/constants.h"
-#include "xla/shape_util.h"
-#include "xla/util.h"
 
 namespace torch_xla {
 namespace resize {

@@ -1,17 +1,18 @@
 #ifndef XLA_CLIENT_XLA_UTIL_H_
 #define XLA_CLIENT_XLA_UTIL_H_
 
-#include <torch/csrc/lazy/core/hash.h>
-
 #include <string>
+
+#include <torch/csrc/lazy/core/hash.h>
 
 #include "absl/status/status.h"
 #include "absl/types/span.h"
-#include "torch_xla/csrc/runtime/types.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/service/hlo.pb.h"
 #include "xla/status_macros.h"
+
+#include "torch_xla/csrc/runtime/types.h"
 
 namespace torch_xla {
 namespace runtime {

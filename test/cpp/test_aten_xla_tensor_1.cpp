@@ -1,7 +1,11 @@
 #include <gtest/gtest.h>
-#include <torch/torch.h>
 
 #include <iostream>
+
+#include <torch/torch.h>
+
+#include "xla/permutation_util.h"
+#include "xla/util.h"
 
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
@@ -12,8 +16,6 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "xla/permutation_util.h"
-#include "xla/util.h"
 
 namespace torch_xla {
 namespace cpp_test {

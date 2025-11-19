@@ -1,5 +1,8 @@
 #include "torch_xla/csrc/elementwise.h"
 
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/lib/math.h"
+
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -9,8 +12,6 @@
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
-#include "xla/hlo/builder/lib/constants.h"
-#include "xla/hlo/builder/lib/math.h"
 
 namespace torch_xla {
 namespace {

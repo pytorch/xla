@@ -66,15 +66,52 @@ ForEachMacros:
   - Q_FOREACH
   - BOOST_FOREACH
 IncludeBlocks:   Regroup
+# Include Groups (by priority):
+#   1. C system headers:     `#include <*.h>`
+#
+#   2. C++ system headers:   `#include <*>`
+#
+#   3. PyTorch headers:
+#     a) API headers:        `#include <torch/*.h>`
+#     b) ATen headers:       `#include <ATen/*.h>`
+#     c) c10 headers:        `#include <c10/*.h>`
+#
+#     Note that PyTorch headers should be included with angle-brackets so as to
+#     keep consistency with PyTorch source code. This should also prevent
+#     headers to be included twice because of different paths.
+#
+#     Google C++ Style Guide dictates (3) and (4) should belong to the same
+#     group. However, this breaks PyTorch/XLA build. The problem is that both
+#     PyTorch and abseil-cpp (included by OpenXLA) define (among many) the
+#     `LOG()` macro. This leads to problems, such as OpenXLA functions calling
+#     PyTorch `LOG()` macro due to include order.
+#
+#     In order to avoid such a problem, we make PyTorch into its own group,
+#     just after the system libraries. This works because including OpenXLA
+#     headers will redefine PyTorch `LOG()` macro, solving the problem above.
+#     This, however might fail one day, if PyTorch starts calling `LOG()` macro
+#     in one of the headers we include in PyTorch/XLA.
+#
+#   4. External headers:
+#     a) abseil-cpp headers: `#include "absl/*.h"
+#     b) OpenXLA headers:    `#include "xla/*.h"
+#
+#   5. Project headers:
+#     a) _XLAC headers:      `#include "torch_xla/csrc/*.h"`
+#     b) Test headers:       `#include "test/*.h"`
 IncludeCategories:
-  - Regex:           '^<ext/.*\.h>'
-    Priority:        2
+  - Regex:           '^<torch/.*>'
+    Priority:        3
   - Regex:           '^<.*\.h>'
     Priority:        1
   - Regex:           '^<.*'
     Priority:        2
+  - Regex:           '"torch_xla/.*"'
+    Priority:        5
+  - Regex:           '"test/.*"'
+    Priority:        5
   - Regex:           '.*'
-    Priority:        3
+    Priority:        4
 IncludeIsMainRegex: '([-_](test|unittest))?$'
 IndentCaseLabels: true
 IndentPPDirectives: None

@@ -2,14 +2,16 @@
 #define XLA_TORCH_XLA_CSRC_TENSOR_H_
 
 #include <c10/core/SymNodeImpl.h>
-#include <torch/csrc/autograd/variable.h>
-#include <torch/csrc/lazy/core/ir_metadata.h>
-#include <torch/csrc/lazy/core/ir_util.h>
 
 #include <memory>
 #include <string>
 
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include "absl/base/nullability.h"
+
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/view.h"
 

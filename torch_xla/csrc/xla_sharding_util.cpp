@@ -5,8 +5,21 @@
 #include <cmath>
 #include <unordered_map>
 
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include "absl/synchronization/blocking_counter.h"
-#include "torch/csrc/lazy/core/ir_util.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/execution_options_util.h"
+#include "xla/hlo/ir/hlo_module.h"
+#include "xla/hlo/parser/hlo_parser.h"
+#include "xla/hlo/pass/hlo_pass_pipeline.h"
+#include "xla/protobuf_util.h"
+#include "xla/service/hlo_verifier.h"
+#include "xla/service/sharding_propagation.h"
+#include "xla/service/spmd/spmd_partitioner.h"
+#include "xla/xla.pb.h"
+#include "xla_sharding_util.h"
+
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
@@ -20,17 +33,6 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
-#include "tsl/profiler/lib/traceme.h"
-#include "xla/execution_options_util.h"
-#include "xla/hlo/ir/hlo_module.h"
-#include "xla/hlo/parser/hlo_parser.h"
-#include "xla/hlo/pass/hlo_pass_pipeline.h"
-#include "xla/protobuf_util.h"
-#include "xla/service/hlo_verifier.h"
-#include "xla/service/sharding_propagation.h"
-#include "xla/service/spmd/spmd_partitioner.h"
-#include "xla/xla.pb.h"
-#include "xla_sharding_util.h"
 
 namespace torch_xla {
 

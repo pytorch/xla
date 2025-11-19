@@ -2,7 +2,6 @@
 #define XLA_CLIENT_CACHE_H_
 
 #include <sys/stat.h>
-#include <torch/csrc/lazy/core/metrics.h>
 
 #include <filesystem>
 #include <fstream>
@@ -13,6 +12,8 @@
 #include <sstream>
 #include <unordered_map>
 #include <utility>
+
+#include <torch/csrc/lazy/core/metrics.h>
 
 namespace torch_xla {
 namespace runtime {

@@ -1,17 +1,13 @@
 #ifndef XLA_CLIENT_IFRT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_IFRT_COMPUTATION_CLIENT_H_
 
-#include <torch/csrc/lazy/backend/backend_data.h>
-
 #include <cstdint>
 #include <mutex>
 #include <shared_mutex>
 
+#include <torch/csrc/lazy/backend/backend_data.h>
+
 #include "absl/types/span.h"
-#include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/operation_manager.h"
-#include "torch_xla/csrc/runtime/util.h"
 #include "xla/hlo/builder/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_client.h"
@@ -22,6 +18,11 @@
 #include "xla/python/pjrt_ifrt/pjrt_dtype.h"
 #include "xla/python/pjrt_ifrt/xla_compiler.h"
 #include "xla/shape.h"
+
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/operation_manager.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace runtime {

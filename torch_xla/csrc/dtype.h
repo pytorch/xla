@@ -1,8 +1,9 @@
 #ifndef XLA_TORCH_XLA_CSRC_DTYPE_H_
 #define XLA_TORCH_XLA_CSRC_DTYPE_H_
 
-#include "torch_xla/csrc/device.h"
 #include "xla/shape.h"
+
+#include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
 

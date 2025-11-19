@@ -10,20 +10,19 @@
 #include <ATen/ops/_embedding_bag_backward_native.h>
 #include <ATen/ops/expand_copy.h>
 #include <c10/core/Contiguity.h>
-#include <torch/csrc/lazy/core/shape_inference.h>
-#include <torch/csrc/lazy/core/tensor_util.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include <iterator>
 #include <mutex>
 #include <optional>
 
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/shape_inference.h>
+#include <torch/csrc/lazy/core/tensor_util.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
-#include "torch/csrc/lazy/core/helpers.h"
-#include "torch/csrc/lazy/core/shape_inference.h"
-#include "torch/csrc/lazy/core/tensor_util.h"
-#include "torch/csrc/lazy/core/util.h"
+
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"

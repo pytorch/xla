@@ -1,14 +1,5 @@
 #include "torch_xla/csrc/tensor.h"
 
-#include <torch/csrc/autograd/variable.h>
-#include <torch/csrc/lazy/core/hash.h>
-#include <torch/csrc/lazy/core/helpers.h>
-#include <torch/csrc/lazy/core/ir_util.h>
-#include <torch/csrc/lazy/core/lazy_graph_executor.h>
-#include <torch/csrc/lazy/core/metrics.h>
-#include <torch/csrc/lazy/core/tensor_util.h>
-#include <torch/csrc/lazy/core/util.h>
-
 #include <algorithm>
 #include <cmath>
 #include <condition_variable>
@@ -18,6 +9,19 @@
 #include <set>
 #include <stdexcept>
 #include <unordered_set>
+
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+#include <torch/csrc/lazy/core/lazy_graph_executor.h>
+#include <torch/csrc/lazy/core/metrics.h>
+#include <torch/csrc/lazy/core/tensor_util.h>
+#include <torch/csrc/lazy/core/util.h>
+
+#include "tsl/platform/errors.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/shape_util.h"
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
@@ -45,9 +49,6 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
-#include "tsl/platform/errors.h"
-#include "tsl/profiler/lib/traceme.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 

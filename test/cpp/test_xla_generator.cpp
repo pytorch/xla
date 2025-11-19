@@ -1,8 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <torch/torch.h>
 
 #include <cstdlib>
+
+#include <torch/torch.h>
 
 #include "test/cpp/torch_xla_test.h"
 #include "torch_xla/csrc/xla_generator.h"

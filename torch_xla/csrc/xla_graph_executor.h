@@ -2,15 +2,19 @@
 #define XLA_TORCH_XLA_CSRC_XLA_GRAPH_EXECUTOR_H_
 
 #include <c10/core/SymNodeImpl.h>
-#include <torch/csrc/autograd/variable.h>
-#include <torch/csrc/lazy/core/ir_util.h>
 
 #include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
 
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include "absl/synchronization/blocking_counter.h"
+#include "xla/hlo/builder/xla_builder.h"
+#include "xla/types.h"
+
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
@@ -23,8 +27,6 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
-#include "xla/hlo/builder/xla_builder.h"
-#include "xla/types.h"
 
 namespace torch_xla {
 
