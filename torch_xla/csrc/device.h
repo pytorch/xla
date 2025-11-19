@@ -1,48 +1,20 @@
 #ifndef XLA_TORCH_XLA_CSRC_DEVICE_H_
 #define XLA_TORCH_XLA_CSRC_DEVICE_H_
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 
 #include <torch/csrc/lazy/backend/backend_device.h>
-#include <torch/csrc/lazy/core/hash.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include "absl/status/statusor.h"
 
 namespace torch_xla {
 
-// Convenient macro for applying another macro to all native device types.
-//
-// Add new device type
-// ===================
-//
-// Add a new line to the macro below:
-//
-//     _(<DEVICE>, <INDEX>)
-//
-// Where <DEVICE> is the enum of the given device, and <INDEX> is the
-// previous number plus 1.
-//
-#define XLA_FOR_ALL_NATIVE_DEVICE_TYPES_(_) \
-  _(CPU, 0)                                 \
-  _(CUDA, 1)                                \
-  _(TPU, 2)                                 \
-  _(NEURON, 3)                              \
-  _(SPMD, 4)
-
 // TODO(yeounoh) `SPMD` is a virtual device that defers data `TransferToDevice`
 // until after the paritioning pass. This avoids transfering  the full input
 // tensor to the device.
-enum class XlaDeviceType : int8_t {
-#define XLA_DECLARE_ENUM(name, value) name = value,
-  XLA_FOR_ALL_NATIVE_DEVICE_TYPES_(XLA_DECLARE_ENUM)
-#undef XLA_DECLARE_ENUM
-
-  // Plugin is not considered a native device type.
-  // It has a special treatment for some functions.
-  PLUGIN,
-};
+enum class XlaDeviceType : int8_t { CPU = 0, CUDA, TPU, NEURON, SPMD, PLUGIN };
 
 struct DeviceType : public torch::lazy::BackendDeviceType {
   DeviceType(XlaDeviceType xla_device_type);

@@ -5,15 +5,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <exception>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 #include <torch/csrc/lazy/backend/backend_device.h>
 
-#include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -30,14 +29,13 @@ namespace {
 static bool spmd_config_is_locked = false;
 static bool use_virtual_device = false;
 
-constexpr std::size_t kNativeXlaDeviceTypeNumber = 5;
-constexpr std::array<std::pair<XlaDeviceType, std::string_view>,
-                     kNativeXlaDeviceTypeNumber>
-    kNativeXlaDeviceTypeWithName = {{
-#define XLA_DEVICE_NAME_PAIR(name, _) {XlaDeviceType::name, #name},
-        XLA_FOR_ALL_NATIVE_DEVICE_TYPES_(XLA_DEVICE_NAME_PAIR)
-#undef XLA_DEVICE_NAME_PAIR
-    }};
+constexpr int8_t kNativeXlaDeviceTypeNumber =
+    static_cast<int8_t>(XlaDeviceType::PLUGIN);
+
+// The elements in this array should match the order in the XlaDeviceType enum
+// declaration. So, if you modify one of them, make sure to keep them in sync.
+constexpr std::array<std::string_view, kNativeXlaDeviceTypeNumber>
+    kNativeXlaDeviceTypeNames = {"CPU", "CUDA", "TPU", "NEURON", "SPMD"};
 
 absl::Status CheckIsNativeXlaDeviceType(int8_t value) {
   if (value < 0 || value >= kNativeXlaDeviceTypeNumber) {
@@ -62,21 +60,20 @@ std::string_view NativeXlaDeviceTypeToString(XlaDeviceType type) {
   //   2. The XlaDeviceType::PLUGIN enum, since it's not considered a "native"
   //      device type
   XLA_CHECK_OK(CheckIsNativeXlaDeviceType(value));
-  return kNativeXlaDeviceTypeWithName[value].second;
+  return kNativeXlaDeviceTypeNames[value];
 }
 
 XlaDeviceType StringToXlaDeviceType(std::string_view type_name) {
-  std::array<std::pair<XlaDeviceType, std::string_view>,
-             kNativeXlaDeviceTypeNumber>::const_iterator it =
-      std::find_if(kNativeXlaDeviceTypeWithName.begin(),
-                   kNativeXlaDeviceTypeWithName.end(),
-                   [=](const std::pair<XlaDeviceType, std::string_view>& pair) {
-                     return pair.second == type_name;
-                   });
-  if (it != kNativeXlaDeviceTypeWithName.end()) {
-    return it->first;
+  std::array<std::string_view, kNativeXlaDeviceTypeNumber>::const_iterator it =
+      std::find(kNativeXlaDeviceTypeNames.begin(),
+                kNativeXlaDeviceTypeNames.end(), type_name);
+
+  if (it == kNativeXlaDeviceTypeNames.end()) {
+    return XlaDeviceType::PLUGIN;
   }
-  return XlaDeviceType::PLUGIN;
+
+  std::size_t index = std::distance(kNativeXlaDeviceTypeNames.begin(), it);
+  return static_cast<XlaDeviceType>(index);
 }
 
 }  // namespace

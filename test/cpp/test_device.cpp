@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
-#include <torch/csrc/lazy/backend/backend_device.h>
 
 #include <cstdint>
 #include <string>
 #include <string_view>
 
+#include <torch/csrc/lazy/backend/backend_device.h>
+
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 
 #include "torch_xla/csrc/device.h"
@@ -47,11 +49,11 @@ static void CheckDeviceTypeConstructionWithString(
 }
 
 TEST(DeviceTest, ConstructNativeDeviceTypeWithString) {
-#define XLA_NATIVE_DEVICE_TYPE_CHECK_CONSTRUCTION_WITH_STRING(type, _) \
-  CheckDeviceTypeConstructionWithString(XlaDeviceType::type, #type);
-  XLA_FOR_ALL_NATIVE_DEVICE_TYPES_(
-      XLA_NATIVE_DEVICE_TYPE_CHECK_CONSTRUCTION_WITH_STRING)
-#undef XLA_DEVICE_TYPE_CHECK_CONSTRUCTION_WITH_STRING
+  CheckDeviceTypeConstructionWithString(XlaDeviceType::CPU, "CPU");
+  CheckDeviceTypeConstructionWithString(XlaDeviceType::CUDA, "CUDA");
+  CheckDeviceTypeConstructionWithString(XlaDeviceType::TPU, "TPU");
+  CheckDeviceTypeConstructionWithString(XlaDeviceType::NEURON, "NEURON");
+  CheckDeviceTypeConstructionWithString(XlaDeviceType::SPMD, "SPMD");
 }
 
 TEST(DeviceTest, ConstructPluginDeviceTypeWithString) {
@@ -68,11 +70,11 @@ static void CheckDeviceTypeConstructionWithEnum(
 }
 
 TEST(DeviceTest, ConstructNativeDeviceTypeWithEnum) {
-#define XLA_NATIVE_DEVICE_TYPE_CHECK_CONSTRUCTION_WITH_ENUM(type, _) \
-  CheckDeviceTypeConstructionWithEnum(XlaDeviceType::type, #type);
-  XLA_FOR_ALL_NATIVE_DEVICE_TYPES_(
-      XLA_NATIVE_DEVICE_TYPE_CHECK_CONSTRUCTION_WITH_ENUM)
-#undef XLA_DEVICE_TYPE_CHECK_CONSTRUCTION_WITH_STRING
+  CheckDeviceTypeConstructionWithEnum(XlaDeviceType::CPU, "CPU");
+  CheckDeviceTypeConstructionWithEnum(XlaDeviceType::CUDA, "CUDA");
+  CheckDeviceTypeConstructionWithEnum(XlaDeviceType::TPU, "TPU");
+  CheckDeviceTypeConstructionWithEnum(XlaDeviceType::NEURON, "NEURON");
+  CheckDeviceTypeConstructionWithEnum(XlaDeviceType::SPMD, "SPMD");
 }
 
 TEST(DeviceTest, ConstructPluginDeviceTypeWithEnumError) {
