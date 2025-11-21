@@ -1301,7 +1301,8 @@ class PyLoweringContext {
     std::unordered_map<int64_t, at::Tensor> results;
     for (int i = 0; i < device_data.size(); ++i) {
       xla::Literal& literal = literals[i];
-      xla::XlaOp op = lowering_ctx.GetParameter(device_data[i]);
+      XLA_ASSIGN_OR_THROW(xla::XlaOp op,
+                          lowering_ctx.GetParameter(device_data[i]));
       at::ScalarType dtype =
           MaybeUpcastToHostTorchType(literal.shape().element_type());
       at::Tensor input = MakeTensorFromXlaLiteral(literal, dtype);
