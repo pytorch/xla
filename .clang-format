@@ -102,6 +102,10 @@ IncludeBlocks:   Regroup
 IncludeCategories:
   - Regex:           '^<torch/.*>'
     Priority:        3
+  - Regex:           '^<ATen/.*>'
+    Priority:        3
+  - Regex:           '^<c10/.*>'
+    Priority:        3
   - Regex:           '^<.*\.h>'
     Priority:        1
   - Regex:           '^<.*'
