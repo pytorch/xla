@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <ATen/core/Generator.h>
 #include <ATen/core/Tensor.h>
 #include <c10/core/Device.h>
@@ -7,8 +9,6 @@
 #include <c10/core/GeneratorImpl.h>
 #include <c10/core/TensorImpl.h>
 #include <c10/util/intrusive_ptr.h>
-
-#include <cstdint>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"

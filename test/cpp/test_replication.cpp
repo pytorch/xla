@@ -1,7 +1,8 @@
-#include <ATen/ATen.h>
 #include <gtest/gtest.h>
 
 #include <iostream>
+
+#include <ATen/ATen.h>
 
 #include "absl/synchronization/blocking_counter.h"
 #include "xla/hlo/builder/xla_builder.h"

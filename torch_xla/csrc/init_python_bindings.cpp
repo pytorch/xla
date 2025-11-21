@@ -1,7 +1,4 @@
-#include <ATen/dlpack.h>
 #include <Python.h>
-#include <c10/core/Device.h>
-#include <c10/util/Metaprogramming.h>
 #include <google/protobuf/text_format.h>
 
 #include <algorithm>
@@ -17,6 +14,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <ATen/dlpack.h>
+#include <c10/core/Device.h>
+#include <c10/util/Metaprogramming.h>
 #include <torch/csrc/Exceptions.h>
 #include <torch/csrc/autograd/utils/wrap_outputs.h>
 #include <torch/csrc/autograd/variable.h>

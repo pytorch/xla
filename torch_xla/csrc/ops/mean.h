@@ -1,10 +1,10 @@
 #ifndef XLA_TORCH_XLA_CSRC_OPS_MEAN_H_
 #define XLA_TORCH_XLA_CSRC_OPS_MEAN_H_
 
-#include <c10/core/ScalarType.h>
-
 #include <optional>
 #include <vector>
+
+#include <c10/core/ScalarType.h>
 
 #include "xla/types.h"
 

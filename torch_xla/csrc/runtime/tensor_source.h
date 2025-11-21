@@ -1,12 +1,11 @@
 #ifndef XLA_CLIENT_TENSOR_SOURCE_H_
 #define XLA_CLIENT_TENSOR_SOURCE_H_
 
-#include <ATen/Tensor.h>
-
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <ATen/Tensor.h>
 #include <torch/csrc/lazy/core/metrics.h>
 
 #include "xla/literal.h"

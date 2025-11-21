@@ -1,9 +1,8 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 
-#include <c10/util/Exception.h>
-
 #include <stdexcept>
 
+#include <c10/util/Exception.h>
 #include <torch/csrc/utils/cpp_stacktraces.h>
 
 #include "tsl/platform/stacktrace.h"

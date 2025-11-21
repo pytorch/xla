@@ -1,12 +1,11 @@
 #ifndef XLA_TORCH_XLA_CSRC_TORCH_UTIL_H_
 #define XLA_TORCH_XLA_CSRC_TORCH_UTIL_H_
 
+#include <optional>
+
 #include <ATen/ATen.h>
 #include <ATen/FunctionalTensorWrapper.h>
 #include <c10/core/ScalarType.h>
-
-#include <optional>
-
 #include <torch/csrc/lazy/core/dynamic_ir.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/tensor.h>

@@ -1,11 +1,10 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 
-#include <ATen/FunctionalTensorWrapper.h>
-
 #include <map>
 #include <string>
 #include <vector>
 
+#include <ATen/FunctionalTensorWrapper.h>
 #include <torch/csrc/lazy/core/tensor_util.h>
 
 #include "absl/log/absl_check.h"

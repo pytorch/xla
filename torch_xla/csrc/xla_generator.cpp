@@ -1,5 +1,9 @@
 #include "xla_generator.h"
 
+#include <cstring>
+#include <deque>
+#include <vector>
+
 #include <ATen/Functions.h>
 #include <ATen/core/ScalarType.h>
 #include <ATen/core/Tensor.h>
@@ -9,10 +13,6 @@
 #include <c10/core/TensorImpl.h>
 #include <c10/util/CallOnce.h>
 #include <c10/util/intrusive_ptr.h>
-
-#include <cstring>
-#include <deque>
-#include <vector>
 
 #include "absl/status/status.h"
 

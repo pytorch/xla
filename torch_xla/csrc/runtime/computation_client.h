@@ -1,8 +1,6 @@
 #ifndef XLA_CLIENT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
-#include <ATen/Tensor.h>
-
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -10,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include <ATen/Tensor.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/hash.h>
