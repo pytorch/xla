@@ -154,7 +154,8 @@ bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
 void ForEachDevice(
     absl::Span<const DeviceType> device_types,
     const std::function<void(const torch::lazy::BackendDevice&)>& devfn) {
-  const torch::lazy::BackendDevice* default_device = bridge::GetDefaultDevice();
+  XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* default_device,
+                      bridge::GetDefaultDevice());
   if (device_types.empty() ||
       std::find_if(device_types.begin(), device_types.end(),
                    [&](const DeviceType device_type) {
@@ -169,7 +170,8 @@ void ForEachDevice(
 
 void ForEachDevice(absl::Span<const DeviceType> device_types,
                    const std::function<void(const torch::Device&)>& devfn) {
-  const torch::lazy::BackendDevice* default_device = bridge::GetDefaultDevice();
+  XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* default_device,
+                      bridge::GetDefaultDevice());
   if (device_types.empty() ||
       std::find_if(device_types.begin(), device_types.end(),
                    [&](const DeviceType device_type) {

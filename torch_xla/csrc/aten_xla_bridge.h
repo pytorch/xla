@@ -30,11 +30,12 @@ namespace bridge {
 // A StatusOr type fulfills only (2), so we can't use it there. In order
 // to do so, we have to change upstream accordingly.
 //
-ABSL_DEPRECATED(
+[[deprecated(
     "Use GetXlaTensor(), instead. "
     "This function returns an null-initialized `XLATensorPtr`, instead of "
-    "propagating errors with StatusOr values.")
-XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor);
+    "propagating errors with StatusOr values.")]]  //
+XLATensorPtr
+TryGetXlaTensor(const at::Tensor& tensor);
 
 // Retrieves the underlying `XLATensorPtr` from `tensor`.
 //
@@ -144,16 +145,11 @@ c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device);
 
 std::string ToXlaString(const c10::Device& device);
 
-[[deprecated(
-    "Use SafeGetDefaultDevice for better error handling.")]] const torch::lazy::
-    BackendDevice* absl_nonnull
-    GetDefaultDevice();
-
 // Returns the default `BackendDevice`.
 // This function returns an error if the `ComputationClient` wasn't correctly
 // initialized.
 const absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>&
-SafeGetDefaultDevice();
+GetDefaultDevice();
 
 c10::Device AtenDefaultDevice();
 

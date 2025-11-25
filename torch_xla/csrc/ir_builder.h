@@ -27,8 +27,10 @@ struct XLAIrBuilder : torch::lazy::IrBuilder {
 
   torch::lazy::NodePtr MakeScalar(const at::Scalar& value,
                                   const at::ScalarType& type) const override {
+    XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* default_device,
+                        bridge::GetDefaultDevice());
     return torch_xla::MakeNode<Scalar>(
-        value, MakeXlaPrimitiveType(type, bridge::GetDefaultDevice()));
+        value, MakeXlaPrimitiveType(type, default_device));
   }
   torch::lazy::NodePtr MakeExpand(const torch::lazy::Value& input0,
                                   const std::vector<int64_t>& size,

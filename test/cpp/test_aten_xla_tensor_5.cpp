@@ -1422,8 +1422,9 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatch) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(bridge::GetDefaultDevice()->type());
+  XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* default_device,
+                      bridge::GetDefaultDevice());
+  XlaDeviceType hw_type = static_cast<XlaDeviceType>(default_device->type());
   // skip this test until the tile mismatch bug is fixed.
   if (hw_type == XlaDeviceType::TPU) {
     return;
@@ -1455,8 +1456,9 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2DBackward) {
   GTEST_SKIP() << "failing due to PyTorch upstream changes. "
                << "See: https://github.com/pytorch/xla/issues/9651.";
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(bridge::GetDefaultDevice()->type());
+  XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* default_device,
+                      bridge::GetDefaultDevice());
+  XlaDeviceType hw_type = static_cast<XlaDeviceType>(default_device->type());
   // skip this test until the tile mismatch bug is fixed.
   if (hw_type == XlaDeviceType::TPU) {
     return;

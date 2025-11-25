@@ -419,14 +419,8 @@ InitializeDefaultBackendDevice() {
   return new torch::lazy::BackendDevice(device);
 }
 
-const torch::lazy::BackendDevice* absl_nonnull GetDefaultDevice() {
-  XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* absl_nonnull device,
-                      SafeGetDefaultDevice());
-  return device;
-}
-
 const absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>&
-SafeGetDefaultDevice() {
+GetDefaultDevice() {
   static absl::StatusOr<torch::lazy::BackendDevice* absl_nonnull>&
       default_backend_device =
           *new absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>(
@@ -435,12 +429,16 @@ SafeGetDefaultDevice() {
 }
 
 c10::Device AtenDefaultDevice() {
-  return XlaDeviceToAtenDevice(*GetDefaultDevice());
+  XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* default_device,
+                      bridge::GetDefaultDevice());
+  return XlaDeviceToAtenDevice(*default_device);
 }
 
 torch::lazy::BackendDevice GetCurrentDevice() {
   if (!g_current_device) {
-    g_current_device = *GetDefaultDevice();
+    XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* default_device,
+                        bridge::GetDefaultDevice());
+    g_current_device = *default_device;
   }
   return *g_current_device;
 }
