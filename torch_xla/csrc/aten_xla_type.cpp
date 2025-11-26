@@ -1146,8 +1146,8 @@ at::Tensor XLANativeFunctions::as_strided_scatter(
   XLA_ASSIGN_OR_THROW(XLATensorPtr xla_base, bridge::GetXlaTensor(base));
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(xla_base->shape(), xsize, xstride,
-                                    storage_offset.value_or(0))) {
+  if (!IsAsStridedSupported(xla_base->shape(), xsize, xstride,
+                            storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(as_strided_scatter)>::call(base, mutated_view,
                                                           size, stride,
@@ -4566,8 +4566,8 @@ at::Tensor XLANativeFunctions::as_strided(
   XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(xla_self->shape(), xsize, xstride,
-                                    storage_offset.value_or(0))) {
+  if (!IsAsStridedSupported(xla_self->shape(), xsize, xstride,
+                            storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
                                                   storage_offset);
@@ -4584,8 +4584,8 @@ const at::Tensor& XLANativeFunctions::as_strided_(
   XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(xla_self->shape(), xsize, xstride,
-                                    storage_offset.value_or(0))) {
+  if (!IsAsStridedSupported(xla_self->shape(), xsize, xstride,
+                            storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(as_strided_)>::call(self, size, stride,
                                                    storage_offset);
