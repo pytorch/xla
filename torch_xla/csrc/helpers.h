@@ -1,24 +1,29 @@
 #ifndef XLA_TORCH_XLA_CSRC_HELPERS_H_
 #define XLA_TORCH_XLA_CSRC_HELPERS_H_
 
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include <c10/core/Scalar.h>
 #include <torch/csrc/lazy/core/shape.h>
 #include <torch/csrc/lazy/core/util.h>
 
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "tsl/platform/bfloat16.h"
 #include "xla/hlo/builder/xla_builder.h"
+#include "xla/hlo/builder/xla_computation.h"
+#include "xla/hlo/ir/hlo_sharding.h"
+#include "xla/literal.h"
 #include "xla/literal_util.h"
-#include "xla/permutation_util.h"
+#include "xla/shape.h"
 #include "xla/types.h"
+#include "xla/xla_data.pb.h"
 
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
@@ -36,7 +41,7 @@ class XlaHelpers {
 
   struct DynamicSize {
     xla::XlaOp size;
-    absl::optional<int64_t> scalar_size;
+    std::optional<int64_t> scalar_size;
   };
 
   struct DynamicReshapeInfo {
@@ -153,14 +158,46 @@ class XlaHelpers {
                               shape.dimensions(), builder);
   }
 
-  static absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
-      const xla::Shape& input_shape, absl::Span<const int64_t> output_sizes);
+  // Computes the necessary information for reshaping `input_shape` into
+  // `output_sizes`, propagating the dynamic dimension (only one allowed), if
+  // necessary.
+  [[deprecated("Use SafeGetDynamicReshapeInfo for better error handling.")]]  //
+  static std::optional<DynamicReshapeInfo>
+  GetDynamicReshapeInfo(const xla::Shape& input_shape,
+                        absl::Span<const int64_t> output_sizes);
+  // Computes the necessary information for reshaping `input_shape` into
+  // `output_sizes`, propagating the dynamic dimension (only one allowed),
+  // if necessary.
+  //
+  // This function shall return an error status if:
+  //   1. `input_shape` has more than 1 dynamic dimension
+  //
+  //   2. The product of `output_sizes` overflows
+  //
+  //   3. In the presence of a dynamic shape in the input, we are unable to map
+  //      it to any of the dimensions of the output
+  //
+  static absl::StatusOr<std::optional<DynamicReshapeInfo>>
+  SafeGetDynamicReshapeInfo(const xla::Shape& input_shape,
+                            absl::Span<const int64_t> output_sizes);
 
   static xla::Shape GetDynamicReshape(const xla::Shape& input_shape,
                                       absl::Span<const int64_t> output_sizes);
 
-  static xla::XlaOp DynamicReshape(xla::XlaOp input,
-                                   absl::Span<const int64_t> output_sizes);
+  // Reshapes `input`, so that its shape dimensions becomes `output_sizes`.
+  [[deprecated("Use SafeDynamicReshape for better error handling.")]]  //
+  static xla::XlaOp
+  DynamicReshape(xla::XlaOp input, absl::Span<const int64_t> output_sizes);
+  // Reshapes `input`, so that its shape dimensions becomes `output_sizes`.
+  //
+  // This function shall return an error status if:
+  //   1. There was a lowering error in the last `XlaBuilder::<Op>` call, where
+  //      the `XlaBuilder` was used to create `input`
+  //
+  //   2. `SafeGetDynamicReshapeInfo()` call fails
+  //
+  static absl::StatusOr<xla::XlaOp> SafeDynamicReshape(
+      xla::XlaOp input, absl::Span<const int64_t> output_sizes);
 
   static bool IsUnboundedDynamic(const xla::Shape& shape);
 
@@ -210,7 +247,17 @@ class XlaHelpers {
       absl::Span<const int64_t> padding);
 
   // Retrieves the dynamic dimension of an input shape, or returns -1 if none.
-  static int64_t GetDynamicDimension(const xla::Shape& shape);
+  [[deprecated(
+      "Use CheckAtMostOneDynamicDimension for better error "
+      "handling")]]  //
+  static int64_t
+  GetDynamicDimension(const xla::Shape& shape);
+  // Check if `shape` has at most 1 dynamic dimension, and retrieves it.
+  //
+  // It shall return an error status if there's 2 or more dynamic dimensions. If
+  // `shape` has no dynamic dimensions, it returns a `std::nullopt`.
+  static absl::StatusOr<std::optional<int64_t>> CheckAtMostOneDynamicDimension(
+      const xla::Shape& shape);
 
   static DynamicSize GetDimensionsSize(absl::Span<const xla::XlaOp> inputs,
                                        absl::Span<const int64_t> dimensions);
@@ -242,8 +289,20 @@ class XlaHelpers {
   static xla::XlaOp ReshapeToRank(xla::XlaOp input, int64_t expected_rank,
                                   int64_t offset = 0);
 
-  static xla::XlaOp Flatten(xla::XlaOp input,
-                            xla::Shape* input_shape = nullptr);
+  // Reshapes `input` into a flattened 1-dimensional tensor.
+  // Deprecated: if not null, `shape` is set to the shape of `input`.
+  [[deprecated("Use SafeFlatten for better error handling.")]]  //
+  static xla::XlaOp
+  Flatten(xla::XlaOp input, xla::Shape* shape = nullptr);
+  // Reshapes `input` into a flattened 1-dimensional tensor.
+  //
+  // This function shall return an error status if:
+  //   1. There was a lowering error in the last `XlaBuilder::<Op>` call, where
+  //      the `XlaBuilder` was used to create `input`
+  //
+  //   2. `SafeDynamicReshape()` function call fails.
+  //
+  static absl::StatusOr<xla::XlaOp> SafeFlatten(xla::XlaOp input);
 
   static xla::XlaOp FlattenDimRange(xla::XlaOp input, int64_t start,
                                     int64_t range,
