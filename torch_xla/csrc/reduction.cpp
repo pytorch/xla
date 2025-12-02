@@ -1,10 +1,9 @@
 #include "torch_xla/csrc/reduction.h"
 
-#include <ATen/core/Reduction.h>
-
 #include <cmath>
 #include <unordered_set>
 
+#include <ATen/core/Reduction.h>
 #include <torch/csrc/lazy/core/helpers.h>
 #include <torch/csrc/lazy/core/util.h>
 

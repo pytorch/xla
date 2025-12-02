@@ -1,8 +1,6 @@
 #ifndef XLA_TORCH_XLA_CSRC_IR_H_
 #define XLA_TORCH_XLA_CSRC_IR_H_
 
-#include <ATen/core/interned_strings.h>
-
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -12,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include <ATen/core/interned_strings.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/ir.h>
 #include <torch/csrc/lazy/core/ir_builder.h>

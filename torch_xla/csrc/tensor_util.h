@@ -1,11 +1,10 @@
 #ifndef XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_
 #define XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_
 
-#include <ATen/ExpandUtils.h>
-
 #include <string>
 #include <vector>
 
+#include <ATen/ExpandUtils.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/hash.h>
 

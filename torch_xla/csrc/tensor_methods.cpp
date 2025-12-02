@@ -1,12 +1,11 @@
 #include "torch_xla/csrc/tensor_methods.h"
 
-#include <ATen/OpMathType.h>
-#include <ATen/core/Reduction.h>
-
 #include <algorithm>
 #include <functional>
 #include <iterator>
 
+#include <ATen/OpMathType.h>
+#include <ATen/core/Reduction.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/helpers.h>
 #include <torch/csrc/lazy/core/util.h>

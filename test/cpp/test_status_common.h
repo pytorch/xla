@@ -18,7 +18,6 @@
 #ifndef XLA_TEST_CPP_TEST_STATUS_COMMON_H_
 #define XLA_TEST_CPP_TEST_STATUS_COMMON_H_
 
-#include <c10/util/Exception.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -26,6 +25,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <utility>
+
+#include <c10/util/Exception.h>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"

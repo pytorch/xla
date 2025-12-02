@@ -1,13 +1,12 @@
 #include "torch_xla/csrc/aten_fallback.h"
 
+#include <unordered_map>
+#include <vector>
+
 #include <ATen/DLConvertor.h>
 #include <ATen/native/CPUFallback.h>
 #include <ATen/ops/_copy_from_and_resize.h>
 #include <ATen/ops/_to_cpu.h>
-
-#include <unordered_map>
-#include <vector>
-
 #include <torch/csrc/utils/device_lazy_init.h>
 
 #include "torch_xla/csrc/function_call_tracker.h"

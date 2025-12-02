@@ -1,10 +1,9 @@
 #include "torch_xla/csrc/xla_sharding_util.h"
 
-#include <ATen/TensorIndexing.h>
-
 #include <cmath>
 #include <unordered_map>
 
+#include <ATen/TensorIndexing.h>
 #include <torch/csrc/lazy/core/ir_util.h>
 
 #include "absl/synchronization/blocking_counter.h"

@@ -3,7 +3,6 @@
 #include <ATen/ExpandUtils.h>
 #include <ATen/Functions.h>
 #include <ATen/ops/select_copy.h>
-
 #include <torch/csrc/lazy/core/util.h>
 
 #include "xla/permutation_util.h"

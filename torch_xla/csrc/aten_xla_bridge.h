@@ -1,11 +1,11 @@
 #ifndef XLA_TORCH_XLA_CSRC_ATEN_XLA_BRIDGE_H_
 #define XLA_TORCH_XLA_CSRC_ATEN_XLA_BRIDGE_H_
 
+#include <vector>
+
 #include <ATen/Device.h>
 #include <ATen/Functions.h>
 #include <ATen/Tensor.h>
-
-#include <vector>
 
 #include "absl/base/nullability.h"
 #include "absl/status/statusor.h"

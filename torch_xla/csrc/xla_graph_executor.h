@@ -1,13 +1,12 @@
 #ifndef XLA_TORCH_XLA_CSRC_XLA_GRAPH_EXECUTOR_H_
 #define XLA_TORCH_XLA_CSRC_XLA_GRAPH_EXECUTOR_H_
 
-#include <c10/core/SymNodeImpl.h>
-
 #include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
 
+#include <c10/core/SymNodeImpl.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/ir_util.h>
 

@@ -1,3 +1,7 @@
+#include <iterator>
+#include <mutex>
+#include <optional>
+
 #include <ATen/ExpandUtils.h>
 #include <ATen/FunctionalTensorWrapper.h>
 #include <ATen/MetaFunctions.h>
@@ -10,11 +14,6 @@
 #include <ATen/ops/_embedding_bag_backward_native.h>
 #include <ATen/ops/expand_copy.h>
 #include <c10/core/Contiguity.h>
-
-#include <iterator>
-#include <mutex>
-#include <optional>
-
 #include <torch/csrc/lazy/core/helpers.h>
 #include <torch/csrc/lazy/core/shape_inference.h>
 #include <torch/csrc/lazy/core/tensor_util.h>

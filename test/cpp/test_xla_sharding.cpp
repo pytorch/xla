@@ -1,10 +1,10 @@
-#include <ATen/ATen.h>
 #include <google/protobuf/repeated_field.h>
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
 #include <iostream>
 
+#include <ATen/ATen.h>
 #include <torch/csrc/lazy/core/lazy_graph_executor.h>
 
 #include "xla/protobuf_util.h"

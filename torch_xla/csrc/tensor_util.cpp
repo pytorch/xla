@@ -1,8 +1,5 @@
 #include "torch_xla/csrc/tensor_util.h"
 
-#include <ATen/Formatting.h>
-#include <ATen/Functions.h>
-
 #include <algorithm>
 #include <cstring>
 #include <functional>
@@ -10,6 +7,8 @@
 #include <numeric>
 #include <thread>
 
+#include <ATen/Formatting.h>
+#include <ATen/Functions.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/util.h>
 
