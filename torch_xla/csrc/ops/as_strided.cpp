@@ -1,8 +1,11 @@
 #include "torch_xla/csrc/ops/as_strided.h"
 
+#include <algorithm>
+
 #include <torch/csrc/lazy/core/util.h>
 
-#include <algorithm>
+#include "xla/shape_util.h"
+#include "xla/util.h"
 
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -11,8 +14,6 @@
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "xla/shape_util.h"
-#include "xla/util.h"
 
 namespace torch_xla {
 namespace {

@@ -51,18 +51,9 @@ def patch_torch_manual_seed():
 
 @functools.lru_cache(maxsize=3)
 def is_xla_device_available(devkind, use_xla2: bool = False):
-  if devkind not in ["CPU", "CUDA", "TPU"]:
+  if devkind not in ["CPU", "TPU"]:
     raise ValueError(devkind)
   # Checking the availability of a given device kind.
-  #
-  # We intentionally use subprocess instead of multiprocessing library. The
-  # reason being that we might initialize CUDA in the parent process and use
-  # CUDA in the child process. This is a known limitation of using CUDA and
-  # forking the process.
-  #
-  # In this case, subprocess works because it replaces the forked memory with
-  # the execution of the new program (fresh memory), avoiding the error.
-  #
   # For more information: https://github.com/pytorch/xla/pull/5960
   CHECK_XLA_DEVICE_PY = "check_xla_device.py"
   python_file = os.path.join(os.path.dirname(__file__), CHECK_XLA_DEVICE_PY)
@@ -80,7 +71,7 @@ def move_to_device(item, device, torch_xla2: bool = False):
 
     def move_to_device_func(tensor: torch.Tensor) -> torch.Tensor:
       # If `tensor` is an XLA tensor, first move it to CPU. We need to do
-      # that if we want to move the tensor to, say, CUDA.
+      # that if we want to move the tensor to TPU.
       if tensor.device.type == "xla":
         return tensor.cpu().to(device)
       return tensor.to(device)

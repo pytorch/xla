@@ -3,11 +3,12 @@
 #include <algorithm>
 #include <sstream>
 
+#include "xla/layout_util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "xla/layout_util.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 

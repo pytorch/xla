@@ -67,6 +67,22 @@ class TestOperationsHlo(unittest.TestCase):
     hlo_text = torch_xla._XLAC._get_xla_tensors_hlo([b])
     assert 'u8' in hlo_text
 
+  def test_bfloat16_mul_not_upcast(self):
+    a = torch.rand(5, 5, dtype=torch.bfloat16).to('xla')
+    b = torch.rand(5, 5, dtype=torch.bfloat16).to('xla')
+    c = a * b
+    hlo_text = torch_xla._XLAC._get_xla_tensors_hlo([c])
+    # Check that the output is not upcasted to float32
+    assert 'f32' not in hlo_text
+
+  def test_bfloat16_float32_mul_upcast(self):
+    a = torch.rand(5, 5, dtype=torch.bfloat16).to('xla')
+    b = torch.rand(5, 5, dtype=torch.float32).to('xla')
+    c = a * b
+    hlo_text = torch_xla._XLAC._get_xla_tensors_hlo([c])
+    # Check that the output is upcasted to float32
+    assert 'f32' in hlo_text
+
 
 if __name__ == '__main__':
   torch.set_default_dtype(torch.float32)

@@ -22,8 +22,7 @@ class TrainResNetXLAAMP(TrainResNetBase):
       with autocast(torch_xla.device()):
         output = self.model(data)
         loss = self.loss_fn(output, target)
-      # TPU amp uses bf16 hence gradient scaling is not necessary. If runnign with XLA:GPU
-      # check https://github.com/pytorch/xla/blob/master/docs/amp.md#amp-for-xlagpu.
+      # TPU amp uses bf16 hence gradient scaling is not necessary.
       loss.backward()
       self.run_optimizer()
       tracker.add(self.batch_size)

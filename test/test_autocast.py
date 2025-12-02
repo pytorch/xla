@@ -12,7 +12,7 @@ import torch_xla.core.xla_model as xm
 import collections
 import unittest
 from torch.testing._internal.autocast_test_lists import AutocastTestLists
-from torch_xla.amp import autocast, GradScaler
+from torch_xla.amp import autocast
 
 
 class AutocastTPUTestLists:
@@ -150,82 +150,6 @@ class AutocastTPUTestLists:
     self.methods_fp32 = []
 
     self.methods_bf16 = [("__matmul__", mat0_bf16 + mat1_fp32)]
-
-
-class AutocastCudaTestExtraLists(object):
-
-  def __init__(self, dev):
-    super().__init__()
-    n = 8
-    dimsets = ((n, n, n), (n, n, n, n), (n, n, n, n, n))
-    conv_args_fp32 = [(torch.randn(dimset, dtype=torch.float32, device=dev),
-                       torch.randn(dimset, dtype=torch.float32, device=dev))
-                      for dimset in dimsets]
-
-    mat0_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
-    mat1_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
-    mat2_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
-    mat3_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
-
-    pointwise0_fp32 = (torch.randn(n, dtype=torch.float32, device=dev),)
-
-    element0_fp32 = (torch.randn(1, dtype=torch.float32, device=dev),)
-
-    # This is currently not part of AutocastTestLists and excludes `relu`, `addbmm`
-    self.torch_bf16 = [
-        ("conv1d", conv_args_fp32[0]),
-        ("conv2d", conv_args_fp32[1]),
-        ("conv3d", conv_args_fp32[2]),
-        ("bmm", (torch.randn((n, n, n), device=dev, dtype=torch.float32),
-                 torch.randn((n, n, n), device=dev, dtype=torch.float32))),
-        ("mm", mat0_fp32 + mat1_fp32),
-        ("matmul",
-         torch.matmul(
-             torch.ones([2, 3], device=dev, dtype=torch.float32),
-             torch.ones([3, 2], device=dev, dtype=torch.float32))),
-        ("baddbmm", (torch.randn((n, n, n), device=dev, dtype=torch.float32),
-                     torch.randn((n, n, n), device=dev, dtype=torch.float32),
-                     torch.randn((n, n, n), device=dev, dtype=torch.float32))),
-        ("addmm", mat1_fp32 + mat2_fp32 + mat3_fp32),
-        ("conv_tbc", (torch.randn((10, 7, 3), device=dev, dtype=torch.float32),
-                      torch.randn((5, 3, 5), device=dev, dtype=torch.float32),
-                      torch.randn(5, device=dev, dtype=torch.float32), 0)),
-        ("conv_transpose1d", conv_args_fp32[0]),
-        ("conv_transpose2d", conv_args_fp32[1]),
-        ("conv_transpose3d", conv_args_fp32[2]),
-        ("prelu", pointwise0_fp32 + element0_fp32),
-    ]
-
-
-class AutocastCudaTestUnsupportedLists(object):
-
-  def __init__(self):
-    super().__init__()
-    # Utility arguments, created as one-element tuples
-    self.torch_expect_builtin_promote = [
-        "cat",  # requires all input tensors to be the same type
-        "equal",  # requires all input tensors to be the same type
-        "stack",  # return f16 instead of f32
-    ]
-    self.methods_expect_builtin_promote = []
-
-    # The remaining lists organize ops that autocast treats explicitly.
-    self.torch_fp16 = [
-        "_convolution_nogroup",  # need lowering
-        "addmv",  # need lowering
-    ]
-    self.torch_fp32 = [
-        "norm",  # produce f16 instead of f32
-    ]
-    self.torch_need_autocast_promote = [
-        "scatter_add",  # cat currently requires all input tensors to be the same type
-    ]
-    self.nn_fp16 = []
-    self.nn_fp32 = []
-    self.linalg_fp16 = []
-    self.methods_fp16 = []
-    self.methods_fp32 = []
-    self.banned = []
 
 
 class TestAutocastBase(unittest.TestCase):

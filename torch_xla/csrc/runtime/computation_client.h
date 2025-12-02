@@ -1,13 +1,6 @@
 #ifndef XLA_CLIENT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
-#include <ATen/Tensor.h>
-#include <torch/csrc/lazy/backend/backend_data.h>
-#include <torch/csrc/lazy/backend/lowering_context.h>
-#include <torch/csrc/lazy/core/hash.h>
-#include <torch/csrc/lazy/core/shape.h>
-#include <torch/csrc/lazy/core/util.h>
-
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -15,10 +8,24 @@
 #include <string>
 #include <vector>
 
+#include <ATen/Tensor.h>
+#include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/backend/lowering_context.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/shape.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "xla/hlo/builder/xla_computation.h"
+#include "xla/hlo/ir/hlo_module.h"
+#include "xla/literal_util.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "xla/pjrt/pjrt_common.h"
+#include "xla/types.h"
+
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
@@ -26,12 +33,6 @@
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/status.h"
-#include "xla/hlo/builder/xla_computation.h"
-#include "xla/hlo/ir/hlo_module.h"
-#include "xla/literal_util.h"
-#include "xla/pjrt/pjrt_client.h"
-#include "xla/pjrt/pjrt_common.h"
-#include "xla/types.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -75,6 +76,11 @@ class ComputationClient {
     void set_should_donate_buffer(bool should_donate_buffer) {
       should_donate_buffer_ = should_donate_buffer;
     }
+
+    // Calls `GetHandle()` while catching exceptions, and turning them into
+    // `Status` errors. This is as much we can do, since `GetHandle()` is
+    // defined in PyTorch upstream.
+    absl::StatusOr<Handle> SafeGetHandle();
 
     virtual std::string ToString() const = 0;
 
@@ -446,6 +452,14 @@ class ComputationClient {
   // after the last ':' character of the device string.
   static int64_t GetDeviceOrdinal(const std::string& device);
 
+  // Sets XLA compile option overrides used by the backend compiler.
+  // - The map keys are XLA compiler flag names (env option override keys).
+  // - The values are stringified flag values.
+  // - Calling this method **overwrites** any previously set options.
+  //   (Pass an empty map to clear.)
+  virtual void SetCustomCompileOptions(
+      const std::unordered_map<std::string, std::string>& options) = 0;
+
  protected:
   static constexpr auto spmd_device_str = "SPMD:0";
 
@@ -474,6 +488,14 @@ class ComputationClient {
   static metrics::Metric* InboundDataMetric();
   static metrics::Metric* OutboundDataMetric();
 };
+
+// Attempts to cast a `BackendData` shared pointer into a
+// `ComputationClient::Data` shared pointer.
+//
+// This function returns an error if the `BackendData` pointer is not a
+// `ComputationClient::Data` instance.
+absl::StatusOr<absl_nonnull ComputationClient::DataPtr> AsComputationClientData(
+    const torch::lazy::BackendDataPtr& backend_data);
 
 }  // namespace runtime
 }  // namespace torch_xla

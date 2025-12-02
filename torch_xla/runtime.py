@@ -162,8 +162,6 @@ def host_index() -> int:
     return plugins.default().host_index()
   elif device_type() == 'TPU':
     return tpu.worker_id()
-
-  # TODO: Update this when we support multi-host GPU
   return 0
 
 

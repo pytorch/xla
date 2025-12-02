@@ -1,10 +1,11 @@
 #include "torch_xla/csrc/ops/gather.h"
 
+#include "xla/hlo/builder/lib/slicing.h"
+
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
-#include "xla/hlo/builder/lib/slicing.h"
 
 namespace torch_xla {
 namespace {

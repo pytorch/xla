@@ -1,9 +1,10 @@
 #ifndef XLA_CLIENT_INITIALIZE_PJRT_CLIENT_H_
 #define XLA_CLIENT_INITIALIZE_PJRT_CLIENT_H_
 
-#include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_common.h"
+
+#include "torch_xla/csrc/runtime/xla_coordinator.h"
 
 namespace torch_xla {
 namespace runtime {

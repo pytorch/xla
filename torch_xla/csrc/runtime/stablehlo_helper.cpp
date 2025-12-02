@@ -10,14 +10,16 @@
 #include "stablehlo/dialect/StablehloOps.h"   // from @stablehlo
 #include "stablehlo/dialect/Version.h"        // from @stablehlo
 #include "stablehlo/dialect/VhloOps.h"        // from @stablehlo
+#include "xla/hlo/translate/hlo_to_mhlo/hlo_to_mlir_hlo.h"
+#include "xla/hlo/translate/mhlo_to_hlo/mlir_hlo_to_hlo.h"
+#include "xla/mlir_hlo/mhlo/transforms/passes.h"
+#include "xla/service/spmd/shardy/stablehlo_round_trip/stablehlo_import.h"
+
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/stablehlo_composite_helper.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/xla_mlir_debuginfo_helper.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
-#include "xla/hlo/translate/hlo_to_mhlo/hlo_to_mlir_hlo.h"
-#include "xla/hlo/translate/mhlo_to_hlo/mlir_hlo_to_hlo.h"
-#include "xla/mlir_hlo/mhlo/transforms/passes.h"
 
 namespace torch_xla {
 
@@ -89,6 +91,7 @@ static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
       torch_xla::runtime::CreateRemoveXlaMarkTensorOpsPass());
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
+
   if (!mlir::succeeded(pm.run(*mlir_module))) {
     return absl::Status(
         absl::StatusCode::kInternal,
@@ -109,6 +112,14 @@ void ConvertHloToStableHlo(const xla::HloModuleProto* proto,
   XLA_CHECK(status.ok()) << "MHLO -> StableHLO conversion failed.\n"
                          << status.message() << err_msg
                          << getHloModuleStr(proto);
+}
+
+void ConvertStableHloToSdy(mlir::ModuleOp* mlir_module) {
+  mlir::PassManager pm(mlir_module->getContext());
+  xla::sdy::addStablehloImportPipeline(pm, false, false);
+  if (!mlir::succeeded(pm.run(*mlir_module))) {
+    XLA_ERROR() << "StableHLO -> SDY conversion failed.\n";
+  }
 }
 
 std::string hloToStablehlo(const xla::HloModuleProto* proto,

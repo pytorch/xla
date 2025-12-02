@@ -1,17 +1,21 @@
 #include "torch_xla/csrc/lowering_context.h"
 
-#include <torch/csrc/lazy/core/ir_metadata.h>
-
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
+
+#include <torch/csrc/lazy/core/ir_metadata.h>
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
+
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -21,7 +25,6 @@
 #include "torch_xla/csrc/status.h"
 
 namespace torch_xla {
-
 namespace {
 
 class HloMetadataSetter {
@@ -78,21 +81,35 @@ class HloMetadataSetter {
       max_stack_depth = custom_opname_meta->max_stack_depth;
     }
 
-    if (!nmeta.scope.empty()) {
+    else if (!nmeta.scope.empty()) {
       op_name_prefix =
           absl::StrCat(absl::StrReplaceAll(nmeta.scope, {{":", "_"}}), "/");
     }
     metadata.set_op_name(absl::StrCat(op_name_prefix, op_type));
 
-    // Sets file, line and stack_frame_id in metadata
-    lowering_context.stack_frame_index_builder()->AddStackFrameLocations(
-        nmeta.frame_info, static_cast<int>(max_stack_depth), metadata);
+    // NOTE: if max_stack_depth is 0, we are just renaming the op, so we don't
+    // need to add stack frame locations
+    if (max_stack_depth > 0) {
+      // Sets file, line and stack_frame_id in metadata
+      lowering_context.stack_frame_index_builder()->AddStackFrameLocations(
+          nmeta.frame_info, static_cast<int>(max_stack_depth), metadata);
+    }
 
     lowering_context.builder()->SetOpMetadata(std::move(metadata));
   }
 
   LoweringContext& lowering_context_;
 };
+
+absl::Status CheckEmptyUnboundedDynamicDims(
+    const std::unordered_set<uint32_t>& unbounded_dynamic_dims) {
+  if (!unbounded_dynamic_dims.empty()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InternalError(absl::StrCat(
+        "expected no unbounded dynamic dims, but got: { ",
+        absl::StrJoin(unbounded_dynamic_dims, /* separator= */ ", "), " }")));
+  }
+  return absl::OkStatus();
+}
 
 }  // namespace
 
@@ -111,24 +128,26 @@ LoweringContext::LoweringContext(
       builder_(name),
       stack_frame_index_builder_(std::make_shared<StackFrameIndexBuilder>()) {
   for (const auto* node : post_order) {
-    LowerNode(*node);
+    XLA_THROW_IF_ERROR(LowerNode(*node));
   }
 }
 
-xla::XlaOp LoweringContext::GetParameter(
-    const std::shared_ptr<torch::lazy::BackendData>& backend_data,
+absl::StatusOr<xla::XlaOp> LoweringContext::GetParameter(
+    const torch::lazy::BackendDataPtr& backend_data,
     const std::unordered_set<uint32_t>& unbounded_dynamic_dims) {
-  const torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
+  XLA_ASSIGN_OR_RETURN(absl_nonnull runtime::ComputationClient::DataPtr data,
+                       runtime::AsComputationClientData(backend_data));
+  XLA_ASSIGN_OR_RETURN(const torch::lazy::BackendData::Handle handle,
+                       data->SafeGetHandle());
+
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
-    auto* const data =
-        dynamic_cast<runtime::ComputationClient::Data*>(backend_data.get());
-    ABSL_CHECK(data != nullptr);
     xla::Shape shape = data->shape();
     for (const int dim : unbounded_dynamic_dims) {
       shape.set_dynamic_dimension(dim, true);
       shape.set_dimensions(dim, xla::Shape::kUnboundedSize);
     }
+
     const size_t param_index = parameters_.size();
     const std::string param_name = absl::StrCat("p", param_index);
     xla::XlaOp param;
@@ -140,13 +159,16 @@ xla::XlaOp LoweringContext::GetParameter(
     } else {
       param = xla::Parameter(builder(), param_index, shape, param_name);
     }
+
     it = parameters_map_.emplace(handle, Parameter{param, param_index}).first;
     parameters_.push_back(backend_data);
   } else {
-    ABSL_CHECK(unbounded_dynamic_dims.empty())
-        << "The unbounded dynamic dims can only be set when Parameter is "
-           "created.";
+    XLA_RETURN_IF_ERROR(
+        CheckEmptyUnboundedDynamicDims(unbounded_dynamic_dims),
+        "unbounded dynamic dims can only be set when calling GetParameter for "
+        "a BackendData instance for the first time.");
   }
+
   parameter_sequence_.push_back(it->second.index);
   return it->second.param;
 }
@@ -226,7 +248,7 @@ xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
     const auto post_order =
         torch::lazy::Util::ComputePostOrder(output.node, &emit_status_);
     for (const auto* const node : post_order) {
-      LowerNode(*node);
+      XLA_THROW_IF_ERROR(LowerNode(*node));
     }
     // At this point the output better be present, otherwise there is an issue
     // with the lowering code.
@@ -237,54 +259,31 @@ xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
   return it->second;
 }
 
-XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node& node) {
-  XlaOpVector result_ops;
-  try {
-    const HloMetadataSetter meta_setter(*this, node);
-    const XlaNode* const casted = dynamic_cast<const XlaNode*>(&node);
+absl::StatusOr<XlaOpVector> LoweringContext::LowerNode(
+    const torch::lazy::Node& node) {
+  const HloMetadataSetter meta_setter(*this, node);
+  const XlaNode* const casted = dynamic_cast<const XlaNode*>(&node);
 
-    result_ops = casted->Lower(this);
-    if (!casted->dynamic_dims().empty()) {
-      const xla::internal::XlaBuilderFriend builder_friend;
-      auto* const inst = builder_friend.GetInstruction(result_ops[0]);
-      auto* const mutable_dynamic =
-          inst->mutable_shape()->mutable_is_dynamic_dimension();
-      if (mutable_dynamic->empty()) {
-        for (int i = 0; i < inst->dimensions_size(); i++) {
-          mutable_dynamic->Add(false);
-        }
-      }
-      auto* const mutable_dims = inst->mutable_shape()->mutable_dimensions();
-      for (const auto dim : casted->dynamic_dims()) {
-        mutable_dynamic->Set(dim, true);
-        mutable_dims->Set(dim, xla::Shape::kUnboundedSize);
+  XLA_ASSIGN_OR_RETURN(XlaOpVector output, casted->CheckedLower(this));
+
+  if (!casted->dynamic_dims().empty()) {
+    const xla::internal::XlaBuilderFriend builder_friend;
+    auto* const inst = builder_friend.GetInstruction(output[0]);
+    auto* const mutable_dynamic =
+        inst->mutable_shape()->mutable_is_dynamic_dimension();
+    if (mutable_dynamic->empty()) {
+      for (int i = 0; i < inst->dimensions_size(); i++) {
+        mutable_dynamic->Add(false);
       }
     }
-  } catch (const std::exception& ex) {
-    ReportBuilderError(node, ex.what());
+    auto* const mutable_dims = inst->mutable_shape()->mutable_dimensions();
+    for (const auto dim : casted->dynamic_dims()) {
+      mutable_dynamic->Set(dim, true);
+      mutable_dims->Set(dim, xla::Shape::kUnboundedSize);
+    }
   }
-  if (!builder()->first_error().ok()) {
-    ReportBuilderError(node, /*error_msg=*/"");
-  }
-  return result_ops;
-}
 
-void LoweringContext::ReportBuilderError(const torch::lazy::Node& node,
-                                         const absl::string_view error_msg) {
-  std::stringstream ss;
-  ss << "Error while lowering: " << node.ToString() << "\n";
-  if (!builder()->first_error().ok()) {
-    ss << "XLA builder error: " << builder()->GetCurrentStatus() << "\n";
-  }
-  if (!error_msg.empty()) {
-    ss << "Error: " << error_msg << "\n";
-  }
-  const torch::lazy::MetaData& nmeta = node.metadata();
-  if (!nmeta.scope.empty()) {
-    ss << "Scope: " << nmeta.scope << "\n";
-  }
-  ss << nmeta.frame_info;
-  throw std::runtime_error(ss.str());
+  return output;
 }
 
 void LoweringContext::SetUpAlias(const std::vector<int64_t>& output_index,

@@ -1,13 +1,14 @@
 #include "torch_xla/csrc/ir_dump_util.h"
 
-#include <torch/csrc/lazy/core/ir_util.h>
-
 #include <regex>
 #include <sstream>
 #include <unordered_map>
 
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
@@ -274,15 +275,14 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     xla::Shape shape = MakeShapeWithDeviceLayout(
         program_shape.result(), static_cast<XlaDeviceType>(device.type()));
     std::vector<runtime::ComputationClient::CompileInstance> instances;
-    instances.push_back(
-        {std::move(computation), device.toString(),
-         runtime::GetComputationClientOrDie()->GetCompilationDevices(
-             device.toString(), {}),
-         &shape,
-         /*parameter_is_tupled_arguments=*/false, is_sharded});
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                        runtime::GetComputationClient());
+    instances.push_back({std::move(computation), device.toString(),
+                         client->GetCompilationDevices(device.toString(), {}),
+                         &shape,
+                         /*parameter_is_tupled_arguments=*/false, is_sharded});
     std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
-        computations =
-            runtime::GetComputationClientOrDie()->Compile(std::move(instances));
+        computations = client->Compile(std::move(instances));
     computation = std::move(computations[0]->move_computation());
   }
 

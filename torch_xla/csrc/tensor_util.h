@@ -1,21 +1,22 @@
 #ifndef XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_
 #define XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_
 
+#include <string>
+#include <vector>
+
 #include <ATen/ExpandUtils.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/hash.h>
 
-#include <string>
-#include <vector>
-
 #include "absl/types/span.h"
+#include "xla/literal.h"
+#include "xla/shape.h"
+#include "xla/types.h"
+
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/unwrap_data.h"
-#include "xla/literal.h"
-#include "xla/shape.h"
-#include "xla/types.h"
 
 namespace torch_xla {
 

@@ -1,15 +1,16 @@
 #ifndef XLA_TORCH_XLA_CSRC_ATEN_XLA_BRIDGE_H_
 #define XLA_TORCH_XLA_CSRC_ATEN_XLA_BRIDGE_H_
 
+#include <vector>
+
 #include <ATen/Device.h>
 #include <ATen/Functions.h>
 #include <ATen/Tensor.h>
 
-#include <vector>
-
 #include "absl/base/nullability.h"
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
+
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
 
@@ -143,7 +144,16 @@ c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device);
 
 std::string ToXlaString(const c10::Device& device);
 
-const torch::lazy::BackendDevice* GetDefaultDevice();
+[[deprecated(
+    "Use SafeGetDefaultDevice for better error handling.")]] const torch::lazy::
+    BackendDevice* absl_nonnull
+    GetDefaultDevice();
+
+// Returns the default `BackendDevice`.
+// This function returns an error if the `ComputationClient` wasn't correctly
+// initialized.
+const absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>&
+SafeGetDefaultDevice();
 
 c10::Device AtenDefaultDevice();
 

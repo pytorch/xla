@@ -82,6 +82,18 @@ if [[ "$BAZEL_VERB" == "coverage" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --remote_download_outputs=all" # for lcov symlink
 fi
 
+# Forward PJRT_DEVICE and CPU_NUM_DEVICES to bazel test environment.
+# Set sensible defaults when not provided so tests run reproducibly.
+: "${PJRT_DEVICE:=CPU}"
+: "${CPU_NUM_DEVICES:=2}"
+export PJRT_DEVICE CPU_NUM_DEVICES
+if [[ -n "${PJRT_DEVICE}" ]]; then
+  EXTRA_FLAGS="$EXTRA_FLAGS --test_env=PJRT_DEVICE=${PJRT_DEVICE}"
+fi
+if [[ -n "${CPU_NUM_DEVICES}" ]]; then
+  EXTRA_FLAGS="$EXTRA_FLAGS --test_env=CPU_NUM_DEVICES=${CPU_NUM_DEVICES}"
+fi
+
 test_names=("all")
 if [[ "$RUN_CPP_TESTS" == "cpp_tests" ]]; then
   test_names=("test_aten_xla_tensor_1"
@@ -101,7 +113,8 @@ if [[ "$RUN_CPP_TESTS" == "cpp_tests" ]]; then
               "test_runtime"
               "test_status_dont_show_cpp_stacktraces"
               "test_status_show_cpp_stacktraces"
-              "test_debug_macros")
+              "test_debug_macros"
+              "test_device")
 fi
 for name in "${test_names[@]}"; do
   echo "Running $name cpp test..."

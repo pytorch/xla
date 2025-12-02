@@ -1,3 +1,4 @@
+import expecttest
 import sys
 import re
 import unittest
@@ -16,7 +17,7 @@ from torch_xla.stablehlo import (StableHLOExportOptions,
 m = Library("my_custom_library", "DEF")
 
 
-class StableHLOCustomCallExportTest(unittest.TestCase):
+class StableHLOCustomCallExportTest(expecttest.TestCase):
 
   def test_single_output(self):
 

@@ -4,7 +4,6 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
-#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "tsl/profiler/lib/profiler_factory.h"
 #include "xla/backends/profiler/plugin/plugin_tracer.h"
 #include "xla/backends/profiler/plugin/profiler_c_api.h"
@@ -12,6 +11,8 @@
 #include "xla/pjrt/status_casters.h"
 #include "xla/tsl/profiler/rpc/client/capture_profile.h"
 #include "xla/tsl/profiler/rpc/profiler_server.h"
+
+#include "torch_xla/csrc/runtime/tf_logging.h"
 
 namespace torch_xla {
 namespace runtime {

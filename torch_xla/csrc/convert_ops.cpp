@@ -2,15 +2,16 @@
 
 #include <climits>
 
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/literal_util.h"
+#include "xla/primitive_util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "xla/hlo/builder/lib/constants.h"
-#include "xla/literal_util.h"
-#include "xla/primitive_util.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

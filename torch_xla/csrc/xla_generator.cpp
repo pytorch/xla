@@ -1,14 +1,118 @@
 #include "xla_generator.h"
 
+#include <cstring>
+#include <deque>
+#include <vector>
+
 #include <ATen/Functions.h>
 #include <ATen/core/ScalarType.h>
 #include <ATen/core/Tensor.h>
 #include <c10/core/Device.h>
 #include <c10/core/DeviceType.h>
+#include <c10/core/GeneratorImpl.h>
 #include <c10/core/TensorImpl.h>
+#include <c10/util/CallOnce.h>
 #include <c10/util/intrusive_ptr.h>
 
-#include <cstring>
+#include "absl/status/status.h"
+
+#include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/status.h"
+
+namespace at {
+
+namespace detail {
+
+namespace {
+
+// Total number of XLA devices in the system.
+static int64_t num_xla_devices;
+
+// Ensures default_gens_xla is initialized once.
+static std::deque<c10::once_flag> xla_gens_init_flag;
+
+// Default, global XLA generators, one per XLA device.
+static std::vector<at::Generator> default_gens_xla;
+
+/*
+ * Populates the global variables related to XLA generators
+ * Warning: this function must only be called once!
+ */
+static absl::Status InitGlobalVars() {
+  static const absl::Status* init_status = new absl::Status([]() {
+    XLA_ASSIGN_OR_RETURN(auto c_client,
+                         torch_xla::runtime::GetComputationClient());
+    num_xla_devices = static_cast<int64_t>(c_client->GetNumDevices());
+    xla_gens_init_flag.resize(num_xla_devices);
+    default_gens_xla.resize(num_xla_devices);
+    return absl::OkStatus();
+  }());
+  return *init_status;
+}
+
+// Validates and normalizes an XLA device index.
+// If requested_index == -1, the current device index is used.
+// Returns InvalidArgument if the resolved index is out of range.
+static absl::StatusOr<c10::DeviceIndex> NormalizeXLADeviceIndex(
+    c10::DeviceIndex requested_index) {
+  c10::DeviceIndex idx = requested_index;
+  if (idx == -1) {
+    idx = torch_xla::bridge::GetCurrentAtenDevice().index();
+  }
+  if (idx < 0 || idx >= num_xla_devices) {
+    return absl::InvalidArgumentError(
+        "Invalid device index for XLA generator. Provided index: " +
+        std::to_string(idx));
+  }
+  return idx;
+}
+
+}  // anonymous namespace
+
+/**
+ * PyTorch maintains a collection of default generators that get
+ * initialized once. The purpose of these default generators is to
+ * maintain a global running state of the pseudo random number generation,
+ * when a user does not explicitly mention any generator.
+ * GetDefaultXLAGenerator gets the default generator for a particular
+ * XLA device.
+ */
+absl::StatusOr<const at::Generator&> GetDefaultXLAGenerator(
+    c10::DeviceIndex device_index) {
+  XLA_RETURN_IF_ERROR(InitGlobalVars(), "Failed to initialize XLA generators");
+  // Normalize and validate the target device index; default to current device
+  // when unspecified
+  XLA_ASSIGN_OR_RETURN(c10::DeviceIndex idx,
+                       NormalizeXLADeviceIndex(device_index),
+                       "Invalid XLA device index");
+  c10::call_once(xla_gens_init_flag[idx], [&] {
+    default_gens_xla[idx] = at::make_generator<XLAGeneratorImpl>(idx);
+    default_gens_xla[idx].seed();
+  });
+  return default_gens_xla[idx];
+}
+
+/**
+ * Utility to create a XLAGeneratorImpl. Returns a shared_ptr
+ */
+absl::StatusOr<at::Generator> CreateXLAGenerator(
+    c10::DeviceIndex device_index) {
+  XLA_RETURN_IF_ERROR(InitGlobalVars(), "Failed to initialize XLA generators");
+  // Normalize and validate the target device index; default to current device
+  // when unspecified
+  XLA_ASSIGN_OR_RETURN(c10::DeviceIndex idx,
+                       NormalizeXLADeviceIndex(device_index),
+                       "Invalid XLA device index");
+  auto gen = at::make_generator<XLAGeneratorImpl>(idx);
+  auto xla_gen = at::check_generator<XLAGeneratorImpl>(gen);
+  xla_gen->set_current_seed(c10::default_rng_seed_val);
+  return gen;
+}
+
+}  // namespace detail
+}  // namespace at
 
 namespace at {
 

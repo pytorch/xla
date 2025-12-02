@@ -1,22 +1,22 @@
 #include "torch_xla/csrc/layout_manager.h"
 
-#include <torch/csrc/lazy/core/util.h>
-
 #include <algorithm>
 #include <exception>
-#include <functional>
 #include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>
 
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/strings/str_split.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/util.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

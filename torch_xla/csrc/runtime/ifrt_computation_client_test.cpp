@@ -6,9 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/tensor_source.h"
-#include "torch_xla/csrc/status.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/logging.h"
 #include "tsl/platform/statusor.h"
@@ -19,6 +16,10 @@
 #include "xla/literal_util.h"
 #include "xla/tests/literal_test_util.h"
 #include "xla/tsl/lib/core/status_test_util.h"
+
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/tensor_source.h"
+#include "torch_xla/csrc/status.h"
 
 namespace torch_xla {
 namespace runtime {

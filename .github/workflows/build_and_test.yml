@@ -4,10 +4,12 @@ on:
     branches:
       - master
       - r[0-9]+.[0-9]+
+      - r[0-9]+.[0-9]+.[0-9]+
   push:
     branches:
       - master
       - r[0-9]+.[0-9]+
+      - r[0-9]+.[0-9]+.[0-9]+
   workflow_dispatch:
 
 concurrency:
@@ -24,31 +26,30 @@ jobs:
       base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
       head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
-  get-torch-commit:
+  report-no-code-changes:
     needs: [check_code_changes]
     runs-on: ubuntu-24.04
-    outputs:
-      torch_commit: ${{ steps.commit.outputs.torch_commit }}
     steps:
-      - name: Get latest torch commit
-        id: commit
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
-        run: |
-          echo "torch_commit=$(git ls-remote https://github.com/pytorch/pytorch.git HEAD | awk '{print $1}')" >> "$GITHUB_OUTPUT"
       - name: Report no code changes
-        if: needs.check_code_changes.outputs.has_code_changes == 'false'
         run: |
           echo "No code changes were detected that require running the full test suite."
+    if: needs.check_code_changes.outputs.has_code_changes == 'false'
 
   build-torch-xla:
     name: "Build PyTorch/XLA"
     uses: ./.github/workflows/_build_torch_xla.yml
-    needs: [check_code_changes, get-torch-commit]
+    needs: [check_code_changes]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.12_tpuvm
-      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
-      timeout-minutes: 45  # Takes ~20m as of 2025/5/30.
-      has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
+      timeout-minutes: 50  # Takes ~50m as of 2025/10/28 (without the remote cache).
+      # We should build PyTorch and PyTorch/XLA if:
+      #   1. There are code changes.
+      #   2. This is a `push` event to `master` or release branches.
+      #
+      # The reason for (2) is that `push-docs` job below is run precisely on (2) condition.
+      # In order for it (the `push-docs` job) to be successful, it needs to install the PyTorch
+      # and PyTorch/XLA wheels. Therefore, we need to build their wheels by running this job.
+      has_code_changes: ${{ (needs.check_code_changes.outputs.has_code_changes == 'true' || github.event_name == 'push') && 'true' || 'false' }}
       runner: linux.24xlarge
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
@@ -56,13 +57,12 @@ jobs:
   test-python-cpu:
     name: "CPU tests"
     uses: ./.github/workflows/_test.yml
-    needs: [build-torch-xla, check_code_changes, get-torch-commit]
+    needs: [build-torch-xla, check_code_changes]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.12_tpuvm
       timeout-minutes: 45  # Takes ~26m as of 2025/5/30.
       collect-coverage: false
       runner: linux.24xlarge
-      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
       has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}

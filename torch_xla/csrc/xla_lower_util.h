@@ -5,9 +5,10 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "torch_xla/csrc/device.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/hlo/ir/hlo_sharding.h"
+
+#include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
 

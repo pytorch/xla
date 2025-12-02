@@ -1,11 +1,11 @@
 #include "torch_xla/csrc/status.h"
 
-#include <c10/util/Exception.h>
-#include <torch/csrc/utils/cpp_stacktraces.h>
-
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+
+#include <c10/util/Exception.h>
+#include <torch/csrc/utils/cpp_stacktraces.h>
 
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
@@ -128,13 +128,6 @@ void status_internal::ThrowStatusError(const absl::Status& status,
   TORCH_CHECK(false, absl::StrCat(BuildStatusErrorMessage(new_status),
                                   LineBreakIfCppStacktracesEnabled()));
 }
-
-void OkOrThrow(const absl::Status& status) {
-  TORCH_CHECK(status.ok(), absl::StrCat(BuildStatusErrorMessage(status),
-                                        LineBreakIfCppStacktracesEnabled()));
-}
-
-void GetValueOrThrow(const absl::Status& status) { OkOrThrow(status); }
 
 void status_internal::OkOrDie(const absl::Status& status, const char* file,
                               const int32_t line, const char* function,

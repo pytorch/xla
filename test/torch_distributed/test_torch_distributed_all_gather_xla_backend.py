@@ -10,7 +10,7 @@ import torch.distributed as dist
 
 def _mp_fn(index):
   device = torch_xla.device()
-  if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):
+  if xm.xla_device_hw(device) in ('TPU', 'NEURON'):
     world_size = xr.world_size()
     rank = xr.global_ordinal()
 
@@ -30,8 +30,7 @@ def _mp_fn(index):
     assert torch.all(xoutput0.cpu() == expected0), f'{xoutput0} != {expected0}'
   else:
     print(
-        'Default device {} is not a TPU or GPU device'.format(device),
-        file=sys.stderr)
+        'Default device {} is not a TPU device'.format(device), file=sys.stderr)
 
 
 if __name__ == '__main__':

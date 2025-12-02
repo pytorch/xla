@@ -55,7 +55,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     # Make sure optimization barrier is applied.
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([model.fc2.weight.grad])
     self.assertIn(
-        'opt-barrier.38 = (f32[1,64]{0,1}, f32[1]{0}, f32[16,64]{1,0}) opt-barrier((f32[1,64]{0,1}, f32[1]{0}, f32[16,64]{1,0}) %tuple.37',
+        'opt-barrier.1 = (f32[1,64]{0,1}, f32[1]{0}, f32[16,64]{1,0}) opt-barrier((f32[1,64]{0,1}, f32[1]{0}, f32[16,64]{1,0}) %tuple.2',
         hlo)
 
     # Make sure the model can execute without error.

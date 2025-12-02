@@ -3,6 +3,8 @@
 #include <torch/csrc/lazy/core/helpers.h>
 #include <torch/csrc/lazy/core/util.h>
 
+#include "absl/base/nullability.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -62,7 +64,9 @@ XLATensorPtr Cross(const XLATensorPtr& input, const XLATensorPtr& other,
   XLATensorPtr s3 = tensor_methods::sub(tensor_methods::mul(u1, v2),
                                         tensor_methods::mul(u2, v1), one);
   // Stack the terms into one result tensor.
-  return tensor_methods::stack({s1, s2, s3}, canonical_dim);
+  XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr output,
+                      tensor_methods::stack({s1, s2, s3}, canonical_dim));
+  return output;
 }
 
 XLATensorPtr MakeMatrixWithDiagonal(const XLATensorPtr& input,
@@ -80,7 +84,8 @@ XLATensorPtr MakeMatrixWithDiagonal(const XLATensorPtr& input,
 XLATensorPtr SmoothL1Loss(const XLATensorPtr& input, const XLATensorPtr& target,
                           ReductionMode reduction, double beta) {
   torch::lazy::ScopePusher ir_scope(at::aten::smooth_l1_loss.toQualString());
-  auto broadcasted_inputs = tensor_methods::broadcast_tensors({input, target});
+  XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> broadcasted_inputs,
+                      tensor_methods::broadcast_tensors({input, target}));
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
   const XLATensorPtr& broadcasted_input = broadcasted_inputs[0];
   const XLATensorPtr& broadcasted_target = broadcasted_inputs[1];
@@ -119,7 +124,8 @@ XLATensorPtr SmoothL1LossBackward(const XLATensorPtr& grad_output,
                                   ReductionMode reduction, double beta) {
   torch::lazy::ScopePusher ir_scope(
       at::aten::smooth_l1_loss_backward.toQualString());
-  auto broadcasted_inputs = tensor_methods::broadcast_tensors({input, target});
+  XLA_ASSIGN_OR_THROW(std::vector<absl_nonnull XLATensorPtr> broadcasted_inputs,
+                      tensor_methods::broadcast_tensors({input, target}));
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
   const XLATensorPtr& broadcasted_input = broadcasted_inputs[0];
   const XLATensorPtr& broadcasted_target = broadcasted_inputs[1];
@@ -238,9 +244,9 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
   // padding_idx.
   XLATensorPtr skip_padding = tensor_methods::unsqueeze(
       tensor_methods::ne(indices_rank1, padding_idx), 1);
-  skip_padding = tensor_methods::expand(
+  XLA_ASSIGN_OR_THROW(
       skip_padding,
-      torch::lazy::ToVector<int64_t>(grad->shape().get().dimensions()));
+      tensor_methods::expand(skip_padding, grad->shape().get().dimensions()));
   XLATensorPtr zero_grad =
       tensor_methods::full_like(grad, 0, grad->GetDevice(), grad->dtype());
   return tensor_methods::index_put(

@@ -3,6 +3,9 @@
 #include <string>
 #include <tuple>
 
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/lib/prng.h"
+
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"
@@ -10,22 +13,11 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_helper.h"
-#include "xla/hlo/builder/lib/constants.h"
-#include "xla/hlo/builder/lib/prng.h"
 
 namespace torch_xla {
 namespace {
 
-std::string GetDefaultGitGeneratorName() {
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
-  switch (hw_type) {
-    case XlaDeviceType::CUDA:
-      return "three_fry";
-    default:
-      return "default";
-  }
-}
+std::string GetDefaultGitGeneratorName() { return "default"; }
 
 xla::BitGeneratorTy GetBitGenerator() {
   static const std::string* bit_generator =

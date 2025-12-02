@@ -2,6 +2,8 @@
 #define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
 #include "absl/base/nullability.h"
+#include "absl/types/span.h"
+
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -91,8 +93,9 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
-std::vector<XLATensorPtr> custom_call(
-    const std::vector<XLATensorPtr>& inputs, const std::string& target,
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> custom_call(
+    const std::vector<absl_nonnull XLATensorPtr>& inputs,
+    const std::string& target,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes, bool has_side_effect,
     const std::string& backend_config, const int api_version,
@@ -103,8 +106,9 @@ void custom_sharding_(
     const std::shared_ptr<XLATensor::ShardingSpec>& spec,
     const CustomSharding::Type& type = CustomSharding::Type::kSharding);
 
-std::vector<XLATensorPtr> tpu_custom_call(
-    const std::vector<XLATensorPtr>& inputs, const std::string& payload,
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> tpu_custom_call(
+    const std::vector<absl_nonnull XLATensorPtr>& inputs,
+    const std::string& payload,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes);
 
@@ -132,8 +136,9 @@ void adam_optimizer_step_(const XLATensorPtr& found_inf, XLATensorPtr& step,
                           double eps, bool amsgrad, bool maximize,
                           bool use_adamw);
 
-std::vector<XLATensorPtr> user_computation(
-    const std::string& opname, absl::Span<const XLATensorPtr> inputs,
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> user_computation(
+    const std::string& opname,
+    absl::Span<const absl_nonnull XLATensorPtr> inputs,
     runtime::ComputationClient::ComputationPtr computation);
 
 //////////////////////////////////////////////////////////////////////////////
@@ -158,10 +163,9 @@ XLATensorPtr cast_int4(const XLATensorPtr& weight,
 // Dynamic Reshape ops here.
 //////////////////////////////////////////////////////////////////////////////
 
-XLATensorPtr dynamic_expand(const XLATensorPtr& input,
-                            const std::vector<int64_t>& size,
-                            const XLATensorPtr& src_tensor, int src_dim,
-                            int target_dim);
+absl::StatusOr<absl_nonnull XLATensorPtr> dynamic_expand(
+    const XLATensorPtr& input, const absl::Span<const int64_t> sizes,
+    const XLATensorPtr& src_tensor, int src_dim, int target_dim);
 
 XLATensorPtr dynamic_view(const XLATensorPtr& input,
                           const std::vector<int64_t>& size,
@@ -257,24 +261,25 @@ void as_strided_(XLATensorPtr& input, std::vector<int64_t> size,
                  std::vector<int64_t> stride,
                  std::optional<int64_t> storage_offset);
 
-XLATensorPtr avg_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
-                         std::vector<int64_t> kernel_size,
-                         std::vector<int64_t> stride,
-                         std::vector<int64_t> padding, bool ceil_mode,
-                         bool count_include_pad,
-                         std::optional<int> divisor_override);
+absl::StatusOr<absl_nonnull XLATensorPtr> avg_pool_nd(
+    const XLATensorPtr& input, int64_t spatial_dim_count,
+    const absl::Span<const int64_t> kernel_size,
+    const absl::Span<const int64_t> stride,
+    const absl::Span<const int64_t> padding, bool ceil_mode,
+    bool count_include_pad, std::optional<int> divisor_override);
 
-XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
-                                  const XLATensorPtr& input,
-                                  int64_t spatial_dim_count,
-                                  std::vector<int64_t> kernel_size,
-                                  std::vector<int64_t> stride,
-                                  std::vector<int64_t> padding, bool ceil_mode,
-                                  bool count_include_pad);
+absl::StatusOr<absl_nonnull XLATensorPtr> avg_pool_nd_backward(
+    const XLATensorPtr& out_backprop, const XLATensorPtr& input,
+    int64_t spatial_dim_count, const absl::Span<const int64_t> kernel_size,
+    const absl::Span<const int64_t> stride,
+    const absl::Span<const int64_t> padding, bool ceil_mode,
+    bool count_include_pad);
 
-XLATensorPtr baddbmm(const XLATensorPtr& input, const XLATensorPtr& batch1,
-                     const XLATensorPtr& batch2, const at::Scalar& beta,
-                     const at::Scalar& alpha);
+absl::StatusOr<absl_nonnull XLATensorPtr> baddbmm(const XLATensorPtr& input,
+                                                  const XLATensorPtr& batch1,
+                                                  const XLATensorPtr& batch2,
+                                                  const at::Scalar& beta,
+                                                  const at::Scalar& alpha);
 
 XLATensorPtr bernoulli(const XLATensorPtr& input, double probability);
 XLATensorPtr bernoulli(const XLATensorPtr& input);
@@ -297,14 +302,16 @@ XLATensorPtr bitwise_xor(const XLATensorPtr& input, const XLATensorPtr& other);
 // Batch matrix multiplication. Both tensors must be 3D, the batch size must
 // match and the remaining two dimensions must be compatible for matrix
 // multiplication.
-XLATensorPtr bmm(const XLATensorPtr& batch1, const XLATensorPtr& batch2);
+absl::StatusOr<absl_nonnull XLATensorPtr> bmm(const XLATensorPtr& input,
+                                              const XLATensorPtr& mat2);
 
 // Broadcasts the given tensors according to broadcasting semantics.
-std::vector<XLATensorPtr> broadcast_tensors(
-    absl::Span<const XLATensorPtr> tensors);
+absl::StatusOr<std::vector<absl_nonnull XLATensorPtr>> broadcast_tensors(
+    absl::Span<const absl_nonnull XLATensorPtr> tensors);
 
 absl::StatusOr<absl_nonnull XLATensorPtr> cat(
-    absl::Span<const XLATensorPtr> tensors, int64_t dim, at::ScalarType dtype);
+    absl::Span<const absl_nonnull XLATensorPtr> tensors, int64_t dim,
+    at::ScalarType dtype);
 
 XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
                            double p);
@@ -316,12 +323,9 @@ XLATensorPtr pixel_shuffle(const XLATensorPtr& self, int64_t upscale_factor);
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
 void celu_(XLATensorPtr& input, const at::Scalar& alpha);
 
-XLATensorPtr clamp(const XLATensorPtr& input,
-                   const std::optional<at::Scalar>& min,
-                   const std::optional<at::Scalar>& max);
-XLATensorPtr clamp(const XLATensorPtr& input,
-                   const std::optional<at::Tensor>& min,
-                   const std::optional<at::Tensor>& max);
+absl::StatusOr<absl_nonnull XLATensorPtr> clamp(
+    const XLATensorPtr& input, const std::optional<at::Scalar>& min,
+    const std::optional<at::Scalar>& max);
 
 XLATensorPtr clone(const XLATensorPtr& input);
 
@@ -427,7 +431,8 @@ XLATensorPtr eq(const XLATensorPtr& input, const XLATensorPtr& other);
 
 XLATensorPtr exp(const XLATensorPtr& input);
 
-XLATensorPtr expand(const XLATensorPtr& input, std::vector<int64_t> size);
+absl::StatusOr<absl_nonnull XLATensorPtr> expand(
+    const XLATensorPtr& input, const absl::Span<const int64_t> sizes);
 
 XLATensorPtr expand_symint(const XLATensorPtr& input,
                            c10::SymIntArrayRef sym_size);
@@ -608,17 +613,17 @@ std::tuple<XLATensorPtr, XLATensorPtr> max(const XLATensorPtr& input,
 void max_out(XLATensorPtr& max, XLATensorPtr& max_values,
              const XLATensorPtr& input, int64_t dim, bool keepdim);
 
-std::tuple<XLATensorPtr, XLATensorPtr> max_pool_nd(
-    const XLATensorPtr& input, int64_t spatial_dim_count,
-    std::vector<int64_t> kernel_size, std::vector<int64_t> stride,
-    std::vector<int64_t> padding, bool ceil_mode);
+absl::StatusOr<std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr>>
+max_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
+            const absl::Span<const int64_t> kernel_size,
+            const absl::Span<const int64_t> stride,
+            const absl::Span<const int64_t> padding, bool ceil_mode);
 
-XLATensorPtr max_pool_nd_backward(const XLATensorPtr& out_backprop,
-                                  const XLATensorPtr& input,
-                                  int64_t spatial_dim_count,
-                                  std::vector<int64_t> kernel_size,
-                                  std::vector<int64_t> stride,
-                                  std::vector<int64_t> padding, bool ceil_mode);
+absl::StatusOr<absl_nonnull XLATensorPtr> max_pool_nd_backward(
+    const XLATensorPtr& out_backprop, const XLATensorPtr& input,
+    int64_t spatial_dim_count, const absl::Span<const int64_t> kernel_size,
+    const absl::Span<const int64_t> stride,
+    const absl::Span<const int64_t> padding, bool ceil_mode);
 
 XLATensorPtr max_unpool(const XLATensorPtr& input, const XLATensorPtr& indices,
                         std::vector<int64_t> output_size);
@@ -646,7 +651,8 @@ void min_out(XLATensorPtr& min, XLATensorPtr& min_indices,
 
 XLATensorPtr mish(const XLATensorPtr& input);
 
-XLATensorPtr mm(const XLATensorPtr& input, const XLATensorPtr& weight);
+absl::StatusOr<XLATensorPtr> mm(const XLATensorPtr& input,
+                                const XLATensorPtr& weight);
 
 XLATensorPtr mse_loss(const XLATensorPtr& input, const XLATensorPtr& target,
                       int64_t reduction);
@@ -820,8 +826,9 @@ XLATensorPtr replication_pad3d_backward(const XLATensorPtr& grad_output,
 
 void resize_(XLATensorPtr& input, std::vector<int64_t> size);
 
-XLATensorPtr roll(const XLATensorPtr& input, absl::Span<const int64_t> shifts,
-                  absl::Span<const int64_t> dims);
+absl::StatusOr<absl_nonnull XLATensorPtr> roll(
+    const absl_nonnull XLATensorPtr& input, absl::Span<const int64_t> shifts,
+    absl::Span<const int64_t> dims);
 
 XLATensorPtr rrelu_with_noise(const XLATensorPtr& input, XLATensorPtr& noise,
                               const at::Scalar& lower, const at::Scalar& upper,
@@ -924,7 +931,8 @@ XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims);
 void squeeze_(XLATensorPtr& input);
 void squeeze_(XLATensorPtr& input, int64_t dim);
 
-XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim);
+absl::StatusOr<absl_nonnull XLATensorPtr> stack(
+    absl::Span<const absl_nonnull XLATensorPtr> tensors, int64_t dim);
 
 XLATensorPtr std(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                  bool keep_reduced_dimensions, double correction);
@@ -969,7 +977,7 @@ std::tuple<XLATensorPtr, XLATensorPtr> topk(const XLATensorPtr& input,
                                             bool stable);
 
 // Returns the sum of the elements of the diagonal of the input 2-D matrix.
-XLATensorPtr trace(const XLATensorPtr& input);
+absl::StatusOr<absl_nonnull XLATensorPtr> trace(const XLATensorPtr& input);
 
 // Swap given dimensions of the input.
 XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1);
@@ -985,7 +993,7 @@ std::tuple<XLATensorPtr, XLATensorPtr> triangular_solve(
 // removed.
 std::vector<XLATensorPtr> unbind(const XLATensorPtr& input, int64_t dim);
 
-void uniform_(XLATensorPtr& input, double from, double to);
+absl::Status uniform_(XLATensorPtr& input, double from, double to);
 
 // Insert a dimension of size one at the specified position.
 XLATensorPtr unsqueeze(const XLATensorPtr& input, int64_t dim);

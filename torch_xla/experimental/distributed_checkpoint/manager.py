@@ -149,7 +149,6 @@ class CheckpointManager:
     self.chkpt_on_preemption = chkpt_on_preemption
 
     # Create a new group if none is provided
-    # TODO(jonbolin): Verify subgroup on GPU backend
     self.pg = process_group or dist.new_group()
 
     # Thread pool to run the async checkpoints. `_async_sem` is used to guard

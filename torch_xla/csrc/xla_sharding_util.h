@@ -1,17 +1,18 @@
 #ifndef XLA_TORCH_XLA_CSRC_XLA_SHARDING_UTIL_H_
 #define XLA_TORCH_XLA_CSRC_XLA_SHARDING_UTIL_H_
 
+#include <tuple>
+
 #include <torch/csrc/jit/python/pybind.h>
 
-#include <tuple>
+#include "xla/hlo/builder/xla_builder.h"
+#include "xla/hlo/builder/xla_computation.h"
+#include "xla/service/hlo.pb.h"
 
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
-#include "xla/hlo/builder/xla_builder.h"
-#include "xla/hlo/builder/xla_computation.h"
-#include "xla/service/hlo.pb.h"
 
 namespace torch_xla {
 
@@ -51,6 +52,12 @@ class ShardingUtil {
                                           const py::list& group_assignment,
                                           const py::list& replication_groups,
                                           ShardingType sharding_type);
+  // Creates an xla::OpSharding for TILED and PARTIAL types using the
+  // HloShardingV2 system.
+  static xla::OpSharding CreateIotaOpSharding(const py::list& dims,
+                                              const py::list& reshape_dims,
+                                              const py::list& transpose_perm,
+                                              const py::list& types);
 
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
@@ -150,6 +157,9 @@ class ShardingUtil {
 
   static void SetAutoSharding();
   static bool GetAutoSharding();
+
+  static xla::Shape GetAdjustedGlobalShape(const at::Tensor& tensor,
+                                           bool minibatch);
 };
 
 }  // namespace torch_xla

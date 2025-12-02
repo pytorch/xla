@@ -4,6 +4,12 @@
 #include <torch/csrc/lazy/core/util.h>
 
 #include "absl/status/status.h"
+#include "xla/hlo/builder/lib/arithmetic.h"
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/lib/loops.h"
+#include "xla/hlo/builder/lib/pooling.h"
+#include "xla/hlo/builder/lib/slicing.h"
+
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -12,11 +18,6 @@
 #include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
-#include "xla/hlo/builder/lib/arithmetic.h"
-#include "xla/hlo/builder/lib/constants.h"
-#include "xla/hlo/builder/lib/loops.h"
-#include "xla/hlo/builder/lib/pooling.h"
-#include "xla/hlo/builder/lib/slicing.h"
 
 namespace torch_xla {
 namespace {

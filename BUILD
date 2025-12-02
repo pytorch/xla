@@ -1,10 +1,5 @@
-load(
-    "@xla//xla/tsl/platform/default:cuda_build_defs.bzl",
-    "if_cuda_is_configured",
-)
-
-load("@python//:defs.bzl", "compile_pip_requirements")
 load("@python_version_repo//:py_version.bzl", "REQUIREMENTS")
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 
 compile_pip_requirements(
     name = "requirements",
@@ -41,9 +36,7 @@ cc_binary(
         "@torch//:libtorch",
         "@torch//:libtorch_cpu",
         "@torch//:libtorch_python",
-    ] + if_cuda_is_configured([
-        "@xla//xla/stream_executor:cuda_platform",
-    ]),
+    ],
 )
 
 test_suite(
@@ -57,6 +50,7 @@ test_suite(
         "//test/cpp:test_aten_xla_tensor_5",
         "//test/cpp:test_aten_xla_tensor_6",
         "//test/cpp:test_debug_macros",
+        "//test/cpp:test_device",
         "//test/cpp:test_ir",
         "//test/cpp:test_lazy",
         "//test/cpp:test_replication",

@@ -53,7 +53,6 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
         src = make_arg(src_size, noncontiguous=not src_contig)
 
         # If accumulate=True, `put_` should be deterministic regardless of the inputs on CPU
-        # On CUDA it may not be, but the test has enough tolerance to account for this
         if accumulate:
           idx = make_idx(src_size, high=dst.numel())
         else:

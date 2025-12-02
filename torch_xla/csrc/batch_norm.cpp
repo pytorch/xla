@@ -1,9 +1,10 @@
 #include "torch_xla/csrc/batch_norm.h"
 
-#include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/shape_helper.h"
 #include "xla/hlo/builder/lib/constants.h"
 #include "xla/hlo/builder/xla_builder.h"
+
+#include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 namespace {

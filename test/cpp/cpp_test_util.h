@@ -2,14 +2,16 @@
 #define XLA_TEST_CPP_CPP_TEST_UTIL_H_
 
 #include <gtest/gtest.h>
-#include <torch/torch.h>
 
 #include <cmath>
 #include <functional>
 #include <string>
 #include <unordered_set>
 
+#include <torch/torch.h>
+
 #include "absl/types/span.h"
+
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/dtype.h"

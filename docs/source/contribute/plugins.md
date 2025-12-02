@@ -1,8 +1,7 @@
 # Custom Hardware Plugins
 
 PyTorch/XLA supports custom hardware through OpenXLA's PJRT C API. The
-PyTorch/XLA team directly supports plugins for Cloud TPU (`libtpu`) and
-GPU ([OpenXLA](https://github.com/openxla/xla/tree/main/xla/pjrt/gpu)).
+PyTorch/XLA team directly supports plugins for Cloud TPU (`libtpu`).
 The same plugins may also be used by JAX and TF.
 
 ## Implementing a PJRT Plugin

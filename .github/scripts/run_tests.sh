@@ -31,6 +31,7 @@ function run_torch_xla_cpp_tests() {
   TORCH_DIR=$(python -c "import pkgutil; import os; print(os.path.dirname(pkgutil.get_loader('torch').get_filename()))")
   export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${TORCH_DIR}/lib
   export PJRT_DEVICE=CPU
+  export CPU_NUM_DEVICES=2
   export XLA_EXPERIMENTAL="nonzero:masked_select:nms"
 
   test_names=("test_aten_xla_tensor_1"
@@ -53,7 +54,8 @@ function run_torch_xla_cpp_tests() {
                "test_runtime"
                "test_status_dont_show_cpp_stacktraces"
                "test_status_show_cpp_stacktraces"
-               "test_debug_macros")
+               "test_debug_macros"
+               "test_device")
   for name in "${test_names[@]}"; do
     echo "Running $name cpp test..."
     /tmp/test/bin/${name}
@@ -77,11 +79,6 @@ PYTORCH_DIR=$1
 XLA_DIR=$2
 USE_COVERAGE="${3:-0}"
 
-if [ -x "$(command -v nvidia-smi)" ]; then
-  num_devices=$(nvidia-smi --list-gpus | wc -l)
-  echo "Found $num_devices GPU devices..."
-  export GPU_NUM_DEVICES=$num_devices
-fi
 export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 

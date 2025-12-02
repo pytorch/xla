@@ -2,9 +2,10 @@
 #define XLA_CLIENT_DEBUG_MACROS_H_
 
 #include "absl/status/status.h"
-#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "tsl/platform/stacktrace.h"
 #include "tsl/platform/statusor.h"
+
+#include "torch_xla/csrc/runtime/tf_logging.h"
 
 // DEPRECATED
 // ==========

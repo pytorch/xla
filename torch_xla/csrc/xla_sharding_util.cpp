@@ -1,12 +1,24 @@
 #include "torch_xla/csrc/xla_sharding_util.h"
 
-#include <ATen/TensorIndexing.h>
-
 #include <cmath>
 #include <unordered_map>
 
+#include <ATen/TensorIndexing.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include "absl/synchronization/blocking_counter.h"
-#include "torch/csrc/lazy/core/ir_util.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/execution_options_util.h"
+#include "xla/hlo/ir/hlo_module.h"
+#include "xla/hlo/parser/hlo_parser.h"
+#include "xla/hlo/pass/hlo_pass_pipeline.h"
+#include "xla/protobuf_util.h"
+#include "xla/service/hlo_verifier.h"
+#include "xla/service/sharding_propagation.h"
+#include "xla/service/spmd/spmd_partitioner.h"
+#include "xla/xla.pb.h"
+#include "xla_sharding_util.h"
+
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
@@ -20,17 +32,6 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
-#include "tsl/profiler/lib/traceme.h"
-#include "xla/execution_options_util.h"
-#include "xla/hlo/ir/hlo_module.h"
-#include "xla/hlo/parser/hlo_parser.h"
-#include "xla/hlo/pass/hlo_pass_pipeline.h"
-#include "xla/protobuf_util.h"
-#include "xla/service/hlo_verifier.h"
-#include "xla/service/sharding_propagation.h"
-#include "xla/service/spmd/spmd_partitioner.h"
-#include "xla/xla.pb.h"
-#include "xla_sharding_util.h"
 
 namespace torch_xla {
 
@@ -216,6 +217,26 @@ bool ShardingUtil::EqualShardingSpecs(const XLATensor::ShardingSpec& a,
 bool ShardingUtil::EqualOpShardings(const xla::OpSharding& a,
                                     const xla::OpSharding& b) {
   return xla::protobuf_util::HaveSameSerialization(a, b);
+}
+
+xla::OpSharding ShardingUtil::CreateIotaOpSharding(
+    const py::list& dims, const py::list& reshape_dims,
+    const py::list& transpose_perm, const py::list& types) {
+  TORCH_LAZY_COUNTER("CreateIotaOpSharding", 1);
+  auto dims_vec = dims.cast<std::vector<int64_t>>();
+  auto reshape_dims_vec = reshape_dims.cast<std::vector<int64_t>>();
+  auto transpose_perm_vec = transpose_perm.cast<std::vector<int>>();
+  std::vector<xla::OpSharding::Type> subgroup_types_vec;
+  for (auto type : types) {
+    subgroup_types_vec.push_back(
+        static_cast<xla::OpSharding::Type>(type.cast<int>()));
+  }
+  CHECK_EQ(reshape_dims_vec.size(), transpose_perm_vec.size());
+  return xla::HloSharding::Subgroup(
+             xla::TileAssignment(dims_vec, reshape_dims_vec,
+                                 transpose_perm_vec),
+             subgroup_types_vec)
+      .ToProto();
 }
 
 xla::OpSharding ShardingUtil::CreateOpSharding(
@@ -516,14 +537,15 @@ std::vector<torch::lazy::BackendDataPtr> ShardingUtil::CreateShardedPlaceholder(
     const std::vector<XLATensor::ShardingSpecPtr>& sharding_specs) {
   std::vector<torch::lazy::BackendDataPtr> placeholders;
   placeholders.reserve(sharding_specs.size());
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   for (int i = 0; i < sharding_specs.size(); ++i) {
     // Create sharded data placeholder, this will be used to
     // hold the corresponding computation results for both sharding &
     // replication.
-    auto sharded_data_placeholder =
-        runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
-            GetVirtualDevice().toString(), sharding_specs[i]->shape,
-            sharding_specs[i]->sharding);
+    auto sharded_data_placeholder = client->CreateDataPlaceholder(
+        GetVirtualDevice().toString(), sharding_specs[i]->shape,
+        sharding_specs[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
     placeholders.push_back(sharded_data_placeholder);
@@ -551,6 +573,8 @@ void ShardingUtil::PrepareOutputShardingPropagation(
       << "Expected size: " << indices.size()
       << ", actual size: " << new_sharding_specs.size();
 
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   for (int i = 0; i < indices.size(); ++i) {
     auto xtensor = (*tensors)[indices[i]];
     (*sharding_specs)[i] = new_sharding_specs[i];
@@ -562,10 +586,9 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // Create sharded data placeholder, this will be used to
     // hold the corresponding computation results for both sharding &
     // replication.
-    auto sharded_data_placeholder =
-        runtime::GetComputationClientOrDie()->CreateDataPlaceholder(
-            GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
-            (*sharding_specs)[i]->sharding);
+    auto sharded_data_placeholder = client->CreateDataPlaceholder(
+        GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
+        (*sharding_specs)[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
     (*data_placeholders)[i] = sharded_data_placeholder;
@@ -609,7 +632,9 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
         local_shards[j], shard_shape, devices[j]));
   }
-  return runtime::GetComputationClientOrDie()->TransferShardsToDevice(
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
+  return client->TransferShardsToDevice(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 
@@ -624,8 +649,9 @@ std::vector<int64_t> ShardingUtil::GetAutoShardingMesh() {
     for (auto i : mesh_shape) {
       total_devices *= i;
     }
-    XLA_CHECK_EQ(total_devices,
-                 runtime::GetComputationClientOrDie()->GetAllDevices().size())
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                        runtime::GetComputationClient());
+    XLA_CHECK_EQ(total_devices, client->GetAllDevices().size())
         << "Invalid auto-sharding mesh_shape: "
         << absl::StrJoin(mesh_shape, ",");
   }
@@ -640,8 +666,9 @@ std::vector<int64_t> ShardingUtil::GetAutoShardingMeshIds(
   // as the auto-sharding pass takes only one arrangement for now.
   // TODO(yeounoh) this was not necessary before; replace if this can be done
   // during the auto-sharding pass.
-  int64_t n_devices =
-      runtime::GetComputationClientOrDie()->GetAllDevices().size();
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
+  int64_t n_devices = client->GetAllDevices().size();
   std::vector<int64_t> device_mesh_ids = std::vector<int64_t>(n_devices);
   std::iota(device_mesh_ids.begin(), device_mesh_ids.end(), 0);
 
@@ -736,14 +763,15 @@ void ShardingUtil::ReshardParameters(
   // more-granular control over the peak memory consumption.
   bool group_sharding =
       runtime::sys_util::GetEnvBool("XLA_AUTO_USE_GROUP_SHARDING", true);
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   if (group_sharding) {
-    outputs = WrapXlaData(runtime::GetComputationClientOrDie()->ReshardData(
-        data_to_reshard, shardings_to_reshard));
+    outputs =
+        WrapXlaData(client->ReshardData(data_to_reshard, shardings_to_reshard));
   } else {
     for (int i = 0; i < data_to_reshard.size(); ++i) {
-      auto output =
-          WrapXlaData(runtime::GetComputationClientOrDie()->ReshardData(
-              {data_to_reshard[i]}, {shardings_to_reshard[i]}));
+      auto output = WrapXlaData(
+          client->ReshardData({data_to_reshard[i]}, {shardings_to_reshard[i]}));
       outputs.insert(outputs.end(), output.begin(), output.end());
     }
   }
@@ -865,4 +893,20 @@ bool ShardingUtil::GetAutoSharding() {
   }
   return use_auto_sharding;
 }
+
+xla::Shape ShardingUtil::GetAdjustedGlobalShape(const at::Tensor& tensor,
+                                                bool minibatch) {
+  xla::Shape global_shape = CreateComputationShapeFromTensor(tensor, nullptr);
+  if (minibatch) {
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                        runtime::GetComputationClient());
+    int num_local_devices = client->GetLocalDevices().size();
+    int num_global_devices = client->GetAllDevices().size();
+    int batch_dim_shape =
+        tensor.sizes()[0] * num_global_devices / num_local_devices;
+    global_shape.set_dimensions(0, batch_dim_shape);
+  }
+  return global_shape;
+}
+
 }  // namespace torch_xla

@@ -1,10 +1,10 @@
 #ifndef XLA_TORCH_XLA_CSRC_OPS_SCALAR_H_
 #define XLA_TORCH_XLA_CSRC_OPS_SCALAR_H_
 
+#include <iostream>
+
 #include <ATen/core/Formatting.h>
 #include <c10/core/Scalar.h>
-
-#include <iostream>
 
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/types.h"

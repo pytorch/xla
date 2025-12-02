@@ -73,7 +73,7 @@ class TestGraphHash(parameterized.TestCase):
       use_persistent=(True, False),
   )
   def test_num_graph_hash(self, use_dynamo, use_persistent):
-    if use_persistent and (xr.device_type() not in {'TPU', 'CUDA', 'NEURON'}):
+    if use_persistent and (xr.device_type() not in {'TPU', 'NEURON'}):
       raise absltest.SkipTest('Device type does not support persistent caching')
     _test_spawn(self._test_num_graph_hash, (use_dynamo, use_persistent))
 

@@ -1,11 +1,12 @@
 #ifndef XLA_TORCH_XLA_CSRC_OPS_SUM_H_
 #define XLA_TORCH_XLA_CSRC_OPS_SUM_H_
 
-#include <c10/core/ScalarType.h>
-
 #include <optional>
 
+#include <c10/core/ScalarType.h>
+
 #include "absl/types/span.h"
+
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {

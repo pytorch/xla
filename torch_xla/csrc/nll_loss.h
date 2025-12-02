@@ -2,8 +2,9 @@
 #define XLA_TORCH_XLA_CSRC_NLL_LOSS_H_
 
 #include "absl/types/optional.h"
-#include "torch_xla/csrc/reduction.h"
 #include "xla/hlo/builder/xla_builder.h"
+
+#include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
 

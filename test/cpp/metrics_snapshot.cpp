@@ -2,7 +2,8 @@
 
 #include <regex>
 
-#include "torch/csrc/lazy/core/metrics.h"
+#include <torch/csrc/lazy/core/metrics.h>
+
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
 

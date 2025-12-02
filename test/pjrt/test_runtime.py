@@ -17,7 +17,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def setUp(self):
     xr.set_device_type('CPU')
 
-  @parameterized.parameters(('CPU', 'CPU'), ('CUDA', 'CUDA'), ('TPU', 'TPU'))
+  @parameterized.parameters(('CPU', 'CPU'), ('TPU', 'TPU'))
   def test_device_type(self, pjrt_device, expected):
     with mock.patch.dict(os.environ, {'PJRT_DEVICE': pjrt_device}, clear=True):
       self.assertEqual(xr.device_type(), expected)
@@ -69,11 +69,6 @@ class TestExperimentalPjrt(parameterized.TestCase):
   }, True), ('pjrt_tpu_precedence', {
       'PJRT_DEVICE': 'TPU',
       'XRT_TPU_CONFIG': 'localservice;0;localhost:51011',
-  }, True), ('gpu_num_devives', {
-      'GPU_NUM_DEVICES': '4'
-  }, True), ('pjrt_gpu', {
-      'PJRT_DEVICE': 'CUDA',
-      'GPU_NUM_DEVICES': '4'
   }, True))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
     # Prevent flag checking during reinitialization of PJRT backend.
@@ -86,7 +81,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
         reload(torch_xla)
         logs_context = contextlib.nullcontext()
         if expect_using_pjrt:
-          self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU', 'NEURON'])
+          self.assertIn(xr.device_type(), ['CPU', 'TPU', 'NEURON'])
         else:
           self.assertIsNone(xr.device_type())
 

@@ -1,14 +1,15 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 
-#include <ATen/FunctionalTensorWrapper.h>
-#include <torch/csrc/lazy/core/tensor_util.h>
-
 #include <map>
 #include <string>
 #include <vector>
 
+#include <ATen/FunctionalTensorWrapper.h>
+#include <torch/csrc/lazy/core/tensor_util.h>
+
 #include "absl/log/absl_check.h"
 #include "absl/strings/str_cat.h"
+
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
@@ -47,18 +48,20 @@ class AtenXlaDeviceMapper {
         return;
       }
     }
-    devices_.emplace_back(ParseDeviceString("SPMD:0"));
+    devices_.emplace_back(GetVirtualDevice());
     devices_ordinals_[devices_.back()] = 0;
   }
 
  private:
   AtenXlaDeviceMapper() {
     if (UseVirtualDevice()) {
-      devices_.emplace_back(ParseDeviceString("SPMD:0"));
+      devices_.emplace_back(GetVirtualDevice());
       devices_ordinals_[devices_.back()] = 0;
     } else {
-      for (auto& device_str :
-           torch_xla::runtime::GetComputationClientOrDie()->GetLocalDevices()) {
+      XLA_ASSIGN_OR_THROW(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
+      for (auto& device_str : client->GetLocalDevices()) {
         devices_.emplace_back(ParseDeviceString(device_str));
         devices_ordinals_[devices_.back()] = devices_.size() - 1;
       }
@@ -397,15 +400,38 @@ std::string ToXlaString(const c10::Device& device) {
   return absl::StrCat("xla:", device.index());
 }
 
-const torch::lazy::BackendDevice* GetDefaultDevice() {
-  static std::string default_device_spec =
-      UseVirtualDevice()
-          ? "SPMD:0"
-          : runtime::GetComputationClientOrDie()->GetDefaultDevice();
-  XLA_CHECK(!default_device_spec.empty());
-  static const torch::lazy::BackendDevice default_device =
-      ParseDeviceString(default_device_spec);
-  return &default_device;
+static absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>
+InitializeDefaultBackendDevice() {
+  std::string spec;
+
+  if (UseVirtualDevice()) {
+    spec = "SPMD:0";
+  } else {
+    XLA_ASSIGN_OR_RETURN(runtime::ComputationClient * absl_nonnull const client,
+                         runtime::GetComputationClient());
+    spec = client->GetDefaultDevice();
+  }
+
+  ABSL_CHECK(!spec.empty());
+  XLA_ASSIGN_OR_RETURN(torch::lazy::BackendDevice device,
+                       SafeParseDeviceString(spec));
+
+  return new torch::lazy::BackendDevice(device);
+}
+
+const torch::lazy::BackendDevice* absl_nonnull GetDefaultDevice() {
+  XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* absl_nonnull device,
+                      SafeGetDefaultDevice());
+  return device;
+}
+
+const absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>&
+SafeGetDefaultDevice() {
+  static absl::StatusOr<torch::lazy::BackendDevice* absl_nonnull>&
+      default_backend_device =
+          *new absl::StatusOr<torch::lazy::BackendDevice * absl_nonnull>(
+              InitializeDefaultBackendDevice());
+  return default_backend_device;
 }
 
 c10::Device AtenDefaultDevice() {

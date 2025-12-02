@@ -1,17 +1,13 @@
 #ifndef XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_
 
-#include <torch/csrc/lazy/backend/backend_data.h>
-
 #include <cstdint>
 #include <mutex>
 #include <shared_mutex>
 
+#include <torch/csrc/lazy/backend/backend_data.h>
+
 #include "absl/types/span.h"
-#include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/operation_manager.h"
-#include "torch_xla/csrc/runtime/util.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/threadpool.h"
 #include "xla/hlo/builder/xla_computation.h"
@@ -20,6 +16,11 @@
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
 #include "xla/shape.h"
+
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/operation_manager.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -165,6 +166,10 @@ class PjRtComputationClient : public ComputationClient {
   void OnReadyCallback(DataPtr data,
                        const std::function<void()>& callback) override;
 
+  // See base class for semantics. This call overwrites previously set options.
+  void SetCustomCompileOptions(
+      const std::unordered_map<std::string, std::string>& options) override;
+
   // Creates a new instance of PjRtComputationClient and initializes it.
   static absl::StatusOr<absl_nonnull std::unique_ptr<PjRtComputationClient>>
   Create();
@@ -197,6 +202,7 @@ class PjRtComputationClient : public ComputationClient {
   // If not nullptr, invoke this instead of the actual XLA compilation. Used
   // only for testing.
   std::function<absl::Status()> fake_xla_compile_ = nullptr;
+  std::unordered_map<std::string, std::string> custom_compile_options_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 

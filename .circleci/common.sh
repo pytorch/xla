@@ -158,26 +158,12 @@ function run_torch_xla_cpp_tests() {
     fi
 
     if [ "$USE_COVERAGE" != "0" ]; then
-      if [ -x "$(command -v nvidia-smi)" ]; then
-        PJRT_DEVICE=CUDA test/cpp/run_tests.sh $EXTRA_ARGS -L""
-        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov1.dat
-        PJRT_DEVICE=CUDA test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
-        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov2.dat
-        lcov --add-tracefile /tmp/cov1.dat -a /tmp/cov2.dat -o /tmp/merged.dat
-      else
-        PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
-        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
-      fi
+      PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
+      cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
       genhtml /tmp/merged.dat -o ~/htmlcov/cpp/cpp_lcov.info
       mv /tmp/merged.dat ~/htmlcov/cpp_lcov.info
     else
-      # Shard GPU testing
-      if [ -x "$(command -v nvidia-smi)" ]; then
-        PJRT_DEVICE=CUDA test/cpp/run_tests.sh $EXTRA_ARGS -L""
-        PJRT_DEVICE=CUDA test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
-      else
-        PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
-      fi
+      PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
     fi
   popd
 }
@@ -196,11 +182,6 @@ function run_torch_xla_tests() {
   RUN_CPP="${RUN_CPP_TESTS:0}"
   RUN_PYTHON="${RUN_PYTHON_TESTS:0}"
 
-  if [ -x "$(command -v nvidia-smi)" ]; then
-    num_devices=$(nvidia-smi --list-gpus | wc -l)
-    echo "Found $num_devices GPU devices..."
-    export GPU_NUM_DEVICES=$num_devices
-  fi
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
   export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 

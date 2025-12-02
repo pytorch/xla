@@ -1,14 +1,18 @@
 #include "torch_xla/csrc/dl_convertor.h"
 
-#include <ATen/DLConvertor.h>
-
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include <ATen/DLConvertor.h>
+
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/types/span.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "xla/pjrt/pjrt_future.h"
+#include "xla/pjrt/pjrt_layout.h"
+
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -20,9 +24,6 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/unwrap_data.h"
-#include "xla/pjrt/pjrt_client.h"
-#include "xla/pjrt/pjrt_future.h"
-#include "xla/pjrt/pjrt_layout.h"
 
 namespace torch_xla {
 
@@ -51,8 +52,6 @@ void DLPackTensorDeleter(DLManagedTensor* t) {
 DLDeviceType DLDeviceTypeForDevice(const xla::PjRtDevice& device) {
   if (device.client()->platform_id() == xla::CpuId()) {
     return DLDeviceType::kDLCPU;
-  } else if (device.client()->platform_id() == xla::CudaId()) {
-    return DLDeviceType::kDLCUDA;
   }
   XLA_ERROR() << "Device " << device.DebugString()
               << " cannot be used as a DLPack device.";
@@ -127,8 +126,9 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
   ABSL_CHECK(handle != nullptr)
       << "Could not extract a valid data handle from the input tensor";
 
-  std::shared_ptr<xla::PjRtBuffer> pjrt_buffer =
-      runtime::GetComputationClientOrDie()->GetPjRtBuffer(handle);
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
+  std::shared_ptr<xla::PjRtBuffer> pjrt_buffer = client->GetPjRtBuffer(handle);
   ABSL_CHECK(pjrt_buffer != nullptr) << "Could not get a valid pjrt_buffer";
 
   ABSL_CHECK(!pjrt_buffer->IsTuple())
@@ -171,16 +171,13 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
 // Reference: https://github.com/openxla/xla/blob/main/xla/python/dlpack.cc
 absl::StatusOr<xla::PjRtDevice*> DeviceForDLDevice(const DLDevice& context) {
   switch (context.device_type) {
-    case DLDeviceType::kDLCPU:
-      XLA_CHECK_EQ(runtime::GetComputationClientOrDie()->GetPlatformID(),
-                   xla::CpuId());
-      return runtime::GetComputationClientOrDie()->LookupAddressableDevice(
-          context.device_id);
-    case DLDeviceType::kDLCUDA:
-      XLA_CHECK_EQ(runtime::GetComputationClientOrDie()->GetPlatformID(),
-                   xla::CudaId());
-      return runtime::GetComputationClientOrDie()->LookupAddressableDevice(
-          context.device_id);
+    case DLDeviceType::kDLCPU: {
+      XLA_ASSIGN_OR_RETURN(
+          runtime::ComputationClient * absl_nonnull const client,
+          runtime::GetComputationClient());
+      XLA_CHECK_EQ(client->GetPlatformID(), xla::CpuId());
+      return client->LookupAddressableDevice(context.device_id);
+    }
     default:
       return tsl::errors::InvalidArgument(
           "Unknown/unsupported DLPack device type %d", context.device_type);
@@ -337,10 +334,11 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
           shape, *device->default_memory_space(), on_delete_callback));
   ABSL_CHECK(pjrt_buffer.get() != nullptr) << "pjrt buffer is null.";
 
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
   runtime::ComputationClient::DataPtr data =
       runtime::PjRtComputationClient::CreateData(
-          runtime::GetComputationClientOrDie()->PjRtDeviceToString(device),
-          shape, std::move(pjrt_buffer));
+          client->PjRtDeviceToString(device), shape, std::move(pjrt_buffer));
 
   at::ScalarType tensor_type = at::toScalarType(dlmt->dl_tensor.dtype);
   XLATensorPtr xla_tensor = XLATensor::Create(data, tensor_type);

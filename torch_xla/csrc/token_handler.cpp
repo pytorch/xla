@@ -1,11 +1,12 @@
 #include "torch_xla/csrc/token_handler.h"
 
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_helper.h"
-#include "xla/hlo/builder/lib/constants.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

@@ -1,13 +1,14 @@
 #ifndef XLA_TORCH_XLA_CSRC_OPS_MEAN_H_
 #define XLA_TORCH_XLA_CSRC_OPS_MEAN_H_
 
-#include <c10/core/ScalarType.h>
-
 #include <optional>
 #include <vector>
 
-#include "torch_xla/csrc/ir.h"
+#include <c10/core/ScalarType.h>
+
 #include "xla/types.h"
+
+#include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 

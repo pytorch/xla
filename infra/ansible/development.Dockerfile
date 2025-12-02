@@ -2,7 +2,7 @@
 # The built image contains all required pip and apt packages for building and
 # running PyTorch and PyTorch/XLA. The image doesn't contain any source code.
 ARG python_version=3.8
-ARG debian_version=bullseye
+ARG debian_version=bookworm
 
 FROM python:${python_version}-${debian_version}
 

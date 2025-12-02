@@ -150,6 +150,8 @@ function run_xla_op_tests1 {
   run_dynamic "$_TEST_DIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug "$_TEST_DIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$_TEST_DIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_test "$_TEST_DIR/test_ops_error_message.py"
+  run_test "$_TEST_DIR/test_ops_error_message_functionalization_disabled.py"
   run_test "$_TEST_DIR/test_xla_graph_execution.py" "$@" --verbosity=$VERBOSITY
   run_pt_xla_debug_level2 "$_TEST_DIR/test_xla_graph_execution.py" "$@" --verbosity=$VERBOSITY
   run_test_without_functionalization "$_TEST_DIR/test_operations.py" "$@" --verbosity=$VERBOSITY
@@ -254,7 +256,6 @@ function run_xla_op_tests3 {
   run_test "$_TEST_DIR/test_devices.py"
   run_test "$_TEST_DIR/test_manual_xla_registration.py"
   run_test_multi_devices "$_TEST_DIR/spmd/test_xla_dtensor_placements.py"
-  # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$_TEST_DIR/test_core_aten_ops.py"
   run_test "$_TEST_DIR/test_pallas.py"
   run_xla_ir_hlo_debug run_test "$_TEST_DIR/test_user_computation_debug_cache.py"

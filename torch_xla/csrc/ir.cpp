@@ -1,14 +1,18 @@
 #include "torch_xla/csrc/ir.h"
 
+#include <algorithm>
+#include <functional>
+#include <sstream>
+
 #include <torch/csrc/lazy/core/config.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/ir_metadata.h>
 #include <torch/csrc/lazy/python/python_util.h>
 
-#include <functional>
-#include <sstream>
-
+#include "absl/log/absl_log.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -159,6 +163,53 @@ XlaOpVector XlaNode::Lower(LoweringContext* loctx) const {
   XLA_ERROR() << "Lowering not implemented for node: " << *this;
 }
 
+absl::StatusOr<XlaOpVector> XlaNode::SafeLower(LoweringContext* loctx) const {
+  // This default implementation of `SafeLower` is only temporary.
+  //
+  // It deals with the, now deprecated, `Lower` function by catching the
+  // thrown exception, if any, and wrapping it with an `absl::StatusOr<T>`
+  // instance.
+  //
+  // Idealy, we should not use `Lower`, at all. Instead, migrate all
+  // lowerings so that they override `SafeLower`.
+  try {
+    return Lower(loctx);
+  } catch (const std::exception& ex) {
+    return XLA_ERROR_WITH_LOCATION(absl::UnknownError(ex.what()));
+  }
+}
+
+absl::StatusOr<XlaOpVector> XlaNode::CheckedLower(
+    LoweringContext* loctx) const {
+  absl::StatusOr<XlaOpVector> output =
+      CheckLoweringOutput(SafeLower(loctx), loctx);
+
+  if (output.ok()) {
+    return output;
+  }
+
+  const torch::lazy::MetaData& meta = metadata();
+
+  // Show more information about the lowering error.
+  ABSL_LOG(ERROR) << "Error lowering node: " << ToString();
+  ABSL_LOG(ERROR) << "  |- scope: " << meta.scope;
+  ABSL_LOG(ERROR) << "  |- frame info: " << meta.frame_info;
+
+  // Keep only the main message in the status error.
+  // Copy the message, since we will be moving from it, next.
+  std::string message(output.status().message());
+  // Even though, at this point, `status` is guaranteed to be an error status,
+  // we use `XLA_RETURN_IF_ERROR` for 2 reasons:
+  //
+  //   1. Prepend the context string to indicate failure in the lowering phase
+  //   2. Add the current frame to the status propagation trace
+  XLA_RETURN_IF_ERROR(
+      std::move(output),
+      absl::StrCat("Error while lowering ", op().ToString(), ": ", message));
+
+  ABSL_UNREACHABLE();
+}
+
 torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,
                                        const xla::Shape& shape,
                                        torch::lazy::hash_t hash_seed) {
@@ -244,6 +295,35 @@ void XlaNode::UpdateShardingHash() {
           torch::lazy::HashCombine(sharding_hash_, (uint32_t)is_dyn_dim);
     }
   }
+}
+
+absl::StatusOr<XlaOpVector> XlaNode::CheckLoweringOutput(
+    absl::StatusOr<XlaOpVector>&& output, LoweringContext* loctx) const {
+  // If `output` is already an error, return them, since there are no
+  // valid outputs for us to check.
+  XLA_ASSIGN_OR_RETURN(XlaOpVector unwrapped_output, std::move(output));
+
+  // Make sure all output XlaBuilder instances are the same as the top-level
+  // one in `loctx`.
+  xla::XlaBuilder* builder = loctx->builder();
+
+  XlaOpVector::iterator it =
+      std::find_if(unwrapped_output.begin(), unwrapped_output.end(),
+                   [=](xla::XlaOp op) { return builder != op.builder(); });
+
+  if (it != unwrapped_output.end()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InternalError(absl::StrCat(
+        "expected all outputs of ", op().ToString(),
+        " to reference the top-level builder in the used LoweringContext "
+        "(builder: ",
+        builder->name(),
+        "). However, found 1 output referencing a different builder: ",
+        xla::internal::XlaBuilderFriend::GetInstruction(*it)->name(),
+        " (builder: ", it->builder()->name(), ").")));
+  }
+
+  XLA_RETURN_IF_ERROR(builder->first_error());
+  return unwrapped_output;
 }
 
 std::shared_ptr<torch::lazy::UserMetaData> XlaNode::SetUserMetadataForSubGraph(

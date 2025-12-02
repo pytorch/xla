@@ -1,113 +1,113 @@
 name: Linter check
 on:
-  pull_request:
-  push:
-    branches:
-      - master
-    tags:
-      - r[0-9]+.[0-9]+
+    pull_request:
+    push:
+        branches:
+            - master
+        tags:
+            - r[0-9]+.[0-9]+
 
 jobs:
-  check_code_changes:
-    name: Check Code Changes
-    uses: ./.github/workflows/_check_code_changes.yml
-    with:
-      event_name: ${{ github.event_name }}
-      # For pull_request, use PR's base and head. For push, use event's before and sha.
-      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-  linter_check:
-    runs-on: ubuntu-24.04
-    needs: [check_code_changes]
-    steps:
-      - name: Checkout repo
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
-        uses: actions/checkout@v3
-      - name: Setup Python
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
-        uses: actions/setup-python@v4
+    check_code_changes:
+        name: Check Code Changes
+        uses: ./.github/workflows/_check_code_changes.yml
         with:
-          python-version: '3.10'
-          cache: 'pip'
-      - run: pip install yapf==0.40.2  # N.B.: keep in sync with `torchax/dev-requirements.txt`, `infra/ansible/config/pip.yaml`
+            event_name: ${{ github.event_name }}
+            # For pull_request, use PR's base and head. For push, use event's before and sha.
+            base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+            head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+    linter_check:
+        runs-on: ubuntu-24.04
+        needs: [check_code_changes]
+        steps:
+            - name: Checkout repo
+              if: needs.check_code_changes.outputs.has_code_changes == 'true'
+              uses: actions/checkout@v3
+            - name: Setup Python
+              if: needs.check_code_changes.outputs.has_code_changes == 'true'
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.10"
+                  cache: "pip"
+            - run: pip install yapf==0.40.2 # N.B.: keep in sync with `infra/ansible/config/pip.yaml`
 
-      - name: Check no TORCH_PIN
-        if: >
-          (github.event_name == 'push' && github.event.ref == 'refs/heads/master') &&
-          needs.check_code_changes.outputs.has_code_changes == 'true'
-        shell: bash
-        run: |
-          TORCH_PIN=./.torch_pin
-          if [[ -f "${TORCH_PIN}" ]]; then
-            echo "Please remove ${TORCH_PIN} before landing."
-            exit 1
-          else
-            echo "No ${TORCH_PIN} found, safe to land..."
-          fi
-      - name: Check .cc file extension
-        shell: bash
-        run: |
-          # Find *.cc files recursively in the current directory, limiting to files only.
-          found_files=$(find . -type f -name "*.cc")
+            - name: Check no TORCH_PIN
+              if: >
+                  (github.event_name == 'push' && github.event.ref == 'refs/heads/master') &&
+                  needs.check_code_changes.outputs.has_code_changes == 'true'
+              shell: bash
+              run: |
+                  TORCH_PIN=./.torch_pin
+                  if [[ -f "${TORCH_PIN}" ]]; then
+                    echo "Please remove ${TORCH_PIN} before landing."
+                    exit 1
+                  else
+                    echo "No ${TORCH_PIN} found, safe to land..."
+                  fi
+            - name: Check .cc file extension
+              shell: bash
+              run: |
+                  # Find *.cc files recursively in the current directory, limiting to files only.
+                  found_files=$(find . -type f -name "*.cc")
 
-          # Check if any files were found.
-          if [ -n "$found_files" ]; then
-            echo "Found *.cc files:"
-            echo "$found_files"
-            echo "Please rename them to *.cpp for consistency."
-            exit 1
-          else
-            echo "PASSED *.cc file extension check"
-          fi
-      - name: Run clang-format
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
-        shell: bash
-        env:
-          CLANG_FORMAT: clang-format-16
-        run: |
-          sudo apt-get update
-          sudo apt install -y "${CLANG_FORMAT}"
-          git_status=$(git status --porcelain)
-          if [[ $git_status ]]; then
-            echo "Checkout code is not clean"
-            echo "${git_status}"
-            exit 1
-          fi
+                  # Check if any files were found.
+                  if [ -n "$found_files" ]; then
+                    echo "Found *.cc files:"
+                    echo "$found_files"
+                    echo "Please rename them to *.cpp for consistency."
+                    exit 1
+                  else
+                    echo "PASSED *.cc file extension check"
+                  fi
+            - name: Run clang-format
+              if: needs.check_code_changes.outputs.has_code_changes == 'true'
+              shell: bash
+              env:
+                  CLANG_FORMAT: clang-format-16
+              run: |
+                  sudo apt-get update
+                  sudo apt install -y "${CLANG_FORMAT}"
+                  git_status=$(git status --porcelain)
+                  if [[ $git_status ]]; then
+                    echo "Checkout code is not clean"
+                    echo "${git_status}"
+                    exit 1
+                  fi
 
-          find . -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs "${CLANG_FORMAT}" -i -style=file
-          git_status=$(git status --porcelain)
-          if [[ $git_status ]]; then
-            git diff
-            echo "${CLANG_FORMAT} recommends the changes above, please manually apply them OR automatically apply the changes "
-            echo "by running \"${CLANG_FORMAT} -i -style=file /PATH/TO/foo.cpp\" to the following files"
-            echo "${git_status}"
-            exit 1
-          else
-            echo "PASSED C++ format"
-          fi
-      - name: Run yapf
-        if: needs.check_code_changes.outputs.has_code_changes == 'true'
-        shell: bash
-        run: |
-          git_status=$(git status --porcelain)
-          if [[ $git_status ]]; then
-            echo "Checkout code is not clean"
-            echo "${git_status}"
-            exit 1
-          fi
+                  find . -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs "${CLANG_FORMAT}" -i -style=file
+                  git_status=$(git status --porcelain)
+                  if [[ $git_status ]]; then
+                    git diff
+                    echo "${CLANG_FORMAT} recommends the changes above, please manually apply them OR automatically apply the changes "
+                    echo "by running \"${CLANG_FORMAT} -i -style=file /PATH/TO/foo.cpp\" to the following files"
+                    echo "${git_status}"
+                    exit 1
+                  else
+                    echo "PASSED C++ format"
+                  fi
+            - name: Run yapf
+              if: needs.check_code_changes.outputs.has_code_changes == 'true'
+              shell: bash
+              run: |
+                  git_status=$(git status --porcelain)
+                  if [[ $git_status ]]; then
+                    echo "Checkout code is not clean"
+                    echo "${git_status}"
+                    exit 1
+                  fi
 
-          yapf -i -r *.py test/ scripts/ torch_xla/ benchmarks/ torchax/
-          git_status=$(git status --porcelain)
-          if [[ $git_status ]]; then
-            git diff
-            echo "yapf recommends the changes above, please manually apply them OR automatically apply the changes "
-            echo "by running `yapf -i /PATH/TO/foo.py` to the following files"
-            echo "${git_status}"
-            exit 1
-          else
-            echo "PASSED Python format"
-          fi
-      - name: Report no code changes
-        if: needs.check_code_changes.outputs.has_code_changes == 'false'
-        run: |
-          echo "No code changes were detected that require running the full test suite."
+                  yapf -i -r *.py test/ scripts/ torch_xla/ benchmarks/
+                  git_status=$(git status --porcelain)
+                  if [[ $git_status ]]; then
+                    git diff
+                    echo "yapf recommends the changes above, please manually apply them OR automatically apply the changes "
+                    echo "by running `yapf -i /PATH/TO/foo.py` to the following files"
+                    echo "${git_status}"
+                    exit 1
+                  else
+                    echo "PASSED Python format"
+                  fi
+            - name: Report no code changes
+              if: needs.check_code_changes.outputs.has_code_changes == 'false'
+              run: |
+                  echo "No code changes were detected that require running the full test suite."

@@ -2,14 +2,15 @@
 
 #include <torch/csrc/lazy/core/helpers.h>
 
+#include "xla/hlo/builder/lib/logdet.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/xla_lower_util.h"
-#include "xla/hlo/builder/lib/logdet.h"
-#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

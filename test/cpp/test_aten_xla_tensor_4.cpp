@@ -1,7 +1,11 @@
 #include <gtest/gtest.h>
-#include <torch/torch.h>
 
 #include <iostream>
+
+#include <torch/torch.h>
+
+#include "xla/permutation_util.h"
+#include "xla/util.h"
 
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
@@ -12,8 +16,6 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "xla/permutation_util.h"
-#include "xla/util.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -569,6 +571,8 @@ TEST_F(AtenXlaTensorTest, TestRsubScalar) {
 }
 
 TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int in_channels = 4;
   int out_channels = 8;
   int kernel_size = 5;
@@ -609,6 +613,8 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   int in_channels = 4;
   int out_channels = 8;
   int kernel_size = 5;
@@ -746,6 +752,8 @@ TEST_F(AtenXlaTensorTest, TestL1Loss) {
 }
 
 TEST_F(AtenXlaTensorTest, TestL1LossBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   for (torch::Reduction::Reduction reduction :
        {torch::Reduction::None, torch::Reduction::Mean,
         torch::Reduction::Sum}) {
@@ -784,6 +792,8 @@ TEST_F(AtenXlaTensorTest, TestMseLoss) {
 }
 
 TEST_F(AtenXlaTensorTest, TestMseLossBackward) {
+  GTEST_SKIP() << "failing due to PyTorch upstream changes. "
+               << "See: https://github.com/pytorch/xla/issues/9651.";
   for (torch::Reduction::Reduction reduction :
        {torch::Reduction::None, torch::Reduction::Mean,
         torch::Reduction::Sum}) {

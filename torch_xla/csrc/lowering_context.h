@@ -1,10 +1,6 @@
 #ifndef XLA_TORCH_XLA_CSRC_LOWERING_CONTEXT_H_
 #define XLA_TORCH_XLA_CSRC_LOWERING_CONTEXT_H_
 
-#include <torch/csrc/lazy/backend/backend_data.h>
-#include <torch/csrc/lazy/backend/lowering_context.h>
-#include <torch/csrc/lazy/core/ir_util.h>
-
 #include <memory>
 #include <optional>
 #include <string>
@@ -13,14 +9,19 @@
 #include <utility>
 #include <vector>
 
+#include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/backend/lowering_context.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include "absl/status/status.h"
 #include "absl/types/span.h"
-#include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/ir.h"
-#include "torch_xla/csrc/runtime/computation_client.h"
 #include "tsl/platform/macros.h"
 #include "xla/hlo/builder/xla_builder.h"
 #include "xla/types.h"
+
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 
 namespace torch_xla {
 
@@ -49,9 +50,9 @@ class LoweringContext : public torch::lazy::LoweringContext {
   // If a parameter associated with data has already been declared, it will be
   // returned. Otherwise a new one will be created, associated with the tensor
   // held in data.
-  xla::XlaOp GetParameter(
-      const std::shared_ptr<torch::lazy::BackendData>& backend_data,
-      const std::unordered_set<uint32_t>& dynamic_dims = {});
+  absl::StatusOr<xla::XlaOp> GetParameter(
+      const torch::lazy::BackendDataPtr& backend_data,
+      const std::unordered_set<uint32_t>& unbounded_dynamic_dims = {});
 
   // If a parameter associated with data has already been declared, returns its
   // ID. Otherwise, returns `std::nullopt`.
@@ -90,7 +91,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
 
   // Lowers a single IR node. All the inputs to the node must have a lowering
   // before calling this API. Returns the generated XLA operations.
-  XlaOpVector LowerNode(const torch::lazy::Node& node);
+  absl::StatusOr<XlaOpVector> LowerNode(const torch::lazy::Node& node);
 
   void SetUpAlias(const std::vector<int64_t>& output_index,
                   int64_t param_number, const std::vector<int64_t>& param_index,
@@ -122,10 +123,6 @@ class LoweringContext : public torch::lazy::LoweringContext {
     xla::XlaOp param;
     size_t index = 0;
   };
-
-  // Reports an XLA builder error for the given node.
-  TF_ATTRIBUTE_NORETURN void ReportBuilderError(const torch::lazy::Node& node,
-                                                absl::string_view error_msg);
 
   xla::XlaBuilder builder_;
   std::unordered_map<torch::lazy::BackendData::Handle, Parameter>
