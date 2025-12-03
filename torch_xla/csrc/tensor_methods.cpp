@@ -80,6 +80,7 @@
 #include "torch_xla/csrc/ops/linspace.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/logsumexp.h"
+#include "torch_xla/csrc/ops/map.h"
 #include "torch_xla/csrc/ops/mark_tensor.h"
 #include "torch_xla/csrc/ops/masked_scatter.h"
 #include "torch_xla/csrc/ops/masked_select.h"
@@ -2435,6 +2436,13 @@ XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other) {
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
+}
+
+XLATensorPtr map(
+    const Callable f, const at::Tensor& xs) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<Map>(
+      f->GetIrValue(), xs->GetIrValue());
+  return input->CreateFrom(torch::lazy::Value(node));
 }
 
 XLATensorPtr mark_tensor(const XLATensorPtr& input, const std::string& info) {

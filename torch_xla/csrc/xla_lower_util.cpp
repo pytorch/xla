@@ -396,6 +396,16 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
                                                xla::PrimitiveType::S64))};
 }
 
+xla::XlaOp BuildMap(const Callable f, const at::Tensor& xs) {
+  const xla::Shape& f_shape = ShapeHelper::ShapeOfXlaOp(f);
+  const xla::Shape& xs_shape = ShapeHelper::ShapeOfXlaOp(xs);
+  int64_t i = 0;
+  while i < xs.size():
+    i = i + 1;
+    f(xs[i]);
+  return xs;
+}
+
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
   // Expand cases in https://pytorch.org/docs/stable/torch.html#torch.matmul
   xla::Shape lhs_shape = ShapeHelper::ShapeOfXlaOp(lhs);

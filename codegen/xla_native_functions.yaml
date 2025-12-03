@@ -250,6 +250,7 @@ supported:
   - log2
   - log10
   - logsumexp
+  - map
   - masked_scatter
   - masked_select
   - max

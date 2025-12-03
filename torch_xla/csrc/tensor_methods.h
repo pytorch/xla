@@ -596,6 +596,8 @@ XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other);
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other);
 
+XLATensorPtr map(const Callable f, const XLATensorPtr& xs);
+
 XLATensorPtr mark_tensor(const XLATensorPtr& input, const std::string& info);
 
 XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
