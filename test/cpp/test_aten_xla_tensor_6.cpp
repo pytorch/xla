@@ -943,8 +943,9 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(bridge::GetDefaultDevice()->type());
+  XLA_ASSIGN_OR_THROW(const torch::lazy::BackendDevice* default_device,
+                      bridge::GetDefaultDevice());
+  XlaDeviceType hw_type = static_cast<XlaDeviceType>(default_device->type());
   if (hw_type != XlaDeviceType::CPU) {
     return;
   }
