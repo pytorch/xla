@@ -177,9 +177,10 @@ class XlaHelpers {
   //   3. In the presence of a dynamic shape in the input, we are unable to map
   //      it to any of the dimensions of the output
   //
-  static absl::StatusOr<std::optional<DynamicReshapeInfo>>
-  SafeGetDynamicReshapeInfo(const xla::Shape& input_shape,
-                            absl::Span<const int64_t> output_sizes);
+  // Precondition: `input_shape` should have, at least, one dynamic dimension.
+  // Otherwise, it will crash!
+  static absl::StatusOr<DynamicReshapeInfo> SafeGetDynamicReshapeInfo(
+      const xla::Shape& input_shape, absl::Span<const int64_t> output_sizes);
 
   static xla::Shape GetDynamicReshape(const xla::Shape& input_shape,
                                       absl::Span<const int64_t> output_sizes);

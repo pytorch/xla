@@ -98,14 +98,14 @@ xla::XlaComputation CreateMinMaxComputation(const std::string& name,
 //
 // For each element, this function will append to the output string:
 //   1. A star (*), if `needs_star(el)` returns true
-//   2. The return value of `get_printable_data(el)`
-template <class T, class FStar, class FPrint = T (*)(T)>
-std::string SpanToStringWithStar(
-    absl::Span<const T> span, FStar&& needs_star,
-    FPrint&& get_printable_data = [](T tee) -> T { return tee; }) {
+//   2. The return value of `format_element(el)`
+template <class T, class NeedsStar, class FormatElement>
+std::string SpanToStringWithStar(absl::Span<const T> span,
+                                 const NeedsStar& needs_star,
+                                 const FormatElement& format_element) {
   return absl::StrJoin(
       span, /* separator= */ ", ", [&](std::string* out, const T el) {
-        absl::StrAppend(out, needs_star(el) ? "*" : "", get_printable_data(el));
+        absl::StrAppend(out, needs_star(el) ? "*" : "", format_element(el));
       });
 }
 
@@ -114,21 +114,30 @@ std::string SpanToStringWithStar(
 // Similarly to `SpanToStringWithStar` function above, this function will also
 // append to the output string the 2 described items. However, with the
 // following changes:
-//   1. The `needs_star` function will also depend on the index of the element
-//   2. It will always print the element, instead of the index (i.e. the
-//   `get_printable_data` is already set)
-template <class F>
+//
+//   1. `needs_star` function has 2 parameters: index and element.
+//
+//   2. There's no `format_element` parameter. This function provides one, by
+//      default, that prints the underlying size element.
+template <class NeedsStar>
 std::string EnumeratedSizesToStringWithStar(absl::Span<const int64_t> sizes,
-                                            F&& needs_star) {
+                                            const NeedsStar& needs_star) {
   std::vector<size_t> indices(sizes.size());
   std::iota(indices.begin(), indices.end(), 0);
 
   return SpanToStringWithStar(
       absl::MakeConstSpan(indices), /* needs_star= */
       [&, sizes](size_t i) -> bool { return needs_star(i, sizes[i]); },
-      /* get_printable_data= */
-      [&, sizes](size_t i) -> int64_t { return sizes[i]; });
+      /* format_element= */
+      [&, sizes](size_t i) -> std::string { return std::to_string(sizes[i]); });
 }
+
+// Explicit `std::string(*)(int64_t)` function for converting `int64_t` to
+//
+// `std::string`. This is needed so that `SpanToStringWithStar` manages to
+// deduce the `FormatElement` type, since `std::string` has no overload for
+// `int64_t`.
+std::string Int64ToString(int64_t i) { return std::to_string(i); }
 
 bool IsUnboundedDynamicSize(const int64_t size) {
   return size == xla::Shape::kUnboundedSize;
@@ -137,14 +146,13 @@ bool IsUnboundedDynamicSize(const int64_t size) {
 // Checks that none of the `output_sizes` are unbounded dynamic sizes.
 //
 // This function is exclusively called by `SafeDynamicReshape()`.
-absl::Status CheckDynamicReshapeAnyOfOutputSizesIsUnboundedDynamic(
+absl::Status CheckNoOutputSizesAreUnbounded(
     absl::Span<const int64_t> output_sizes) {
   if (std::any_of(output_sizes.begin(), output_sizes.end(),
                   IsUnboundedDynamicSize)) {
     std::string output_sizes_with_unbounded_mark_str = SpanToStringWithStar(
-        output_sizes, /* needs_star= */ [](int64_t size) -> bool {
-          return IsUnboundedDynamicSize(size);
-        });
+        output_sizes, /* needs_star= */ IsUnboundedDynamicSize,
+        /* format_element= */ Int64ToString);
 
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
         "Error when calling DynamicReshape() in the lower phase: expected "
@@ -156,15 +164,37 @@ absl::Status CheckDynamicReshapeAnyOfOutputSizesIsUnboundedDynamic(
   return absl::OkStatus();
 }
 
+// Checks that `shape` has exactly 1 dynamic dimension.
+//
+// This function is exclusively called by `SafeGetDynamicReshapeInfo()`.
+absl::StatusOr<int64_t> CheckAndGetExactlyOneDynamicDimension(
+    const xla::Shape& shape) {
+  XLA_ASSIGN_OR_RETURN(std::optional<int64_t> opt_dynamic_dimension,
+                       XlaHelpers::CheckAtMostOneDynamicDimension(shape));
+
+  if (!opt_dynamic_dimension.has_value()) {
+    std::string shape_str = EnumeratedSizesToStringWithStar(
+        shape.dimensions(), /* needs_star= */ [&](size_t i, int64_t) {
+          return shape.is_dynamic_dimension(i);
+        });
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
+        "Error when calling GetDynamicReshapeInfo() in the lower phase: "
+        "expected exactly 1 dynamic dimension in the input shape ",
+        shape_str, ".")));
+  }
+
+  return *opt_dynamic_dimension;
+}
+
 // Checks that when mapping the `input_dynamic_dimension`, we won't split a
 // dynamic dimension in the output.
 //
-// This function is exclusively called by
-// `GetDynamicReshapeInfoOutputDynamicDimension()`.
-template <class F>
-absl::Status CheckGetDynamicReshapeInfoDynamicDimensionNotSplit(
-    F&& get_error_prefix, int64_t input_dynamic_dimension, size_t i,
-    int64_t output_elements, int64_t input_elements_before_dynamic_dimension) {
+// This function is exclusively called by `GetOutputDynamicDimension()`.
+template <class ErrorPrefix>
+absl::Status CheckDynamicDimensionNotSplit(
+    const ErrorPrefix& get_error_prefix, int64_t input_dynamic_dimension,
+    size_t i, int64_t output_elements,
+    int64_t input_elements_before_dynamic_dimension) {
   if (output_elements > input_elements_before_dynamic_dimension) {
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
         get_error_prefix(),
@@ -180,11 +210,11 @@ absl::Status CheckGetDynamicReshapeInfoDynamicDimensionNotSplit(
 
 // Checks that we were able to find a dynamic dimension in the output.
 //
-// This function is exclusively called by
-// `GetDynamicReshapeInfoOutputDynamicDimension()`.
-template <class F>
-absl::Status CheckGetDynamicReshapeInfoFoundOutputDynamicDimension(
-    F&& get_error_prefix, std::optional<int64_t> output_dynamic_dimension) {
+// This function is exclusively called by `GetOutputDynamicDimension()`.
+template <class ErrorPrefix>
+absl::Status CheckFoundOutputDynamicDimension(
+    const ErrorPrefix& get_error_prefix,
+    std::optional<int64_t> output_dynamic_dimension) {
   if (!output_dynamic_dimension.has_value()) {
     return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(absl::StrCat(
         get_error_prefix(),
@@ -196,8 +226,8 @@ absl::Status CheckGetDynamicReshapeInfoFoundOutputDynamicDimension(
 // Tries to map the `input_dynamic_dimension` onto `output_sizes`. If
 // successful, returns the mapped output dynamic dimension.
 //
-// This function is exclusively called by `GetDynamicReshapeInfo()`.
-absl::StatusOr<int64_t> GetDynamicReshapeInfoOutputDynamicDimension(
+// This function is exclusively called by `SafeGetDynamicReshapeInfo()`.
+absl::StatusOr<int64_t> GetOutputDynamicDimension(
     absl::Span<const int64_t> input_sizes,
     absl::Span<const int64_t> output_sizes, int64_t input_dynamic_dimension) {
   // Function for building the error prefix, which prints the `input_sizes`
@@ -205,7 +235,9 @@ absl::StatusOr<int64_t> GetDynamicReshapeInfoOutputDynamicDimension(
   auto get_error_prefix = [=]() -> std::string {
     std::string input_sizes_str = EnumeratedSizesToStringWithStar(
         input_sizes,
-        [=](size_t i, int64_t) { return i == input_dynamic_dimension; });
+        /* needs_star= */ [=](size_t i, int64_t) {
+          return i == input_dynamic_dimension;
+        });
     std::string output_sizes_str =
         absl::StrJoin(output_sizes, /* separator= */ ", ");
     return absl::StrCat(
@@ -225,7 +257,7 @@ absl::StatusOr<int64_t> GetDynamicReshapeInfoOutputDynamicDimension(
   int64_t output_elements = 1;
 
   for (size_t i = 0; i < output_sizes.size(); ++i) {
-    XLA_RETURN_IF_ERROR(CheckGetDynamicReshapeInfoDynamicDimensionNotSplit(
+    XLA_RETURN_IF_ERROR(CheckDynamicDimensionNotSplit(
         get_error_prefix, input_dynamic_dimension, i, output_elements,
         input_elements_before_dynamic_dimension));
     output_elements *= output_sizes[i];
@@ -235,7 +267,7 @@ absl::StatusOr<int64_t> GetDynamicReshapeInfoOutputDynamicDimension(
     }
   }
 
-  XLA_RETURN_IF_ERROR(CheckGetDynamicReshapeInfoFoundOutputDynamicDimension(
+  XLA_RETURN_IF_ERROR(CheckFoundOutputDynamicDimension(
       get_error_prefix, output_dynamic_dimension));
   return *output_dynamic_dimension;
 }
@@ -500,36 +532,33 @@ xla::XlaOp XlaHelpers::ReshapeToRank(xla::XlaOp input, int64_t expected_rank,
 
 std::optional<XlaHelpers::DynamicReshapeInfo> XlaHelpers::GetDynamicReshapeInfo(
     const xla::Shape& input_shape, absl::Span<const int64_t> output_sizes) {
-  XLA_ASSIGN_OR_THROW(std::optional<DynamicReshapeInfo> info,
-                      SafeGetDynamicReshapeInfo(input_shape, output_sizes));
-  return info;
+  if (input_shape.is_dynamic()) {
+    XLA_ASSIGN_OR_THROW(DynamicReshapeInfo info,
+                        SafeGetDynamicReshapeInfo(input_shape, output_sizes));
+    return info;
+  }
+  return std::nullopt;
 }
 
-absl::StatusOr<std::optional<XlaHelpers::DynamicReshapeInfo>>
+absl::StatusOr<XlaHelpers::DynamicReshapeInfo>
 XlaHelpers::SafeGetDynamicReshapeInfo(const xla::Shape& input_shape,
                                       absl::Span<const int64_t> output_sizes) {
-  // Make sure `input_shape` has up to a single dynamic dimension.
-  XLA_ASSIGN_OR_RETURN(std::optional<int64_t> opt_input_dynamic_dimension,
-                       CheckAtMostOneDynamicDimension(input_shape));
-  // Short-circuit if no dynamic dimension was found.
-  if (!opt_input_dynamic_dimension.has_value()) {
-    return std::nullopt;
-  }
-
-  // From this point onwards, we know that `input_shape` has exactly 1 dynamic
-  // dimension.
-  int64_t input_dynamic_dimension = opt_input_dynamic_dimension.value();
-
   DynamicReshapeInfo info;
   XLA_ASSIGN_OR_RETURN(info.output_shape,
                        xla::ShapeUtil::MakeValidatedShape(
                            input_shape.element_type(), output_sizes));
 
+  // Make sure `input_shape` has exactly 1 dynamic dimension.
+  absl::StatusOr<int64_t> exactly_1_dynamic_dimension_check =
+      CheckAndGetExactlyOneDynamicDimension(input_shape);
+  XLA_CHECK_OK(exactly_1_dynamic_dimension_check);
+
   if (info.output_shape.dimensions().size() > 0) {
     XLA_ASSIGN_OR_RETURN(
         info.dynamic_dimension,
-        GetDynamicReshapeInfoOutputDynamicDimension(
-            input_shape.dimensions(), output_sizes, input_dynamic_dimension));
+        GetOutputDynamicDimension(input_shape.dimensions(), output_sizes,
+                                  /* input_dynamic_dimension= */
+                                  exactly_1_dynamic_dimension_check.value()));
     info.output_shape.set_dynamic_dimension(info.dynamic_dimension, true);
   }
 
@@ -554,8 +583,7 @@ xla::XlaOp XlaHelpers::DynamicReshape(xla::XlaOp input,
 
 absl::StatusOr<xla::XlaOp> XlaHelpers::SafeDynamicReshape(
     xla::XlaOp input, absl::Span<const int64_t> output_sizes) {
-  XLA_CHECK_OK(
-      CheckDynamicReshapeAnyOfOutputSizesIsUnboundedDynamic(output_sizes));
+  XLA_CHECK_OK(CheckNoOutputSizesAreUnbounded(output_sizes));
 
   XLA_ASSIGN_OR_RETURN(const xla::Shape* absl_nonnull input_shape,
                        GetShape(input));
@@ -563,9 +591,9 @@ absl::StatusOr<xla::XlaOp> XlaHelpers::SafeDynamicReshape(
     return input;
   }
 
-  XLA_ASSIGN_OR_RETURN(std::optional<DynamicReshapeInfo> info,
-                       SafeGetDynamicReshapeInfo(*input_shape, output_sizes));
-  if (info.has_value()) {
+  if (input_shape->is_dynamic()) {
+    XLA_ASSIGN_OR_RETURN(DynamicReshapeInfo info,
+                         SafeGetDynamicReshapeInfo(*input_shape, output_sizes));
     return xla::ReshapeWithInferredDimension(input, output_sizes,
                                              info->dynamic_dimension);
   }
