@@ -692,6 +692,13 @@ manual_versioned_builds = [
   {
     git_tag         = "v2.1.0"
     pytorch_git_rev = "v2.1.0"
+    package_version = "2.1.0+libtpu"
+    accelerator     = "tpu"
+    bundle_libtpu   = "1"
+  },
+  {
+    git_tag         = "v2.1.0"
+    pytorch_git_rev = "v2.1.0"
     package_version = "2.1.0"
     accelerator     = "tpu"
     python_version  = "3.9"
