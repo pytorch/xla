@@ -4634,4 +4634,19 @@ at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
       tensor_methods::view(xla_self, XlaHelpers::I64List(size)));
 }
 
+// Sparse mask and coalesce are sparse dispatch only. These exist to prevent
+// the functionalization layer from incorrectly applying wrappers when we
+// pass through before hitting python dispatch.
+at::Tensor XLANativeFunctions::sparse_mask(const at::Tensor& self,
+                                           const at::Tensor& mask) {
+  at::AutoDispatchSkipFunctionalize guard;
+  at::AutoDispatchBelowAutograd guard2;
+  return self.sparse_mask(mask);
+}
+
+at::Tensor XLANativeFunctions::coalesce(const at::Tensor& self) {
+  at::AutoDispatchSkipFunctionalize guard;
+  at::AutoDispatchBelowAutograd guard2;
+  return at::_coalesce(self);
+}
 }  // namespace torch_xla
