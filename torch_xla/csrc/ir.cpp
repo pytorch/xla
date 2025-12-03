@@ -17,6 +17,7 @@
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/status.h"
 
 namespace torch_xla {
 namespace {
