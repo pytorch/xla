@@ -1,8 +1,6 @@
 #ifndef XLA_TORCH_XLA_CSRC_LOWERING_CONTEXT_H_
 #define XLA_TORCH_XLA_CSRC_LOWERING_CONTEXT_H_
 
-#include <c10/util/ArrayRef.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -12,6 +10,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <c10/util/ArrayRef.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/backend_device.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>

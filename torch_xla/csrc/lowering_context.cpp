@@ -1,7 +1,5 @@
 #include "torch_xla/csrc/lowering_context.h"
 
-#include <c10/util/ArrayRef.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -11,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include <c10/util/ArrayRef.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/backend_device.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
