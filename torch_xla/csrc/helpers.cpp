@@ -595,7 +595,7 @@ absl::StatusOr<xla::XlaOp> XlaHelpers::SafeDynamicReshape(
     XLA_ASSIGN_OR_RETURN(DynamicReshapeInfo info,
                          SafeGetDynamicReshapeInfo(*input_shape, output_sizes));
     return xla::ReshapeWithInferredDimension(input, output_sizes,
-                                             info->dynamic_dimension);
+                                             info.dynamic_dimension);
   }
   return xla::Reshape(input, output_sizes);
 }
