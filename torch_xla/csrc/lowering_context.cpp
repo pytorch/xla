@@ -259,7 +259,7 @@ xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
 
 absl::StatusOr<xla::XlaOp> LoweringContext::SafeGetOutputOp(
     const torch::lazy::Output& output) {
-  if (CheckOutputIsEmitted(output).ok()) {
+  if (!CheckOutputIsEmitted(output).ok()) {
     const std::vector<const torch::lazy::Node*> post_order =
         torch::lazy::Util::ComputePostOrder(output.node, &emit_status_);
     for (const torch::lazy::Node* const node : post_order) {
