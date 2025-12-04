@@ -6,10 +6,11 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Overview: module code &mdash; PyTorch/XLA master documentation</title>
+  <title>Quickstart: Your First PyTorch/XLA Model &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -36,6 +37,8 @@
   <link rel="stylesheet" href="../_static/katex-math.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Learn about TPUs" href="../accelerators/tpu.html" />
+    <link rel="prev" title="Pytorch/XLA Overview" href="xla-overview.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -317,15 +320,15 @@
             
             
               <p class="caption" role="heading"><span class="caption-text">Learn the Basics</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA Overview</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/xla-quickstart.html">Quickstart: Your First PyTorch/XLA Model</a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xla-overview.html">Pytorch/XLA Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart: Your First PyTorch/XLA Model</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Distributed Training on TPU</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/migration-to-xla-on-tpus.html">Migrating from PyTorch on GPUs to PyTorch/XLA on TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration-to-xla-on-tpus.html">Migrating from PyTorch on GPUs to PyTorch/XLA on TPUs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorials/precision_tutorial.html">Control MXU Floating Point Precision</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">SPMD User Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">SPMD advanced topics</a></li>
@@ -340,7 +343,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic Shapes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dynamic_shape.html">Dynamic Shapes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo Integration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Optimizing Repeated Layers with <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
@@ -349,9 +352,9 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Troubleshooting</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">PyTorch/XLA Compile API and it’s interaction with Eager mode.</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/trace-vs-execution-time.html">Tracing Time vs. Execution Time in PyTorch/XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshooting Basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="eager.html">PyTorch/XLA Compile API and it’s interaction with Eager mode.</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trace-vs-execution-time.html">Tracing Time vs. Execution Time in PyTorch/XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshoot.html">Troubleshooting Basics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notes/source_of_recompilation.html">Source of recompilations in torch_xla</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Troubleshooting recompilations</a></li>
 </ul>
@@ -365,7 +368,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api-guide.html">PyTorch/XLA API</a></li>
 </ul>
 
             
@@ -406,10 +409,14 @@
       </li>
 
         
-      <li>Overview: module code</li>
+      <li>Quickstart: Your First PyTorch/XLA Model</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/learn/xla-quickstart.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+          
         
       </li>
     
@@ -438,22 +445,184 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <h1>All modules for which code is available</h1>
-<ul><li><a href="torch_xla/backends.html">torch_xla.backends</a></li>
-<li><a href="torch_xla/core/xla_model.html">torch_xla.core.xla_model</a></li>
-<li><a href="torch_xla/debug/metrics.html">torch_xla.debug.metrics</a></li>
-<li><a href="torch_xla/distributed/parallel_loader.html">torch_xla.distributed.parallel_loader</a></li>
-<li><a href="torch_xla/distributed/spmd/xla_sharding.html">torch_xla.distributed.spmd.xla_sharding</a></li>
-<li><a href="torch_xla/distributed/xla_multiprocessing.html">torch_xla.distributed.xla_multiprocessing</a></li>
-<li><a href="torch_xla/experimental/eager.html">torch_xla.experimental.eager</a></li>
-<li><a href="torch_xla/runtime.html">torch_xla.runtime</a></li>
-<li><a href="torch_xla/torch_xla.html">torch_xla.torch_xla</a></li>
+  <section id="quickstart-your-first-pytorch-xla-model">
+<h1>Quickstart: Your First PyTorch/XLA Model<a class="headerlink" href="#quickstart-your-first-pytorch-xla-model" title="Permalink to this heading">¶</a></h1>
+<p>This guide will walk you through training a basic PyTorch model on an XLA device. We’ll use the classic MNIST dataset and a simple convolutional neural network (CNN). By the end of this quickstart, you’ll see how few modifications are needed to get your PyTorch code running with PyTorch/XLA.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading">¶</a></h2>
+<p>Before you start, please ensure you have:</p>
+<ol class="arabic simple">
+<li><p>Successfully completed the <a class="reference internal" href="../index.html"><span class="doc std std-doc">Installation steps</span></a> and have PyTorch/XLA installed and configured for your target XLA device (e.g., TPU or GPU).</p></li>
+<li><p>Basic familiarity with PyTorch concepts (tensors, <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code>, <code class="docutils literal notranslate"><span class="pre">DataLoader</span></code>, optimizers).</p></li>
+</ol>
+</section>
+<section id="the-mnist-training-script">
+<h2>The MNIST Training Script<a class="headerlink" href="#the-mnist-training-script" title="Permalink to this heading">¶</a></h2>
+<p>Install <code class="docutils literal notranslate"><span class="pre">torchvision</span></code> to load the built-in MNIST dataset, and create a <code class="docutils literal notranslate"><span class="pre">data</span></code> directory to store it.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>torchvision
+mkdir<span class="w"> </span>data
+</pre></div>
+</div>
+<p>Create a Python script named <code class="docutils literal notranslate"><span class="pre">mnist_xla_quickstart.py</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.optim</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">optim</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchvision</span><span class="w"> </span><span class="kn">import</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">transforms</span>
+
+<span class="c1"># PyTorch/XLA specific imports</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+
+<span class="c1"># Define the CNN Model</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MNISTNet</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MNISTNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conv1</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conv2</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc1</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">7</span><span class="o">*</span><span class="mi">7</span><span class="o">*</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span> <span class="c1"># Adjusted for 28x28 image, 2 pooling layers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc2</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">max_pool2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conv1</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">max_pool2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conv2</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="o">*</span><span class="mi">7</span><span class="o">*</span><span class="mi">64</span><span class="p">)</span> <span class="c1"># Flatten the tensor</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fc1</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">F</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">train_mnist</span><span class="p">():</span>
+    <span class="c1"># Training parameters</span>
+    <span class="n">epochs</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">learning_rate</span> <span class="o">=</span> <span class="mf">0.01</span>
+    <span class="n">momentum</span> <span class="o">=</span> <span class="mf">0.5</span>
+    <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">64</span>
+
+    <span class="c1"># 1. Acquire the XLA device</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running on XLA device: </span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Load MNIST dataset</span>
+    <span class="n">train_loader</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span>
+        <span class="n">datasets</span><span class="o">.</span><span class="n">MNIST</span><span class="p">(</span><span class="s1">&#39;./data&#39;</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                       <span class="n">transform</span><span class="o">=</span><span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+                           <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+                           <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">((</span><span class="mf">0.1307</span><span class="p">,),</span> <span class="p">(</span><span class="mf">0.3081</span><span class="p">,))</span>
+                       <span class="p">])),</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># 2. Initialize the model and move it to the XLA device</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">MNISTNet</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="c1"># Define loss function and optimizer</span>
+    <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">NLLLoss</span><span class="p">()</span>
+    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting training...&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">epochs</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">train_loader</span><span class="p">):</span>
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+
+            <span class="c1"># 3. Move data and target to the XLA device</span>
+            <span class="n">data</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">target</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+            <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+            <span class="c1"># 4. Synchronize: Tell XLA to execute the accumulated operations</span>
+            <span class="c1"># For single device training, torch_xla.sync() is often used.</span>
+            <span class="c1"># For multi-device training (covered later), xm.optimizer_step(optimizer)</span>
+            <span class="c1"># also performs this synchronization.</span>
+            <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">batch_idx</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Train Epoch: </span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s1"> [</span><span class="si">{</span><span class="n">batch_idx</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">train_loader</span><span class="o">.</span><span class="n">dataset</span><span class="p">)</span><span class="si">}</span><span class="s1"> &#39;</span>
+                      <span class="sa">f</span><span class="s1">&#39;(</span><span class="si">{</span><span class="mf">100.</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">batch_idx</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">train_loader</span><span class="p">)</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">%)]</span><span class="se">\t</span><span class="s1">Loss: </span><span class="si">{</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s1">.6f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Training finished!&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">train_mnist</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="running-the-script">
+<h2>Running the Script<a class="headerlink" href="#running-the-script" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Save the code above as <code class="docutils literal notranslate"><span class="pre">mnist_xla_quickstart.py</span></code>.</p></li>
+<li><p>Ensure your environment is configured to use your XLA device (e.g., <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=TPU</span></code> or <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=CUDA</span></code> set as environment variables if not already configured globally).</p></li>
+<li><p>Run the script from your terminal:</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>mnist_xla_quickstart.py
+</pre></div>
+</div>
+<p>You should see output indicating the XLA device (index) being used and training progress, including loss values.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>Running<span class="w"> </span>on<span class="w"> </span>XLA<span class="w"> </span>device:<span class="w"> </span>xla:0
+<span class="m">100</span>.0%
+<span class="m">100</span>.0%
+<span class="m">100</span>.0%
+<span class="m">100</span>.0%
+Starting<span class="w"> </span>training...
+Train<span class="w"> </span>Epoch:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">[</span><span class="m">0</span>/60000<span class="w"> </span><span class="o">(</span><span class="m">0</span>%<span class="o">)]</span><span class="w">	</span>Loss:<span class="w"> </span><span class="m">2</span>.303487
+Train<span class="w"> </span>Epoch:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">[</span><span class="m">6400</span>/60000<span class="w"> </span><span class="o">(</span><span class="m">11</span>%<span class="o">)]</span><span class="w">	</span>Loss:<span class="w"> </span><span class="m">0</span>.702035
+Train<span class="w"> </span>Epoch:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">[</span><span class="m">12800</span>/60000<span class="w"> </span><span class="o">(</span><span class="m">21</span>%<span class="o">)]</span><span class="w">	</span>Loss:<span class="w"> </span><span class="m">0</span>.492530
+Train<span class="w"> </span>Epoch:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">[</span><span class="m">19200</span>/60000<span class="w"> </span><span class="o">(</span><span class="m">32</span>%<span class="o">)]</span><span class="w">	</span>Loss:<span class="w"> </span><span class="m">0</span>.294703
+Train<span class="w"> </span>Epoch:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">[</span><span class="m">25600</span>/60000<span class="w"> </span><span class="o">(</span><span class="m">43</span>%<span class="o">)]</span><span class="w">	</span>Loss:<span class="w"> </span><span class="m">0</span>.191667
+Train<span class="w"> </span>Epoch:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">[</span><span class="m">32000</span>/60000<span class="w"> </span><span class="o">(</span><span class="m">53</span>%<span class="o">)]</span><span class="w">	</span>Loss:<span class="w"> </span><span class="m">0</span>.233557
+Train<span class="w"> </span>Epoch:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">[</span><span class="m">38400</span>/60000<span class="w"> </span><span class="o">(</span><span class="m">64</span>%<span class="o">)]</span><span class="w">	</span>Loss:<span class="w"> </span><span class="m">0</span>.135758
+Train<span class="w"> </span>Epoch:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">[</span><span class="m">44800</span>/60000<span class="w"> </span><span class="o">(</span><span class="m">75</span>%<span class="o">)]</span><span class="w">	</span>Loss:<span class="w"> </span><span class="m">0</span>.257190
+Train<span class="w"> </span>Epoch:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">[</span><span class="m">51200</span>/60000<span class="w"> </span><span class="o">(</span><span class="m">85</span>%<span class="o">)]</span><span class="w">	</span>Loss:<span class="w"> </span><span class="m">0</span>.121358
+Train<span class="w"> </span>Epoch:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">[</span><span class="m">57600</span>/60000<span class="w"> </span><span class="o">(</span><span class="m">96</span>%<span class="o">)]</span><span class="w">	</span>Loss:<span class="w"> </span><span class="m">0</span>.073349
+Training<span class="w"> </span>finished!
+</pre></div>
+</div>
+</section>
+<section id="explanation-of-xla-specific-parts">
+<h2>Explanation of XLA-Specific Parts<a class="headerlink" href="#explanation-of-xla-specific-parts" title="Permalink to this heading">¶</a></h2>
+<p>Let’s break down the PyTorch/XLA specific lines:</p>
+<ol class="arabic simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">torch_xla</span></code></strong> and <strong><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">torch_xla.core.xla_model</span> <span class="pre">as</span> <span class="pre">xm</span></code></strong>: These lines import the necessary PyTorch/XLA modules. The <code class="docutils literal notranslate"><span class="pre">torch_xla</span></code> import initializes the XLA backend. <code class="docutils literal notranslate"><span class="pre">xm</span></code> is a common alias for <code class="docutils literal notranslate"><span class="pre">torch_xla.core.xla_model</span></code>, which provides core XLA functionalities.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">device</span> <span class="pre">=</span> <span class="pre">xm.xla_device()</span></code></strong>: This is the key function to obtain an XLA device object. PyTorch/XLA will automatically select an available XLA device (like a TPU core or a GPU managed by XLA). Tensors and models need to be moved to this device to be accelerated.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">.to(device)</span></code></strong>: Just like in standard PyTorch, you use <code class="docutils literal notranslate"><span class="pre">.to(device)</span></code> to move your model’s parameters (<code class="docutils literal notranslate"><span class="pre">model.to(device)</span></code>) and your input data and targets (<code class="docutils literal notranslate"><span class="pre">data.to(device)</span></code>, <code class="docutils literal notranslate"><span class="pre">target.to(device)</span></code>) to the XLA device.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code></strong>: This is a crucial function in PyTorch/XLA when not using <code class="docutils literal notranslate"><span class="pre">xm.optimizer_step()</span></code> (which is common in multi-device setups). PyTorch/XLA operations are <em>lazy</em>; they build up a computation graph behind the scenes. <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> tells PyTorch/XLA that the current phase of computation definition is complete. This triggers the XLA compiler to optimize and execute the accumulated graph on the accelerator. It’s typically called once per training iteration, often after <code class="docutils literal notranslate"><span class="pre">optimizer.step()</span></code>. In multi-processing scenarios, <code class="docutils literal notranslate"><span class="pre">xm.optimizer_step(optimizer)</span></code> often replaces the separate <code class="docutils literal notranslate"><span class="pre">optimizer.step()</span></code> and <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> calls, as it handles gradient synchronization and the step execution.</p></li>
+</ol>
+</section>
+<section id="key-takeaways">
+<h2>Key Takeaways<a class="headerlink" href="#key-takeaways" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>Minimal Code Changes</strong>: Running PyTorch on XLA devices often requires only a few lines of code to be added or modified.</p></li>
+<li><p><strong>Device Agnostic Model Code</strong>: Your core model definition (<code class="docutils literal notranslate"><span class="pre">MNISTNet</span></code>), loss function, and optimizer logic remain standard PyTorch code.</p></li>
+<li><p><strong>Lazy Execution</strong>: PyTorch/XLA defers computation until explicitly synchronized. This allows for powerful graph-level optimizations by the XLA compiler.</p></li>
 </ul>
+</section>
+<section id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this heading">¶</a></h2>
+<p>Congratulations! You’ve run your first PyTorch model on an XLA device.</p>
+<ul class="simple">
+<li><p>If you’re coming from a GPU background, check out our <a class="reference internal" href="migration-to-xla-on-tpus.html"><span class="doc std std-doc">Migrating from GPUs to TPUs</span></a> guide for more detailed advice.</p></li>
+<li><p>To learn how to scale this to multiple XLA devices, explore the guides in the <em>Distributed Training on TPU</em> section.</p></li>
+</ul>
+</section>
+</section>
+
 
              </article>
              
             </div>
             <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../accelerators/tpu.html" class="btn btn-neutral float-right" title="Learn about TPUs" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="xla-overview.html" class="btn btn-neutral" title="Pytorch/XLA Overview" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
   
 
   
@@ -482,7 +651,18 @@
         <div class="pytorch-content-right" id="pytorch-content-right">
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
-              
+              <ul>
+<li><a class="reference internal" href="#">Quickstart: Your First PyTorch/XLA Model</a><ul>
+<li><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li><a class="reference internal" href="#the-mnist-training-script">The MNIST Training Script</a></li>
+<li><a class="reference internal" href="#running-the-script">Running the Script</a></li>
+<li><a class="reference internal" href="#explanation-of-xla-specific-parts">Explanation of XLA-Specific Parts</a></li>
+<li><a class="reference internal" href="#key-takeaways">Key Takeaways</a></li>
+<li><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+</ul>
+
             </div>
           </div>
         </div>
