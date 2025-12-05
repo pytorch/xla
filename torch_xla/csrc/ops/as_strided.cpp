@@ -145,10 +145,7 @@ absl::Status AsStrided::CheckSpecFitsInputImpl(
   return absl::OkStatus();
 }
 
-bool AsStridedIsSupported(const xla::Shape& input_shape,
-                          absl::Span<const int64_t> size,
-                          absl::Span<const int64_t> stride,
-                          int64_t storage_offset) {
+bool IsAsStridedWithStrideSupported(absl::Span<const int64_t> stride) {
   std::vector<int64_t> sorted_stride(stride.begin(), stride.end());
   std::sort(sorted_stride.begin(), sorted_stride.end());
   return stride.empty() || sorted_stride.front() == 1;

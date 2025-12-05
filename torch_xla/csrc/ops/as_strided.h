@@ -45,12 +45,9 @@ class AsStrided : public XlaNode {
   absl::Status CheckSpecFitsInput(const torch::lazy::Value& input) const;
 };
 
-// Legacy function that checks whether the given specs are supported by this
+// Legacy function that checks whether the given `stride` is supported by this
 // lowering of the `as_strided` operation.
-bool IsAsStridedSupported(const xla::Shape& input_shape,
-                          absl::Span<const int64_t> size,
-                          absl::Span<const int64_t> stride,
-                          int64_t storage_offset);
+bool IsAsStridedWithStrideSupported(absl::Span<const int64_t> stride);
 
 // Retrieves the permutation for sorting `v` in descending order.
 std::vector<int64_t> GetDescendingOrderPermutation(absl::Span<const int64_t> v);
