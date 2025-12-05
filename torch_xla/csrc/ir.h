@@ -33,10 +33,6 @@ class LoweringContext;
 
 using XlaOpVector = absl::InlinedVector<xla::XlaOp, 1>;
 
-template <typename T>
-using OutputMap =
-    std::unordered_map<torch::lazy::Output, T, torch::lazy::Output::Hasher>;
-
 void DetectDynamicShape(torch::lazy::NodePtr node);
 
 template <typename T, typename... Args>

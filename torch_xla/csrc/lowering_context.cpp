@@ -1,24 +1,35 @@
 #include "torch_xla/csrc/lowering_context.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
-#include <sstream>
-#include <stdexcept>
+#include <string>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
+#include <c10/util/ArrayRef.h>
+#include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/backend/backend_device.h>
+#include <torch/csrc/lazy/backend/lowering_context.h>
+#include <torch/csrc/lazy/core/config.h>
+#include <torch/csrc/lazy/core/ir.h>
 #include <torch/csrc/lazy/core/ir_metadata.h>
+#include <torch/csrc/lazy/core/ir_util.h>
 
-#include "absl/log/absl_check.h"
-#include "absl/log/absl_log.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
+#include "xla/hlo/builder/xla_builder.h"
+#include "xla/hlo/builder/xla_computation.h"
+#include "xla/shape.h"
+#include "xla/xla_data.pb.h"
 
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/stack_frame_index_builder.h"
@@ -242,21 +253,23 @@ void LoweringContext::AssignOutputOp(const torch::lazy::Output& output,
 }
 
 xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
-  auto it = emitted_outputs_.find(output);
+  XLA_ASSIGN_OR_THROW(xla::XlaOp op, SafeGetOutputOp(output));
+  return op;
+}
 
-  if (it == emitted_outputs_.end()) {
-    const auto post_order =
+absl::StatusOr<xla::XlaOp> LoweringContext::SafeGetOutputOp(
+    const torch::lazy::Output& output) {
+  if (!CheckOutputIsEmitted(output).ok()) {
+    const std::vector<const torch::lazy::Node*> post_order =
         torch::lazy::Util::ComputePostOrder(output.node, &emit_status_);
-    for (const auto* const node : post_order) {
-      XLA_THROW_IF_ERROR(LowerNode(*node));
+    for (const torch::lazy::Node* const node : post_order) {
+      XLA_RETURN_IF_ERROR(LowerNode(*node));
     }
     // At this point the output better be present, otherwise there is an issue
     // with the lowering code.
-    it = emitted_outputs_.find(output);
-    ABSL_CHECK(it != emitted_outputs_.end())
-        << "No XLA operation emitted for output: " << output;
+    XLA_CHECK_OK(CheckOutputIsEmitted(output));
   }
-  return it->second;
+  return emitted_outputs_.at(output);
 }
 
 absl::StatusOr<XlaOpVector> LoweringContext::LowerNode(
@@ -327,6 +340,17 @@ torch::lazy::ComputationPtr LoweringContext::Build() {
   XLA_ASSIGN_OR_THROW(xla::XlaComputation xla_computation, BuildXla());
   return std::make_shared<runtime::ComputationClient::Computation>(
       builder_.name(), std::move(xla_computation), device_);
+}
+
+absl::Status LoweringContext::CheckOutputIsEmitted(
+    const torch::lazy::Output& output) const {
+  torch::lazy::OutputMap<xla::XlaOp>::const_iterator it =
+      emitted_outputs_.find(output);
+  if (it == emitted_outputs_.end()) {
+    return XLA_ERROR_WITH_LOCATION(absl::InvalidArgumentError(
+        absl::StrCat("could not find output: ", output.ToString())));
+  }
+  return absl::OkStatus();
 }
 
 }  // namespace torch_xla

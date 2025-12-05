@@ -1,27 +1,29 @@
 #ifndef XLA_TORCH_XLA_CSRC_LOWERING_CONTEXT_H_
 #define XLA_TORCH_XLA_CSRC_LOWERING_CONTEXT_H_
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <unordered_map>
-#include <utility>
+#include <unordered_set>
 #include <vector>
 
+#include <c10/util/ArrayRef.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/backend/backend_device.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
+#include <torch/csrc/lazy/core/ir.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
 #include <torch/csrc/lazy/core/ir_util.h>
 
 #include "absl/status/status.h"
-#include "absl/types/span.h"
-#include "tsl/platform/macros.h"
+#include "absl/status/statusor.h"
 #include "xla/hlo/builder/xla_builder.h"
-#include "xla/types.h"
+#include "xla/hlo/builder/xla_computation.h"
 
-#include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
-#include "torch_xla/csrc/runtime/computation_client.h"
 
 namespace torch_xla {
 
@@ -74,10 +76,23 @@ class LoweringContext : public torch::lazy::LoweringContext {
   // operands among the emitted outputs.
   void AssignOutputOp(const torch::lazy::Output& output, xla::XlaOp op);
 
-  // Retrieves the lowered operation for a output. If the requested output is
-  // not available yet, the graph behind the output's XlaNode is lowered, and
-  // the corresponding XLA operation returned.
-  xla::XlaOp GetOutputOp(const torch::lazy::Output& output);
+  // Retrieves the lowered operation for a output.
+  //
+  // If the requested output is not available yet, the graph behind the output's
+  // XlaNode is lowered, and the corresponding XLA operation returned.
+  [[deprecated("Use SafeGetOutputOp for better error handling.")]] xla::XlaOp
+  GetOutputOp(const torch::lazy::Output& output);
+  // Retrieves the lowered operation for a output.
+  //
+  // If the requested output is not available yet, the graph behind the output's
+  // XlaNode is lowered, and the corresponding XLA operation returned.
+  //
+  // This function shall return an error status if the lowering the underlying
+  // `output`, or any other dependent nodes, returns an error status.
+  // Additionally, it might abort if after the lowering of `output` and its
+  // dependent nodes, the lowered node for `output` is not available, i.e. not
+  // in `emitted_outputs_`.
+  absl::StatusOr<xla::XlaOp> SafeGetOutputOp(const torch::lazy::Output& output);
 
   // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API).
@@ -110,7 +125,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
 
   torch::lazy::ComputationPtr Build() override;
 
-  const OutputMap<xla::XlaOp> GetEmittedOutputs() const {
+  const torch::lazy::OutputMap<xla::XlaOp> GetEmittedOutputs() const {
     return emitted_outputs_;
   }
 
@@ -124,11 +139,15 @@ class LoweringContext : public torch::lazy::LoweringContext {
     size_t index = 0;
   };
 
+  // Checks whether the given output is already emitted. In other words, whether
+  // we can find it inside `emitted_outputs_`.
+  absl::Status CheckOutputIsEmitted(const torch::lazy::Output& output) const;
+
   xla::XlaBuilder builder_;
   std::unordered_map<torch::lazy::BackendData::Handle, Parameter>
       parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
-  OutputMap<xla::XlaOp> emitted_outputs_;
+  torch::lazy::OutputMap<xla::XlaOp> emitted_outputs_;
   std::string name_;
 
   std::shared_ptr<StackFrameIndexBuilder> stack_frame_index_builder_;
