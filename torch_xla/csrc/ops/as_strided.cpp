@@ -69,9 +69,7 @@ absl::StatusOr<XlaOpVector> AsStrided::SafeLower(LoweringContext* loctx) const {
   XLA_ASSIGN_OR_RETURN(const xla::Shape* absl_nonnull input_shape_ptr,
                        GetShape(input));
 
-  XLA_ASSIGN_OR_RETURN(int64_t input_element_count,
-                       xla::ShapeUtil::ElementsIn(*input_shape_ptr));
-
+  int64_t input_element_count = xla::ShapeUtil::ElementsIn(*input_shape_ptr);
   int64_t spec_element_count = GetSpecElementCount();
 
   // Preprocess `input` so that it:
