@@ -4,7 +4,9 @@ We appreciate all contributions. If you are planning to contribute a bug fix for
 an open issue, please comment on the thread and we're happy to provide guidance.
 You are welcome to pick issues with [good first issue](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 and [help wanted](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
-labels to get started. [A series of videos](https://www.youtube.com/watch?v=vtdh80s9618&list=PLo9i-9xXLe_pFQgHvjFFKZI-8EtKwKd62) is also available to give you an overview of how PyTorch/XLA works under the hood
+labels to get started. 
+[A series of videos](https://www.youtube.com/watch?v=vtdh80s9618&list=PLo9i-9xXLe_pFQgHvjFFKZI-8EtKwKd62)
+is also available to give you an overview of how PyTorch/XLA works under the hood.
 
 If you plan to contribute new features or extensions to this repository, first
 open an issue and discuss the feature with us. Sending a PR without discussion
