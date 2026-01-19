@@ -78,6 +78,60 @@ class TestGraphHash(parameterized.TestCase):
     _test_spawn(self._test_num_graph_hash, (use_dynamo, use_persistent))
 
 
+class TestClearCompilationCache(parameterized.TestCase):
+
+  def _test_clear_memory_cache(self):
+    """Test clearing the in-memory compilation cache."""
+    xla_dev = torch_xla.device()
+    model = M().to(device=xla_dev)
+    input1 = torch.rand((10, 5)).to(xla_dev)
+    model(input1)
+    torch_xla.sync()
+    xm.wait_device_ops()
+
+    graph_cnt = xr.get_num_cached_compilation_graph()
+    self.assertGreater(graph_cnt, 0)
+
+    xr.clear_compilation_cache()
+
+    new_graph_cnt = xr.get_num_cached_compilation_graph()
+    self.assertEqual(new_graph_cnt, 0)
+
+  def test_clear_memory_cache(self):
+    _test_spawn(self._test_clear_memory_cache, ())
+
+  def _test_clear_persistent_cache(self):
+    """Test clearing the persistent compilation cache (memory + disk)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+      xr.initialize_cache(tmpdir)
+
+      xla_dev = torch_xla.device()
+      model = M().to(device=xla_dev)
+      input1 = torch.rand((10, 5)).to(xla_dev)
+      model(input1)
+      torch_xla.sync()
+      xm.wait_device_ops()
+
+      graph_cnt = xr.get_num_cached_compilation_graph()
+      self.assertGreater(graph_cnt, 0)
+
+      cache_files_before = os.listdir(tmpdir)
+      self.assertGreater(len(cache_files_before), 0)
+
+      xr.clear_compilation_cache()
+
+      new_graph_cnt = xr.get_num_cached_compilation_graph()
+      self.assertEqual(new_graph_cnt, 0)
+
+      cache_files_after = os.listdir(tmpdir)
+      self.assertEqual(len(cache_files_after), 0)
+
+  def test_clear_persistent_cache(self):
+    if xr.device_type() not in {'TPU', 'NEURON'}:
+      raise absltest.SkipTest('Device type does not support persistent caching')
+    _test_spawn(self._test_clear_persistent_cache, ())
+
+
 if __name__ == '__main__':
   test = absltest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
