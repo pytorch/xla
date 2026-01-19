@@ -81,18 +81,19 @@ class TestGraphHash(parameterized.TestCase):
 class TestClearCompilationCache(parameterized.TestCase):
 
   def _test_clear_memory_cache(self):
-    """Test clearing the in-memory compilation cache."""
     xla_dev = torch_xla.device()
     model = M().to(device=xla_dev)
+    model = torch.compile(model, backend='openxla')
     input1 = torch.rand((10, 5)).to(xla_dev)
     model(input1)
+
     torch_xla.sync()
     xm.wait_device_ops()
 
     graph_cnt = xr.get_num_cached_compilation_graph()
     self.assertGreater(graph_cnt, 0)
 
-    xr.clear_compilation_cache()
+    xr.clear_computation_cache()
 
     new_graph_cnt = xr.get_num_cached_compilation_graph()
     self.assertEqual(new_graph_cnt, 0)
@@ -101,28 +102,27 @@ class TestClearCompilationCache(parameterized.TestCase):
     _test_spawn(self._test_clear_memory_cache, ())
 
   def _test_clear_persistent_cache(self):
-    """Test clearing the persistent compilation cache (memory + disk)."""
     with tempfile.TemporaryDirectory() as tmpdir:
       xr.initialize_cache(tmpdir)
 
       xla_dev = torch_xla.device()
       model = M().to(device=xla_dev)
       input1 = torch.rand((10, 5)).to(xla_dev)
+      model = torch.compile(model, backend='openxla')
       model(input1)
+
       torch_xla.sync()
       xm.wait_device_ops()
 
       graph_cnt = xr.get_num_cached_compilation_graph()
       self.assertGreater(graph_cnt, 0)
-
       cache_files_before = os.listdir(tmpdir)
       self.assertGreater(len(cache_files_before), 0)
 
-      xr.clear_compilation_cache()
+      xr.clear_computation_cache()
 
       new_graph_cnt = xr.get_num_cached_compilation_graph()
       self.assertEqual(new_graph_cnt, 0)
-
       cache_files_after = os.listdir(tmpdir)
       self.assertEqual(len(cache_files_after), 0)
 
