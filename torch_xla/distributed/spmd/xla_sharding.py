@@ -873,6 +873,7 @@ def get_xla_sharding_specs(tensors: list) -> list:
 def wrap_as_sharded_tensor(t: Union[torch.Tensor, XLAShardedTensor],
                            mesh_shape=None,
                            partition_spec=None) -> XLAShardedTensor:
+  # pass along mesh and partition spec information
   if not isinstance(t, XLAShardedTensor):
     # Create a new XLAShardedTensor
     return XLAShardedTensor(
