@@ -10,6 +10,7 @@
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "single_include/nlohmann/json.hpp"
 #include "stablehlo/dialect/StablehloOps.h"
 
@@ -416,6 +417,24 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
           impl_ops_setvec.insert(def_op);
         } else {
           processing.push_back(def_op);
+        }
+      }
+      // Also collect values used inside nested regions (e.g., reduce body)
+      // that are defined in the parent function. These are not captured by
+      // getOperands() but need to be included in the composite.
+      for (mlir::Region& region : curr_op->getRegions()) {
+        llvm::SetVector<mlir::Value> captured;
+        mlir::getUsedValuesDefinedAbove(region, region, captured);
+        for (mlir::Value value : captured) {
+          mlir::Operation* def_op = value.getDefiningOp();
+          if (def_op == nullptr) {
+            arg_pos_setvec.insert(
+                {value, std::numeric_limits<int64_t>::max()});
+          } else if (llvm::isa<mlir::stablehlo::ConstantOp>(def_op)) {
+            impl_ops_setvec.insert(def_op);
+          } else {
+            processing.push_back(def_op);
+          }
         }
       }
     }
