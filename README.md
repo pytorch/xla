@@ -1,6 +1,7 @@
 # PyTorch/XLA
 
 > [!NOTE]
+> <b>4/22/2026</b>: To read more on our TorchTPU announcement see our latest [blog post](https://developers.googleblog.com/torchtpu-running-pytorch-natively-on-tpus-at-google-scale/). Once TorchTPU is public it will replace PyTorch/XLA. 
 > <b>10/2025</b>: Based on community feedback, we have proposed a more native direction for PyTorch on TPU. Read the RFC and comment at [#9684](https://github.com/pytorch/xla/issues/9684).
 >
 
