@@ -5,6 +5,8 @@ PyTorch/XLA documentation
 ``torch_xla`` is a Python package that implements \
 `XLA <https://openxla.org/xla>`_ as a backend for PyTorch.
 
+4/22/2026: To read more on our TorchTPU announcement see our latest blog post <https://developers.googleblog.com/torchtpu-running-pytorch-natively-on-tpus-at-google-scale/>. Once TorchTPU is public it will replace PyTorch/XLA. 
+
 +------------------------------------------------+------------------------------------------------+------------------------------------------------+
 | **Familiar APIs**                              | **High Performance**                           | **Cost Efficient**                             |
 |                                                |                                                |                                                |
