@@ -25,6 +25,7 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 from torch_xla.utils.buffer_donor_context import alias_with_buffer_donor_config
+from torch_xla.distributed.spmd.xla_sharding import get_xla_sharding_specs
 import torch_xla.utils.dlpack as torch_xla_dlpack
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
@@ -339,8 +340,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
   }
 
   if xr.is_spmd():
-    xla_args_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(
-        xla_args_tensor_only)
+    xla_args_sharding_spec = get_xla_sharding_specs(xla_args_tensor_only)
   else:
     xla_args_sharding_spec = ()
 
@@ -531,7 +531,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       # if the input sharding was the same for skip_checking_input_sharding_threashold times
       # we will skip checking the input sharding since it can be expensive.
       if skip_checking_input_sharding_threashold > 0:
-        if torch_xla._XLAC._get_xla_sharding_specs(
+        if get_xla_sharding_specs(
             xla_args_tensor_only) != xla_args_sharding_spec:
           # update the xla_args with the input with new sharding and retrace
           xla_model.xla_args = args

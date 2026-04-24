@@ -847,6 +847,29 @@ def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   return t
 
 
+def get_xla_sharding_specs(tensors: list) -> list:
+  """
+  Returns XLA sharding specs for the given tensors, normalizing unsharded
+  tensors to '{replicated}'.
+
+  Unsharded tensors have an empty sharding spec, but after dispatch they are
+  annotated as '{replicated}'. Without normalization, the empty spec and the
+  post-dispatch replicated spec would differ under equality comparison, causing
+  unnecessary graph retracing on every step.
+
+  Args:
+    tensors (list[torch.Tensor]): XLA tensors to query sharding specs for.
+
+  Returns:
+    list[str]: HLO sharding spec strings, one per tensor. Unsharded tensors
+      are returned as '{replicated}'.
+  """
+  return [
+      s if s else "{replicated}"
+      for s in torch_xla._XLAC._get_xla_sharding_specs(tensors)
+  ]
+
+
 def wrap_as_sharded_tensor(t: Union[torch.Tensor, XLAShardedTensor],
                            mesh_shape=None,
                            partition_spec=None) -> XLAShardedTensor:
