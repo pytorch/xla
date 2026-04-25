@@ -49,6 +49,7 @@
 #include "torch_xla/csrc/ops/convolution_overrideable.h"
 #include "torch_xla/csrc/ops/count_nonzero.h"
 #include "torch_xla/csrc/ops/cummax.h"
+#include "torch_xla/csrc/ops/cummin.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/custom_call.h"
@@ -1730,6 +1731,25 @@ std::tuple<XLATensorPtr, XLATensorPtr> cummax(const XLATensorPtr& input,
   XLATensorPtr t_index =
       input->CreateFrom(torch::lazy::Value(node, 1), at::ScalarType::Long,
                         /*delay_eager_execution=*/true);
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+  if (graph_executor->UseEagerMode()) {
+    // Execute the HLO that will run the `kthvalue` and in one hlo
+    std::vector<XLATensorPtr> tensors_to_sync = {t_value, t_index};
+    graph_executor->ApplyEagerSync(tensors_to_sync);
+  }
+  return std::make_tuple(t_value, t_index);
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr> cummin(const XLATensorPtr& input,
+                                              int64_t dim) {
+  torch::lazy::NodePtr node = torch_xla::MakeNode<CumMin>(
+      input->GetIrValue(), torch::lazy::GetCanonicalDimensionIndex(
+                               dim, input->shape().get().rank()));
+  XLATensorPtr t_value = input->CreateFrom(torch::lazy::Value(node, 0),
+                                           /*delay_eager_executation=*/true);
+  XLATensorPtr t_index =
+      input->CreateFrom(torch::lazy::Value(node, 1), at::ScalarType::Long,
+                        /*delay_eager_executation=*/true);
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   if (graph_executor->UseEagerMode()) {
     // Execute the HLO that will run the `kthvalue` and in one hlo
