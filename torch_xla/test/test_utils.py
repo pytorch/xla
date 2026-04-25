@@ -101,11 +101,17 @@ def get_summary_writer(logdir):
     Instance of Tensorboard SummaryWriter.
   """
   if logdir:
-    from tensorboardX import SummaryWriter
-    writer = SummaryWriter(log_dir=logdir)
-    write_to_summary(
-        writer, 0, dict_to_write={'TensorboardStartTimestamp': time.time()})
-    return writer
+    try:
+      from tensorboardX import SummaryWriter
+      writer = SummaryWriter(log_dir=logdir)
+      write_to_summary(
+          writer, 0, dict_to_write={'TensorboardStartTimestamp': time.time()})
+      return writer
+    except Exception as e:
+      print("Failed to initialize Tensorboard SummaryWriter: %s" % str(e),
+            flush=True)
+      return None
+
 
 
 def now(format='%H:%M:%S'):
