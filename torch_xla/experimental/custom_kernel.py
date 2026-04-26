@@ -305,6 +305,7 @@ def _maybe_reshape_input_output_funcs(current_shape, non_batch_dims=3):
   return reshape_input, reshape_output
 
 
+@requires_jax
 def _fa_custom_forward_single_device(
     q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, causal: bool,
     q_segment_ids: torch.Tensor, kv_segment_ids: torch.Tensor, sm_scale: float,
@@ -492,6 +493,7 @@ def _pad_to_block_size(
   return padded, pad_size
 
 
+@requires_jax
 def _fa_custom_backward_single_device(
     grad_output: torch.Tensor, q: torch.Tensor, k: torch.Tensor,
     v: torch.Tensor, o: torch.Tensor, l: torch.Tensor, m: torch.Tensor,
@@ -791,7 +793,6 @@ class FlashAttention(torch.autograd.Function):
     return segment_ids, q_segment_ids, kv_segment_ids
 
   @staticmethod
-  @requires_jax
   def forward(ctx, q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale, ab,
               partition_spec, mesh):
     ctx.q_shape = q.shape
@@ -823,7 +824,6 @@ class FlashAttention(torch.autograd.Function):
     return o
 
   @staticmethod
-  @requires_jax
   def backward(ctx, grad_output):
     q, k, v, o, l, m, q_segment_ids, kv_segment_ids, ab = ctx.saved_tensors
     causal = ctx.causal
