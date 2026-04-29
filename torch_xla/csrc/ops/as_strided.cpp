@@ -133,7 +133,9 @@ absl::Status AsStrided::CheckSpecFitsInput(
 absl::Status AsStrided::CheckSpecFitsInputImpl(
     const xla::Shape& input_shape, int64_t input_element_count,
     int64_t spec_element_count) const {
-  if (input_element_count < storage_offset_ + spec_element_count) {
+  if (storage_offset_ < 0 || spec_element_count < 0 ||
+      storage_offset_ > input_element_count ||
+      spec_element_count > input_element_count - storage_offset_) {
     return XLA_ERROR_WITH_LOCATION(absl::InternalError(absl::StrCat(
         "as_strided(): expected input ", input_shape.ToString(),
         " (elements=", input_element_count,

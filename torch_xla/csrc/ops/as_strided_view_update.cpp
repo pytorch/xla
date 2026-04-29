@@ -22,7 +22,9 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   int64_t input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
   int64_t slice_size = torch_xla::runtime::util::Multiply<int64_t>(size);
-  XLA_CHECK_LE(storage_offset + input_element_count, slice_size);
+  XLA_CHECK_GE(storage_offset, 0);
+  XLA_CHECK_GE(input_element_count, 0);
+  XLA_CHECK_LE(storage_offset, slice_size - input_element_count);
 
   std::vector<int64_t> permutation = GetDescendingOrderPermutation(stride);
   xla::XlaOp transposed_input = xla::IsIdentityPermutation(permutation)
