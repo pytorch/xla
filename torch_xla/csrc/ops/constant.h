@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_CONSTANT_H_
+#define XLA_TORCH_XLA_CSRC_OPS_CONSTANT_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -10,7 +11,7 @@ class Constant : public XlaNode {
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -20,4 +21,8 @@ class Constant : public XlaNode {
   xla::Literal value_;
 };
 
+torch::lazy::hash_t LiteralHash(const xla::Literal& l);
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_CONSTANT_H_

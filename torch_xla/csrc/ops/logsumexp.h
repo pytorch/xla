@@ -1,6 +1,5 @@
-#pragma once
-
-#include <c10/util/Optional.h>
+#ifndef XLA_TORCH_XLA_CSRC_OPS_LOGSUMEXP_H_
+#define XLA_TORCH_XLA_CSRC_OPS_LOGSUMEXP_H_
 
 #include <vector>
 
@@ -10,12 +9,12 @@ namespace torch_xla {
 
 class Logsumexp : public XlaNode {
  public:
-  Logsumexp(const XlaValue& input, std::vector<int64_t> dimensions,
+  Logsumexp(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
             bool keep_reduced_dimensions);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -29,3 +28,5 @@ class Logsumexp : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_LOGSUMEXP_H_

@@ -7,16 +7,17 @@
 
 namespace torch_xla {
 
-ScatterAdd::ScatterAdd(const XlaValue& input, const XlaValue& index,
-                       const XlaValue& src, int64_t dim)
+ScatterAdd::ScatterAdd(const torch::lazy::Value& input,
+                       const torch::lazy::Value& index,
+                       const torch::lazy::Value& src, int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::scatter_add), {input, index, src},
-              input.xla_shape(),
+              GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-torch::lazy::NodePtr ScatterAdd::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<ScatterAdd>(operands.at(0), operands.at(1),
-                                           operands.at(2), dim_);
+torch::lazy::NodePtr ScatterAdd::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<ScatterAdd>(operands.at(0), operands.at(1),
+                                         operands.at(2), dim_);
 }
 
 XlaOpVector ScatterAdd::Lower(LoweringContext* loctx) const {

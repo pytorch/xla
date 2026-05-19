@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_TRIANGULAR_SOLVE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_TRIANGULAR_SOLVE_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,12 +7,13 @@ namespace torch_xla {
 
 class TriangularSolve : public XlaNode {
  public:
-  TriangularSolve(const XlaValue& rhs, const XlaValue& lhs, bool left_side,
-                  bool lower, bool transpose, bool unit_diagonal);
+  TriangularSolve(const torch::lazy::Value& rhs, const torch::lazy::Value& lhs,
+                  bool left_side, bool lower, bool transpose,
+                  bool unit_diagonal);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -31,3 +33,5 @@ class TriangularSolve : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_TRIANGULAR_SOLVE_H_

@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/optimization_barrier.h"
 
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -9,23 +10,24 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const OpList& inputs) {
+xla::Shape NodeOutputShape(const torch::lazy::OpList& inputs) {
   std::vector<xla::Shape> output_shapes;
   output_shapes.reserve(inputs.size());
   for (size_t i = 0; i < inputs.size(); ++i) {
-    output_shapes.push_back(inputs[i].xla_shape());
+    output_shapes.push_back(GetXlaShape(inputs[i]));
   }
   return xla::ShapeUtil::MakeTupleShape(output_shapes);
 }
 
 }  // namespace
 
-OptimizationBarrier::OptimizationBarrier(const OpList& inputs)
+OptimizationBarrier::OptimizationBarrier(const torch::lazy::OpList& inputs)
     : XlaNode(xla_optimization_barrier, inputs, NodeOutputShape(inputs),
               /*num_outputs=*/inputs.size()) {}
 
-torch::lazy::NodePtr OptimizationBarrier::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<OptimizationBarrier>(operands);
+torch::lazy::NodePtr OptimizationBarrier::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<OptimizationBarrier>(operands);
 }
 
 XlaOpVector OptimizationBarrier::Lower(LoweringContext* loctx) const {

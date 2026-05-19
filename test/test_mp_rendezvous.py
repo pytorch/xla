@@ -1,11 +1,11 @@
 import re
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 def _get_replica_group(index):
-  world_size = xm.xrt_world_size()
+  world_size = xr.world_size()
   split = world_size // 2
   gid = index // split if split > 0 else 0
   return list(range(0, split)) if index < split else list(
@@ -13,7 +13,7 @@ def _get_replica_group(index):
 
 
 def _mp_fn(index):
-  ordinal = xm.get_ordinal()
+  ordinal = xr.global_ordinal()
   print('Core {} waiting for rendezvous ...'.format(ordinal))
   replicas, gid = _get_replica_group(index)
   data = xm.rendezvous(
@@ -32,4 +32,4 @@ def _mp_fn(index):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=())
+  torch_xla.launch(_mp_fn, args=())

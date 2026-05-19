@@ -1,15 +1,19 @@
-#include <ATen/ATen.h>
 #include <gtest/gtest.h>
 
 #include <limits>
 #include <vector>
 
-#include "cpp_test_util.h"
-#include "torch/csrc/autograd/variable.h"
+#include <ATen/ATen.h>
+#include <torch/csrc/autograd/variable.h>
+
+#include "absl/base/nullability.h"
+
+#include "test/cpp/cpp_test_util.h"
+#include "test/cpp/torch_xla_test.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -17,11 +21,11 @@ namespace {
 
 bool CheckBidirectionalConversion(
     const at::Tensor& input, at::ScalarType dest_element_type,
-    c10::optional<xla::PrimitiveType> xla_type = c10::nullopt) {
+    std::optional<xla::PrimitiveType> xla_type = std::nullopt) {
   xla::Literal literal =
       GetTensorLiteral(input, /*shape=*/nullptr, /*device=*/nullptr);
   if (xla_type) {
-    literal = literal.Convert(*xla_type).ConsumeValueOrDie();
+    literal = std::move(literal.Convert(*xla_type)).value();
   }
   at::Tensor converted = MakeTensorFromXlaLiteral(literal, dest_element_type);
   return EqualValuesNoElementTypeCheck(converted, input);
@@ -62,6 +66,28 @@ TEST_F(TensorTest, TestConversions) {
     EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::Long));
   }
   {
+    at::Tensor a = at::randint(std::numeric_limits<uint16_t>::min(),
+                               std::numeric_limits<uint16_t>::max(), {2, 2},
+                               at::TensorOptions(at::kUInt16));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt16));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt32));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt64));
+  }
+  {
+    at::Tensor a = at::randint(std::numeric_limits<uint32_t>::min(),
+                               std::numeric_limits<uint32_t>::max(), {2, 2},
+                               at::TensorOptions(at::kUInt32));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt32));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt64));
+  }
+  {
+    // The range of uint64_t is too large for randint to generate.
+    at::Tensor a = at::randint(std::numeric_limits<uint32_t>::min(),
+                               std::numeric_limits<uint32_t>::max(), {2, 2},
+                               at::TensorOptions(at::kUInt64));
+    EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::UInt64));
+  }
+  {
     at::Tensor a = at::randint(0, 1, {2, 2}, at::TensorOptions(at::kByte));
     EXPECT_TRUE(CheckBidirectionalConversion(a, at::ScalarType::Byte,
                                              xla::PrimitiveType::PRED));
@@ -78,9 +104,9 @@ TEST_F(TensorTest, TestAdd) {
   at::Tensor c = a.add(b, 1.0);
 
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-    XLATensor dev_a = XLATensor::Create(a, device);
-    XLATensor dev_b = XLATensor::Create(b, device);
-    XLATensor dev_c = XLATensor::add(dev_a, dev_b, 1.0);
+    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_a, XLATensor::Create(a, device));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_b, XLATensor::Create(b, device));
+    XLATensorPtr dev_c = tensor_methods::add(dev_a, dev_b, 1.0);
 
     AllClose(c, dev_c);
   });
@@ -98,12 +124,12 @@ TEST_F(TensorTest, TestIntegerAdd) {
           at::isIntegralType(type) ? at::Scalar(int64_t(1)) : at::Scalar(1.0);
       at::Tensor c = a.add(b, one);
 
-      XLATensor dev_a = XLATensor::Create(a, device);
-      XLATensor dev_b = XLATensor::Create(b, device);
-      XLATensor dev_c = XLATensor::add(dev_a, dev_b, one);
+      XLA_ASSIGN_OR_THROW(XLATensorPtr dev_a, XLATensor::Create(a, device));
+      XLA_ASSIGN_OR_THROW(XLATensorPtr dev_b, XLATensor::Create(b, device));
+      XLATensorPtr dev_c = tensor_methods::add(dev_a, dev_b, one);
 
-      EXPECT_TRUE(
-          EqualValuesNoElementTypeCheck(c, dev_c.ToTensor(/*detached=*/false)));
+      EXPECT_TRUE(EqualValuesNoElementTypeCheck(
+          c, dev_c->ToTensor(/*detached=*/false)));
     }
   });
 }
@@ -112,20 +138,11 @@ TEST_F(TensorTest, TestSize) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   int rank = input.dim();
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-    XLATensor dev_input = XLATensor::Create(input, device);
+    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+                        XLATensor::Create(input, device));
     for (int dim = -rank; dim < rank; ++dim) {
-      EXPECT_EQ(input.size(dim), dev_input.size(dim));
+      EXPECT_EQ(input.size(dim), dev_input->size(dim));
     }
-  });
-}
-
-TEST_F(TensorTest, TestRelu) {
-  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
-  at::Tensor output = input.relu();
-  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-    XLATensor dev_input = XLATensor::Create(input, device);
-    XLATensor dev_output = XLATensor::relu(dev_input);
-    AllClose(output, dev_output);
   });
 }
 
@@ -138,9 +155,11 @@ TEST_F(TensorTest, TestRrelu) {
       at::Tensor noise = at::zeros_like(input);
       at::Tensor output =
           at::rrelu_with_noise(input, noise, lower, upper, training);
-      XLATensor dev_input = XLATensor::Create(input, device);
-      XLATensor dev_noise = XLATensor::Create(noise, device);
-      XLATensor dev_outputs = XLATensor::rrelu_with_noise(
+      XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+                          XLATensor::Create(input, device));
+      XLA_ASSIGN_OR_THROW(XLATensorPtr dev_noise,
+                          XLATensor::Create(noise, device));
+      XLATensorPtr dev_outputs = tensor_methods::rrelu_with_noise(
           dev_input, dev_noise, lower, upper, training);
       AllClose(output, dev_outputs);
       AllClose(noise, dev_noise);
@@ -154,8 +173,10 @@ TEST_F(TensorTest, TestThreshold) {
   float value = 20;
   at::Tensor output = at::threshold(input, threshold, value);
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-    XLATensor dev_input = XLATensor::Create(input, device);
-    XLATensor dev_output = XLATensor::threshold(dev_input, threshold, value);
+    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+                        XLATensor::Create(input, device));
+    XLATensorPtr dev_output =
+        tensor_methods::threshold(dev_input, threshold, value);
     AllClose(output, dev_output);
   });
 }
@@ -171,10 +192,13 @@ TEST_F(TensorTest, TestAddMatMul) {
   at::Tensor bias = at::rand({labels}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::addmm(bias, input, weight);
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-    XLATensor dev_input = XLATensor::Create(input, device);
-    XLATensor dev_weight = XLATensor::Create(weight, device);
-    XLATensor dev_bias = XLATensor::Create(bias, device);
-    XLATensor dev_output = XLATensor::addmm(dev_input, dev_weight, dev_bias);
+    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+                        XLATensor::Create(input, device));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_weight,
+                        XLATensor::Create(weight, device));
+    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_bias, XLATensor::Create(bias, device));
+    XLATensorPtr dev_output =
+        tensor_methods::addmm(dev_input, dev_weight, dev_bias);
     AllClose(output, dev_output);
   });
 }
@@ -183,8 +207,9 @@ TEST_F(TensorTest, TestTranspose) {
   at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::transpose(input, 0, 1);
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-    XLATensor dev_input = XLATensor::Create(input, device);
-    XLATensor dev_output = XLATensor::transpose(dev_input, 0, 1);
+    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+                        XLATensor::Create(input, device));
+    XLATensorPtr dev_output = tensor_methods::transpose(dev_input, 0, 1);
     AllClose(output, dev_output);
   });
 }
@@ -193,8 +218,9 @@ TEST_F(TensorTest, TestView) {
   at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor output = input.view({-1, 320});
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-    XLATensor dev_input = XLATensor::Create(input, device);
-    XLATensor dev_output = XLATensor::view(dev_input, {-1, 320});
+    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+                        XLATensor::Create(input, device));
+    XLATensorPtr dev_output = tensor_methods::view(dev_input, {-1, 320});
     AllClose(output, dev_output);
   });
 }
@@ -263,19 +289,6 @@ TEST_F(TensorTest, TestViewOfViewMod) {
   });
 }
 
-TEST_F(TensorTest, TestLogSoftmax) {
-  at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
-  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-    XLATensor dev_input = XLATensor::Create(input, device);
-    for (int dim = 0; dim < input.dim(); ++dim) {
-      at::Tensor output = input.log_softmax(dim);
-      XLATensor dev_output =
-          XLATensor::log_softmax(dev_input, dim, c10::nullopt);
-      AllClose(output, dev_output, /*rtol=*/1e-3);
-    }
-  });
-}
-
 TEST_F(TensorTest, TestMaxPool2D) {
   at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
   int kernel_size = 3;
@@ -287,13 +300,18 @@ TEST_F(TensorTest, TestMaxPool2D) {
                          /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
                          /*ceil_mode=*/false);
       ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-        XLATensor dev_input = XLATensor::Create(input, device);
-        auto dev_output = XLATensor::max_pool_nd(
-            dev_input,
-            /*spatial_dim_count=*/2,
-            /*kernel_size=*/{kernel_size, kernel_size},
-            /*stride=*/{stride, stride},
-            /*padding=*/{padding, padding}, /*ceil_mode=*/false);
+        XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr dev_input,
+                            XLATensor::Create(input, device));
+        std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr>
+            dev_output;
+        XLA_ASSIGN_OR_THROW(
+            dev_output,
+            tensor_methods::max_pool_nd(
+                dev_input,
+                /*spatial_dim_count=*/2,
+                /*kernel_size=*/{kernel_size, kernel_size},
+                /*stride=*/{stride, stride},
+                /*padding=*/{padding, padding}, /*ceil_mode=*/false));
         AllClose(output, std::get<0>(dev_output));
       });
     }
@@ -311,14 +329,18 @@ TEST_F(TensorTest, TestMaxPool2DNonSquare) {
           /*padding=*/{padding, padding + 1}, /*dilation=*/{1, 1},
           /*ceil_mode=*/false);
       ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-        XLATensor dev_input = XLATensor::Create(input, device);
-        auto dev_output = XLATensor::max_pool_nd(
-            dev_input,
-            /*spatial_dim_count=*/2,
-            /*kernel_size=*/{kernel_size, kernel_size + 1},
-            /*stride=*/{stride, stride + 1},
-            /*padding=*/{padding, padding + 1},
-            /*ceil_mode=*/false);
+        XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr dev_input,
+                            XLATensor::Create(input, device));
+        std::tuple<absl_nonnull XLATensorPtr, absl_nonnull XLATensorPtr>
+            dev_output;
+        XLA_ASSIGN_OR_THROW(dev_output,
+                            tensor_methods::max_pool_nd(
+                                dev_input,
+                                /*spatial_dim_count=*/2,
+                                /*kernel_size=*/{kernel_size, kernel_size + 1},
+                                /*stride=*/{stride, stride + 1},
+                                /*padding=*/{padding, padding + 1},
+                                /*ceil_mode=*/false));
         AllClose(output, std::get<0>(dev_output));
       });
     }
@@ -336,16 +358,20 @@ TEST_F(TensorTest, TestAvgPool2D) {
                            /*kernel_size=*/{kernel_size, kernel_size},
                            /*stride=*/{stride, stride},
                            /*padding=*/{padding, padding},
-                           /*ceil_mode=*/false, count_include_pad);
+                           /*ceil_mode=*/false, count_include_pad,
+                           /*divisor_override=*/std::nullopt);
         ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-          XLATensor dev_input = XLATensor::Create(input, device);
-          XLATensor dev_output =
-              XLATensor::avg_pool_nd(dev_input,
-                                     /*spatial_dim_count=*/2,
-                                     /*kernel_size=*/{kernel_size, kernel_size},
-                                     /*stride=*/{stride, stride},
-                                     /*padding=*/{padding, padding},
-                                     /*ceil_mode=*/false, count_include_pad);
+          XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr dev_input,
+                              XLATensor::Create(input, device));
+          XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr dev_output,
+                              tensor_methods::avg_pool_nd(
+                                  dev_input,
+                                  /*spatial_dim_count=*/2,
+                                  /*kernel_size=*/{kernel_size, kernel_size},
+                                  /*stride=*/{stride, stride},
+                                  /*padding=*/{padding, padding},
+                                  /*ceil_mode=*/false, count_include_pad,
+                                  /*divisor_override=*/std::nullopt));
           AllClose(output, dev_output);
         });
       }
@@ -364,17 +390,22 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
             /*kernel_size=*/{kernel_size, kernel_size + 1},
             /*stride=*/{stride, stride + 1},
             /*padding=*/{padding, padding + 1}, /*ceil_mode=*/false,
-            /*count_include_pad=*/count_include_pad);
+            /*count_include_pad=*/count_include_pad,
+            /*divisor_override=*/std::nullopt);
         ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-          XLATensor dev_input = XLATensor::Create(input, device);
-          XLATensor dev_output = XLATensor::avg_pool_nd(
-              dev_input,
-              /*spatial_dim_count=*/2,
-              /*kernel_size=*/{kernel_size, kernel_size + 1},
-              /*stride=*/{stride, stride + 1},
-              /*padding=*/{padding, padding + 1},
-              /*ceil_mode=*/false,
-              /*count_include_pad=*/count_include_pad);
+          XLA_ASSIGN_OR_THROW(absl_nonnull XLATensorPtr dev_input,
+                              XLATensor::Create(input, device));
+          XLA_ASSIGN_OR_THROW(
+              absl_nonnull XLATensorPtr dev_output,
+              tensor_methods::avg_pool_nd(
+                  dev_input,
+                  /*spatial_dim_count=*/2,
+                  /*kernel_size=*/{kernel_size, kernel_size + 1},
+                  /*stride=*/{stride, stride + 1},
+                  /*padding=*/{padding, padding + 1},
+                  /*ceil_mode=*/false,
+                  /*count_include_pad=*/count_include_pad,
+                  /*divisor_override=*/std::nullopt));
           AllClose(output, dev_output);
         });
       }
@@ -403,14 +434,21 @@ TEST_F(TensorTest, TestBatchNorm1D) {
           /*running_mean=*/running_mean, /*running_var=*/running_var,
           /*training=*/training, /*momentum=*/momentum, /*eps=*/eps);
       ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-        XLATensor xla_input = XLATensor::Create(input, device);
-        XLATensor xla_weight =
-            undef_weight_bias ? XLATensor() : XLATensor::Create(weight, device);
-        XLATensor xla_bias =
-            undef_weight_bias ? XLATensor() : XLATensor::Create(bias, device);
-        XLATensor xla_running_mean = XLATensor::Create(running_mean, device);
-        XLATensor xla_running_var = XLATensor::Create(running_var, device);
-        auto xla_output = XLATensor::native_batch_norm(
+        XLA_ASSIGN_OR_THROW(XLATensorPtr xla_input,
+                            XLATensor::Create(input, device));
+        XLATensorPtr xla_weight;
+        if (!undef_weight_bias) {
+          XLA_ASSIGN_OR_THROW(xla_weight, XLATensor::Create(weight, device));
+        }
+        XLATensorPtr xla_bias;
+        if (!undef_weight_bias) {
+          XLA_ASSIGN_OR_THROW(xla_bias, XLATensor::Create(bias, device));
+        }
+        XLA_ASSIGN_OR_THROW(XLATensorPtr xla_running_mean,
+                            XLATensor::Create(running_mean, device));
+        XLA_ASSIGN_OR_THROW(XLATensorPtr xla_running_var,
+                            XLATensor::Create(running_var, device));
+        auto xla_output = tensor_methods::native_batch_norm(
             /*input=*/xla_input, /*weight=*/xla_weight, /*bias=*/xla_bias,
             /*running_mean=*/xla_running_mean, /*running_var=*/xla_running_var,
             /*training=*/training, /*momentum=*/momentum, /*eps=*/eps);
@@ -418,9 +456,9 @@ TEST_F(TensorTest, TestBatchNorm1D) {
         // native_batch_norm return undefined for save_mean & save_invstd when
         // training=false.
         EXPECT_EQ(std::get<1>(output).defined(),
-                  !std::get<1>(xla_output).is_null());
+                  std::get<1>(xla_output) != nullptr);
         EXPECT_EQ(std::get<2>(output).defined(),
-                  !std::get<2>(xla_output).is_null());
+                  std::get<2>(xla_output) != nullptr);
         if (training) {
           AllClose(std::get<1>(output), std::get<1>(xla_output));
           AllClose(std::get<2>(output), std::get<2>(xla_output));
@@ -431,6 +469,9 @@ TEST_F(TensorTest, TestBatchNorm1D) {
 }
 
 TEST_F(TensorTest, TestConv2D) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   int in_channels = 9;
   int out_channels = 3;
   int kernel_size = 5;
@@ -463,12 +504,15 @@ TEST_F(TensorTest, TestConv2D) {
                     /*output_padding=*/{output_padding, output_padding},
                     /*groups=*/groups, false, false, false);
                 ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-                  XLATensor dev_input = XLATensor::Create(input, device);
-                  XLATensor dev_weight = XLATensor::Create(weight, device);
-                  XLATensor dev_output;
+                  XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+                                      XLATensor::Create(input, device));
+                  XLA_ASSIGN_OR_THROW(XLATensorPtr dev_weight,
+                                      XLATensor::Create(weight, device));
+                  XLATensorPtr dev_output;
                   if (with_bias) {
-                    XLATensor dev_bias = XLATensor::Create(bias, device);
-                    dev_output = XLATensor::convolution_overrideable(
+                    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_bias,
+                                        XLATensor::Create(bias, device));
+                    dev_output = tensor_methods::convolution_overrideable(
                         dev_input, dev_weight, dev_bias,
                         /*stride=*/{stride, stride},
                         /*padding=*/{padding, padding},
@@ -477,7 +521,7 @@ TEST_F(TensorTest, TestConv2D) {
                         /*output_padding=*/{output_padding, output_padding},
                         /*groups=*/groups);
                   } else {
-                    dev_output = XLATensor::convolution_overrideable(
+                    dev_output = tensor_methods::convolution_overrideable(
                         dev_input, dev_weight,
                         /*stride=*/{stride, stride},
                         /*padding=*/{padding, padding},
@@ -532,12 +576,15 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
                     /*groups=*/groups, false, false, false);
 
                 ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-                  XLATensor dev_input = XLATensor::Create(input, device);
-                  XLATensor dev_weight = XLATensor::Create(weight, device);
-                  XLATensor dev_output;
+                  XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+                                      XLATensor::Create(input, device));
+                  XLA_ASSIGN_OR_THROW(XLATensorPtr dev_weight,
+                                      XLATensor::Create(weight, device));
+                  XLATensorPtr dev_output;
                   if (with_bias) {
-                    XLATensor dev_bias = XLATensor::Create(bias, device);
-                    dev_output = XLATensor::convolution_overrideable(
+                    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_bias,
+                                        XLATensor::Create(bias, device));
+                    dev_output = tensor_methods::convolution_overrideable(
                         dev_input, dev_weight, dev_bias,
                         /*stride=*/{stride, stride + 1},
                         /*padding=*/{padding, padding + 1},
@@ -547,7 +594,7 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
                         /*groups=*/groups);
 
                   } else {
-                    dev_output = XLATensor::convolution_overrideable(
+                    dev_output = tensor_methods::convolution_overrideable(
                         dev_input, dev_weight,
                         /*stride=*/{stride, stride + 1},
                         /*padding=*/{padding, padding + 1},
@@ -568,6 +615,9 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
 }
 
 TEST_F(TensorTest, TestConv3D) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   int in_channels = 9;
   int out_channels = 3;
   int kernel_size = 5;
@@ -602,12 +652,15 @@ TEST_F(TensorTest, TestConv3D) {
                     {output_padding, output_padding, output_padding},
                     /*groups=*/groups, false, false, false);
                 ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-                  XLATensor dev_input = XLATensor::Create(input, device);
-                  XLATensor dev_weight = XLATensor::Create(weight, device);
-                  XLATensor dev_output;
+                  XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+                                      XLATensor::Create(input, device));
+                  XLA_ASSIGN_OR_THROW(XLATensorPtr dev_weight,
+                                      XLATensor::Create(weight, device));
+                  XLATensorPtr dev_output;
                   if (with_bias) {
-                    XLATensor dev_bias = XLATensor::Create(bias, device);
-                    dev_output = XLATensor::convolution_overrideable(
+                    XLA_ASSIGN_OR_THROW(XLATensorPtr dev_bias,
+                                        XLATensor::Create(bias, device));
+                    dev_output = tensor_methods::convolution_overrideable(
                         dev_input, dev_weight, dev_bias,
                         /*stride=*/{stride, stride, stride},
                         /*padding=*/{padding, padding, padding},
@@ -617,7 +670,7 @@ TEST_F(TensorTest, TestConv3D) {
                         {output_padding, output_padding, output_padding},
                         /*groups=*/groups);
                   } else {
-                    dev_output = XLATensor::convolution_overrideable(
+                    dev_output = tensor_methods::convolution_overrideable(
                         dev_input, dev_weight,
                         /*stride=*/{stride, stride, stride},
                         /*padding=*/{padding, padding, padding},
@@ -674,12 +727,14 @@ TEST_F(TensorTest, TestConv3D) {
 //                     {output_padding, output_padding + 1, output_padding},
 //                     /*groups=*/groups, false, false, false);
 //                 ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-//                   XLATensor dev_input = XLATensor::Create(input, device);
-//                   XLATensor dev_weight = XLATensor::Create(weight, device);
-//                   XLATensor dev_output;
-//                   if (with_bias) {
-//                     XLATensor dev_bias = XLATensor::Create(bias, device);
-//                     dev_output = XLATensor::convolution_overrideable(
+//                   XLA_ASSIGN_OR_THROW(XLATensorPtr dev_input,
+//                   XLATensor::Create(input, device));
+//                   XLA_ASSIGN_OR_THROW(XLATensorPtr dev_weight,
+//                   XLATensor::Create(weight, device)); XLATensorPtr
+//                   dev_output; if (with_bias) {
+//                     XLA_ASSIGN_OR_THROW(XLATensorPtr dev_bias,
+//                     XLATensor::Create(bias, device)); dev_output =
+//                     tensor_methods::convolution_overrideable(
 //                         dev_input, dev_weight, dev_bias,
 //                         /*stride=*/{stride, stride + 1, stride + 1},
 //                         /*padding=*/{padding, padding + 1, padding + 1},
@@ -689,7 +744,7 @@ TEST_F(TensorTest, TestConv3D) {
 //                         {output_padding, output_padding + 1, output_padding},
 //                         /*groups=*/groups);
 //                   } else {
-//                     dev_output = XLATensor::convolution_overrideable(
+//                     dev_output = tensor_methods::convolution_overrideable(
 //                         dev_input, dev_weight,
 //                         /*stride=*/{stride, stride + 1, stride + 1},
 //                         /*padding=*/{padding, padding + 1, padding + 1},

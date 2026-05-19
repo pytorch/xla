@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_UPSAMPLE_NEAREST2D_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_UPSAMPLE_NEAREST2D_BACKWARD_H_
 
 #include <vector>
 
@@ -8,11 +9,11 @@ namespace torch_xla {
 
 class UpsampleNearestBackward : public XlaNode {
  public:
-  UpsampleNearestBackward(const XlaValue& input,
+  UpsampleNearestBackward(const torch::lazy::Value& input,
                           std::vector<int64_t> output_size,
                           std::vector<int64_t> input_size);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -28,3 +29,5 @@ class UpsampleNearestBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_UPSAMPLE_NEAREST2D_BACKWARD_H_

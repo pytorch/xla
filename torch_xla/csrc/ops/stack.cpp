@@ -8,7 +8,8 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(absl::Span<const XlaValue> values, int64_t dim) {
+xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> values,
+                           int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildStack(operands, dim);
@@ -16,21 +17,22 @@ xla::Shape NodeOutputShape(absl::Span<const XlaValue> values, int64_t dim) {
   std::vector<xla::Shape> shapes;
   shapes.reserve(values.size());
   for (auto& value : values) {
-    shapes.push_back(value.xla_shape());
+    shapes.push_back(GetXlaShape(value));
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Stack::Stack(absl::Span<const XlaValue> values, int64_t dim)
-    : XlaNode(torch::lazy::OpKind(at::aten::stack), values,
-              [&]() { return NodeOutputShape(values, dim); },
-              /*num_outputs=*/1, torch::lazy::MHash(dim)),
+Stack::Stack(c10::ArrayRef<torch::lazy::Value> values, int64_t dim)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::stack), values,
+          [&]() { return NodeOutputShape(values, dim); },
+          /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-torch::lazy::NodePtr Stack::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Stack>(operands, dim_);
+torch::lazy::NodePtr Stack::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Stack>(operands, dim_);
 }
 
 XlaOpVector Stack::Lower(LoweringContext* loctx) const {

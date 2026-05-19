@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_SELECT_H_
+#define XLA_TORCH_XLA_CSRC_OPS_SELECT_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,10 +7,10 @@ namespace torch_xla {
 
 class Select : public XlaNode {
  public:
-  Select(const XlaValue& input, int64_t dim, int64_t start, int64_t end,
-         int64_t stride);
+  Select(const torch::lazy::Value& input, int64_t dim, int64_t start,
+         int64_t end, int64_t stride);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -36,3 +37,5 @@ class Select : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_SELECT_H_

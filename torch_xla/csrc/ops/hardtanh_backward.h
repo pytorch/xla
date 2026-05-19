@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_HARDTANH_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_HARDTANH_BACKWARD_H_
 
 #include <c10/core/Scalar.h>
 
@@ -8,12 +9,13 @@ namespace torch_xla {
 
 class HardtanhBackward : public XlaNode {
  public:
-  HardtanhBackward(const XlaValue& grad_output, const XlaValue& input,
-                   const at::Scalar& min_val, const at::Scalar& max_val);
+  HardtanhBackward(const torch::lazy::Value& grad_output,
+                   const torch::lazy::Value& input, const at::Scalar& min_val,
+                   const at::Scalar& max_val);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -27,3 +29,5 @@ class HardtanhBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_HARDTANH_BACKWARD_H_

@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import argparse
 import threading
 import torch
@@ -12,7 +10,7 @@ import torch_xla.core.xla_model as xm
 
 
 def run_benchmark(args, pos_args):
-  devices = xm.get_xla_supported_devices(max_devices=args.max_devices)
+  devices = xm.get_xla_supported_devices(args.max_devices)
   shape = [int(x) for x in args.shape.split(',')]
 
   send_list = []

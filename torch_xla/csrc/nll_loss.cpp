@@ -1,10 +1,12 @@
 #include "torch_xla/csrc/nll_loss.h"
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/math.h"
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/lib/math.h"
+
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -20,7 +22,7 @@ struct WeightScale {
 // This allows the ignored index to be ignored by the one-hot conversion.
 xla::XlaOp OneHotIota(xla::XlaBuilder* builder, int64_t depth, int axis,
                       const xla::Shape& indices_shape, int ignore_index) {
-  int indices_dims = indices_shape.rank();
+  int indices_dims = indices_shape.dimensions_size();
   std::vector<int64_t> linspace_dims(indices_dims + 1, 1);
   linspace_dims[axis] = depth;
   xla::Shape linspace_xla_shape =
@@ -48,7 +50,7 @@ xla::XlaOp OneHotIota(xla::XlaBuilder* builder, int64_t depth, int axis,
 xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, int64_t depth, int axis,
                           xla::XlaOp indices, xla::XlaOp on_value,
                           xla::XlaOp off_value, int ignore_index) {
-  const xla::Shape& indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
+  const xla::Shape& indices_shape = ShapeHelper::ShapeOfXlaOp(indices);
 
   // Expand the labels with a depth dimension for the classes.
   std::vector<int64_t> output_dimensions(indices_shape.dimensions().begin(),
@@ -61,7 +63,7 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, int64_t depth, int axis,
 
   // Now compare the labels in index form to the iota tensor to get the one hot
   // format.
-  std::vector<int64_t> broadcast_dims(indices_shape.rank());
+  std::vector<int64_t> broadcast_dims(indices_shape.dimensions_size());
   std::iota(broadcast_dims.begin(), broadcast_dims.begin() + axis, 0);
   std::iota(broadcast_dims.begin() + axis, broadcast_dims.end(), axis + 1);
   xla::XlaOp one_hot_bool = xla::Eq(indices, iota, broadcast_dims);
@@ -74,7 +76,7 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, int64_t depth, int axis,
 WeightScale GetMaskedWeight(xla::XlaOp weight, const xla::Shape& logits_shape,
                             xla::XlaOp labels, xla::XlaOp one_hot_labels,
                             int axis, int ignore_index, bool non_zero_scale) {
-  const xla::Shape& labels_shape = XlaHelpers::ShapeOfXlaOp(labels);
+  const xla::Shape& labels_shape = ShapeHelper::ShapeOfXlaOp(labels);
   xla::XlaOp valid_bitmap = xla::Ne(
       labels, XlaHelpers::ScalarValue<int64_t>(
                   ignore_index, labels_shape.element_type(), labels.builder()));
@@ -87,7 +89,7 @@ WeightScale GetMaskedWeight(xla::XlaOp weight, const xla::Shape& logits_shape,
   }
   xla::XlaOp zeros =
       XlaHelpers::ScalarBroadcast<float>(0.0, logits_shape, labels.builder());
-  std::vector<int64_t> broadcast_dims(labels_shape.rank());
+  std::vector<int64_t> broadcast_dims(labels_shape.dimensions_size());
   std::iota(broadcast_dims.begin(), broadcast_dims.begin() + axis, 0);
   std::iota(broadcast_dims.begin() + axis, broadcast_dims.end(), axis + 1);
   xla::XlaOp xvalid_bitmap = xla::BroadcastInDim(
@@ -112,7 +114,7 @@ WeightScale GetMaskedWeight(xla::XlaOp weight, const xla::Shape& logits_shape,
 xla::XlaOp BuildNllLoss(xla::XlaOp logits, xla::XlaOp labels, xla::XlaOp weight,
                         int ignore_index, ReductionMode reduction_mode) {
   const int classes_axis = 1;
-  const xla::Shape& logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
+  const xla::Shape& logits_shape = ShapeHelper::ShapeOfXlaOp(logits);
   xla::XlaOp zero = xla::Zero(logits.builder(), logits_shape.element_type());
   xla::XlaOp one = xla::One(logits.builder(), logits_shape.element_type());
   xla::XlaOp one_hot_labels = LabelsToOneHot(
@@ -156,7 +158,7 @@ xla::XlaOp BuildNllLossBackward(xla::XlaOp grad_output, xla::XlaOp logits,
                                 xla::XlaOp total_weight, int ignore_index,
                                 ReductionMode reduction_mode) {
   const int classes_axis = 1;
-  const xla::Shape& logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
+  const xla::Shape& logits_shape = ShapeHelper::ShapeOfXlaOp(logits);
   xla::XlaOp zero = xla::Zero(logits.builder(), logits_shape.element_type());
   xla::XlaOp one = xla::One(logits.builder(), logits_shape.element_type());
   xla::XlaOp one_hot_labels = LabelsToOneHot(
@@ -168,11 +170,11 @@ xla::XlaOp BuildNllLossBackward(xla::XlaOp grad_output, xla::XlaOp logits,
       /*off_value=*/zero,
       /*ignore_index=*/ignore_index);
 
-  const xla::Shape& grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
+  const xla::Shape& grad_output_shape = ShapeHelper::ShapeOfXlaOp(grad_output);
   xla::XlaOp grad = grad_output;
-  if (grad_output_shape.rank() == 1) {
+  if (grad_output_shape.dimensions_size() == 1) {
     grad = xla::BroadcastInDim(grad, logits_shape.dimensions(), {0});
-  } else if (grad_output_shape.rank() == 3) {
+  } else if (grad_output_shape.dimensions_size() == 3) {
     // nll_loss_2d case
     grad = xla::BroadcastInDim(grad, logits_shape.dimensions(), {0, 2, 3});
   }

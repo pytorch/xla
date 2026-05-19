@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_REPLICATION_PAD_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_REPLICATION_PAD_BACKWARD_H_
 
 #include <vector>
 
@@ -8,10 +9,11 @@ namespace torch_xla {
 
 class ReplicationPadBackward : public XlaNode {
  public:
-  ReplicationPadBackward(const XlaValue& gard_output, const XlaValue& input,
+  ReplicationPadBackward(const torch::lazy::Value& gard_output,
+                         const torch::lazy::Value& input,
                          std::vector<int64_t> padding);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -24,3 +26,5 @@ class ReplicationPadBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_REPLICATION_PAD_BACKWARD_H_

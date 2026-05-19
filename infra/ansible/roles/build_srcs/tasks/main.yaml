@@ -1,0 +1,219 @@
+- name: Read PyTorch pin
+  ansible.builtin.shell: |
+    cat {{ (src_root, 'pytorch/xla/.torch_pin') | path_join }} 2> /dev/null ||
+      tail -1 {{ (src_root, 'pytorch/xla/.torch_commit') | path_join }}
+  register: torch_pin
+
+- name: Checkout PyTorch pin
+  # ansible.builtin.git wants to fetch the entire history, so check out the pin manually
+  ansible.builtin.shell:
+    cmd: |
+      set -xe
+      PIN="{{ torch_pin.stdout }}"
+      if [[ $PIN = \#* ]]; then
+        PRNUM="${PIN//[!0-9]/}"
+        git fetch --no-recurse-submodules origin "pull/$PRNUM/head"
+      else
+        git fetch --no-recurse-submodules origin {{ torch_pin.stdout }}
+      fi
+      git checkout --no-recurse-submodules FETCH_HEAD
+      git submodule update --init --recursive
+    chdir: "{{ (src_root, 'pytorch') | path_join }}"
+  args:
+    executable: /bin/bash
+
+- name: Build PyTorch
+  ansible.builtin.command:
+    cmd: python setup.py bdist_wheel
+    chdir: "{{ (src_root, 'pytorch') | path_join }}"
+    creates: "{{ (src_root, 'pytorch/dist/*.whl') | path_join }}"
+  # Set `USE_CUDA=0` as PyTorch cannot be used with GPU in eager and XLA mode.
+  environment: "{{ env_vars | combine({'USE_CUDA': 0}) }}"
+
+- name: Find PyTorch *.whl files in pytorch/dist
+  ansible.builtin.find:
+    path: "{{ (src_root, 'pytorch/dist') | path_join }}"
+    pattern: "*.whl"
+  register: pytorch_wheels
+
+- name: Install PyTorch wheels
+  ansible.builtin.pip:
+    name: "{{ pytorch_wheels.files | map(attribute='path') }}"
+    state: "forcereinstall"
+
+- name: Build PyTorch/XLA
+  ansible.builtin.command:
+    cmd: python setup.py bdist_wheel
+    chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
+  environment: "{{ env_vars }}"
+
+- name: Find XLA *.whl files in pytorch/xla/dist
+  ansible.builtin.find:
+    path: "{{ (src_root, 'pytorch/xla/dist') | path_join }}"
+    pattern: "*.whl"
+  register: xla_wheels
+
+- name: Install XLA wheels
+  ansible.builtin.pip:
+    name: "{{ xla_wheels.files | map(attribute='path') }}"
+    state: "forcereinstall"
+
+- name: Create a temp directory for collecting wheels
+  ansible.builtin.file:
+    path: /tmp/staging-wheels
+    state: directory
+    mode: '0755'
+
+- name: Delete any existing /dist directory
+  ansible.builtin.file:
+    path: /dist
+    state: absent
+    mode: '0755'
+
+- name: Create /dist directory for exported wheels
+  ansible.builtin.file:
+    path: /dist
+    state: directory
+    mode: '0755'
+
+- name: Copy wheels to staging
+  ansible.builtin.shell: |
+    pushd /tmp/staging-wheels
+    cp {{ item.dir }}/*.whl .
+    popd
+  args:
+    executable: /bin/bash
+    chdir: "{{ item.dir }}"
+  loop:
+    - { dir: "{{ (src_root, 'pytorch/dist') | path_join }}", prefix: "torch" }
+    - { dir: "{{ (src_root, 'pytorch/xla/dist') | path_join }}", prefix: "torch_xla" }
+
+- name: Rename and append +YYYYMMDD suffix to nightly wheels
+  ansible.builtin.shell: |
+    # For both torch and torch_xla, we would like to have one wheel without
+    # date, and another copy of the same wheel with a date in the file name.
+    # This script normalizes wheel names to:
+    #
+    # torch_xla-2.5.0.dev-cp310-cp310-linux_x86_64.whl
+    # torch_xla-2.5.0.dev20240819-cp310-cp310-linux_x86_64.whl (extra copy)
+    #
+    # and so on.
+
+    # rename file name like torch_xla-2.5.0+gitac7fd44-cp310-cp310-linux_x86_64.whl into
+    # torch_xla-2.5.0.dev-cp310-cp310-linux_x86_64.whl
+    # Basically the filename is split into 5 groups to concatenate:
+    # group 1: prefix stop at first -: `torch_xla` or `torch`;
+    # group 2: anything after first - before next + or -: `2.5.0`;
+    # group 3 (can be empty): any thing after + before next -: `+gitac7fd44`;
+    # group 4 (can be empty): group 3 without +: `gitac7fd441`;
+    # group 5: anything from next - to the end: `cp310-cp310-linux_x86_64.whl`.
+    rename -v "s/^(.*?)\-(.*?)(\+([^ -]+))?\-(.+)/\1-\2.dev-\5/" *.whl
+
+    # At this point, we have *.dev*.whl files. Now we want to produce the dated
+    # YYYYMMDD versions as a second copy without losing the .dev one.
+    current_date="$(date -u +%Y%m%d)"
+
+    for f in *.whl; do
+      if [[ "$f" == *".dev-"* ]]; then
+        # Replace the first occurrence of `.dev-` with `.dev<date>-`.
+        # For example:
+        #   torch-2.6.0.dev-cp310-cp310-linux_x86_64.whl
+        # becomes
+        #   torch-2.6.0.dev20241206-cp310-cp310-linux_x86_64.whl
+        newf="${f/.dev-/.dev${current_date}-}"
+
+        # Copy the file to the new filename.
+        cp "$f" "$newf"
+      fi
+    done
+  args:
+    executable: /bin/bash
+    chdir: "/tmp/staging-wheels"
+  when: nightly_release
+
+- name: Add precxx11 suffix to wheels built without C++11 ABI
+  ansible.builtin.shell: |
+    # Given names like
+    #
+    # torch_xla-2.5.0.dev20240819-cp310-cp310-linux_x86_64.whl
+    # torch_xla-2.4.0-cp311-cp311-manylinux_2_28_x86_64.whl
+    # torch-2.5.0+libtpu-cp310-cp310-linux_x86_64.whl
+    # torch-2.5.0-cp311-cp311-linux_x86_64.whl
+    #
+    # we want to rename it to
+    #
+    # torch_xla-2.5.0.dev20240819+cxx11-cp310-cp310-linux_x86_64.whl
+    # torch_xla-2.4.0+cxx11-cp311-cp311-manylinux_2_28_x86_64.whl
+    # torch-2.5.0+libtpu.cxx11-cp310-cp310-linux_x86_64.whl
+    # torch-2.5.0+cxx11-cp311-cp311-linux_x86_64.whl
+    #
+    # essentially adding +cxx11 before the -cp39, -cp310, -cp311 etc identifiers.
+    if [[ "$f" == *"+libtpu"* ]]; then
+      rename -v "s/^(.+?)(-cp\d+)/\1.precxx11\2/" *.whl
+    else
+      rename -v "s/^(.+?)(-cp\d+)/\1+precxx11\2/" *.whl
+    fi
+  args:
+    executable: /bin/bash
+    chdir: "/tmp/staging-wheels"
+  when: cxx11_abi | int == 0
+
+- name: Copy wheels to /dist
+  ansible.builtin.shell: "mv /tmp/staging-wheels/* /dist/"
+  args:
+    executable: /bin/bash
+
+- name: Delete temp directory
+  ansible.builtin.file:
+    path: /tmp/staging-wheels
+    state: absent
+    mode: '0755'
+
+- name: Create temp directory for C++ tests
+  ansible.builtin.file:
+    path: /tmp/test/bin
+    state: directory
+    mode: '0755'
+  when: build_cpp_tests
+
+- name: Collect C++ test files
+  ansible.builtin.shell: |
+    cd pytorch/xla/build/temp*
+    bazel query 'kind(".*_test", tests(//:cpp_tests))' --output=label | xargs -n 1 bazel cquery --output=files | xargs cp -t /tmp/test/bin
+  args:
+    executable: bash
+    chdir: "{{ src_root }}"
+  when: build_cpp_tests
+
+- name: Read Torchvision pin
+  ansible.builtin.command: cat {{ (src_root, 'pytorch') | path_join }}/.github/ci_commit_pins/vision.txt
+  register: torchvision_pin
+
+- name: Build Torchvision wheel
+  ansible.builtin.command:
+    cmd: pip wheel --no-build-isolation --no-deps "git+https://github.com/pytorch/vision.git@{{ torchvision_pin.stdout }}"
+    chdir: /dist
+  environment: "{{ env_vars }}"
+
+- name: Add precxx11 suffix to Torchvision wheels built without C++11 ABI
+  ansible.builtin.shell: |
+    rename -v "s/^torchvision(.+?)(-cp\d+)/torchvision\1.precxx11\2/" *.whl
+  args:
+    executable: /bin/bash
+    chdir: "/dist"
+  when: cxx11_abi | int == 0
+
+- name: Find Torchvision *.whl files in /dist
+  ansible.builtin.find:
+    path: /dist
+    pattern: "torchvision*.whl"
+  register: torchvision_wheels
+
+- name: Install Torchvision wheel
+  ansible.builtin.pip:
+    name: "{{ torchvision_wheels.files | map(attribute='path') }}"
+
+- name: "Tests"
+  include_tasks: tests.yaml
+  tags:
+    - tests

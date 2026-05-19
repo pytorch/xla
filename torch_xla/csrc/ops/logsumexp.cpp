@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/logsumexp.h"
 
 #include "absl/strings/str_join.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -11,33 +12,34 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildLogsumexp(operands[0], dimensions, keep_reduced_dimensions);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Logsumexp::Logsumexp(const XlaValue& input, std::vector<int64_t> dimensions,
+Logsumexp::Logsumexp(const torch::lazy::Value& input,
+                     std::vector<int64_t> dimensions,
                      bool keep_reduced_dimensions)
-    : XlaNode(torch::lazy::OpKind(at::aten::logsumexp), {input},
-              [&]() {
-                return NodeOutputShape(input, dimensions,
-                                       keep_reduced_dimensions);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(dimensions, keep_reduced_dimensions)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::logsumexp), {input},
+          [&]() {
+            return NodeOutputShape(input, dimensions, keep_reduced_dimensions);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(dimensions, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
-torch::lazy::NodePtr Logsumexp::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Logsumexp>(operands.at(0), dimensions_,
-                                          keep_reduced_dimensions_);
+torch::lazy::NodePtr Logsumexp::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Logsumexp>(operands.at(0), dimensions_,
+                                        keep_reduced_dimensions_);
 }
 
 XlaOpVector Logsumexp::Lower(LoweringContext* loctx) const {

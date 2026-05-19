@@ -1,6 +1,8 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_MSE_LOSS_H_
+#define XLA_TORCH_XLA_CSRC_OPS_MSE_LOSS_H_
 
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
+
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/reduction.h"
 
@@ -8,12 +10,12 @@ namespace torch_xla {
 
 class MseLoss : public XlaNode {
  public:
-  MseLoss(const XlaValue& input, const XlaValue& target,
+  MseLoss(const torch::lazy::Value& input, const torch::lazy::Value& target,
           ReductionMode reduction);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -24,3 +26,5 @@ class MseLoss : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_MSE_LOSS_H_

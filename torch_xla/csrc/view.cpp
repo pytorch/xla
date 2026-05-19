@@ -4,11 +4,11 @@
 #include <functional>
 #include <numeric>
 
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
+#include <torch/csrc/lazy/core/util.h>
+
+#include "xla/shape_util.h"
+#include "xla/util.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/as_strided_view_update.h"
@@ -22,93 +22,97 @@
 #include "torch_xla/csrc/ops/unselect.h"
 #include "torch_xla/csrc/ops/update_slice.h"
 #include "torch_xla/csrc/ops/view.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace {
 
-XlaValue ApplyViewInfo(XlaValue ir_value, const ViewInfo& view_info) {
+torch::lazy::Value ApplyViewInfo(torch::lazy::Value ir_value,
+                                 const ViewInfo& view_info) {
   switch (view_info.view_type) {
     case ViewInfo::Type::kSelect:
-      return torch::lazy::MakeNode<Select>(
+      return torch_xla::MakeNode<Select>(
           ir_value, view_info.select->dim, view_info.select->start,
           view_info.select->end, view_info.select->stride);
     case ViewInfo::Type::kNarrow:
-      return torch::lazy::MakeNode<GenericSlice>(ir_value, view_info.indices,
-                                                 view_info.shape.dimensions());
+      return torch_xla::MakeNode<GenericSlice>(ir_value, view_info.indices,
+                                               view_info.shape.dimensions());
     case ViewInfo::Type::kNoOp:
       return ir_value;
     case ViewInfo::Type::kPermute:
-      return torch::lazy::MakeNode<Permute>(ir_value, view_info.permutation);
+      return torch_xla::MakeNode<Permute>(ir_value, view_info.permutation);
     case ViewInfo::Type::kReshape:
-      return torch::lazy::MakeNode<ViewOp>(
+      return torch_xla::MakeNode<ViewOp>(
           ir_value,
           torch::lazy::ToVector<int64_t>(view_info.shape.dimensions()));
     case ViewInfo::Type::kResize:
-      return torch::lazy::MakeNode<Resize>(
+      return torch_xla::MakeNode<Resize>(
           ir_value,
           torch::lazy::ToVector<int64_t>(view_info.shape.dimensions()));
     case ViewInfo::Type::kAsStrided:
-      return torch::lazy::MakeNode<AsStrided>(
+      return torch_xla::MakeNode<AsStrided>(
           ir_value,
           torch::lazy::ToVector<int64_t>(view_info.shape.dimensions()),
           view_info.as_strided->stride, view_info.as_strided->offset);
     case ViewInfo::Type::kDiagonal:
-      return torch::lazy::MakeNode<Diagonal>(
-          ir_value, view_info.diagonal->offset, view_info.diagonal->dim1,
-          view_info.diagonal->dim2);
+      return torch_xla::MakeNode<Diagonal>(ir_value, view_info.diagonal->offset,
+                                           view_info.diagonal->dim1,
+                                           view_info.diagonal->dim2);
     default:
       XLA_ERROR() << "Invalid view type: "
                   << torch::lazy::GetEnumValue(view_info.view_type);
   }
 }
 
-XlaValue ApplyUpdate(XlaValue ir_value, const Alias::UpdateData& update_data) {
+torch::lazy::Value ApplyUpdate(torch::lazy::Value ir_value,
+                               const Alias::UpdateData& update_data) {
   // We first bring the source IR value forward, by reshaping and slicing.
-  std::vector<XlaValue> tmp_values({ir_value});
+  std::vector<torch::lazy::Value> tmp_values({ir_value});
   for (size_t i = 0; i < update_data.view_infos.size(); ++i) {
     const ViewInfo& view_info = update_data.view_infos[i];
     tmp_values.push_back(ApplyViewInfo(tmp_values.back(), view_info));
   }
   // We then move backward given the source update value, by reshaping and
   // slice-updating.
-  XlaValue result = update_data.ir_value;
+  torch::lazy::Value result = update_data.ir_value;
   for (size_t i = update_data.view_infos.size(); i > 0; --i) {
     const ViewInfo& view_info = update_data.view_infos[i - 1];
     switch (view_info.view_type) {
       case ViewInfo::Type::kSelect:
-        result = torch::lazy::MakeNode<Unselect>(
+        result = torch_xla::MakeNode<Unselect>(
             tmp_values[i - 1], result, view_info.select->dim,
             view_info.select->start, view_info.select->end,
             view_info.select->stride);
         break;
       case ViewInfo::Type::kNarrow:
-        result = torch::lazy::MakeNode<UpdateSlice>(tmp_values[i - 1], result,
-                                                    view_info.indices);
+        result = torch_xla::MakeNode<UpdateSlice>(tmp_values[i - 1], result,
+                                                  view_info.indices);
         break;
       case ViewInfo::Type::kNoOp:
         break;
       case ViewInfo::Type::kPermute:
-        result = torch::lazy::MakeNode<Permute>(
+        result = torch_xla::MakeNode<Permute>(
             result, xla::InversePermutation(view_info.permutation));
         break;
       case ViewInfo::Type::kReshape:
-        result = torch::lazy::MakeNode<ViewOp>(
+        result = torch_xla::MakeNode<ViewOp>(
             result, torch::lazy::ToVector<int64_t>(
                         view_info.source_shape.dimensions()));
         break;
       case ViewInfo::Type::kResize:
-        result = torch::lazy::MakeNode<Resize>(
+        result = torch_xla::MakeNode<Resize>(
             result, torch::lazy::ToVector<int64_t>(
                         view_info.source_shape.dimensions()));
         break;
       case ViewInfo::Type::kAsStrided:
-        result = torch::lazy::MakeNode<AsStridedViewUpdate>(
+        result = torch_xla::MakeNode<AsStridedViewUpdate>(
             tmp_values[i - 1], result,
             torch::lazy::ToVector<int64_t>(view_info.source_shape.dimensions()),
             view_info.as_strided->stride, view_info.as_strided->offset);
         break;
       case ViewInfo::Type::kDiagonal:
-        result = torch::lazy::MakeNode<DiagonalViewUpdate>(
+        result = torch_xla::MakeNode<DiagonalViewUpdate>(
             tmp_values[i - 1], result, view_info.diagonal->offset,
             view_info.diagonal->dim1, view_info.diagonal->dim2);
         break;
@@ -125,7 +129,7 @@ XlaValue ApplyUpdate(XlaValue ir_value, const Alias::UpdateData& update_data) {
 ViewInfo::ViewInfo(Type view_type, xla::Shape shape, xla::Shape source_shape)
     : view_type(view_type),
       shape(std::move(shape)),
-      indices(source_shape.rank(), 0),
+      indices(source_shape.dimensions_size(), 0),
       source_shape(std::move(source_shape)) {}
 
 ViewInfo::ViewInfo(Type view_type, xla::Shape source_shape,
@@ -166,7 +170,8 @@ ViewInfo::ViewInfo(Type view_type, const xla::Shape& source_shape,
   XLA_CHECK(view_type == Type::kDiagonal);
 }
 
-void Alias::Update(XlaValue ir_value, std::vector<ViewInfo> view_infos) {
+void Alias::Update(torch::lazy::Value ir_value,
+                   std::vector<ViewInfo> view_infos) {
   if (!updates_.empty() && updates_.back().view_infos == view_infos) {
     updates_.back().ir_value = std::move(ir_value);
   } else {
@@ -175,7 +180,7 @@ void Alias::Update(XlaValue ir_value, std::vector<ViewInfo> view_infos) {
   ++generation_;
 }
 
-XlaValue Alias::SyncUpdateOperations() {
+torch::lazy::Value Alias::SyncUpdateOperations() {
   for (auto& update_data : updates_) {
     ir_value_ = ApplyUpdate(ir_value_, update_data);
   }
@@ -208,7 +213,7 @@ View::View(xla::Shape shape, std::shared_ptr<Alias> alias,
   }
 }
 
-void View::Update(XlaValue ir_value) {
+void View::Update(torch::lazy::Value ir_value) {
   alias_->Update(std::move(ir_value), view_infos_);
 }
 
@@ -224,7 +229,7 @@ View::IrNode View::GetViewIrNode() {
   if (IsUpToDate()) {
     return {ir_value_, false};
   }
-  XlaValue update = alias_->SyncUpdateOperations();
+  torch::lazy::Value update = alias_->SyncUpdateOperations();
   for (auto& view_info : view_infos_) {
     update = ApplyViewInfo(update, view_info);
   }

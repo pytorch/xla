@@ -5,6 +5,7 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [
           'build',
+          '--shm-size', '16gb',
           '--build-arg', 'base_image=${_DOCKER_BASE_IMAGE}',
           '--build-arg', 'cuda=${_CUDA}',
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
@@ -13,6 +14,8 @@ steps:
           '--build-arg', 'bazel_jobs=${_BAZEL_JOBS}',
           '--build-arg', 'git_clone=${_GIT_CLONE}',
           '--build-arg', 'cuda_compute=${_CUDA_COMPUTE}',
+          '--build-arg', 'xla_branch=${_GITHUB_XLA_BRANCH}',
+          '--build-arg', 'examle_branch=${_GITHUB_EXAMPLE_BRANCH}',
           '-t', 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}',
           '-f', 'docker/Dockerfile', '.'
         ]
@@ -24,8 +27,8 @@ steps:
   entrypoint: bash
   args: ['-c', 'source /pytorch/xla/docker/common.sh && run_deployment_tests']
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/tpu-pytorch/xla']
-  timeout: 1800s
+  args: ['push', '--all-tags', 'gcr.io/tpu-pytorch/xla']
+  timeout: 2700s
 - name: 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}'
   entrypoint: 'bash'
   args: ['-c', 'source /pytorch/xla/docker/common.sh && collect_wheels ${_RELEASE_VERSION}']
@@ -41,12 +44,14 @@ substitutions:
     _BAZEL_JOBS: ''
     _GIT_CLONE: 'true'
     _CUDA_COMPUTE: '3.7,7.0,7.5,8.0'
+    _GITHUB_XLA_BRANCH: ''
+    _GITHUB_EXAMPLE_BRANCH: 'master'
 options:
     pool:
       name: 'projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build'
     dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
-timeout: 18000s
+timeout: 32000s
 artifacts:
   objects:
     # CUDA wheels exported under `wheels/cuda/<cuda_version>`

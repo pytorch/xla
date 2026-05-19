@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/std_mean.h"
 
 #include "absl/strings/str_join.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
@@ -8,9 +9,9 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            std::vector<int64_t>& dimensions,
-                           bool keep_reduced_dimensions, int64_t correction) {
+                           bool keep_reduced_dimensions, double correction) {
   auto lower_for_shape_fn_std_mean =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp std = BuildStdDeviation(operands[0], dimensions,
@@ -19,13 +20,14 @@ xla::Shape NodeOutputShape(const XlaValue& input,
         BuildMean(operands[0], dimensions, keep_reduced_dimensions);
     return xla::Tuple(operands[0].builder(), {std, mean});
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn_std_mean);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn_std_mean);
 }
 
 }  // namespace
 
-StdMean::StdMean(const XlaValue& input, std::vector<int64_t> dimensions,
-                 int64_t correction, bool keep_reduced_dimensions)
+StdMean::StdMean(const torch::lazy::Value& input,
+                 std::vector<int64_t> dimensions, double correction,
+                 bool keep_reduced_dimensions)
     : XlaNode(
           torch::lazy::OpKind(at::aten::std_mean), {input},
           [&]() {
@@ -38,9 +40,9 @@ StdMean::StdMean(const XlaValue& input, std::vector<int64_t> dimensions,
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
-torch::lazy::NodePtr StdMean::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<StdMean>(operands.at(0), dimensions_,
-                                        correction_, keep_reduced_dimensions_);
+torch::lazy::NodePtr StdMean::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<StdMean>(operands.at(0), dimensions_, correction_,
+                                      keep_reduced_dimensions_);
 }
 
 XlaOpVector StdMean::Lower(LoweringContext* loctx) const {

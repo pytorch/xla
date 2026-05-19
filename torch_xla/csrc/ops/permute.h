@@ -1,15 +1,17 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_PERMUTE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_PERMUTE_H_
 
 #include "absl/types/span.h"
+
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 
 class Permute : public XlaNode {
  public:
-  Permute(const XlaValue& input, std::vector<int64_t> dims);
+  Permute(const torch::lazy::Value& input, std::vector<int64_t> dims);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -26,3 +28,5 @@ class Permute : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_PERMUTE_H_

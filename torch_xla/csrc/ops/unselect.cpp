@@ -9,18 +9,19 @@
 
 namespace torch_xla {
 
-Unselect::Unselect(const XlaValue& target, const XlaValue& source, int64_t dim,
-                   int64_t start, int64_t end, int64_t stride)
-    : XlaNode(xla_unselect, {target, source}, target.xla_shape(),
+Unselect::Unselect(const torch::lazy::Value& target,
+                   const torch::lazy::Value& source, int64_t dim, int64_t start,
+                   int64_t end, int64_t stride)
+    : XlaNode(xla_unselect, {target, source}, GetXlaShape(target),
               /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
       dim_(dim),
       start_(start),
       end_(end),
       stride_(stride) {}
 
-torch::lazy::NodePtr Unselect::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_,
-                                         start_, end_, stride_);
+torch::lazy::NodePtr Unselect::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_,
+                                       start_, end_, stride_);
 }
 
 XlaOpVector Unselect::Lower(LoweringContext* loctx) const {

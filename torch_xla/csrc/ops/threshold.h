@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_THRESHOLD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_THRESHOLD_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -7,9 +8,9 @@ namespace torch_xla {
 // IR node for the threshold operation.
 class Threshold : public XlaNode {
  public:
-  Threshold(const XlaValue& input, float threshold, float value);
+  Threshold(const torch::lazy::Value& input, float threshold, float value);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -25,3 +26,5 @@ class Threshold : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_THRESHOLD_H_

@@ -1,10 +1,13 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_DATA_OPS_H_
+#define XLA_TORCH_XLA_CSRC_DATA_OPS_H_
 
 #include <vector>
 
+#include <c10/core/ScalarType.h>
+
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 // Collection of XLA lowerings for operations which only involve some form of
 // data movement and no computation.
@@ -23,6 +26,16 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
 // output size.
 xla::XlaOp BuildView(xla::XlaOp input, absl::Span<const int64_t> output_sizes);
 
+// Build View with unbounded dynamism input.
+xla::XlaOp BuildUnboundedDynamicView(
+    xla::XlaOp input, const xla::Shape& input_shape,
+    const absl::Span<const int64_t>& output_sizes);
+
+// Return a new XlaOp that reflects dynamic dimensions
+xla::XlaOp SetDimensionSizes(xla::XlaOp input,
+                             absl::Span<const xla::XlaOp> symbolic_output_sizes,
+                             std::vector<bool> dynamic_dims);
+
 // Squeezes the given dimension if trivial (size 1), returns the unchanged input
 // otherwise.
 xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, int64_t dim);
@@ -35,8 +48,14 @@ xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input);
 xla::XlaOp BuildExpand(xla::XlaOp input,
                        absl::Span<const int64_t> output_sizes);
 
+xla::XlaOp BuildMaskedFillScalar(xla::XlaOp input, xla::XlaOp mask,
+                                 xla::XlaOp scalar);
+
 std::vector<int64_t> BuildSqueezedDimensions(
     absl::Span<const int64_t> dimensions, int64_t squeeze_dim);
+
+std::vector<int64_t> BuildSqueezedDimensions(
+    absl::Span<const int64_t> dimensions, std::vector<int64_t>& squeeze_dim);
 
 std::vector<int64_t> BuildUnsqueezeDimensions(
     absl::Span<const int64_t> dimensions, int64_t dim);
@@ -49,7 +68,8 @@ xla::XlaOp BuildStack(absl::Span<const xla::XlaOp> inputs, int64_t dim);
 
 // Concatenates a list of tensors along an existing dimension specified by the
 // dim argument.
-xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, int64_t dim);
+xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, int64_t dim,
+                    at::ScalarType dtype);
 
 // Repeats the input tensor along each dimension by the given number of repeats.
 xla::XlaOp BuildRepeat(xla::XlaOp input, absl::Span<const int64_t> repeats);
@@ -97,3 +117,5 @@ xla::XlaOp PadInDim(xla::XlaOp input, int64_t dim, int64_t pad_lo,
                     int64_t pad_hi, const xla::XlaOp* pad_value = nullptr);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_DATA_OPS_H_

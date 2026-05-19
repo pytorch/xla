@@ -1,24 +1,27 @@
 #include "torch_xla/csrc/ops/upsample_nearest2d.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/util.h"
+#include "xla/util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/resize_ops.h"
 
 namespace torch_xla {
 
-UpsampleNearest::UpsampleNearest(const XlaValue& input,
+UpsampleNearest::UpsampleNearest(const torch::lazy::Value& input,
                                  std::vector<int64_t> output_size)
-    : XlaNode(torch::lazy::OpKind(at::aten::upsample_nearest2d), {input},
-              [&]() {
-                return resize::GetForwardOutputShape2d(input.xla_shape(),
-                                                       output_size);
-              },
-              /*num_outputs=*/1, torch::lazy::MHash(output_size)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::upsample_nearest2d), {input},
+          [&]() {
+            return resize::GetForwardOutputShape2d(GetXlaShape(input),
+                                                   output_size);
+          },
+          /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-torch::lazy::NodePtr UpsampleNearest::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<UpsampleNearest>(operands.at(0), output_size_);
+torch::lazy::NodePtr UpsampleNearest::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<UpsampleNearest>(operands.at(0), output_size_);
 }
 
 XlaOpVector UpsampleNearest::Lower(LoweringContext* loctx) const {

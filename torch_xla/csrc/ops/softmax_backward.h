@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_SOFTMAX_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_SOFTMAX_BACKWARD_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,10 +7,10 @@ namespace torch_xla {
 
 class SoftmaxBackward : public XlaNode {
  public:
-  SoftmaxBackward(const XlaValue& grad_output, const XlaValue& output,
-                  int64_t dim);
+  SoftmaxBackward(const torch::lazy::Value& grad_output,
+                  const torch::lazy::Value& output, int64_t dim);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -23,3 +24,5 @@ class SoftmaxBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_SOFTMAX_BACKWARD_H_

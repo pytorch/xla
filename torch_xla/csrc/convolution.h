@@ -1,7 +1,10 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_CONVOLUTION_H_
+#define XLA_TORCH_XLA_CSRC_CONVOLUTION_H_
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
+
+#include "torch_xla/csrc/convolution_helper.h"
 
 namespace torch_xla {
 
@@ -33,3 +36,5 @@ ConvGrads BuildConvolutionBackwardOverrideable(
     absl::Span<const int64_t> output_padding, int64_t groups);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_CONVOLUTION_H_

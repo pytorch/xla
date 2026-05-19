@@ -1,9 +1,10 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_
+#define XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_
 
 #include <ATen/core/interned_strings.h>
 #include <c10/core/Scalar.h>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 
@@ -20,6 +21,9 @@ xla::XlaOp BuildRelu(xla::XlaOp input);
 
 xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight);
 
+std::vector<xla::XlaOp> BuildPreluBackward(xla::XlaOp grad, xla::XlaOp input,
+                                           xla::XlaOp weight);
+
 std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
                                    const at::Scalar& upper, bool training,
                                    xla::XlaOp rng_seed);
@@ -28,14 +32,14 @@ xla::XlaOp BuildRreluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                               xla::XlaOp noise, const at::Scalar& lower,
                               const at::Scalar& upper, bool training);
 
-xla::XlaOp BuildHardshrink(xla::XlaOp input, const at::Scalar& lambda);
+xla::XlaOp BuildHardshrink(xla::XlaOp input, xla::XlaOp lambda);
 xla::XlaOp BuildHardSigmoid(xla::XlaOp input);
 xla::XlaOp BuildHardSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input);
 xla::XlaOp BuildHardSwish(xla::XlaOp input);
 xla::XlaOp BuildHardSwishBackward(xla::XlaOp grad_output, xla::XlaOp input);
-xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda);
+xla::XlaOp BuildSoftshrink(xla::XlaOp input, xla::XlaOp lambda);
 xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                               const at::Scalar& lambda);
+                               xla::XlaOp lambda);
 
 xla::XlaOp BuildHardtanhBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                  const at::Scalar& min_val,
@@ -43,10 +47,10 @@ xla::XlaOp BuildHardtanhBackward(xla::XlaOp grad_output, xla::XlaOp input,
 
 // Computes the leaky rectified linear unit:
 // LeakyReLU(x) = max(0, input) + negative_slope ∗ min(0, input).
-xla::XlaOp BuildLeakyRelu(xla::XlaOp input, double negative_slope);
+xla::XlaOp BuildLeakyRelu(xla::XlaOp input, xla::XlaOp negative_slope);
 
 xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                                  double negative_slope_value);
+                                  xla::XlaOp negative_slope);
 
 // Computes the sigmoid function using Tanh
 // Sigmoid(x) = (tanh(x ∗ 0.5) + 1) ∗ 0.5
@@ -92,17 +96,46 @@ xla::XlaOp BuildSelu(xla::XlaOp input);
 // Computes the LogSigmoid function of input.
 std::vector<xla::XlaOp> BuildLogSigmoid(xla::XlaOp input);
 
+// Computes the logit function of the input.
+// If eps is given, the input is clamped between eps and 1-eps.
+xla::XlaOp BuildLogit(xla::XlaOp input, std::optional<double> eps);
+
+// Computes the division of input and the divisor.
+xla::XlaOp BuildDiv(xla::XlaOp input, xla::XlaOp divisor);
+
 // Computes the backward of LogSigmoid.
 xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                    xla::XlaOp buffer);
 
 // Computes the Elu function of input.
-xla::XlaOp BuildElu(xla::XlaOp input, const at::Scalar& alpha,
-                    const at::Scalar& scale, const at::Scalar& input_scale);
+xla::XlaOp BuildElu(xla::XlaOp input, xla::XlaOp alpha, xla::XlaOp scale,
+                    xla::XlaOp input_scale);
 
 // Computes the backward of Elu.
 xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
                             const at::Scalar& alpha, const at::Scalar& scale,
                             const at::Scalar& input_scale);
 
+// Computes a linear interpolation of two tensors start (given by input) and end
+// based on a scalar or tensor weight and returns the resulting out tensor.
+xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight);
+
+// Computes the rsub function. Subtracts input, scaled by alpha, from other.
+// out = other − alpha * input
+xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
+// Computes the sub function. Subtracts other, scaled by alpha, from input.
+// out = input − alpha * other
+xla::XlaOp BuildSub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
+// Computes the add function. Adds other, scaled by alpha, from input.
+// out = input + alpha * other
+xla::XlaOp BuildAdd(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
+// Computes the mul function.
+// out = input * other
+xla::XlaOp BuildMul(xla::XlaOp input, xla::XlaOp other);
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_

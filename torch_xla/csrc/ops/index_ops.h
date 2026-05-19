@@ -21,7 +21,8 @@
 // adjacent (e.g. x[[0, 1], :, [2, 3]]). In this case, self and the index
 // tensors are transposed to the front: x.transpose(1, 2)[[0, 1], [2, 3]]
 
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_INDEX_OPS_H_
+#define XLA_TORCH_XLA_CSRC_OPS_INDEX_OPS_H_
 
 #include <ATen/core/List.h>
 #include <ATen/core/Tensor.h>
@@ -42,39 +43,44 @@ struct CanonicalIndexInfo {
   int64_t start_dim = 0;
 };
 
-// Transform the given base and indices to a form supported by the XLATensor
+// Transform the given base and indices to a form supported by the XLATensorPtr
 // index implementation. Input indices are reordered so that non-null indices
 // are first and the tail of null indices is dropped. The dimensions of the base
 // are reordered to be consistent with this reordering.
 CanonicalIndexInfo GetCanonicalIndexInfo(
     const at::Tensor& base,
-    const c10::List<c10::optional<at::Tensor>>& orig_indices);
+    const c10::List<std::optional<at::Tensor>>& orig_indices);
 
 // Expands a rank <= 1 tensor to rank 1, if necessary.
-XlaValue EnsureRank1(const XlaValue& index);
+torch::lazy::Value EnsureRank1(const torch::lazy::Value& index);
 
 // Implements indexing by tensors of long according to the top-level
 // description.
-XLATensor IndexByTensors(const XLATensor& base,
-                         absl::Span<const XLATensor> indices,
-                         int64_t start_dim);
+XLATensorPtr IndexByTensors(const XLATensorPtr& base,
+                            absl::Span<const XLATensorPtr> indices,
+                            int64_t start_dim);
 
-XlaValue IndexPutByTensors(const XLATensor& base,
-                           absl::Span<const XLATensor> indices,
-                           int64_t start_dim, const XLATensor& updates,
-                           bool accumulate,
-                           absl::Span<const int64_t> result_permutation);
+torch::lazy::Value IndexPutByTensors(
+    const XLATensorPtr& base, absl::Span<const XLATensorPtr> indices,
+    int64_t start_dim, const XLATensorPtr& updates, bool accumulate,
+    absl::Span<const int64_t> result_permutation);
 
-torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
-                               const XLATensor& index, const at::Scalar& value);
+torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
+                               const XLATensorPtr& index,
+                               const at::Scalar& value);
 
-torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
-                               const XLATensor& index, const XLATensor& value);
+torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
+                               const XLATensorPtr& index,
+                               const XLATensorPtr& value);
 
-XlaValue IndexAdd(const XLATensor& base, int64_t dim, const XLATensor& index,
-                  const XLATensor& source);
+torch::lazy::Value IndexAdd(const XLATensorPtr& base, int64_t dim,
+                            const XLATensorPtr& index,
+                            const XLATensorPtr& source);
 
-XlaValue IndexCopy(const XLATensor& base, int64_t dim, const XLATensor& index,
-                   const XLATensor& source);
+torch::lazy::Value IndexCopy(const XLATensorPtr& base, int64_t dim,
+                             const XLATensorPtr& index,
+                             const XLATensorPtr& source);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_INDEX_OPS_H_

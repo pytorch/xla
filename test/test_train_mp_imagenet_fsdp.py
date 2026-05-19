@@ -1,10 +1,11 @@
 import args_parse
+from functools import partial
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
     'inception_v3', 'resnet101', 'resnet152', 'resnet18', 'resnet34',
     'resnet50', 'squeezenet1_0', 'squeezenet1_1', 'vgg11', 'vgg11_bn', 'vgg13',
-    'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn'
+    'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn', 'vit_b_16'
 ]
 
 MODEL_OPTS = {
@@ -38,12 +39,43 @@ MODEL_OPTS = {
     '--flatten_parameters': {
         'action': 'store_true',
     },
+    '--auto_wrap_policy': {
+        'choices': ['none', 'size_based', 'type_based'],
+        'default': 'none',
+    },
+    '--auto_wrap_min_num_params': {
+        'type': int,
+        'default': 1e6,
+    },
     '--use_nested_fsdp': {
         'action': 'store_true',
     },
     '--use_gradient_checkpointing': {
         'action': 'store_true',
     },
+    '--compute_dtype': {
+        'choices': ['float32', 'float16', 'bfloat16'],
+        'default': 'float32',
+    },
+    '--fp32_reduce_scatter': {
+        'action': 'store_true',
+    },
+    '--pjrt_distributed': {
+        'action': 'store_true',
+    },
+    '--shard_param_on_dim_0': {
+        'action': 'store_true',
+    },
+    '--no_pin_layout_in_collective_ops': {
+        'action': 'store_false',
+        'dest': 'pin_layout_in_collective_ops',
+    },
+    '--use_small_fake_sample': {
+        'action': 'store_true',
+    },
+    '--profile': {
+        'action': 'store_true',
+    }
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -68,17 +100,23 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
 
+import torch.distributed as dist
+import torch_xla.distributed.xla_backend
+
 from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP, checkpoint_module
+from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
+                                             transformer_auto_wrap_policy)
 
 DEFAULT_KWARGS = dict(
-    batch_size=128,
+    batch_size=64,
     test_set_batch_size=64,
     num_epochs=18,
     momentum=0.9,
@@ -131,19 +169,22 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
+  if FLAGS.pjrt_distributed:
+    dist.init_process_group('xla', init_method='xla://')
+
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
-    train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
+    use_small_fake_sample = FLAGS.use_small_fake_sample
+    train_dataset_len = 50000 if use_small_fake_sample else 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=train_dataset_len // FLAGS.batch_size //
-        xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size // xr.world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
-        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=50000 // FLAGS.batch_size // xr.world_size())
   else:
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -170,16 +211,16 @@ def train_imagenet():
         ]))
 
     train_sampler, test_sampler = None, None
-    if xm.xrt_world_size() > 1:
+    if xr.world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
+          num_replicas=xr.world_size(),
+          rank=xr.global_ordinal(),
           shuffle=True)
       test_sampler = torch.utils.data.distributed.DistributedSampler(
           test_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
+          num_replicas=xr.world_size(),
+          rank=xr.global_ordinal(),
           shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -200,22 +241,60 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  device = xm.xla_device()
+  device = torch_xla.device()
   model = get_model_property('model_fn')()
-  # Wrap the model with FSDP
-  # You may wrap all, a subset, or none of the sub-modules with inner FSDPs
-  # - to implement ZeRO-2, wrap none of the sub-modules
-  # - to implement ZeRO-3, wrap all of the sub-modules (nested FSDP)
-  # - you may wrap sub-modules at different granularity (e.g. at each resnet
-  #   stage or each residual block or each conv layer).
+  # Automatic wrapping sub-modules with inner FSDP
+  auto_wrap_policy = None
+  auto_wrapper_callable = None
+  if FLAGS.auto_wrap_policy != "none":
+    if FLAGS.auto_wrap_policy == "size_based":
+      # auto-wrap all sub-modules with a certain number of parameters (default 1e6)
+      auto_wrap_policy = partial(
+          size_based_auto_wrap_policy,
+          min_num_params=FLAGS.auto_wrap_min_num_params)
+    elif FLAGS.auto_wrap_policy == "type_based":
+      # auto-wrap all sub-modules in torchvision ResNet's BasicBlock or Bottleneck
+      # or torchvision transformer's EncoderBlock as an example
+      # (transformer_auto_wrap_policy wraps all sub-modules in transformer_layer_cls)
+      auto_wrap_policy = partial(
+          transformer_auto_wrap_policy,
+          transformer_layer_cls={
+              torchvision.models.resnet.BasicBlock,
+              torchvision.models.resnet.Bottleneck,
+              torchvision.models.vision_transformer.EncoderBlock,
+          })
+    else:
+      raise Exception(f"Invalid auto-wrap policy: {FLAGS.auto_wrap_policy}")
+    if FLAGS.use_gradient_checkpointing:
+      # Apply gradient checkpointing to auto-wrapped sub-modules if specified
+      auto_wrapper_callable = lambda m, *args, **kwargs: FSDP(
+          checkpoint_module(m), *args, **kwargs)
+
   fsdp_wrap = lambda m: FSDP(
-      m.to(device), flatten_parameters=FLAGS.flatten_parameters)
-  # Apply gradient checkpointing to sub-modules if specified
-  grad_ckpt_wrap = checkpoint_module if FLAGS.use_gradient_checkpointing else (
-      lambda x: x)
+      m,
+      compute_dtype=getattr(torch, FLAGS.compute_dtype),
+      fp32_reduce_scatter=FLAGS.fp32_reduce_scatter,
+      flatten_parameters=FLAGS.flatten_parameters,
+      shard_param_on_dim_0=FLAGS.shard_param_on_dim_0,
+      pin_layout_in_collective_ops=FLAGS.pin_layout_in_collective_ops,
+      auto_wrap_policy=auto_wrap_policy,
+      auto_wrapper_callable=auto_wrapper_callable)
+  # Manually wrapping sub-modules with inner FSDP (if not using auto-wrap)
+  # (in this case, the sub-modules should be wrapped before the base model)
   if FLAGS.use_nested_fsdp:
+    assert FLAGS.auto_wrap_policy == "none", \
+        "--use_nested_fsdp is for manual nested wrapping should only be used" \
+        " without auto-wrapping"
+    # You may wrap all, a subset, or none of the sub-modules with inner FSDPs
+    # - to implement ZeRO-2, wrap none of the sub-modules
+    # - to implement ZeRO-3, wrap all of the sub-modules (nested FSDP)
+    # - you may wrap sub-modules at different granularity (e.g. at each resnet
+    #   stage or each residual block or each conv layer).
     # Here we apply inner FSDP at the level of child modules for ZeRO-3, which
     # corresponds to different stages in resnet (i.e. Stage 1 to 5).
+    # Apply gradient checkpointing to nested-wrapped sub-modules if specified
+    grad_ckpt_wrap = checkpoint_module if FLAGS.use_gradient_checkpointing else (
+        lambda x: x)
     for submodule_name, submodule in model.named_children():
       if sum(p.numel() for p in submodule.parameters()) == 0:
         # Skip those submodules without parameters (i.e. no need to shard them)
@@ -235,7 +314,7 @@ def train_imagenet():
       momentum=FLAGS.momentum,
       weight_decay=1e-4)
   num_training_steps_per_epoch = train_dataset_len // (
-      FLAGS.batch_size * xm.xrt_world_size())
+      FLAGS.batch_size * xr.world_size())
   lr_scheduler = schedulers.WarmupAndExponentialDecayScheduler(
       optimizer,
       num_steps_per_epoch=num_training_steps_per_epoch,
@@ -245,21 +324,26 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
 
+  if FLAGS.profile:
+    server = xp.start_server(FLAGS.profiler_port)
+
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
-      optimizer.step()  # do not reduce gradients on sharded params
-      tracker.add(FLAGS.batch_size)
-      if lr_scheduler:
-        lr_scheduler.step()
-      if step % FLAGS.log_steps == 0:
-        xm.add_step_closure(
-            _train_update, args=(device, step, loss, tracker, epoch, writer))
+      with xp.StepTrace('train_imagenet', step_num=step):
+        with xp.Trace('build_graph'):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
+          optimizer.step()  # do not reduce gradients on sharded params
+          tracker.add(FLAGS.batch_size)
+          if lr_scheduler:
+            lr_scheduler.step()
+        if step % FLAGS.log_steps == 0:
+          xm.add_step_closure(
+              _train_update, args=(device, step, loss, tracker, epoch, writer))
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -286,7 +370,10 @@ def train_imagenet():
     run_eval = ((not FLAGS.test_only_at_end and
                  epoch % FLAGS.eval_interval == 0) or epoch == FLAGS.num_epochs)
     if run_eval:
-      accuracy = test_loop_fn(test_device_loader, epoch)
+      # TODO(alanwaketan): Investigate why inference would impact
+      # the next epoch's training.
+      with torch.no_grad():
+        accuracy = test_loop_fn(test_device_loader, epoch)
       xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
           epoch, test_utils.now(), accuracy))
       max_accuracy = max(accuracy, max_accuracy)
@@ -306,7 +393,7 @@ def train_imagenet():
 def _mp_fn(index, flags):
   global FLAGS
   FLAGS = flags
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
@@ -315,4 +402,6 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
+  debug_single_process = FLAGS.num_cores == 1
+  torch_xla.launch(
+      _mp_fn, args=(FLAGS,), debug_single_process=debug_single_process)

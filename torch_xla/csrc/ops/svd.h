@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_SVD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_SVD_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,11 +7,11 @@ namespace torch_xla {
 
 class SVD : public XlaNode {
  public:
-  SVD(const XlaValue& input, bool some, bool compute_uv);
+  SVD(const torch::lazy::Value& input, bool some, bool compute_uv);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -24,3 +25,5 @@ class SVD : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_SVD_H_

@@ -1,5 +1,11 @@
+import functools
+import os
+import threading
+from typing import Union
+
 import torch_xla
 import torch_xla.core.xla_model as xm
+from torch_xla._internal.jax_workarounds import maybe_get_jax
 
 _TRACER_MARKED_STEP: bool = False
 
@@ -66,7 +72,7 @@ def trace(service_addr: str,
       in case of failures.
     host_tracer_level (int): CPU tracing level. Values are: 1 - critical info
       only, 2 - info, 3 - verbose.
-      device_tracer_level (int): Device (TPU/GPU) tracing level. Values are: 1 -
+      device_tracer_level (int): Device (TPU) tracing level. Values are: 1 -
       enabled, 0 - disabled.
     delay_ms (int): Specifies the services to start profiling delay_ms
       milliseconds after the current time.
@@ -88,17 +94,22 @@ def trace(service_addr: str,
       options=options)
 
 
+def trace_detached(*args, **kwargs):
+  """
+  Wraps the :func:`~torch_xla.debug.profiler.trace` method to capture a profile
+  in a background thread. See that method for the list of supported parameters
+  and their semantics.
+  """
+  threading.Thread(target=trace, args=args, kwargs=kwargs).start()
+
+
 class Trace(torch_xla._XLAC.profiler.TraceMe):
   """Context manager that produces a trace event for profiling.
 
   The traces generated can then be collected using the above profiling APIs.
   The profiling server first needs to be started up and then can be sampled
-  either using Tensorboard profiler plugin
-  (https://github.com/tensorflow/profiler) or the
+  either using xprof (https://github.com/openxla/xprof) or the
   :func:`~torch_xla.debug.profiler.trace` method.
-
-  Note: currently only supports PyTorch/XLA client side trace events. i.e.,
-  the namespace won't group TPU worker side trace.
 
   Example usage:
   ```python
@@ -106,7 +117,7 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
 
   with xp.Trace('fwd_context'):
     model(input)
-    xm.mark_step()
+    torch_xla.sync()
   ```
   """
 
@@ -118,7 +129,16 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
     self.scope = torch_xla._XLAC.profiler.scope_pusher(self.name)
     super().__enter__()
 
+    self._jax_scope = None
+    # Also enter the JAX named scope, to support torchax lowering.
+    if jax := maybe_get_jax(log=False):
+      self._jax_scope = jax.named_scope(self.name)
+      self._jax_scope.__enter__()
+
   def __exit__(self, type, value, traceback):
+    if self._jax_scope is not None:
+      self._jax_scope.__exit__(type, value, traceback)
+      self._jax_scope = None
     if getattr(self, 'scope', None):
       del self.scope
     super().__exit__(type, value, traceback)
@@ -156,5 +176,81 @@ class StepTrace(Trace):
       # In ir.cpp ResetScopeContext we ensure that we have no remaining scope
       # before marking step.
       del self.scope
-    xm.mark_step()
+    torch_xla.sync()
     super().__exit__(type, value, traceback)
+
+
+def trace_me(scope: str):
+
+  def decorator_trace_me(func):
+
+    @functools.wraps(func)
+    def wrapper_trace_me(*args, **kwargs):
+      with Trace(scope):
+        return func(*args, **kwargs)
+
+    return wrapper_trace_me
+
+  return decorator_trace_me
+
+
+# The profiler implementation is based on JAX implementation
+# https://github.com/jax-ml/jax/blob/main/jax/_src/profiler.py
+class _ProfileState:
+
+  def __init__(self):
+    self.profile_session = None
+    self.log_dir = None
+    self.create_perfetto_link = False
+    self.create_perfetto_trace = False
+    self.lock = threading.Lock()
+
+  def reset(self):
+    _profile_state.profile_session = None
+    _profile_state.create_perfetto_link = False
+    _profile_state.create_perfetto_trace = False
+    _profile_state.log_dir = None
+
+
+_profile_state = _ProfileState()
+
+
+def start_trace(log_dir: Union[os.PathLike, str]) -> None:
+  """Starts a profiler trace.
+
+  The trace will capture CPU, and/or TPU activity, including Python
+  functions and PyTorch/XLA on-device operations. Use :func:`stop_trace` to end
+  the trace and save the results to ``log_dir``.
+
+  The resulting trace can be viewed with TensorBoard. Note that TensorBoard
+  doesn't need to be running when collecting the trace.
+
+  Only one trace may be collected at a time. A RuntimeError will be raised if
+  :func:`start_trace` is called while another trace is running.
+
+  Args:
+    log_dir: The directory to save the profiler trace to (usually the
+      TensorBoard log directory).
+  """
+  with _profile_state.lock:
+    if _profile_state.profile_session is not None:
+      raise RuntimeError("Profile has already been started. "
+                         "Only one profile may be run at a time.")
+
+    _profile_state.profile_session = torch_xla._XLAC.profiler.TslProfilerSessionWrapper(
+    )
+    _profile_state.log_dir = str(log_dir)
+
+
+def stop_trace() -> None:
+  """Stops the currently-running profiler trace.
+
+  The trace will be saved to the ``log_dir`` passed to the corresponding
+  :func:`start_trace` call. Raises a RuntimeError if a trace hasn't been started.
+  """
+  with _profile_state.lock:
+    if _profile_state.profile_session is None:
+      raise RuntimeError("No profile started")
+    sess = _profile_state.profile_session
+    sess.export(sess.stop(), str(_profile_state.log_dir))
+    _profile_state.reset()

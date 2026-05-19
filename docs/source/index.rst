@@ -1,99 +1,114 @@
-.. mdinclude:: ../../API_GUIDE.md
+:github_url: https://github.com/pytorch/xla
 
-PyTorch/XLA API
-==================================
+PyTorch/XLA documentation
+===================================
+``torch_xla`` is a Python package that implements \
+`XLA <https://openxla.org/xla>`_ as a backend for PyTorch.
 
-xla_model
-----------------------------------
+4/22/2026: To read more on our TorchTPU announcement see our latest blog post <https://developers.googleblog.com/torchtpu-running-pytorch-natively-on-tpus-at-google-scale/>. Once TorchTPU is public it will replace PyTorch/XLA. 
 
-.. automodule:: torch_xla.core.xla_model
-.. autofunction:: xla_device
-.. autofunction:: get_xla_supported_devices
-.. autofunction:: xla_device_hw
-.. autofunction:: get_ordinal
-.. autofunction:: get_local_ordinal
-.. autofunction:: is_master_ordinal
-.. autofunction:: xrt_world_size
-.. autofunction:: all_reduce
-.. autofunction:: all_gather
-.. autofunction:: all_to_all
-.. autofunction:: add_step_closure
-.. autofunction:: wait_device_ops
-.. autofunction:: optimizer_step
-.. autofunction:: save
-.. autofunction:: rendezvous
-.. autofunction:: do_on_ordinals
-.. autofunction:: mesh_reduce
-.. autofunction:: set_rng_state
-.. autofunction:: get_rng_state
-.. autofunction:: get_memory_info
++------------------------------------------------+------------------------------------------------+------------------------------------------------+
+| **Familiar APIs**                              | **High Performance**                           | **Cost Efficient**                             |
+|                                                |                                                |                                                |
+| Create and train PyTorch models on TPUs,       | Scale training jobs across thousands of        | TPU hardware and the XLA compiler are optimized|
+| with only minimal changes required.            | TPU cores while maintaining high MFU.          | for cost-efficient training and inference.     |
++------------------------------------------------+------------------------------------------------+------------------------------------------------+
 
-.. automodule:: torch_xla.core.functions
-.. autofunction:: all_reduce
-.. autofunction:: all_gather
-.. autofunction:: nms
-		
-distributed
-----------------------------------
+Getting Started
+---------------
 
-.. automodule:: torch_xla.distributed.parallel_loader
-.. autoclass:: ParallelLoader
-	       :members: per_device_loader
+Install with pip.
 
-.. automodule:: torch_xla.distributed.xla_multiprocessing
-.. autofunction:: spawn
-.. autoclass:: MpModelWrapper
-	       :members: to
-.. autoclass:: MpSerialExecutor
-	       :members: run
+.. code-block:: sh
 
-utils
-----------------------------------
+   pip install torch torch_xla[tpu]
 
-.. automodule:: torch_xla.utils.metrics
-.. autofunction:: counter_names
-.. autofunction:: counter_value
-.. autofunction:: metric_names
-.. autofunction:: metric_data
-.. autofunction:: metrics_report
-  
-.. automodule:: torch_xla.utils.tf_record_reader
-.. autoclass:: TfRecordReader
+Verify the installation:
 
-.. automodule:: torch_xla.utils.utils
-.. autoclass:: SampleGenerator
-.. autoclass:: DataWrapper
+.. code-block:: sh
 
-.. automodule:: torch_xla.utils.serialization
-.. autofunction:: save
-.. autofunction:: load
+   python -c "import torch_xla; print(torch_xla.__version__)"
+   python -c "import torch; import torch_xla; print(torch.tensor(1.0, device='xla').device)"
 
-.. automodule:: torch_xla.utils.gcsfs
-.. autofunction:: open
-.. autofunction:: list
-.. autofunction:: stat
-.. autofunction:: remove
-.. autofunction:: rmtree
-.. autofunction:: read
-.. autofunction:: write
-.. autofunction:: generic_open
-.. autofunction:: generic_read
-.. autofunction:: generic_write
-.. autofunction:: is_gcs_path
+Tutorials
+---------
 
-.. automodule:: torch_xla.utils.cached_dataset
-.. autoclass:: CachedDataset
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Learn the Basics
 
+   learn/pytorch-on-xla-devices
+   learn/xla-overview
+   learn/xla-quickstart
 
-test
-----------------------------------
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Distributed Training on TPU
 
-.. automodule:: torch_xla.utils.test_utils
-.. autofunction:: mp_test
-.. autofunction:: write_to_summary
-.. autofunction:: close_summary_writer
-.. autofunction:: get_summary_writer
-.. autofunction:: print_training_update
-.. autofunction:: print_test_update
+   accelerators/tpu
+   learn/migration-to-xla-on-tpus
+   tutorials/precision_tutorial
+   perf/spmd_basic
+   perf/spmd_advanced
+   perf/spmd_distributed_checkpoint
+   features/torch_distributed
+   perf/ddp
+   perf/fsdp_collectives
+   perf/fsdp_spmd
 
-.. mdinclude:: ../../OP_LOWERING_GUIDE.md
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Advanced Techniques
+
+   features/pallas
+   features/stablehlo
+   perf/amp
+   learn/dynamic_shape
+   perf/dynamo
+   perf/quantized_ops
+   features/scan
+   perf/fori_loop
+   perf/assume_pure
+
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Troubleshooting
+
+   learn/eager
+   learn/trace-vs-execution-time
+   learn/troubleshoot
+   notes/source_of_recompilation
+   perf/recompilation
+
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Training on GPU
+
+   accelerators/gpu
+   perf/spmd_gpu
+
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Contributing
+
+   contribute/bazel
+   contribute/configure-environment
+   contribute/cpp_debugger
+   contribute/op_lowering
+   contribute/codegen_migration
+   contribute/plugins
+
+API Reference
+-------------
+
+.. toctree::
+   :glob:
+   :maxdepth: 2
+
+   learn/api-guide

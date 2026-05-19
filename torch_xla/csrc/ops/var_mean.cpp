@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/var_mean.h"
 
 #include "absl/strings/str_join.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -11,8 +12,8 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
-                           std::vector<int64_t>& dimensions, int64_t correction,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           std::vector<int64_t>& dimensions, double correction,
                            bool keep_reduced_dimensions) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -22,13 +23,14 @@ xla::Shape NodeOutputShape(const XlaValue& input,
         BuildMean(operands[0], dimensions, keep_reduced_dimensions);
     return xla::Tuple(operands[0].builder(), {var, mean});
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-VarMean::VarMean(const XlaValue& input, std::vector<int64_t> dimensions,
-                 int64_t correction, bool keep_reduced_dimensions)
+VarMean::VarMean(const torch::lazy::Value& input,
+                 std::vector<int64_t> dimensions, double correction,
+                 bool keep_reduced_dimensions)
     : XlaNode(
           torch::lazy::OpKind(at::aten::var_mean), {input},
           [&]() {
@@ -41,9 +43,9 @@ VarMean::VarMean(const XlaValue& input, std::vector<int64_t> dimensions,
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
-torch::lazy::NodePtr VarMean::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<VarMean>(operands.at(0), dimensions_,
-                                        correction_, keep_reduced_dimensions_);
+torch::lazy::NodePtr VarMean::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<VarMean>(operands.at(0), dimensions_, correction_,
+                                      keep_reduced_dimensions_);
 }
 
 XlaOpVector VarMean::Lower(LoweringContext* loctx) const {

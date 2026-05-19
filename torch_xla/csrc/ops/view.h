@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_VIEW_H_
+#define XLA_TORCH_XLA_CSRC_OPS_VIEW_H_
 
 #include <vector>
 
@@ -8,7 +9,8 @@ namespace torch_xla {
 
 class ViewOp : public XlaNode {
  public:
-  ViewOp(const XlaValue& input, std::vector<int64_t> output_size);
+  ViewOp(const torch::lazy::Value& input, std::vector<int64_t> output_size);
+  ViewOp(const torch::lazy::Value& input, xla::Shape output_shape);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -21,3 +23,5 @@ class ViewOp : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_VIEW_H_

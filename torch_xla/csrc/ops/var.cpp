@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/var.h"
 
 #include "absl/strings/str_join.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -11,21 +12,21 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
-                           std::vector<int64_t>& dimensions, int64_t correction,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           std::vector<int64_t>& dimensions, double correction,
                            bool keep_reduced_dimensions) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildVar(operands[0], dimensions, correction,
                     keep_reduced_dimensions);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Var::Var(const XlaValue& input, std::vector<int64_t> dimensions,
-         int64_t correction, bool keep_reduced_dimensions)
+Var::Var(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
+         double correction, bool keep_reduced_dimensions)
     : XlaNode(
           torch::lazy::OpKind(at::aten::var), {input},
           NodeOutputShape(input, dimensions, correction,
@@ -36,9 +37,9 @@ Var::Var(const XlaValue& input, std::vector<int64_t> dimensions,
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
-torch::lazy::NodePtr Var::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Var>(operands.at(0), dimensions_, correction_,
-                                    keep_reduced_dimensions_);
+torch::lazy::NodePtr Var::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Var>(operands.at(0), dimensions_, correction_,
+                                  keep_reduced_dimensions_);
 }
 
 XlaOpVector Var::Lower(LoweringContext* loctx) const {

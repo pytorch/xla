@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_SCATTER_H_
+#define XLA_TORCH_XLA_CSRC_OPS_SCATTER_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,12 +7,12 @@ namespace torch_xla {
 
 class Scatter : public XlaNode {
  public:
-  Scatter(const XlaValue& input, const XlaValue& index, const XlaValue& src,
-          int64_t dim);
+  Scatter(const torch::lazy::Value& input, const torch::lazy::Value& index,
+          const torch::lazy::Value& src, int64_t dim);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -22,3 +23,5 @@ class Scatter : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_SCATTER_H_

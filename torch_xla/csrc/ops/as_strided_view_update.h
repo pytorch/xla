@@ -1,21 +1,24 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_VIEW_UPDATE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_VIEW_UPDATE_H_
 
 #include <vector>
 
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
+
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 
 class AsStridedViewUpdate : public XlaNode {
  public:
-  AsStridedViewUpdate(const XlaValue& target, const XlaValue& input,
+  AsStridedViewUpdate(const torch::lazy::Value& target,
+                      const torch::lazy::Value& input,
                       std::vector<int64_t> size, std::vector<int64_t> stride,
                       int64_t storage_offset);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -32,3 +35,5 @@ class AsStridedViewUpdate : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_VIEW_UPDATE_H_

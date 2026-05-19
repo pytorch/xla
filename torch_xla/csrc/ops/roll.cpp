@@ -4,15 +4,15 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 namespace torch_xla {
 
-Roll::Roll(const XlaValue& input, std::vector<int64_t> shifts,
+Roll::Roll(const torch::lazy::Value& input, std::vector<int64_t> shifts,
            std::vector<int64_t> dims)
-    : XlaNode(torch::lazy::OpKind(at::aten::roll), {input}, input.xla_shape(),
+    : XlaNode(torch::lazy::OpKind(at::aten::roll), {input}, GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(shifts, dims)),
       shifts_(std::move(shifts)),
       dims_(std::move(dims)) {}
 
-torch::lazy::NodePtr Roll::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Roll>(operands.at(0), shifts_, dims_);
+torch::lazy::NodePtr Roll::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Roll>(operands.at(0), shifts_, dims_);
 }
 
 XlaOpVector Roll::Lower(LoweringContext* loctx) const {

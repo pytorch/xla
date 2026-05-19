@@ -1,12 +1,52 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TORCH_UTIL_H_
+#define XLA_TORCH_XLA_CSRC_TORCH_UTIL_H_
+
+#include <optional>
 
 #include <ATen/ATen.h>
+#include <ATen/FunctionalTensorWrapper.h>
 #include <c10/core/ScalarType.h>
-#include <c10/util/Optional.h>
+#include <torch/csrc/lazy/core/dynamic_ir.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/tensor.h>
+#include <torch/csrc/lazy/core/util.h>
 
-#include "tensorflow/compiler/xla/shape.h"
-#include "torch/csrc/lazy/core/hash.h"
+#include "xla/shape.h"
+
+#include "torch_xla/csrc/runtime/debug_macros.h"
+
 namespace torch_xla {
+
+// Unpack SymInt objects into their building blocks
+struct SymIntElements {
+ public:
+  SymIntElements(c10::SymInt& size) { AddSymIntNodeElements(size); }
+  SymIntElements(c10::SymIntArrayRef& size) {
+    std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
+    for (auto& _size : _sizes) {
+      AddSymIntNodeElements(_size);
+    }
+  }
+  SymIntElements(torch::lazy::Value ir);
+  std::vector<torch::lazy::NodePtr> GetSizeNodes() const { return size_nodes_; }
+  std::vector<int64_t> GetUpperBounds() const { return upper_bounds_; }
+  std::vector<bool> GetDynamicDims() const { return dynamic_dims_; }
+  torch::lazy::NodePtr GetSizeNode(size_t index) const {
+    return size_nodes_[index];
+  }
+  void SetUpperBound(int64_t index, int64_t upper_bound) {
+    XLA_CHECK_GT(upper_bounds_.size(), index);
+    upper_bounds_[index] = upper_bound;
+  }
+
+ private:
+  void AddSymIntNodeElements(c10::SymInt& size);
+  // Only the symbolic symint will have a size_nodes, static symint
+  // will have a nullptr in this vector.
+  std::vector<torch::lazy::NodePtr> size_nodes_;
+  std::vector<int64_t> upper_bounds_;
+  std::vector<bool> dynamic_dims_;
+};
 
 // Return at::ScalarType from at::Scalar
 at::ScalarType GetScalarType(const at::Scalar& scalar);
@@ -24,8 +64,13 @@ at::Scalar MakeFloatScalar(T value) {
 // Unwraps tensor to target dtype if it's a wrapped number.
 at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype);
 
-// Checks whether a c10::optional<Tensor> is defined.
-inline bool IsDefined(const c10::optional<at::Tensor>& tensor) {
+// Wraps tensor to functional tensor if XLA_DISABLE_FUNCTIONALIZATION is false
+// or not set. For unwrapping, `torch::lazy::maybe_unwrap_functional()` will
+// only unwrap tensors that are functional. So, nothing needs to be done there.
+at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor);
+
+// Checks whether a std::optional<Tensor> is defined.
+inline bool IsDefined(const std::optional<at::Tensor>& tensor) {
   return tensor.has_value() && tensor.value().defined();
 }
 
@@ -50,3 +95,5 @@ hash_t MHash(absl::Span<const T> value, Targs... Fargs) {
 
 }  // namespace lazy
 }  // namespace torch
+
+#endif  // XLA_TORCH_XLA_CSRC_TORCH_UTIL_H_

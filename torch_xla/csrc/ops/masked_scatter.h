@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_MASKED_SCATTER_H_
+#define XLA_TORCH_XLA_CSRC_OPS_MASKED_SCATTER_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -9,12 +10,14 @@ namespace torch_xla {
 // it gets its own IR node class.
 class MaskedScatter : public XlaNode {
  public:
-  MaskedScatter(const XlaValue& input, const XlaValue& mask,
-                const XlaValue& source);
+  MaskedScatter(const torch::lazy::Value& input, const torch::lazy::Value& mask,
+                const torch::lazy::Value& source);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_MASKED_SCATTER_H_

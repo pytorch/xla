@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/std.h"
 
 #include "absl/strings/str_join.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
@@ -8,21 +9,21 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            std::vector<int64_t>& dimensions,
-                           bool keep_reduced_dimensions, int64_t correction) {
+                           bool keep_reduced_dimensions, double correction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildStdDeviation(operands[0], dimensions, keep_reduced_dimensions,
                              correction);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Std::Std(const XlaValue& input, std::vector<int64_t> dimensions,
-         bool keep_reduced_dimensions, int64_t correction)
+Std::Std(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
+         bool keep_reduced_dimensions, double correction)
     : XlaNode(
           torch::lazy::OpKind(at::aten::std), {input},
           [&]() {
@@ -35,9 +36,9 @@ Std::Std(const XlaValue& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions),
       correction_(correction) {}
 
-torch::lazy::NodePtr Std::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Std>(operands.at(0), dimensions_,
-                                    keep_reduced_dimensions_, correction_);
+torch::lazy::NodePtr Std::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Std>(operands.at(0), dimensions_,
+                                  keep_reduced_dimensions_, correction_);
 }
 
 XlaOpVector Std::Lower(LoweringContext* loctx) const {

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_INDEX_GET_H_
+#define XLA_TORCH_XLA_CSRC_OPS_INDEX_GET_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,11 +7,12 @@ namespace torch_xla {
 
 class IndexGet : public XlaNode {
  public:
-  IndexGet(const XlaValue& base, const XlaValue& indices, int64_t start_dim);
+  IndexGet(const torch::lazy::Value& base, const torch::lazy::Value& indices,
+           int64_t start_dim);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -22,3 +24,5 @@ class IndexGet : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_INDEX_GET_H_

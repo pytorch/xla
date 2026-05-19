@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  generateName: xla-test-job-
+  labels:
+    tpu: v2-8
+spec:
+  affinity:
+    # Prevent multiple pods from scheduling on the same host
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: tpu
+            operator: In
+            values:
+            - v2-8
+        topologyKey: "kubernetes.io/hostname"
+    # Only schedule on v2-8 TPUs
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: tpu.googleapis.com/type
+            operator: In
+            values:
+            - v2-8
+  restartPolicy: Never
+  volumes:
+  # Increase size of tmpfs /dev/shm to avoid OOM.
+  - name: dshm
+    emptyDir:
+      medium: Memory
+  activeDeadlineSeconds: 7200 # 2 hours
+  containers:
+  - name: xla-test
+    securityContext:
+      privileged: true
+    image: $IMAGE
+    command:
+    - bash
+    - -cxe
+    - |
+      pip install expecttest==0.1.6
+      pip install rich
+      pip install --pre torch_xla[pallas] --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
+
+      cd /src/pytorch/xla
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: dshm
+    env:
+    - name: PJRT_DEVICE
+      value: TPU

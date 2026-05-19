@@ -1,6 +1,3 @@
-from __future__ import division
-from __future__ import print_function
-
 import os
 import shutil
 
@@ -28,7 +25,7 @@ def _rewrite_data(path, data, save_tensors):
 
   def convert_fn(tensors):
     torch_xla._XLAC._xla_sync_multi(
-        tensors, devices=[], wait=True, sync_xla_data=True)
+        tensors, devices=[], wait=True, sync_xla_data=False)
     rewritten_tensors = []
     for i, t in enumerate(tensors):
       if save_tensors:
@@ -39,9 +36,10 @@ def _rewrite_data(path, data, save_tensors):
   def select_fn(v):
     return type(v) == torch.Tensor and xm.is_xla_tensor(v)
 
-  if os.path.isdir(path):
-    shutil.rmtree(path)
-  os.mkdir(path)
+  if save_tensors:
+    if os.path.isdir(path):
+      shutil.rmtree(path)
+    os.mkdir(path)
   return xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
@@ -76,7 +74,6 @@ def save(data, path, master_only=True, global_master=False):
   ref_data = _rewrite_data(_get_tensors_folder(path), data, should_write_data)
   if should_write_data:
     torch.save(ref_data, path)
-  xm.rendezvous('torch_xla.utils.serialization.save')
 
 
 def load(path):
@@ -87,7 +84,7 @@ def load(path):
   Returns:
     The loaded data.
   """
-  ref_data = torch.load(path)
+  ref_data = torch.load(path, weights_only=False)
   tensor_folder = _get_tensors_folder(path)
 
   def convert_fn(tensors):

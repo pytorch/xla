@@ -1,4 +1,14 @@
 import args_parse
+from torch_xla import runtime as xr
+
+MODEL_OPTS = {
+    '--ddp': {
+        'action': 'store_true',
+    },
+    '--pjrt_distributed': {
+        'action': 'store_true',
+    },
+}
 
 FLAGS = args_parse.parse_common_options(
     datadir='/tmp/mnist-data',
@@ -6,7 +16,9 @@ FLAGS = args_parse.parse_common_options(
     momentum=0.5,
     lr=0.01,
     target_accuracy=98.0,
-    num_epochs=18)
+    num_epochs=18,
+    opts=MODEL_OPTS.items(),
+)
 
 import os
 import shutil
@@ -22,8 +34,11 @@ import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch_xla.distributed.xla_backend
 
 
 class MNIST(nn.Module):
@@ -48,17 +63,21 @@ class MNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
-def _train_update(device, x, loss, tracker, writer):
+def _train_update(device, step, loss, tracker, epoch, writer):
   test_utils.print_training_update(
       device,
-      x,
+      step,
       loss.item(),
       tracker.rate(),
       tracker.global_rate(),
+      epoch,
       summary_writer=writer)
 
 
 def train_mnist(flags, **kwargs):
+  if flags.ddp or flags.pjrt_distributed:
+    dist.init_process_group('xla', init_method='xla://')
+
   torch.manual_seed(1)
 
   if flags.fake_data:
@@ -66,33 +85,33 @@ def train_mnist(flags, **kwargs):
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=60000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=60000 // flags.batch_size // xr.world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=10000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=10000 // flags.batch_size // xr.world_size())
   else:
     train_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(xm.get_ordinal())),
+        os.path.join(flags.datadir, str(xr.global_ordinal())),
         train=True,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(xm.get_ordinal())),
+        os.path.join(flags.datadir, str(xr.global_ordinal())),
         train=False,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     train_sampler = None
-    if xm.xrt_world_size() > 1:
+    if xr.world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
+          num_replicas=xr.world_size(),
+          rank=xr.global_ordinal(),
           shuffle=True)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -109,17 +128,24 @@ def train_mnist(flags, **kwargs):
         num_workers=flags.num_workers)
 
   # Scale learning rate to num cores
-  lr = flags.lr * xm.xrt_world_size()
+  lr = flags.lr * xr.world_size()
 
-  device = xm.xla_device()
+  device = torch_xla.device()
   model = MNIST().to(device)
+
+  # Initialization is nondeterministic with multiple threads in PjRt.
+  # Synchronize model parameters across replicas manually.
+  xm.broadcast_master_param(model)
+
+  if flags.ddp:
+    model = DDP(model, gradient_as_bucket_view=True)
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
 
-  def train_loop_fn(loader):
+  def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
@@ -127,13 +153,16 @@ def train_mnist(flags, **kwargs):
       output = model(data)
       loss = loss_fn(output, target)
       loss.backward()
-      xm.optimizer_step(optimizer)
+      if flags.ddp:
+        optimizer.step()
+      else:
+        xm.optimizer_step(optimizer)
       tracker.add(flags.batch_size)
       if step % flags.log_steps == 0:
         xm.add_step_closure(
             _train_update,
-            args=(device, step, loss, tracker, writer),
-            run_async=FLAGS.async_closures)
+            args=(device, step, loss, tracker, epoch, writer),
+            run_async=flags.async_closures)
 
   def test_loop_fn(loader):
     total_samples = 0
@@ -154,7 +183,7 @@ def train_mnist(flags, **kwargs):
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, flags.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    train_loop_fn(train_device_loader)
+    train_loop_fn(train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
 
     accuracy = test_loop_fn(test_device_loader)
@@ -175,7 +204,7 @@ def train_mnist(flags, **kwargs):
 
 
 def _mp_fn(index, flags):
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_mnist(flags)
   if flags.tidy and os.path.isdir(flags.datadir):
     shutil.rmtree(flags.datadir)
@@ -186,4 +215,6 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
+  debug_single_process = FLAGS.num_cores == 1
+  torch_xla.launch(
+      _mp_fn, args=(FLAGS,), debug_single_process=debug_single_process)

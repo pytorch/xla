@@ -1,6 +1,8 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_NLL_LOSS_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_NLL_LOSS_BACKWARD_H_
 
 #include "absl/types/optional.h"
+
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/reduction.h"
 
@@ -8,15 +10,16 @@ namespace torch_xla {
 
 class NllLossBackward : public XlaNode {
  public:
-  NllLossBackward(const XlaValue& grad_output, const XlaValue& logits,
-                  const XlaValue& labels,
-                  const absl::optional<XlaValue>& weight,
-                  const absl::optional<XlaValue>& total_weight,
+  NllLossBackward(const torch::lazy::Value& grad_output,
+                  const torch::lazy::Value& logits,
+                  const torch::lazy::Value& labels,
+                  const absl::optional<torch::lazy::Value>& weight,
+                  const absl::optional<torch::lazy::Value>& total_weight,
                   ReductionMode reduction, int ignore_index);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -30,3 +33,5 @@ class NllLossBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_NLL_LOSS_BACKWARD_H_

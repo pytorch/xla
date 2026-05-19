@@ -4,19 +4,25 @@
 #include <functional>
 #include <numeric>
 
+#include <torch/csrc/lazy/core/tensor_util.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/slicing.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "torch/csrc/lazy/core/tensor_util.h"
-#include "torch/csrc/lazy/core/util.h"
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/lib/slicing.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
+
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/reduction.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -24,24 +30,34 @@ namespace {
 
 bool IsSparseGather(const xla::Shape& input_shape,
                     const xla::Shape& index_shape, int64_t dim) {
-  static int dense_gather_factor =
-      xla::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 100);
-  int64_t input_elements = xla::ShapeUtil::ElementsIn(input_shape);
-  int64_t index_elements = xla::ShapeUtil::ElementsIn(index_shape);
-  // Simple heuristic. Might need fine tuning.
-  return index_elements < input_elements / dense_gather_factor;
+  // Conservative sparsity check for multi-platform support
+  // to avoid gather on a single float on TPU.
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
+  if (CheckTpuDevice(hw_type) || CheckNeuronDevice(hw_type)) {
+    // XLA_DENSE_GATHER_FACTOR can be used to finely control the
+    // sparsity check.
+    static int dense_gather_factor =
+        runtime::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 8192);
+    int64_t input_elements = input_shape.dimensions()[dim];
+    // Use a very conservative check so that we run dense gather
+    // most of the time on TPU.
+    return input_elements > dense_gather_factor * 10;
+  }
+  // Use sparse gather for non-TPU platforms.
+  return true;
 }
 
 }  // namespace
 
 bool IsSparseGather(xla::XlaOp input, xla::XlaOp index, int64_t dim) {
-  return IsSparseGather(XlaHelpers::ShapeOfXlaOp(input),
-                        XlaHelpers::ShapeOfXlaOp(index), dim);
+  return IsSparseGather(ShapeHelper::ShapeOfXlaOp(input),
+                        ShapeHelper::ShapeOfXlaOp(index), dim);
 }
 
 std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
                                       absl::Span<const int64_t> input_sizes) {
-  c10::optional<size_t> incomplete_dim;
+  std::optional<size_t> incomplete_dim;
   int64_t incomplete_element_count = 1;
   for (size_t dim = 0; dim < output_sizes.size(); ++dim) {
     int64_t dim_size = output_sizes[dim];
@@ -54,10 +70,10 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
       incomplete_element_count *= dim_size;
     }
   }
-  int64_t total_element_count = xla::util::Multiply<int64_t>(input_sizes);
+  int64_t total_element_count = runtime::util::Multiply<int64_t>(input_sizes);
   if (!incomplete_dim) {
     XLA_CHECK_EQ(total_element_count,
-                 xla::util::Multiply<int64_t>(output_sizes))
+                 runtime::util::Multiply<int64_t>(output_sizes))
         << "(" << absl::StrJoin(output_sizes, ", ") << ") vs. ("
         << absl::StrJoin(input_sizes, ", ") << ")";
     return torch::lazy::ToVector<int64_t>(output_sizes);
@@ -77,15 +93,79 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
 }
 
 xla::XlaOp BuildView(xla::XlaOp input, absl::Span<const int64_t> output_sizes) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   const auto complete_output_sizes =
       GetCompleteShape(output_sizes, input_shape.dimensions());
   return XlaHelpers::DynamicReshape(input, complete_output_sizes);
 }
 
+xla::XlaOp BuildUnboundedDynamicView(
+    xla::XlaOp input, const xla::Shape& input_shape,
+    const absl::Span<const int64_t>& output_sizes) {
+  // Only Support BS is dynamic now.
+  const absl::Span<const int64_t> input_dims = input_shape.dimensions();
+  XLA_CHECK(std::count(input_dims.cbegin(), input_dims.cend(),
+                       xla::Shape::kUnboundedSize) == 1 &&
+            input_shape.is_unbounded_dynamic_dimension(0))
+      << "Only BS of the input to view op can be unbounded dynamic.";
+
+  XLA_CHECK(std::accumulate(input_dims.cbegin() + 1, input_dims.cend(), 1,
+                            std::multiplies<int64_t>()) ==
+            std::accumulate(output_sizes.cbegin() + 1, output_sizes.cend(), 1,
+                            std::multiplies<int64_t>()))
+      << "Dimensions of view input and output don't match.";
+
+  const int src_index = 0;
+  const int target_index = 0;
+  xla::XlaOp dynamic_dim =
+      xla::Reshape(xla::GetDimensionSize(input, src_index), {1});
+
+  std::vector<xla::XlaOp> concat_ops;
+  concat_ops.push_back(dynamic_dim);
+  std::vector<int32_t> static_input_dims_vec(output_sizes.begin() + 1,
+                                             output_sizes.end());
+  concat_ops.push_back(xla::ConstantR1(
+      input.builder(), absl::Span<const int32_t>(static_input_dims_vec)));
+  xla::XlaOp final_broadcast_dimensions =
+      xla::ConcatInDim(input.builder(), absl::Span<xla::XlaOp>(concat_ops), 0);
+
+  // Final shape
+  std::vector<int64_t> output_sizes_vec(output_sizes.begin(),
+                                        output_sizes.end());
+  output_sizes_vec[target_index] = xla::Shape::kUnboundedSize;
+  std::vector<bool> output_dynamic(output_sizes_vec.size(), false);
+  output_dynamic[target_index] = true;
+  xla::Shape final_shape = xla::ShapeUtil::MakeShape(
+      input_shape.element_type(), output_sizes_vec, output_dynamic);
+
+  xla::XlaOp result =
+      xla::CustomCall(input.builder(), "mhlo.dynamic_reshape",
+                      {input, final_broadcast_dimensions}, final_shape);
+  return result;
+}
+
+xla::XlaOp SetDimensionSizes(xla::XlaOp input,
+                             absl::Span<const xla::XlaOp> symbolic_output_sizes,
+                             std::vector<bool> dynamic_dims) {
+  size_t current_output_size_index = 0;
+  size_t symbolic_output_sizes_len = symbolic_output_sizes.size();
+  for (size_t i = 0; i < dynamic_dims.size(); i++) {
+    if (dynamic_dims[i]) {
+      // Dimension i is dynamic
+      XLA_CHECK_LT(current_output_size_index, symbolic_output_sizes_len);
+      input = xla::SetDimensionSize(
+          input, symbolic_output_sizes[current_output_size_index++], i);
+    }
+  }
+  // Number of symbolic_output_sizes should equal to number of dynamic
+  // dimensions.
+  XLA_CHECK_EQ(current_output_size_index, symbolic_output_sizes_len);
+  return input;
+}
+
 xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, int64_t dim) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  XLA_CHECK_LT(dim, input_shape.rank());
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  XLA_CHECK_LT(dim, input_shape.dimensions_size());
   if (input_shape.dimensions(dim) != 1) {
     return input;
   }
@@ -94,7 +174,7 @@ xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, int64_t dim) {
 }
 
 xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   auto output_sizes =
       BuildSqueezedDimensions(input_shape.dimensions(), /*squeeze_dim=*/-1);
   return XlaHelpers::DynamicReshape(input, output_sizes);
@@ -112,14 +192,55 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
                              torch::lazy::Iota<int64_t>(output_sizes.size()));
 }
 
+xla::XlaOp BuildMaskedFillScalar(xla::XlaOp input, xla::XlaOp mask,
+                                 xla::XlaOp scalar) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  const xla::Shape& mask_shape = ShapeHelper::ShapeOfXlaOp(mask);
+
+  if (!xla::ShapeUtil::Compatible(input_shape, mask_shape)) {
+    XLA_ASSIGN_OR_THROW(xla::Shape shape,
+                        XlaHelpers::GetPromotedShape(input_shape, mask_shape));
+    input = BuildExpand(input, shape.dimensions());
+    mask = BuildExpand(mask, shape.dimensions());
+  }
+
+  xla::XlaOp zero = xla::Zero(mask.builder(), XlaHelpers::TypeOfXlaOp(mask));
+  xla::XlaOp mask_pred = xla::Ne(mask, zero);
+  xla::XlaOp update_scalar =
+      ConvertTo(scalar, ShapeHelper::ShapeOfXlaOp(scalar).element_type(),
+                ShapeHelper::ShapeOfXlaOp(input).element_type());
+  return xla::Select(mask_pred, update_scalar, input);
+}
+
 std::vector<int64_t> BuildSqueezedDimensions(
     absl::Span<const int64_t> dimensions, int64_t squeeze_dim) {
+  std::vector<int64_t> squeeze_dims({squeeze_dim});
+  return BuildSqueezedDimensions(dimensions, squeeze_dims);
+}
+
+std::vector<int64_t> BuildSqueezedDimensions(
+    absl::Span<const int64_t> dimensions, std::vector<int64_t>& squeeze_dims) {
+  std::sort(squeeze_dims.begin(), squeeze_dims.end());
   std::vector<int64_t> output_dimensions;
-  for (int64_t i = 0; i < dimensions.size(); ++i) {
-    int64_t dim = dimensions[i];
-    if (dim != 1 || (i != squeeze_dim && squeeze_dim >= 0)) {
+  size_t i = 0;
+  for (size_t j = 0; j < dimensions.size(); j++) {
+    auto dim = dimensions[j];
+    if (squeeze_dims.size() == 1 && squeeze_dims[0] == -1) {
+      // Special case where squeeze_dims = {-1}.
+      if (dim != 1) {
+        output_dimensions.push_back(dim);
+      }
+      continue;
+    }
+    if (i == squeeze_dims.size() || j < squeeze_dims[i]) {
+      output_dimensions.push_back(dim);
+      continue;
+    }
+    // Checks to see if we need to squeeze the dim or not.
+    if (dim != 1) {
       output_dimensions.push_back(dim);
     }
+    i++;
   }
   return output_dimensions;
 }
@@ -143,17 +264,25 @@ xla::XlaOp BuildStack(absl::Span<const xla::XlaOp> inputs, int64_t dim) {
   XLA_CHECK_GT(inputs.size(), 0);
   std::vector<xla::XlaOp> reshaped_inputs;
   for (size_t i = 0; i < inputs.size(); ++i) {
-    auto input_size = XlaHelpers::SizesOfXlaOp(inputs[i]);
-    input_size.insert(input_size.begin() + dim, 1);
-    reshaped_inputs.push_back(
-        XlaHelpers::DynamicReshape(inputs[i], input_size));
+    const xla::XlaOp& input = inputs[i];
+    const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(inputs[i]);
+    const std::vector<int64_t> input_sizes =
+        XlaHelpers::SizesOfXlaOp(inputs[i]);
+    std::vector<int64_t> output_sizes = input_sizes;
+    output_sizes.insert(output_sizes.begin() + dim, 1);
+    reshaped_inputs.push_back(XlaHelpers::DynamicReshape(input, output_sizes));
   }
   return xla::ConcatInDim(inputs[0].builder(), reshaped_inputs, dim);
 }
 
-xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, int64_t dim) {
+xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, int64_t dim,
+                    at::ScalarType dtype) {
   XLA_CHECK_GT(inputs.size(), 0);
-  return xla::ConcatInDim(inputs[0].builder(), inputs, dim);
+  std::vector<xla::XlaOp> casted_inputs;
+  for (const auto& op : inputs) {
+    casted_inputs.push_back(CastToScalarType(op, dtype));
+  }
+  return xla::ConcatInDim(inputs[0].builder(), casted_inputs, dim);
 }
 
 xla::XlaOp BuildRepeat(xla::XlaOp input, absl::Span<const int64_t> repeats) {
@@ -208,15 +337,15 @@ std::vector<xla::XlaOp> BuildSplit(xla::XlaOp input,
 
 xla::XlaOp BuildUpdateSlice(xla::XlaOp input, xla::XlaOp source,
                             absl::Span<const int64_t> base_indices) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const xla::Shape& source_shape = XlaHelpers::ShapeOfXlaOp(source);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  const xla::Shape& source_shape = ShapeHelper::ShapeOfXlaOp(source);
   xla::XlaOp update_source = source;
   if (source_shape.element_type() != input_shape.element_type()) {
     update_source = ConvertTo(source, source_shape.element_type(),
-                              input_shape.element_type(), /*device=*/nullptr);
+                              input_shape.element_type());
   }
   xla::XlaOp reshaped_source =
-      XlaHelpers::ReshapeToRank(update_source, input_shape.rank());
+      XlaHelpers::ReshapeToRank(update_source, input_shape.dimensions_size());
   std::vector<xla::XlaOp> start_indices;
   for (auto index : base_indices) {
     start_indices.push_back(
@@ -236,7 +365,7 @@ xla::XlaOp BuildSlice(xla::XlaOp input, absl::Span<const int64_t> base_indices,
 }
 
 xla::XlaOp BoundIndices(xla::XlaOp index, xla::XlaOp max_index) {
-  const xla::Shape& index_shape = XlaHelpers::ShapeOfXlaOp(index);
+  const xla::Shape& index_shape = ShapeHelper::ShapeOfXlaOp(index);
   return xla::Select(
       xla::Ge(index, xla::Zero(index.builder(), index_shape.element_type())),
       index, index + max_index);
@@ -262,7 +391,7 @@ xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const int64_t> size) {
   xla::Shape input_shape;
   xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
   int64_t num_elements = xla::ShapeUtil::ElementsIn(input_shape);
-  int64_t new_num_elements = xla::util::Multiply<int64_t>(size);
+  int64_t new_num_elements = runtime::util::Multiply<int64_t>(size);
   xla::XlaOp resized_input = input;
   if (num_elements > new_num_elements) {
     resized_input = xla::SliceInDim(r1_input, 0, new_num_elements, 1, 0);
@@ -280,8 +409,8 @@ xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const int64_t> size) {
 
 xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, int64_t dim,
                          int64_t start, int64_t end, int64_t stride) {
-  const xla::Shape& target_shape = XlaHelpers::ShapeOfXlaOp(target);
-  const xla::Shape& source_shape = XlaHelpers::ShapeOfXlaOp(source);
+  const xla::Shape& target_shape = ShapeHelper::ShapeOfXlaOp(target);
+  const xla::Shape& source_shape = ShapeHelper::ShapeOfXlaOp(source);
   if (target_shape.dimensions(dim) == source_shape.dimensions(dim)) {
     // Shortcut for unselects which are fully covering selects.
     XLA_CHECK_EQ(start, 0);
@@ -291,13 +420,13 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, int64_t dim,
   }
 
   xla::PrimitiveType pred_type =
-      GetDevicePrimitiveType(xla::PrimitiveType::PRED, /*device=*/nullptr);
+      GetXlaPrimitiveTypeForCurrentDevice(xla::PrimitiveType::PRED);
   xla::XlaOp source_true = XlaHelpers::ScalarBroadcast(
       1, pred_type, source_shape.dimensions(), source.builder());
   xla::XlaOp pred_zero = xla::Zero(target.builder(), pred_type);
   xla::XlaOp zero = xla::Zero(target.builder(), target_shape.element_type());
   xla::PaddingConfig padding_config;
-  for (int64_t i = 0; i < target_shape.rank(); ++i) {
+  for (int64_t i = 0; i < target_shape.dimensions_size(); ++i) {
     auto* dims = padding_config.add_dimensions();
     if (i == dim) {
       dims->set_edge_padding_low(start);
@@ -321,12 +450,12 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, int64_t dim,
 
 xla::XlaOp BuildReflectionPad2d(xla::XlaOp input,
                                 absl::Span<const int64_t> padding) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  XLA_CHECK_GE(2 * input_shape.rank(), padding.size());
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  XLA_CHECK_GE(2 * input_shape.dimensions_size(), padding.size());
   XLA_CHECK_EQ(padding.size() % 2, 0) << "Uneven padding: " << padding.size();
   xla::XlaOp result = input;
   for (size_t i = 0; i < padding.size(); i += 2) {
-    int64_t dim = input_shape.rank() - 1 - i / 2;
+    int64_t dim = input_shape.dimensions_size() - 1 - i / 2;
     int64_t dim_size = input_shape.dimensions(dim);
     int64_t lhs_padding = padding[i];
     int64_t rhs_padding = padding[i + 1];
@@ -345,14 +474,14 @@ xla::XlaOp BuildReflectionPad2d(xla::XlaOp input,
 
 xla::XlaOp BuildReflectionPadBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                       absl::Span<const int64_t> padding) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const xla::Shape& grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
-  XLA_CHECK_GE(2 * grad_output_shape.rank(), padding.size());
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  const xla::Shape& grad_output_shape = ShapeHelper::ShapeOfXlaOp(grad_output);
+  XLA_CHECK_GE(2 * grad_output_shape.dimensions_size(), padding.size());
   XLA_CHECK_EQ(padding.size() % 2, 0) << "Uneven padding: " << padding.size();
 
   xla::XlaOp grad = grad_output;
   for (size_t i = 0; i < padding.size(); i += 2) {
-    int64_t dim = grad_output_shape.rank() - 1 - i / 2;
+    int64_t dim = grad_output_shape.dimensions_size() - 1 - i / 2;
     int64_t dim_size = grad_output_shape.dimensions(dim);
     int64_t lhs_padding = padding[i];
     int64_t rhs_padding = padding[i + 1];
@@ -384,12 +513,12 @@ xla::XlaOp BuildReflectionPadBackward(xla::XlaOp grad_output, xla::XlaOp input,
 
 xla::XlaOp BuildReplicationPad(xla::XlaOp input,
                                absl::Span<const int64_t> padding) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  XLA_CHECK_GE(2 * input_shape.rank(), padding.size());
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  XLA_CHECK_GE(2 * input_shape.dimensions_size(), padding.size());
   XLA_CHECK_EQ(padding.size() % 2, 0) << "Uneven padding: " << padding.size();
   xla::XlaOp result = input;
   for (size_t i = 0; i < padding.size(); i += 2) {
-    int64_t dim = input_shape.rank() - 1 - i / 2;
+    int64_t dim = input_shape.dimensions_size() - 1 - i / 2;
     if ((padding[i] != 0 || padding[i + 1] != 0) &&
         input_shape.dimensions(dim) > 0) {
       std::vector<xla::XlaOp> parts;
@@ -414,14 +543,14 @@ xla::XlaOp BuildReplicationPad(xla::XlaOp input,
 
 xla::XlaOp BuildReplicationPadBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                        absl::Span<const int64_t> padding) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const xla::Shape& grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
-  XLA_CHECK_GE(2 * grad_output_shape.rank(), padding.size());
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  const xla::Shape& grad_output_shape = ShapeHelper::ShapeOfXlaOp(grad_output);
+  XLA_CHECK_GE(2 * grad_output_shape.dimensions_size(), padding.size());
   XLA_CHECK_EQ(padding.size() % 2, 0) << "Uneven padding: " << padding.size();
 
   xla::XlaOp grad = grad_output;
   for (size_t i = 0; i < padding.size(); i += 2) {
-    int64_t dim = grad_output_shape.rank() - 1 - i / 2;
+    int64_t dim = grad_output_shape.dimensions_size() - 1 - i / 2;
     int64_t dim_size = grad_output_shape.dimensions(dim);
     int64_t lhs_padding = padding[i];
     int64_t rhs_padding = padding[i + 1];
@@ -455,14 +584,14 @@ xla::XlaOp BuildReplicationPadBackward(xla::XlaOp grad_output, xla::XlaOp input,
 
 xla::XlaOp PadInDim(xla::XlaOp input, int64_t dim, int64_t pad_lo,
                     int64_t pad_hi, const xla::XlaOp* pad_value) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp zero;
   if (pad_value == nullptr) {
     zero = xla::Zero(input.builder(), input_shape.element_type());
     pad_value = &zero;
   }
   xla::PaddingConfig padding_config;
-  for (int64_t i = 0; i < input_shape.rank(); ++i) {
+  for (int64_t i = 0; i < input_shape.dimensions_size(); ++i) {
     auto* dims = padding_config.add_dimensions();
     dims->set_interior_padding(0);
     if (i == dim) {

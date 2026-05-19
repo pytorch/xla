@@ -1,17 +1,20 @@
 #include "torch_xla/csrc/ops/nll_loss2d.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
-                           const absl::optional<XlaValue>& weight,
+xla::Shape NodeOutputShape(const torch::lazy::Value& logits,
+                           const torch::lazy::Value& labels,
+                           const absl::optional<torch::lazy::Value>& weight,
                            ReductionMode reduction, int ignore_index) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -24,36 +27,40 @@ xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
   };
   std::vector<xla::Shape> shapes;
   for (auto& input :
-       xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight})) {
-    shapes.push_back(input.xla_shape());
+       torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
+           {logits, labels}, {&weight})) {
+    shapes.push_back(GetXlaShape(input));
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
 }  // namespace
 
-NllLoss2d::NllLoss2d(const XlaValue& logits, const XlaValue& labels,
-                     const absl::optional<XlaValue>& weight,
+NllLoss2d::NllLoss2d(const torch::lazy::Value& logits,
+                     const torch::lazy::Value& labels,
+                     const absl::optional<torch::lazy::Value>& weight,
                      ReductionMode reduction, int ignore_index)
-    : XlaNode(torch::lazy::OpKind(at::aten::nll_loss2d),
-              xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight}),
-              [&]() {
-                return NodeOutputShape(logits, labels, weight, reduction,
-                                       ignore_index);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
-                                 ignore_index)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::nll_loss2d),
+          torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
+              {logits, labels}, {&weight}),
+          [&]() {
+            return NodeOutputShape(logits, labels, weight, reduction,
+                                   ignore_index);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
+                             ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 
-torch::lazy::NodePtr NllLoss2d::Clone(OpList operands) const {
-  absl::optional<XlaValue> weight;
+torch::lazy::NodePtr NllLoss2d::Clone(torch::lazy::OpList operands) const {
+  absl::optional<torch::lazy::Value> weight;
   if (operands.size() > 2) {
     weight = operands.at(2);
   }
-  return torch::lazy::MakeNode<NllLoss2d>(operands.at(0), operands.at(1),
-                                          weight, reduction_, ignore_index_);
+  return torch_xla::MakeNode<NllLoss2d>(operands.at(0), operands.at(1), weight,
+                                        reduction_, ignore_index_);
 }
 
 XlaOpVector NllLoss2d::Lower(LoweringContext* loctx) const {

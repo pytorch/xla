@@ -29,7 +29,7 @@ class BaseBench(object):
 
   def __init__(self, args):
     self.args = args
-    self.device = xm.xla_device()
+    self.device = torch_xla.device()
     self.test_time = xu.getenv_as('BENCH_TEST_TIME', float, 5.0)
     torch.manual_seed(42)
 
@@ -128,7 +128,6 @@ if __name__ == '__main__':
   args, benchs = parser.parse_known_args()
   args.benchs = benchs
 
-  torch.set_default_tensor_type('torch.FloatTensor')
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-      use_full_mat_mul_precision=True)
+  torch.set_default_dtype(torch.float32)
+  torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   run_benchmarks(args)

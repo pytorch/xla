@@ -1,20 +1,22 @@
 #include "torch_xla/csrc/ops/nll_loss2d_backward.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
+#include <torch/csrc/lazy/core/util.h>
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& logits,
-                           const XlaValue& labels,
-                           const absl::optional<XlaValue>& weight,
-                           const absl::optional<XlaValue>& total_weight,
-                           ReductionMode reduction, int ignore_index) {
+xla::Shape NodeOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& logits,
+    const torch::lazy::Value& labels,
+    const absl::optional<torch::lazy::Value>& weight,
+    const absl::optional<torch::lazy::Value>& total_weight,
+    ReductionMode reduction, int ignore_index) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp weight;
@@ -29,9 +31,10 @@ xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& logits,
                                 total_weight, ignore_index, reduction);
   };
   std::vector<xla::Shape> shapes;
-  for (auto& input : xla::util::GetValuesVector<XlaValue>(
+  for (auto& input :
+       torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
            {grad_output, logits, labels}, {&weight, &total_weight})) {
-    shapes.push_back(input.xla_shape());
+    shapes.push_back(GetXlaShape(input));
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
@@ -39,31 +42,34 @@ xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& logits,
 }  // namespace
 
 NllLoss2dBackward::NllLoss2dBackward(
-    const XlaValue& grad_output, const XlaValue& logits, const XlaValue& labels,
-    const absl::optional<XlaValue>& weight,
-    const absl::optional<XlaValue>& total_weight, ReductionMode reduction,
-    int ignore_index)
-    : XlaNode(torch::lazy::OpKind(at::aten::nll_loss2d_backward),
-              xla::util::GetValuesVector<XlaValue>(
-                  {grad_output, logits, labels}, {&weight, &total_weight}),
-              [&]() {
-                return NodeOutputShape(grad_output, logits, labels, weight,
-                                       total_weight, reduction, ignore_index);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
-                                 ignore_index)),
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& logits,
+    const torch::lazy::Value& labels,
+    const absl::optional<torch::lazy::Value>& weight,
+    const absl::optional<torch::lazy::Value>& total_weight,
+    ReductionMode reduction, int ignore_index)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::nll_loss2d_backward),
+          torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
+              {grad_output, logits, labels}, {&weight, &total_weight}),
+          [&]() {
+            return NodeOutputShape(grad_output, logits, labels, weight,
+                                   total_weight, reduction, ignore_index);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
+                             ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 
-torch::lazy::NodePtr NllLoss2dBackward::Clone(OpList operands) const {
-  absl::optional<XlaValue> weight;
-  absl::optional<XlaValue> total_weight;
+torch::lazy::NodePtr NllLoss2dBackward::Clone(
+    torch::lazy::OpList operands) const {
+  absl::optional<torch::lazy::Value> weight;
+  absl::optional<torch::lazy::Value> total_weight;
   if (operands.size() > 3) {
     weight = operands.at(3);
     total_weight = operands.at(4);
   }
-  return torch::lazy::MakeNode<NllLoss2dBackward>(
+  return torch_xla::MakeNode<NllLoss2dBackward>(
       operands.at(0), operands.at(1), operands.at(2), weight, total_weight,
       reduction_, ignore_index_);
 }

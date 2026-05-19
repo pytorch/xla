@@ -1,0 +1,48 @@
+[build-system]
+# These are the packages required to run `setup.py` in an isolated environment.
+# Pip will install these *before* executing the build backend.
+requires = [
+    "setuptools>=42",
+    "wheel",
+    "requests",
+    "numpy",
+    "pyyaml",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torch-xla"
+description = "XLA bridge for PyTorch"
+readme = "README.md"
+authors = [
+    { name = "PyTorch/XLA Dev Team", email = "pytorch-xla@googlegroups.com" },
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["pytorch", "xla", "tpu", "deep learning", "compiler"]
+
+# This tells build tools to get this info from setup.py instead of this file.
+dynamic = [
+    "version",
+    "dependencies",
+    "optional-dependencies",
+    "entry-points",
+    "scripts"
+]
+
+[project.urls]
+Homepage = "https://github.com/pytorch/xla"
+Repository = "https://github.com/pytorch/xla"
+"Bug Tracker" = "https://github.com/pytorch/xla/issues"

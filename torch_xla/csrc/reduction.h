@@ -1,7 +1,8 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_REDUCTION_H_
+#define XLA_TORCH_XLA_CSRC_REDUCTION_H_
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
 
 namespace torch_xla {
 
@@ -11,6 +12,8 @@ enum class ReductionMode {
   kSum,
 };
 
+ReductionMode GetXlaReductionMode(int64_t reduction);
+
 xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
                                    const absl::optional<xla::XlaOp>& weight,
                                    ReductionMode reduction);
@@ -18,12 +21,6 @@ xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
 xla::XlaOp BuildBinaryCrossEntropyBackward(
     xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp target,
     const absl::optional<xla::XlaOp>& weight, ReductionMode reduction);
-
-xla::XlaOp BuildL1Loss(xla::XlaOp input, xla::XlaOp target,
-                       ReductionMode reduction);
-
-xla::XlaOp BuildL1LossBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                               xla::XlaOp target, ReductionMode reduction);
 
 xla::XlaOp BuildMseLoss(xla::XlaOp input, xla::XlaOp target,
                         ReductionMode reduction);
@@ -39,7 +36,7 @@ xla::XlaOp BuildMean(xla::XlaOp input, absl::Span<const int64_t> dimensions,
 
 xla::XlaOp BuildStdDeviation(xla::XlaOp input,
                              absl::Span<const int64_t> dimensions,
-                             bool keep_reduced_dimensions, int64_t correction);
+                             bool keep_reduced_dimensions, double correction);
 
 // Builds the sum of all values by reducing all the dimensions listed in
 // dimensions. If keep_reduced_dimensions is true, the reduced dimensions will
@@ -91,6 +88,14 @@ xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, int64_t dim,
                                       const xla::XlaComputation& reducer,
                                       xla::XlaOp init);
 
+// Computes the cumulative computation specified by "reducer" and "init" in the
+// given dimension "dim".
+// Returns a tuple XlaOp (values, indices).
+xla::XlaOp BuildCumulativeComputationWithIndices(
+    xla::XlaOp value_input, xla::XlaOp index_input, int64_t dim,
+    const xla::XlaComputation& reducer, xla::XlaOp value_init,
+    xla::XlaOp index_init);
+
 xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions);
 
@@ -98,10 +103,19 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions);
 
 xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const int64_t> dimensions,
-                    int64_t correction, bool keep_reduced_dimensions);
+                    double correction, bool keep_reduced_dimensions);
 
 xla::XlaOp BuildLogsumexp(xla::XlaOp input,
                           absl::Span<const int64_t> dimensions,
                           bool keep_reduced_dimensions);
 
+xla::XlaOp BuildEinsum(absl::Span<const xla::XlaOp> operands,
+                       const std::string& equation);
+
+std::vector<xla::XlaOp> BuildEinsumBackward(const xla::XlaOp& grad_output,
+                                            absl::Span<const xla::XlaOp> inputs,
+                                            const std::string& equation);
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_REDUCTION_H_

@@ -4,16 +4,23 @@
 #include <sstream>
 #include <unordered_map>
 
+#include <torch/csrc/lazy/core/ir_util.h>
+
+#include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/xla_util.h"
-#include "torch/csrc/lazy/core/ir_util.h"
-#include "torch_xla/csrc/ir_util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
+#include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 namespace {
 
+using xla::internal::XlaBuilderFriend;
 using NodeIdMap = std::unordered_map<const torch::lazy::Node*, size_t>;
 
 struct AttrTag {
@@ -178,7 +185,8 @@ std::string GenerateTextNodeSpec(const torch::lazy::Node* node,
 }  // namespace
 
 std::string DumpUtil::ToDot(absl::Span<const torch::lazy::Node* const> nodes) {
-  auto post_order = Util::ComputePostOrder(nodes);
+  auto post_order = torch::lazy::Util::ComputePostOrder(
+      c10::makeArrayRef(nodes.data(), nodes.size()));
   return PostOrderToDot(post_order, nodes);
 }
 
@@ -219,7 +227,8 @@ std::string DumpUtil::PostOrderToDot(
 }
 
 std::string DumpUtil::ToText(absl::Span<const torch::lazy::Node* const> nodes) {
-  auto post_order = Util::ComputePostOrder(nodes);
+  auto post_order = torch::lazy::Util::ComputePostOrder(
+      c10::makeArrayRef(nodes.data(), nodes.size()));
   return PostOrderToText(post_order, nodes);
 }
 
@@ -244,16 +253,58 @@ std::string DumpUtil::PostOrderToText(
   return ss.str();
 }
 
-std::string DumpUtil::ToHlo(absl::Span<const XlaValue> values,
-                            const torch::lazy::BackendDevice& device) {
+std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
+                            const torch::lazy::BackendDevice& device,
+                            EmitMode mode) {
   LoweringContext lowering_ctx("IrToHlo", device);
   for (auto& ir_value : values) {
-    xla::XlaOp root = lowering_ctx.GetOutputOp(
+    lowering_ctx.AddResult(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
-    lowering_ctx.AddResult(root);
   }
-  xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
-  return ConsumeValue(xla::util::GetComputationHloText(computation));
+
+  // Annotate HLO sharding selectively in the compuation.
+  // This is no-op if an instruction doesn't have any sharding annotation.
+  auto is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation computation, lowering_ctx.BuildXla());
+
+  static bool dump_post_optimizations =
+      runtime::sys_util::GetEnvBool("XLA_DUMP_POST_OPTIMIZATIONS", false);
+  if (dump_post_optimizations) {
+    XLA_ASSIGN_OR_THROW(xla::ProgramShape program_shape,
+                        computation.GetProgramShape());
+    xla::Shape shape = MakeShapeWithDeviceLayout(
+        program_shape.result(), static_cast<XlaDeviceType>(device.type()));
+    std::vector<runtime::ComputationClient::CompileInstance> instances;
+    XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                        runtime::GetComputationClient());
+    instances.push_back({std::move(computation), device.toString(),
+                         client->GetCompilationDevices(device.toString(), {}),
+                         &shape,
+                         /*parameter_is_tupled_arguments=*/false, is_sharded});
+    std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
+        computations = client->Compile(std::move(instances));
+    computation = std::move(computations[0]->move_computation());
+  }
+
+  switch (mode) {
+    case EmitMode::kHloReadable: {
+      XLA_ASSIGN_OR_THROW(std::string hlo_text,
+                          runtime::util::GetComputationHloText(computation));
+      return hlo_text;
+    }
+    case EmitMode::kHloProto: {
+      XLA_ASSIGN_OR_THROW(std::string serialized_proto,
+                          runtime::util::GetDeterministicSerializedModuleProto(
+                              computation.proto()));
+      return serialized_proto;
+    }
+    case EmitMode::kStableHloReadable:
+      return hloToStablehlo(&computation.proto(),
+                            /* emit_bytecode = */ false);
+    case EmitMode::kStableHloBytecode:
+      return hloToStablehlo(&computation.proto(),
+                            /* emit_bytecode = */ true);
+  }
 }
 
 }  // namespace torch_xla

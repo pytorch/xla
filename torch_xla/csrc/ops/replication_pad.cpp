@@ -1,33 +1,34 @@
 #include "torch_xla/csrc/ops/replication_pad.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> padding) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReplicationPad(operands[0], padding);
   };
-  return InferOutputShape({input.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, shape_fn);
 }
 
 }  // namespace
 
-ReplicationPad::ReplicationPad(const XlaValue& input,
+ReplicationPad::ReplicationPad(const torch::lazy::Value& input,
                                std::vector<int64_t> padding)
-    : XlaNode(xla_replication_pad, {input},
-              [&]() { return NodeOutputShape(input, padding); },
-              /*num_outputs=*/1, torch::lazy::MHash(padding)),
+    : XlaNode(
+          xla_replication_pad, {input},
+          [&]() { return NodeOutputShape(input, padding); },
+          /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
-torch::lazy::NodePtr ReplicationPad::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<ReplicationPad>(operands.at(0), padding_);
+torch::lazy::NodePtr ReplicationPad::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<ReplicationPad>(operands.at(0), padding_);
 }
 
 XlaOpVector ReplicationPad::Lower(LoweringContext* loctx) const {

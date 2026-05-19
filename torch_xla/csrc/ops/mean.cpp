@@ -1,7 +1,9 @@
 #include "torch_xla/csrc/ops/mean.h"
 
+#include <torch/csrc/lazy/core/tensor_util.h>
+
 #include "absl/strings/str_join.h"
-#include "torch/csrc/lazy/core/tensor_util.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -14,43 +16,44 @@ namespace {
 
 xla::XlaOp LowerMean(xla::XlaOp input, const std::vector<int64_t>& dimensions,
                      bool keep_reduced_dimensions,
-                     const c10::optional<at::ScalarType>& dtype) {
+                     const std::optional<at::ScalarType>& dtype) {
   xla::XlaOp result = BuildMean(input, dimensions, keep_reduced_dimensions);
   return dtype ? xla::ConvertElementType(
                      result, MakeXlaPrimitiveType(*dtype, /*device=*/nullptr))
                : result;
 }
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions,
-                           const c10::optional<at::ScalarType>& dtype) {
+                           const std::optional<at::ScalarType>& dtype) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerMean(operands[0], dimensions, keep_reduced_dimensions, dtype);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Mean::Mean(const XlaValue& input, std::vector<int64_t> dimensions,
-           bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
-    : XlaNode(torch::lazy::OpKind(at::aten::mean), {input},
-              [&]() {
-                return NodeOutputShape(input, dimensions,
-                                       keep_reduced_dimensions, dtype);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(dimensions, keep_reduced_dimensions,
-                                 torch::lazy::OptionalOr<int>(dtype, -1))),
+Mean::Mean(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
+           bool keep_reduced_dimensions, std::optional<at::ScalarType> dtype)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::mean), {input},
+          [&]() {
+            return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
+                                   dtype);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(dimensions, keep_reduced_dimensions,
+                             torch::lazy::OptionalOr<int>(dtype, -1))),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
 
-torch::lazy::NodePtr Mean::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Mean>(operands.at(0), dimensions_,
-                                     keep_reduced_dimensions_, dtype_);
+torch::lazy::NodePtr Mean::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Mean>(operands.at(0), dimensions_,
+                                   keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Mean::Lower(LoweringContext* loctx) const {

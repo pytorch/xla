@@ -2,7 +2,7 @@
 # ``fairscale.nn.misc.FlattenParamsWrapper`` in
 # https://github.com/facebookresearch/fairscale/blob/main/fairscale/nn/misc/flatten_params_wrapper.py
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from contextlib import contextmanager
 from itertools import chain
 import typing
@@ -18,6 +18,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    TypeVar,
     Union,
     cast,
 )
@@ -25,6 +26,11 @@ from typing import (
 import torch
 from torch import Tensor
 import torch.nn as nn
+
+# Static type.
+State = namedtuple(
+    'State',
+    ['param_numels', 'param_shapes', 'param_infos', 'shared_param_infos'])
 
 
 class FlatParameter(nn.Parameter):
@@ -100,7 +106,7 @@ class FlatParameter(nn.Parameter):
     names = [".".join([m, n]) if m else n for (m, _, n) in self._param_infos]
     return names, self._param_shapes, self._param_numels
 
-  def __setstate__(self, state: Tuple[Any, Any, Any, Any]) -> None:
+  def __setstate__(self, state: State) -> None:
     """Use by pickle to set the internal states."""
     (self._param_numels, self._param_shapes, self._param_infos,
      self._shared_param_infos) = state
@@ -108,7 +114,9 @@ class FlatParameter(nn.Parameter):
         self._param_numels
     ), f"Incorrect pickling {self.numel()} vs. {sum(self._param_numels)}"
 
-  def __reduce_ex__(self, proto: int) -> Tuple[Any, Any, Any]:
+  def __reduce_ex__(
+      self, proto: int
+  ) -> Tuple["FlatParameter", Tuple[Sequence[nn.Parameter], bool], State]:
     """Support pickling between ranks."""
     return (
         FlatParameter,  # Callable
@@ -118,6 +126,15 @@ class FlatParameter(nn.Parameter):
         (self._param_numels, self._param_shapes, self._param_infos,
          self._shared_param_infos),
     )
+
+  def to(self, *args, **kwargs) -> nn.Parameter:
+    """Make a copy of the flat parameter onto the specified device and dtype"""
+    out = FlatParameter([self.data.to(*args, **kwargs)], self.requires_grad)
+    out._param_numels = self._param_numels.copy()
+    out._param_shapes = self._param_shapes.copy()
+    out._param_infos = self._param_infos.copy()
+    out._shared_param_infos = self._shared_param_infos.copy()
+    return out
 
 
 # Static types.
@@ -206,7 +223,7 @@ class XlaFlattenParamsWrapper(nn.Module):
           f"Incorrect param groups {len(overall_param_set)} vs {self.num_param_managed}"
       )
 
-    self.flat_params: List[FlatTypes] = []
+    flat_params: List[FlatTypes] = []
 
     # Prepare flat param names.
     if flat_param_names is None:
@@ -225,9 +242,9 @@ class XlaFlattenParamsWrapper(nn.Module):
       flat_param = FlatParameter(params, params[0].requires_grad)
       flat_param._param_infos = param_infos
       flat_param._shared_param_infos = shared_param_infos
-      self.flat_params.append(flat_param)
+      flat_params.append(flat_param)
 
-    self._flatten_params(self.flat_params)
+    self._flatten_params(flat_params)
 
     # Register hook to be called after state_dict() to remove the
     # "_fpw_module." prefix and before load_state_dict() to add it back.
@@ -240,12 +257,23 @@ class XlaFlattenParamsWrapper(nn.Module):
     self._auto_unflatten_state_dict = auto_unflatten_state_dict
 
   @property
-  def module(self) -> Any:
+  def module(self) -> nn.Module:
     """
     Support fpw.module in case we are immitating DDP, which has .module
     property to the underlying module.
     """
     return self._fpw_module
+
+  @property
+  def flat_params(self) -> List[FlatTypes]:
+    """
+    Get the flattened parameters if this module is already flattened. Otherwise
+    returns an empty list.
+    """
+    if not self.is_flattened:
+      return []
+
+    return [getattr(self, n) for n in self.flat_param_names]
 
   @property
   def flat_param(self) -> nn.Parameter:
@@ -327,7 +355,6 @@ class XlaFlattenParamsWrapper(nn.Module):
         flat_params), f"{len(self.flat_param_names)} vs. {len(flat_params)}"
     for n, flat_param in zip(self.flat_param_names, flat_params):
       self.register_parameter(n, flat_param)
-    self.flat_params = flat_params
 
     # deregister the names as parameters
     for _, m, n in self._param_infos:
@@ -366,7 +393,6 @@ class XlaFlattenParamsWrapper(nn.Module):
     for n in self.flat_param_names:
       # This ensures the flat params are removed from the module.
       delattr(self, n)
-    self.flat_params = []
 
   def _unflatten_params_as_views(self) -> None:
     """
@@ -422,14 +448,14 @@ class XlaFlattenParamsWrapper(nn.Module):
       if orig_flattened:
         self._flatten_params(orig_flat_params)
 
-  def __getattr__(self, name: str) -> Any:
+  def __getattr__(self, name: str) -> Union[Tensor, nn.Module]:
     """Forward missing attributes to wrapped module."""
     try:
       return super().__getattr__(name)  # defer to nn.Module's logic
     except AttributeError:
       return getattr(self.module, name)  # fallback to wrapped module
 
-  def __getitem__(self, key: int) -> Any:
+  def __getitem__(self, key: int) -> nn.Module:
     """Forward indexing calls in case the module is a nn.Sequential."""
     return self.module.__getitem__(key)
 
@@ -447,7 +473,7 @@ class XlaFlattenParamsWrapper(nn.Module):
     ...
 
   # Since we have overloads above, we can use Any here.
-  def state_dict(self, *args: Any, **kwargs: Any) -> Any:
+  def state_dict(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
     """Return the wrapped module's state_dict."""
     if self.is_flattened and self._auto_unflatten_state_dict:
       # Returns the original version.

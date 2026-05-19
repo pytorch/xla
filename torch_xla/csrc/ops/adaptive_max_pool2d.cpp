@@ -1,14 +1,14 @@
 #include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> output_size) {
   auto lower_for_shape_fn =
       [output_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -16,20 +16,22 @@ xla::Shape NodeOutputShape(const XlaValue& input,
     MaxPoolResult result = BuildAdaptiveMaxPoolNd(operands[0], output_size, 2);
     return xla::Tuple(operands[0].builder(), {result.result, result.indices});
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-AdaptiveMaxPool2d::AdaptiveMaxPool2d(const XlaValue& input,
+AdaptiveMaxPool2d::AdaptiveMaxPool2d(const torch::lazy::Value& input,
                                      std::vector<int64_t> output_size)
-    : XlaNode(torch::lazy::OpKind(at::aten::adaptive_max_pool2d), {input},
-              [&]() { return NodeOutputShape(input, output_size); },
-              /*num_outputs=*/2, torch::lazy::MHash(output_size)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::adaptive_max_pool2d), {input},
+          [&]() { return NodeOutputShape(input, output_size); },
+          /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-torch::lazy::NodePtr AdaptiveMaxPool2d::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
+torch::lazy::NodePtr AdaptiveMaxPool2d::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
 }
 
 XlaOpVector AdaptiveMaxPool2d::Lower(LoweringContext* loctx) const {

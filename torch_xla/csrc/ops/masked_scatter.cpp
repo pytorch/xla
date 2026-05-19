@@ -5,15 +5,16 @@
 
 namespace torch_xla {
 
-MaskedScatter::MaskedScatter(const XlaValue& input, const XlaValue& mask,
-                             const XlaValue& source)
+MaskedScatter::MaskedScatter(const torch::lazy::Value& input,
+                             const torch::lazy::Value& mask,
+                             const torch::lazy::Value& source)
     : XlaNode(torch::lazy::OpKind(at::aten::masked_scatter),
-              {input, mask, source}, input.xla_shape(),
+              {input, mask, source}, GetXlaShape(input),
               /*num_outputs=*/1) {}
 
-torch::lazy::NodePtr MaskedScatter::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<MaskedScatter>(operands.at(0), operands.at(1),
-                                              operands.at(2));
+torch::lazy::NodePtr MaskedScatter::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<MaskedScatter>(operands.at(0), operands.at(1),
+                                            operands.at(2));
 }
 
 XlaOpVector MaskedScatter::Lower(LoweringContext* loctx) const {

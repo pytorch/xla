@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_RRELU_WITH_NOISE_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_RRELU_WITH_NOISE_BACKWARD_H_
 
 #include <c10/core/Scalar.h>
 
@@ -8,13 +9,15 @@ namespace torch_xla {
 
 class RreluWithNoiseBackward : public XlaNode {
  public:
-  RreluWithNoiseBackward(const XlaValue& grad_output, const XlaValue& input,
-                         const XlaValue& noise, const at::Scalar& lower,
-                         const at::Scalar& upper, bool training);
+  RreluWithNoiseBackward(const torch::lazy::Value& grad_output,
+                         const torch::lazy::Value& input,
+                         const torch::lazy::Value& noise,
+                         const at::Scalar& lower, const at::Scalar& upper,
+                         bool training);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -31,3 +34,5 @@ class RreluWithNoiseBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_RRELU_WITH_NOISE_BACKWARD_H_

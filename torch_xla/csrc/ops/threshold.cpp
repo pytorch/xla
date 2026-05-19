@@ -5,15 +5,16 @@
 
 namespace torch_xla {
 
-Threshold::Threshold(const XlaValue& input, float threshold, float value)
+Threshold::Threshold(const torch::lazy::Value& input, float threshold,
+                     float value)
     : XlaNode(torch::lazy::OpKind(at::aten::threshold), {input},
-              input.xla_shape(),
+              GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(threshold, value)),
       threshold_(threshold),
       value_(value) {}
 
-torch::lazy::NodePtr Threshold::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Threshold>(operands.at(0), threshold_, value_);
+torch::lazy::NodePtr Threshold::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Threshold>(operands.at(0), threshold_, value_);
 }
 
 XlaOpVector Threshold::Lower(LoweringContext* loctx) const {

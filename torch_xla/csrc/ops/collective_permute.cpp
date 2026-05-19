@@ -1,7 +1,8 @@
 #include "torch_xla/csrc/ops/collective_permute.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -10,20 +11,20 @@ namespace torch_xla {
 namespace {
 
 xla::Shape NodeOutputShape(
-    const XlaValue& input, const XlaValue& token,
+    const torch::lazy::Value& input, const torch::lazy::Value& token,
     const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     CollectivePermuteResult result =
         BuildCollectivePermute(operands[0], operands[1], source_target_pairs);
     return xla::Tuple(operands[0].builder(), {result.result, result.token});
   };
-  return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(token)}, shape_fn);
 }
 
 }  // namespace
 
 CollectivePermute::CollectivePermute(
-    const XlaValue& input, const XlaValue& token,
+    const torch::lazy::Value& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs)
     : XlaNode(
           xla_collective_permute, {input, token},
@@ -31,9 +32,10 @@ CollectivePermute::CollectivePermute(
           /*num_outputs=*/2, torch::lazy::MHash(source_target_pairs)),
       source_target_pairs_(std::move(source_target_pairs)) {}
 
-torch::lazy::NodePtr CollectivePermute::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<CollectivePermute>(
-      operands.at(0), operands.at(1), source_target_pairs_);
+torch::lazy::NodePtr CollectivePermute::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<CollectivePermute>(operands.at(0), operands.at(1),
+                                                source_target_pairs_);
 }
 
 XlaOpVector CollectivePermute::Lower(LoweringContext* loctx) const {

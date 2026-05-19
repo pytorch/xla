@@ -1,0 +1,111 @@
+name: Check Code Changes
+
+on:
+  workflow_call:
+    inputs:
+      event_name:
+        required: true
+        type: string
+      # For pull_request, base_sha is github.event.pull_request.base.sha (target branch tip)
+      # For push, base_sha is github.event.before
+      base_sha:
+        required: true
+        type: string
+      # For pull_request, head_sha is github.event.pull_request.head.sha (PR branch tip)
+      # For push, head_sha is github.sha
+      head_sha:
+        required: true
+        type: string
+    outputs:
+      has_code_changes:
+        description: "True if non-markdown code files were changed or event is workflow_dispatch/schedule, false otherwise."
+        value: ${{ jobs.check_files.outputs.has_code_changes }}
+
+jobs:
+  check_files:
+    runs-on: ubuntu-24.04
+    outputs:
+      has_code_changes: ${{ steps.perform_check.outputs.has_code_changes }}
+    steps:
+      - name: Checkout code for diff (if needed)
+        # Checkout only if a diff is actually needed
+        if: inputs.event_name != 'workflow_dispatch' && inputs.event_name != 'schedule'
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history for all branches and tags.
+          # This is necessary for `git diff A...B` (three-dot diff) to find the merge base
+          # and correctly diff PR changes against the point where it diverged.
+          # It's also needed for `git diff A B` if A and B are far apart.
+          fetch-depth: 0
+
+      - name: Perform file content check
+        id: perform_check
+        run: |
+          echo "Event Name: ${{ inputs.event_name }}"
+          echo "Base SHA input (for PR: target branch; for Push: before SHA): ${{ inputs.base_sha }}"
+          echo "Head SHA input (for PR: PR head; for Push: current SHA): ${{ inputs.head_sha }}"
+
+          # Handle workflow_dispatch and schedule events first
+          if [[ "${{ inputs.event_name }}" == "workflow_dispatch" || "${{ inputs.event_name }}" == "schedule" ]]; then
+            echo "Event is ${{ inputs.event_name }}. Assuming code changes or full run needed."
+            echo "has_code_changes=true" >> "$GITHUB_OUTPUT"
+            exit 0 # Exit early, no diff needed
+          fi
+
+          # Handle initial push (base SHA is all zeros)
+          # For an initial push, all files in the head_sha are considered "changed" (new).
+          if [[ "${{ inputs.base_sha }}" == "0000000000000000000000000000000000000000" ]]; then
+            echo "Initial push (base SHA is zeros). Assuming code changes."
+            # We can list all files in the current commit (inputs.head_sha) if needed,
+            # but for simplicity, just assuming code changes is often sufficient.
+            # To be precise, one could do: git ls-tree -r --name-only ${{ inputs.head_sha }} > changed_files.txt
+            # And then apply the markdown filter. For now, we'll assume changes.
+            echo "has_code_changes=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Handle cases where base and head are the same (e.g., re-run on a specific commit, or a push with no new commits)
+          # This can happen if a workflow is re-run, or if a branch is pushed without new commits (e.g., force push to same SHA).
+          if [[ "${{ inputs.base_sha }}" == "${{ inputs.head_sha }}" ]]; then
+            echo "Base SHA is the same as Head SHA. No file changes. Assuming no code changes for skipping purposes."
+            echo "has_code_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Ensure SHAs are valid before attempting diff
+          # (git rev-parse --verify will exit with non-zero if SHA is not found)
+          git rev-parse --verify ${{ inputs.base_sha }}^{commit} >/dev/null 2>&1 || { echo "Error: Base SHA ${{ inputs.base_sha }} not found or invalid."; exit 1; }
+          git rev-parse --verify ${{ inputs.head_sha }}^{commit} >/dev/null 2>&1 || { echo "Error: Head SHA ${{ inputs.head_sha }} not found or invalid."; exit 1; }
+
+
+          # Determine the diff command based on the event type
+          if [[ "${{ inputs.event_name }}" == "pull_request" ]]; then
+            # For pull requests, use three-dot diff (A...B).
+            # This shows changes on the PR branch (inputs.head_sha)
+            # since it diverged from the target branch (inputs.base_sha).
+            # inputs.base_sha is github.event.pull_request.base.sha
+            # inputs.head_sha is github.event.pull_request.head.sha
+            echo "Pull Request: Diffing ${{ inputs.base_sha }}...${{ inputs.head_sha }}"
+            git diff --name-only --no-renames ${{ inputs.base_sha }}...${{ inputs.head_sha }} > changed_files.txt
+          else # For 'push' and potentially other events not explicitly handled above
+            # For pushes, use two-dot diff (A B).
+            # inputs.base_sha is github.event.before
+            # inputs.head_sha is github.sha
+            echo "Push or other event: Diffing ${{ inputs.base_sha }} ${{ inputs.head_sha }}"
+            git diff --name-only --no-renames ${{ inputs.base_sha }} ${{ inputs.head_sha }} > changed_files.txt
+          fi
+
+          echo "Changed files:"
+          cat changed_files.txt
+
+          if [ ! -s changed_files.txt ]; then # Check if changed_files.txt is empty
+            echo "No files changed in the diff."
+            echo "has_code_changes=false" >> "$GITHUB_OUTPUT"
+          elif grep -q -v -E '\.md$' changed_files.txt; then
+            echo "Non-markdown code changes detected."
+            echo "has_code_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Only markdown changes detected or no non-markdown changes found in diff."
+            echo "has_code_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash

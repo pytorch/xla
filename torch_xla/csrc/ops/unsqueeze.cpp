@@ -6,22 +6,23 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, int dim) {
-  const xla::Shape& shape = input.xla_shape();
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, int dim) {
+  const xla::Shape& shape = GetXlaShape(input);
   auto dimensions = BuildUnsqueezeDimensions(shape.dimensions(), dim);
   return xla::ShapeUtil::MakeShape(shape.element_type(), dimensions);
 }
 
 }  // namespace
 
-Unsqueeze::Unsqueeze(const XlaValue& input, int dim)
-    : XlaNode(torch::lazy::OpKind(at::aten::unsqueeze), {input},
-              [&]() { return NodeOutputShape(input, dim); },
-              /*num_outputs=*/1, torch::lazy::MHash(dim)),
+Unsqueeze::Unsqueeze(const torch::lazy::Value& input, int dim)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::unsqueeze), {input},
+          [&]() { return NodeOutputShape(input, dim); },
+          /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-torch::lazy::NodePtr Unsqueeze::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Unsqueeze>(operands.at(0), dim_);
+torch::lazy::NodePtr Unsqueeze::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Unsqueeze>(operands.at(0), dim_);
 }
 
 XlaOpVector Unsqueeze::Lower(LoweringContext* loctx) const {

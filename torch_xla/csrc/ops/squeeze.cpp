@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/ops/squeeze.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
@@ -16,25 +16,26 @@ xla::XlaOp LowerSqueeze(xla::XlaOp input, int dim) {
   return SqueezeTrivialDimension(input, dim);
 }
 
-xla::Shape NodeOutputShape(const XlaValue& input, int dim) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, int dim) {
   auto lower_for_shape_fn =
       [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return LowerSqueeze(operands[0], dim);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Squeeze::Squeeze(const XlaValue& input, int dim)
-    : XlaNode(torch::lazy::OpKind(at::aten::squeeze), {input},
-              [&]() { return NodeOutputShape(input, dim); },
-              /*num_outputs=*/1, torch::lazy::MHash(dim)),
+Squeeze::Squeeze(const torch::lazy::Value& input, int dim)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::squeeze), {input},
+          [&]() { return NodeOutputShape(input, dim); },
+          /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-torch::lazy::NodePtr Squeeze::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Squeeze>(operands.at(0), dim_);
+torch::lazy::NodePtr Squeeze::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Squeeze>(operands.at(0), dim_);
 }
 
 XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {

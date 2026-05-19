@@ -5,8 +5,11 @@ set -x  # Display commands being run.
 
 PYTHON_VERSION=$1
 RELEASE_VERSION=$2  # rX.Y or nightly
-DEFAULT_PYTHON_VERSION=3.6
+BUILD_CPP_TESTS="${3:-0}"
+DEFAULT_PYTHON_VERSION=3.8
 DEBIAN_FRONTEND=noninteractive
+
+ACL_VERSION=v22.05 # Arm Compute Library version
 
 function maybe_append {
   local LINE="$1"
@@ -53,51 +56,41 @@ function install_cudnn {
   rm -f "$CUDNN_FILE"
 }
 
-function maybe_install_cuda {
-  if [ "$XLA_CUDA" == "1" ]; then
-    if [ ! -d "/usr/local/cuda" ]; then
-      local CUDA_VER="10.2"
-      local CUDA_SUBVER="89_440.33.01"
-      local CUDA_FILE="cuda_${CUDA_VER}.${CUDA_SUBVER}_linux.run"
-      wget "http://developer.download.nvidia.com/compute/cuda/${CUDA_VER}/Prod/local_installers/${CUDA_FILE}"
-      sudo sh "${CUDA_FILE}" --silent --toolkit
-      rm -f "${CUDA_FILE}"
-    fi
-    if [ ! -f "/usr/local/cuda/include/cudnn.h" ] && [ ! -f "/usr/include/cudnn.h" ]; then
-      install_cudnn
-    fi
-    export TF_CUDA_PATHS="/usr/local/cuda,/usr/include,/usr"
-    maybe_append 'export TF_CUDA_PATHS="/usr/local/cuda,/usr/include,/usr"' ~/.bashrc
-    if [ "$TF_CUDA_COMPUTE_CAPABILITIES" == "" ]; then
-      export TF_CUDA_COMPUTE_CAPABILITIES="7.0"
-    fi
-    maybe_append "export TF_CUDA_COMPUTE_CAPABILITIES=\"$TF_CUDA_COMPUTE_CAPABILITIES\"" ~/.bashrc
-  fi
-}
-
 function maybe_install_sources {
-  if [ ! -d "torch" ]; then
+  if [[ $(uname -m) == "aarch64" && ! -d "$HOME/ComputeLibrary" ]]; then
+    # install arm compute library
+    pushd $HOME
+    git clone https://review.mlplatform.org/ml/ComputeLibrary.git
+    popd
+  fi
+
+  # Check if we have cloned pytorch or xla and cd into the pytorch dir.
+  # Within the pytorch dir there is a subdir `torch`, and within xla
+  # is `torch_xla`.
+  if [ ! -d "torch" && ! -d "torch_xla" ]; then
     sudo apt-get install -y git
     git clone --recursive https://github.com/pytorch/pytorch.git
     cd pytorch
     git clone --recursive https://github.com/pytorch/xla.git
     export RELEASE_VERSION="nightly"
+  elif [ -d "torch_xla" ]; then
+    cd ..
   fi
 }
 
 function install_bazel() {
-  local BAZEL_VERSION=$(cat "xla/third_party/tensorflow/.bazelversion")
-  local BAZEL_FILE="bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh"
   sudo apt-get install -y pkg-config zip zlib1g-dev unzip
-  # Move to /tmp folder as otherwise the .bazelversion file found in pytorch source makes
-  # the install fail.
-  pushd /tmp
-  curl -L -O "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_FILE}"
-  chmod 755 "$BAZEL_FILE"
-  ./"$BAZEL_FILE" --user
-  rm -f "$BAZEL_FILE"
-  popd
+  sudo apt-get -qq install npm nodejs
+  sudo npm install -g @bazel/bazelisk
+  if [[ -e /usr/bin/bazel ]]; then
+    sudo unlink /usr/bin/bazel
+  fi
+  sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
   export PATH="$PATH:$HOME/bin"
+}
+
+function install_ninja() {
+  sudo apt-get install ninja-build
 }
 
 function debian_version {
@@ -124,10 +117,17 @@ function install_llvm_clang() {
   sudo update-alternatives --install /usr/bin/clang++ clang++ $(which clang++-8) 70
 }
 
+function install_gcc() {
+  sudo apt-get -y install gcc-11 g++-11
+  export CC=/usr/bin/gcc-11 export CXX=/usr/bin/g++-11
+  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
+  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+}
+
 function install_req_packages() {
-  sudo apt-get -y install python-pip git curl libopenblas-dev vim apt-transport-https ca-certificates wget procps
-  maybe_install_cuda
+  sudo apt-get -y install python3-pip git curl libopenblas-dev vim apt-transport-https ca-certificates wget procps
   install_bazel
+  install_ninja
 }
 
 function install_gcloud() {
@@ -142,26 +142,47 @@ function install_gcloud() {
 
 function install_and_setup_conda() {
   # Install conda if dne already.
-  if ! test -d "$HOME/anaconda3"; then
-    CONDA_VERSION="5.3.1"
-    curl -O "https://repo.anaconda.com/archive/Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
-    sh "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh" -b
-    rm -f "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
+  if [[ $(uname -m) == "x86_64" ]]; then
+    if ! test -d "$HOME/anaconda3"; then
+       CONDA_VERSION="5.3.1"
+       curl -O "https://repo.anaconda.com/archive/Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
+       sh "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh" -b
+       rm -f "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
+    fi
+    maybe_append ". $HOME/anaconda3/etc/profile.d/conda.sh" ~/.bashrc
+    source "$HOME/anaconda3/etc/profile.d/conda.sh"
+  elif [[ $(uname -m) == "aarch64" ]]; then
+    if ! test -d "$HOME/miniforge3"; then
+       curl -OL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh
+       sh -f Miniforge3-Linux-aarch64.sh -b
+       rm -f Miniforge3-Linux-aarch64.sh
+    fi
+    maybe_append ". $HOME/miniforge3/etc/profile.d/conda.sh" ~/.bashrc
+    source "$HOME/miniforge3/etc/profile.d/conda.sh"
   fi
-  maybe_append ". $HOME/anaconda3/etc/profile.d/conda.sh" ~/.bashrc
-  source "$HOME/anaconda3/etc/profile.d/conda.sh"
   ENVNAME="pytorch"
   if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
-    conda remove --name "$ENVNAME" --all
+    conda remove -y --name "$ENVNAME" --all
   fi
   if [ -z "$PYTHON_VERSION" ]; then
     PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
   fi
-  conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
+  if [[ $(uname -m) == "x86_64" ]]; then
+    conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
+  elif [[ $(uname -m) == "aarch64" ]]; then
+    conda create -y --name "$ENVNAME" python=${PYTHON_VERSION}
+  fi
+
   conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
-  conda install -y numpy pyyaml mkl-include setuptools cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
+  conda install -y numpy pyyaml setuptools==65.6.3 cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
+  if [[ $(uname -m) == "x86_64" ]]; then
+    # Overwrite mkl packages here, since nomkl conflicts with the anaconda env setup.
+    conda remove -y tbb
+    pip install mkl==2022.2.1 mkl_include==2022.2.1
+  fi
+
   /usr/bin/yes | pip install --upgrade google-api-python-client
   /usr/bin/yes | pip install --upgrade oauth2client
   /usr/bin/yes | pip install --upgrade google-cloud-storage
@@ -169,6 +190,25 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install cloud-tpu-client
   /usr/bin/yes | pip install expecttest==0.1.3
   /usr/bin/yes | pip install tensorboardX
+}
+
+function build_armcomputelibrary() {
+  # setup additional system config, install scons
+  sudo apt-get install -y scons
+  if ! test -d "$HOME/acl"; then
+     mkdir $HOME/acl
+  fi
+  install_dir=$HOME/acl
+
+  # Build with scons
+  scons -j16  Werror=0 debug=0 neon=1 opencl=0 embed_kernels=0 \
+     openmp=1 cppthreads=0 os=linux arch=armv8.2-a build=native multi_isa=1 \
+     build_dir=$install_dir/build
+
+  cp -r arm_compute $install_dir
+  cp -r include $install_dir
+  cp -r utils $install_dir
+  cp -r support $install_dir
 }
 
 function build_and_install_torch() {
@@ -181,19 +221,53 @@ function build_and_install_torch() {
   git submodule update --init --recursive
   # Apply patches to PT which are required by the XLA support.
   xla/scripts/apply_patches.sh
+
+  if [[ $(uname -m) == "aarch64" ]]; then
+    # use mkldnn and acl backend for aarch64
+    pushd $HOME/ComputeLibrary
+    git checkout $ACL_VERSION
+    build_armcomputelibrary
+    popd
+    export ACL_ROOT_DIR=$HOME/acl USE_OPENMP=1 USE_MKLDNN=ON USE_MKLDNN_ACL=ON
+  fi
+
   python setup.py bdist_wheel
   pip install dist/*.whl
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/dist" ]; then
+    mkdir -p /pytorch/dist
+    cp dist/*.whl /pytorch/dist/
+  fi
 }
 
 function build_and_install_torch_xla() {
   git submodule update --init --recursive
   if [ "${RELEASE_VERSION}" = "nightly" ]; then
-    export VERSIONED_XLA_BUILD=1
+    export GIT_VERSIONED_XLA_BUILD=true
   else
     export TORCH_XLA_VERSION=${RELEASE_VERSION:1}  # r0.5 -> 0.5
   fi
+
+  if [[ $(uname -m) == "aarch64" ]]; then
+    # enable ACL runtime for CPU backend
+    export XLA_CPU_USE_ACL=1
+  fi
+
   python setup.py bdist_wheel
   pip install dist/*.whl
+  if [ "$TPUVM_MODE" == "1" ]; then
+    pip install torch_xla[tpu] \
+      -f https://storage.googleapis.com/libtpu-wheels/index.html \
+      -f https://storage.googleapis.com/libtpu-releases/index.html
+    sudo apt-get install -y google-perftools
+  fi
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/xla/dist" ]; then
+    mkdir -p /pytorch/xla/dist
+    cp dist/*.whl /pytorch/xla/dist/
+  fi
 }
 
 function install_torchvision_from_source() {
@@ -205,19 +279,45 @@ function install_torchvision_from_source() {
   python setup.py bdist_wheel
   pip install dist/*.whl
   popd
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/vision/dist" ]; then
+    mkdir -p /pytorch/vision/dist
+    cp vision/dist/*.whl /pytorch/vision/dist/
+  fi
+}
+
+function install_torchaudio_from_source() {
+  torchaudio_repo_version="main"
+  git clone -b "${torchaudio_repo_version}" https://github.com/pytorch/audio.git
+  pushd audio
+  python setup.py bdist_wheel
+  pip install dist/*.whl
+  popd
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/audio/dist" ]; then
+    mkdir -p /pytorch/audio/dist
+    cp audio/dist/*.whl /pytorch/audio/dist/
+  fi
 }
 
 function main() {
   setup_system
   maybe_install_sources
   install_req_packages
-  install_llvm_clang
+  if [[ $(uname -m) == "x86_64" ]]; then
+    install_llvm_clang
+  elif [[ $(uname -m) == "aarch64" ]]; then
+    install_gcc
+  fi
   install_and_setup_conda
   build_and_install_torch
   pushd xla
   build_and_install_torch_xla
   popd
   install_torchvision_from_source
+  # install_torchaudio_from_source
   install_gcloud
 }
 

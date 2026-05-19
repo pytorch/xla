@@ -6,20 +6,21 @@
 
 namespace torch_xla {
 
-Linspace::Linspace(const XlaValue& start, const XlaValue& end, int64_t steps)
-    : XlaNode(torch::lazy::OpKind(at::aten::linspace), {start, end},
-              [&]() {
-                xla::PrimitiveType dtype =
-                    XlaHelpers::PromoteType(start.xla_shape().element_type(),
-                                            end.xla_shape().element_type());
-                return xla::ShapeUtil::MakeShape(dtype, {steps});
-              },
-              /*num_outputs=*/1, torch::lazy::MHash(steps)),
+Linspace::Linspace(const torch::lazy::Value& start,
+                   const torch::lazy::Value& end, int64_t steps)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::linspace), {start, end},
+          [&]() {
+            xla::PrimitiveType dtype =
+                XlaHelpers::PromoteType(GetXlaShape(start).element_type(),
+                                        GetXlaShape(end).element_type());
+            return xla::ShapeUtil::MakeShape(dtype, {steps});
+          },
+          /*num_outputs=*/1, torch::lazy::MHash(steps)),
       steps_(steps) {}
 
-torch::lazy::NodePtr Linspace::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Linspace>(operands.at(0), operands.at(1),
-                                         steps_);
+torch::lazy::NodePtr Linspace::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Linspace>(operands.at(0), operands.at(1), steps_);
 }
 
 XlaOpVector Linspace::Lower(LoweringContext* loctx) const {

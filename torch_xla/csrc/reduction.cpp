@@ -3,13 +3,21 @@
 #include <cmath>
 #include <unordered_set>
 
-#include "tensorflow/compiler/xla/client/lib/arithmetic.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "torch/csrc/lazy/core/util.h"
+#include <ATen/core/Reduction.h>
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
+
+#include "xla/hlo/builder/lib/arithmetic.h"
+#include "xla/hlo/builder/lib/constants.h"
+#include "xla/hlo/builder/lib/matrix.h"
+#include "xla/literal_util.h"
+
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ops/einsum_utilities.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -31,7 +39,7 @@ ReductionInfo GetReductionInfo(xla::XlaOp input, const xla::Shape& shape,
   ReductionInfo rinfo;
   std::unordered_set<int64_t> reduced_dimensions(dimensions.begin(),
                                                  dimensions.end());
-  for (int64_t i = 0; i < shape.rank(); ++i) {
+  for (int64_t i = 0; i < shape.dimensions_size(); ++i) {
     if (reduced_dimensions.count(i) > 0) {
       if (keep_reduced_dimensions) {
         rinfo.new_dimensions.push_back(1);
@@ -53,7 +61,8 @@ xla::XlaComputation CreateAllComputation(xla::PrimitiveType type) {
   xla::XlaOp zero = xla::Zero(&builder, type);
   xla::XlaOp one = xla::One(&builder, type);
   xla::Select(xla::And(xla::Ne(x, zero), xla::Ne(y, zero)), one, zero);
-  return ConsumeValue(builder.Build());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation all_computation, builder.Build());
+  return all_computation;
 }
 
 xla::XlaComputation CreateAnyComputation(xla::PrimitiveType type) {
@@ -65,7 +74,8 @@ xla::XlaComputation CreateAnyComputation(xla::PrimitiveType type) {
   xla::XlaOp zero = xla::Zero(&builder, type);
   xla::XlaOp one = xla::One(&builder, type);
   xla::Select(xla::Or(xla::Ne(x, zero), xla::Ne(y, zero)), one, zero);
-  return ConsumeValue(builder.Build());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation any_computation, builder.Build());
+  return any_computation;
 }
 
 xla::XlaOp GetScaleValue(xla::XlaOp input, xla::XlaOp count,
@@ -75,11 +85,21 @@ xla::XlaOp GetScaleValue(xla::XlaOp input, xla::XlaOp count,
   xla::XlaOp scale = xla::Select(xla::Ne(count, zero),
                                  one / xla::ConvertElementType(count, type),
                                  xla::NanValue(input.builder(), type));
-  return input * scale;
+
+  if (XlaHelpers::IsUnboundedDynamismEnabled()) {
+    // XLA Multiply doesn't do implicit broadcasting for unbounded dynamism now.
+    // TODO(lsy323): Remove this branch once the support is added in XLA.
+    auto promoted = XlaHelpers::Promote(input, scale);
+    return xla::Mul(
+        promoted.first, promoted.second,
+        XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
+  } else {
+    return input * scale;
+  }
 }
 
 xla::XlaOp AverageValue(xla::XlaOp input, xla::XlaOp reduced) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp num_elements =
       XlaHelpers::GetDimensionsSize({input},
                                     XlaHelpers::GetAllDimensions(input_shape))
@@ -90,7 +110,7 @@ xla::XlaOp AverageValue(xla::XlaOp input, xla::XlaOp reduced) {
 SummationResult CreateSummation(xla::XlaOp input,
                                 absl::Span<const int64_t> dimensions,
                                 bool keep_reduced_dimensions, bool scale) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp init_value = xla::Zero(input.builder(), shape.element_type());
   SummationResult result;
   result.rinfo =
@@ -103,15 +123,25 @@ SummationResult CreateSummation(xla::XlaOp input,
         result.result, result.rinfo.element_count.size, shape.element_type());
   }
   if (keep_reduced_dimensions) {
-    result.result =
-        XlaHelpers::DynamicReshape(result.result, result.rinfo.new_dimensions);
+    if (shape.is_unbounded_dynamic()) {
+      for (size_t i = 0; i < result.rinfo.new_dimensions.size(); ++i) {
+        if (shape.is_unbounded_dynamic_dimension(i)) {
+          result.rinfo.new_dimensions[i] = xla::Shape::kUnboundedSize;
+        }
+      }
+      result.result = XlaHelpers::DynamicUnboundedReshape(
+          result.result, input, result.rinfo.new_dimensions);
+    } else {
+      result.result = XlaHelpers::DynamicReshape(result.result,
+                                                 result.rinfo.new_dimensions);
+    }
   }
   return result;
 }
 
 xla::XlaOp CreateProduct(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                          bool keep_reduced_dimensions) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp init_value = xla::One(input.builder(), shape.element_type());
   ReductionInfo rinfo =
       GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
@@ -126,11 +156,23 @@ xla::XlaOp CreateProduct(xla::XlaOp input, absl::Span<const int64_t> dimensions,
 
 }  // namespace
 
+ReductionMode GetXlaReductionMode(int64_t reduction) {
+  switch (reduction) {
+    case at::Reduction::Mean:
+      return ReductionMode::kMean;
+    case at::Reduction::None:
+      return ReductionMode::kNone;
+    case at::Reduction::Sum:
+      return ReductionMode::kSum;
+  }
+  XLA_ERROR() << "Unknown reduction mode: " << reduction;
+}
+
 xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
                                    const absl::optional<xla::XlaOp>& weight,
                                    ReductionMode reduction) {
   static const float kLogBound = -100;
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp xweight;
   if (weight) {
     // PyTorch guards weight and input has the same shape.
@@ -161,7 +203,7 @@ xla::XlaOp BuildBinaryCrossEntropyBackward(
     xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp target,
     const absl::optional<xla::XlaOp>& weight, ReductionMode reduction) {
   static const float kEpsilon = 1e-12;
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp xweight;
   if (weight) {
     // PyTorch guards weight and input has the same shape.
@@ -185,56 +227,26 @@ xla::XlaOp BuildBinaryCrossEntropyBackward(
   return result;
 }
 
-xla::XlaOp BuildL1Loss(xla::XlaOp input, xla::XlaOp target,
-                       ReductionMode reduction) {
-  xla::XlaOp result = xla::Abs(input - target);
-  if (reduction == ReductionMode::kNone) {
-    return result;
-  }
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  result = xla::ReduceAll(
-      result, xla::Zero(input.builder(), input_shape.element_type()),
-      XlaHelpers::CreateAddComputation(input_shape.element_type()));
-  if (reduction == ReductionMode::kMean) {
-    result = AverageValue(input, result);
-  }
-  return result;
-}
-
-xla::XlaOp BuildL1LossBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                               xla::XlaOp target, ReductionMode reduction) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  if (reduction == ReductionMode::kNone) {
-    xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
-    xla::XlaOp mask = xla::Select(xla::Ge(input, target), one, -one);
-    return mask * grad_output;
-  }
-  xla::XlaOp grad_value = grad_output;
-  if (reduction == ReductionMode::kMean) {
-    grad_value = AverageValue(input, grad_value);
-  }
-  return xla::Select(xla::Ge(input, target), grad_value, -grad_value);
-}
-
 xla::XlaOp BuildMseLoss(xla::XlaOp input, xla::XlaOp target,
                         ReductionMode reduction) {
-  xla::XlaOp diff = input - target;
+  xla::XlaOp diff = XlaHelpers::PromotedSub(input, target);
   xla::XlaOp result = diff * diff;
   if (reduction == ReductionMode::kNone) {
     return result;
   }
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  const xla::Shape& result_shape = ShapeHelper::ShapeOfXlaOp(result);
   result = xla::ReduceAll(
-      result, xla::Zero(input.builder(), input_shape.element_type()),
-      XlaHelpers::CreateAddComputation(input_shape.element_type()));
+      result, xla::Zero(result.builder(), result_shape.element_type()),
+      XlaHelpers::CreateAddComputation(result_shape.element_type()));
   if (reduction == ReductionMode::kMean) {
     int64_t num_elements = xla::ShapeUtil::ElementsIn(input_shape);
     if (num_elements == 0) {
       return xla::NanValue(input.builder(), input_shape.element_type());
     } else {
       xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
-          1.0 / static_cast<double>(num_elements), input_shape.element_type(),
-          input.builder());
+          1.0 / static_cast<double>(num_elements), result_shape.element_type(),
+          result.builder());
       result = result * scale_value;
     }
   }
@@ -243,12 +255,13 @@ xla::XlaOp BuildMseLoss(xla::XlaOp input, xla::XlaOp target,
 
 xla::XlaOp BuildMseLossBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                 xla::XlaOp target, ReductionMode reduction) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp two = XlaHelpers::ScalarValue<double>(
       2, input_shape.element_type(), input.builder());
-  xla::XlaOp d_input = two * (input - target);
+  xla::XlaOp d_input =
+      XlaHelpers::PromotedMul(two, XlaHelpers::PromotedSub(input, target));
   if (reduction == ReductionMode::kNone) {
-    return d_input * grad_output;
+    return XlaHelpers::PromotedMul(d_input, grad_output);
   }
   xla::XlaOp grad_value = grad_output;
   if (reduction == ReductionMode::kMean) {
@@ -256,22 +269,40 @@ xla::XlaOp BuildMseLossBackward(xla::XlaOp grad_output, xla::XlaOp input,
     xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
         1.0 / static_cast<double>(num_elements), input_shape.element_type(),
         input.builder());
-    grad_value = grad_output * scale_value;
+    grad_value = XlaHelpers::PromotedMul(grad_output, scale_value);
   }
-  return d_input * grad_value;
+  return XlaHelpers::PromotedMul(d_input, grad_value);
 }
 
 xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, int64_t dim,
                                       const xla::XlaComputation& reducer,
                                       xla::XlaOp init) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  std::vector<int64_t> window_strides(input_shape.rank(), 1);
-  std::vector<int64_t> window_dims(input_shape.rank(), 1);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  std::vector<int64_t> window_strides(input_shape.dimensions_size(), 1);
+  std::vector<int64_t> window_dims(input_shape.dimensions_size(), 1);
   window_dims[dim] = input_shape.dimensions(dim);
-  std::vector<std::pair<int64_t, int64_t>> padding(input_shape.rank());
+  std::vector<std::pair<int64_t, int64_t>> padding(
+      input_shape.dimensions_size());
   padding[dim].first = input_shape.dimensions(dim) - 1;
   return xla::ReduceWindowWithGeneralPadding(
       input, init, reducer, window_dims, window_strides,
+      /*base_dilations=*/{}, /*window_dilations=*/{}, padding);
+}
+
+xla::XlaOp BuildCumulativeComputationWithIndices(
+    xla::XlaOp value_input, xla::XlaOp index_input, int64_t dim,
+    const xla::XlaComputation& reducer, xla::XlaOp value_init,
+    xla::XlaOp index_init) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(value_input);
+  std::vector<int64_t> window_strides(input_shape.dimensions_size(), 1);
+  std::vector<int64_t> window_dims(input_shape.dimensions_size(), 1);
+  window_dims[dim] = input_shape.dimensions(dim);
+  std::vector<std::pair<int64_t, int64_t>> padding(
+      input_shape.dimensions_size());
+  padding[dim].first = input_shape.dimensions(dim) - 1;
+  return xla::ReduceWindowWithGeneralPadding(
+      {value_input, index_input}, {value_init, index_init}, reducer,
+      window_dims, window_strides,
       /*base_dilations=*/{}, /*window_dilations=*/{}, padding);
 }
 
@@ -282,35 +313,55 @@ xla::XlaOp BuildMean(xla::XlaOp input, absl::Span<const int64_t> dimensions,
       .result;
 }
 
-xla::XlaOp BuildStdDeviation(xla::XlaOp input,
-                             absl::Span<const int64_t> dimensions,
-                             bool keep_reduced_dimensions, int64_t correction) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+xla::XlaOp ApplyCorrectedScaling(const SummationResult& sum_result,
+                                 double correction, xla::PrimitiveType type) {
+  auto builder = sum_result.result.builder();
+  auto count_real =
+      xla::ConvertElementType(sum_result.rinfo.element_count.size, type);
+  auto correction_scalar = XlaHelpers::ScalarValue(correction, type, builder);
+  auto zero = xla::Zero(builder, type);
+  auto dof = xla::Max(zero, count_real - correction_scalar);
+  auto one = xla::One(builder, type);
+  auto scale = one / dof;
+  return sum_result.result * scale;
+}
+
+xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const int64_t> dimensions,
+                    double correction, bool keep_reduced_dimensions) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp mean =
       BuildMean(input, dimensions, /*keep_reduced_dimensions*/ true);
-  xla::XlaOp bcast_mean =
-      xla::BroadcastInDim(mean, input_shape.dimensions(),
-                          torch::lazy::Iota<int64_t>(input_shape.rank()));
+  xla::XlaOp bcast_mean;
+  if (input_shape.is_unbounded_dynamic()) {
+    auto promoted = XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
+        input, mean, input_shape);
+    bcast_mean = promoted.second;
+  } else {
+    bcast_mean = xla::BroadcastInDim(
+        mean, input_shape.dimensions(),
+        torch::lazy::Iota<int64_t>(input_shape.dimensions_size()));
+  }
   xla::XlaOp input_mean_diff = input - bcast_mean;
-  xla::XlaOp squared_var = input_mean_diff * input_mean_diff;
-  xla::XlaOp squared_result;
+  xla::XlaOp diff2 = input_mean_diff * input_mean_diff;
+  xla::XlaOp var;
   if (correction != 0) {
     SummationResult sum_result = CreateSummation(
-        squared_var, dimensions, keep_reduced_dimensions, /*scale=*/false);
-    xla::XlaOp correction_scalar = XlaHelpers::ScalarValue(
-        correction,
-        XlaHelpers::TypeOfXlaOp(sum_result.rinfo.element_count.size),
-        input.builder());
-    squared_result =
-        GetScaleValue(sum_result.result,
-                      sum_result.rinfo.element_count.size - correction_scalar,
-                      input_shape.element_type());
+        diff2, dimensions, keep_reduced_dimensions, /*scale=*/false);
+    var = ApplyCorrectedScaling(sum_result, correction,
+                                input_shape.element_type());
   } else {
     SummationResult sum_result = CreateSummation(
-        squared_var, dimensions, keep_reduced_dimensions, /*scale=*/true);
-    squared_result = sum_result.result;
+        diff2, dimensions, keep_reduced_dimensions, /*scale=*/true);
+    var = sum_result.result;
   }
-  return xla::Sqrt(squared_result);
+  return var;
+}
+
+xla::XlaOp BuildStdDeviation(xla::XlaOp input,
+                             absl::Span<const int64_t> dimensions,
+                             bool keep_reduced_dimensions, double correction) {
+  auto var = BuildVar(input, dimensions, correction, keep_reduced_dimensions);
+  return xla::Sqrt(var);
 }
 
 xla::XlaOp BuildSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
@@ -333,19 +384,23 @@ xla::XlaOp BuildMaxInDim(xla::XlaOp input, int64_t dim,
 xla::XlaOp BuildMaxInDims(xla::XlaOp input,
                           absl::Span<const int64_t> dimensions,
                           bool keep_reduced_dimensions) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
+  std::vector<int64_t> canonical_dimensions =
+      torch::lazy::GetCanonicalDimensionIndices(
+          runtime::util::ToVector<int64_t>(dimensions),
+          shape.dimensions_size());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.min, shape.element_type(), input.builder());
-  ReductionInfo rinfo =
-      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
+  ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
+                                         keep_reduced_dimensions);
   if (rinfo.element_count.scalar_size) {
     // When can only assert this if dimensions are not dynamic.
     XLA_CHECK_GT(*rinfo.element_count.scalar_size, 0);
   }
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMaxComputation(shape.element_type()),
-      dimensions);
+      canonical_dimensions);
   if (keep_reduced_dimensions) {
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
@@ -360,19 +415,25 @@ xla::XlaOp BuildMinInDim(xla::XlaOp input, int64_t dim,
 xla::XlaOp BuildMinInDims(xla::XlaOp input,
                           absl::Span<const int64_t> dimensions,
                           bool keep_reduced_dimensions) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
+
+  std::vector<int64_t> canonical_dimensions =
+      torch::lazy::GetCanonicalDimensionIndices(
+          runtime::util::ToVector<int64_t>(dimensions),
+          shape.dimensions_size());
+
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.max, shape.element_type(), input.builder());
-  ReductionInfo rinfo =
-      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
+  ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
+                                         keep_reduced_dimensions);
   if (rinfo.element_count.scalar_size) {
     // When can only assert this if dimensions are not dynamic.
     XLA_CHECK_GT(*rinfo.element_count.scalar_size, 0);
   }
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMinComputation(shape.element_type()),
-      dimensions);
+      canonical_dimensions);
   if (keep_reduced_dimensions) {
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
@@ -380,40 +441,60 @@ xla::XlaOp BuildMinInDims(xla::XlaOp input,
 }
 
 xla::XlaOp BuildArgMax(xla::XlaOp input, int64_t dim, bool keepdim) {
-  const xla::Shape* shape = &XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape* shape = &ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp operand = input;
+  bool dim_is_none = false;
   if (dim < 0) {
     dim = 0;
+    dim_is_none = true;
     operand = XlaHelpers::DynamicReshape(operand,
                                          {xla::ShapeUtil::ElementsIn(*shape)});
-    shape = &XlaHelpers::ShapeOfXlaOp(operand);
+    if (!keepdim) {
+      shape = &ShapeHelper::ShapeOfXlaOp(operand);
+    }
   }
   xla::XlaOp result = xla::ArgMax(
-      operand,
-      GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
+      operand, GetXlaPrimitiveTypeForCurrentDevice(xla::PrimitiveType::S64),
+      dim);
   if (keepdim) {
     auto dimensions = torch::lazy::ToVector<int64_t>(shape->dimensions());
-    dimensions[dim] = 1;
+    if (dim_is_none) {
+      for (auto& dim_it : dimensions) {
+        dim_it = 1;
+      }
+    } else {
+      dimensions[dim] = 1;
+    }
     result = XlaHelpers::DynamicReshape(result, dimensions);
   }
   return result;
 }
 
 xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim) {
-  const xla::Shape* shape = &XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape* shape = &ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp operand = input;
+  bool dim_is_none = false;
   if (dim < 0) {
     dim = 0;
+    dim_is_none = true;
     operand = XlaHelpers::DynamicReshape(operand,
                                          {xla::ShapeUtil::ElementsIn(*shape)});
-    shape = &XlaHelpers::ShapeOfXlaOp(operand);
+    if (!keepdim) {
+      shape = &ShapeHelper::ShapeOfXlaOp(operand);
+    }
   }
-  xla::XlaOp result = xla::ArgMin(
-      operand,
-      GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
+  xla::XlaOp result = xla::ArgMinMax(
+      operand, GetXlaPrimitiveTypeForCurrentDevice(xla::PrimitiveType::S64),
+      dim, /* is_min */ true);
   if (keepdim) {
     auto dimensions = torch::lazy::ToVector<int64_t>(shape->dimensions());
-    dimensions[dim] = 1;
+    if (dim_is_none) {
+      for (auto& dim_it : dimensions) {
+        dim_it = 1;
+      }
+    } else {
+      dimensions[dim] = 1;
+    }
     result = XlaHelpers::DynamicReshape(result, dimensions);
   }
   return result;
@@ -421,9 +502,13 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim) {
 
 xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  ReductionInfo rinfo =
-      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
+  std::vector<int64_t> canonical_dimensions =
+      torch::lazy::GetCanonicalDimensionIndices(
+          runtime::util::ToVector<int64_t>(dimensions),
+          shape.dimensions_size());
+  ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
+                                         keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
       input.builder(), xla::LiteralUtil::One(shape.element_type()));
   xla::PrimitiveType result_type =
@@ -431,7 +516,7 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                                                      : xla::PrimitiveType::PRED;
   xla::XlaOp result =
       xla::Reduce(input, init_value, CreateAllComputation(shape.element_type()),
-                  dimensions);
+                  canonical_dimensions);
   result = MaybeConvertTo(
       xla::Ne(result, xla::Zero(input.builder(), shape.element_type())),
       result_type);
@@ -443,9 +528,13 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const int64_t> dimensions,
 
 xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  ReductionInfo rinfo =
-      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
+  std::vector<int64_t> canonical_dimensions =
+      torch::lazy::GetCanonicalDimensionIndices(
+          runtime::util::ToVector<int64_t>(dimensions),
+          shape.dimensions_size());
+  ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
+                                         keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
       input.builder(), xla::LiteralUtil::Zero(shape.element_type()));
   xla::PrimitiveType result_type =
@@ -453,7 +542,7 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                                                      : xla::PrimitiveType::PRED;
   xla::XlaOp result =
       xla::Reduce(input, init_value, CreateAnyComputation(shape.element_type()),
-                  dimensions);
+                  canonical_dimensions);
   result = MaybeConvertTo(
       xla::Ne(result, xla::Zero(input.builder(), shape.element_type())),
       result_type);
@@ -461,39 +550,6 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
   return result;
-}
-
-xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const int64_t> dimensions,
-                    int64_t correction, bool keep_reduced_dimensions) {
-  const auto& input_builder = input.builder();
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const xla::PrimitiveType input_type = input_shape.element_type();
-
-  // var = (input^2).sum(dim)/size(dim) - (input.sum(dim)/size(dim))^2
-  SummationResult mean_result =
-      CreateSummation(input, dimensions, keep_reduced_dimensions,
-                      /*scale=*/true);
-  SummationResult squared_mean_result =
-      CreateSummation(input * input, dimensions, keep_reduced_dimensions, true);
-
-  // Clips to zero if the result is negative, which can happen due to
-  // roundoff errors.
-  xla::XlaOp var = xla::Max(
-      squared_mean_result.result - (mean_result.result * mean_result.result),
-      XlaHelpers::ScalarValue<float>(0, input_type, input_builder));
-
-  ReductionInfo rinfo = mean_result.rinfo;
-  if (correction != 0) {
-    xla::XlaOp count = xla::ConvertElementType(rinfo.element_count.size,
-                                               xla::PrimitiveType::F32);
-    xla::XlaOp residual_count =
-        count - XlaHelpers::ScalarValue(
-                    correction, XlaHelpers::ShapeOfXlaOp(count).element_type(),
-                    input_builder);
-    xla::XlaOp scaler = residual_count / count;
-    var = GetScaleValue(var, scaler, input_type);
-  }
-  return var;
 }
 
 xla::XlaOp BuildLogsumexp(xla::XlaOp input,
@@ -516,6 +572,51 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
             .result;
   }
   return logs + max_in_dim;
+}
+
+xla::XlaOp BuildEinsum(absl::Span<const xla::XlaOp> operands,
+                       const std::string& equation) {
+  if (operands.size() == 1) {
+    return xla::Einsum(
+        operands[0], equation,
+        xla::PrecisionConfig::Precision::PrecisionConfig_Precision_DEFAULT);
+  } else if (operands.size() == 2) {
+    return xla::Einsum(
+        operands[0], operands[1], equation,
+        xla::PrecisionConfig::Precision::PrecisionConfig_Precision_DEFAULT,
+        XlaHelpers::PromoteType(XlaHelpers::TypeOfXlaOp(operands[0]),
+                                XlaHelpers::TypeOfXlaOp(operands[1])));
+  }
+}
+
+std::vector<xla::XlaOp> BuildEinsumBackward(const xla::XlaOp& grad_output,
+                                            absl::Span<const xla::XlaOp> inputs,
+                                            const std::string& equation) {
+  std::vector<xla::XlaOp> result;
+  if (inputs.size() == 1) {
+    std::string backward_equation =
+        EinsumUtilities::BuildBackwardsEquation(equation);
+    result.push_back(xla::Einsum(grad_output, backward_equation));
+  } else if (inputs.size() == 2) {
+    std::vector<std::string> equations =
+        EinsumUtilities::BuildBackwardsEquations(equation);
+
+    xla::PrimitiveType type = XlaHelpers::PromoteType(
+        XlaHelpers::TypeOfXlaOp(grad_output),
+        XlaHelpers::TypeOfXlaOp(inputs[0]), XlaHelpers::TypeOfXlaOp(inputs[1]));
+
+    result.push_back(xla::Einsum(
+        grad_output, inputs[1], equations[0],
+        xla::PrecisionConfig::Precision::PrecisionConfig_Precision_DEFAULT,
+        type));
+
+    result.push_back(xla::Einsum(
+        inputs[0], grad_output, equations[1],
+        xla::PrecisionConfig::Precision::PrecisionConfig_Precision_DEFAULT,
+        type));
+  }
+
+  return result;
 }
 
 }  // namespace torch_xla

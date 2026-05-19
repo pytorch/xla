@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_AVG_POOL_ND_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_AVG_POOL_ND_BACKWARD_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,12 +7,13 @@ namespace torch_xla {
 
 class AvgPoolNdBackward : public XlaNode {
  public:
-  AvgPoolNdBackward(const XlaValue& grad_output, const XlaValue& input,
-                    int64_t spatial_dim_count, std::vector<int64_t> kernel_size,
+  AvgPoolNdBackward(const torch::lazy::Value& grad_output,
+                    const torch::lazy::Value& input, int64_t spatial_dim_count,
+                    std::vector<int64_t> kernel_size,
                     std::vector<int64_t> stride, std::vector<int64_t> padding,
                     bool ceil_mode, bool count_include_pad);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -42,3 +44,5 @@ class AvgPoolNdBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_AVG_POOL_ND_BACKWARD_H_

@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/index_select.h"
 
-#include "tensorflow/compiler/xla/client/lib/slicing.h"
+#include "xla/hlo/builder/lib/slicing.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -8,28 +9,28 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& index,
-                           int64_t dim) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& index, int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::TorchIndexSelect(operands[0], operands[1], dim);
   };
-  return InferOutputShape({input.xla_shape(), index.xla_shape()},
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(index)},
                           lower_for_shape_fn);
 }
 
 }  // namespace
 
-IndexSelect::IndexSelect(const XlaValue& input, int64_t dim,
-                         const XlaValue& index)
-    : XlaNode(torch::lazy::OpKind(at::aten::index_select), {input, index},
-              [&]() { return NodeOutputShape(input, index, dim); },
-              /*num_outputs=*/1, torch::lazy::MHash(dim)),
+IndexSelect::IndexSelect(const torch::lazy::Value& input, int64_t dim,
+                         const torch::lazy::Value& index)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::index_select), {input, index},
+          [&]() { return NodeOutputShape(input, index, dim); },
+          /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-torch::lazy::NodePtr IndexSelect::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<IndexSelect>(operands.at(0), dim_,
-                                            operands.at(1));
+torch::lazy::NodePtr IndexSelect::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<IndexSelect>(operands.at(0), dim_, operands.at(1));
 }
 
 XlaOpVector IndexSelect::Lower(LoweringContext* loctx) const {

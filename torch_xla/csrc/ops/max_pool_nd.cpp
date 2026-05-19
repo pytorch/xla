@@ -1,14 +1,15 @@
 #include "torch_xla/csrc/ops/max_pool_nd.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, int64_t spatial_dim_count,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           int64_t spatial_dim_count,
                            absl::Span<const int64_t> kernel_size,
                            absl::Span<const int64_t> stride,
                            absl::Span<const int64_t> padding, bool ceil_mode) {
@@ -18,7 +19,7 @@ xla::Shape NodeOutputShape(const XlaValue& input, int64_t spatial_dim_count,
                        padding, ceil_mode);
     return xla::Tuple(operands[0].builder(), {result.result, result.indices});
   };
-  return InferOutputShape({input.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, shape_fn);
 }
 
 c10::Symbol MaxPoolNdSymbol(int64_t spatial_dim_count) {
@@ -37,28 +38,29 @@ c10::Symbol MaxPoolNdSymbol(int64_t spatial_dim_count) {
 
 }  // namespace
 
-MaxPoolNd::MaxPoolNd(const XlaValue& input, int64_t spatial_dim_count,
+MaxPoolNd::MaxPoolNd(const torch::lazy::Value& input, int64_t spatial_dim_count,
                      std::vector<int64_t> kernel_size,
                      std::vector<int64_t> stride, std::vector<int64_t> padding,
                      bool ceil_mode)
-    : XlaNode(torch::lazy::OpKind(MaxPoolNdSymbol(spatial_dim_count)), {input},
-              [&]() {
-                return NodeOutputShape(input, spatial_dim_count, kernel_size,
-                                       stride, padding, ceil_mode);
-              },
-              /*num_outputs=*/2,
-              torch::lazy::MHash(spatial_dim_count, kernel_size, stride,
-                                 padding, ceil_mode)),
+    : XlaNode(
+          torch::lazy::OpKind(MaxPoolNdSymbol(spatial_dim_count)), {input},
+          [&]() {
+            return NodeOutputShape(input, spatial_dim_count, kernel_size,
+                                   stride, padding, ceil_mode);
+          },
+          /*num_outputs=*/2,
+          torch::lazy::MHash(spatial_dim_count, kernel_size, stride, padding,
+                             ceil_mode)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       ceil_mode_(ceil_mode) {}
 
-torch::lazy::NodePtr MaxPoolNd::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_,
-                                          kernel_size_, stride_, padding_,
-                                          ceil_mode_);
+torch::lazy::NodePtr MaxPoolNd::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_,
+                                        kernel_size_, stride_, padding_,
+                                        ceil_mode_);
 }
 
 XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {

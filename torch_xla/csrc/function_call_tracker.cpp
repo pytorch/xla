@@ -7,10 +7,12 @@
 #include <thread>
 #include <unordered_set>
 
+#include <torch/csrc/lazy/python/python_util.h>
+
 #include "absl/strings/str_split.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/core/platform/stacktrace.h"
-#include "torch/csrc/lazy/python/python_util.h"
+#include "tsl/platform/stacktrace.h"
+
+#include "torch_xla/csrc/runtime/sys_util.h"
 
 namespace torch_xla {
 namespace fn_tracker {
@@ -28,15 +30,16 @@ struct TrackerContext {
 
 TrackerContext* LoadTrackerContext() {
   std::string fntracker_file =
-      xla::sys_util::GetEnvString("XLA_FNTRACKER_FILE", "");
+      runtime::sys_util::GetEnvString("XLA_FNTRACKER_FILE", "");
   TrackerContext* tctx = nullptr;
   if (!fntracker_file.empty()) {
     tctx = new TrackerContext(
         std::move(fntracker_file),
-        xla::sys_util::GetEnvInt("XLA_FNTRACKER_LEVEL",
-                                 std::numeric_limits<int>::max()));
+        runtime::sys_util::GetEnvInt("XLA_FNTRACKER_LEVEL",
+                                     std::numeric_limits<int>::max()));
 
-    std::string fn_list = xla::sys_util::GetEnvString("XLA_FNTRACKER_LIST", "");
+    std::string fn_list =
+        runtime::sys_util::GetEnvString("XLA_FNTRACKER_LIST", "");
     for (auto& fn : absl::StrSplit(fn_list, ':')) {
       if (!fn.empty()) {
         tctx->tags.insert(std::string(fn));
@@ -57,7 +60,7 @@ void LogFunction(TrackerContext* tctx, const char* tag) {
   fn_file << "[TAG " << tag << " From Thread " << std::this_thread::get_id()
           << "]\n"
           << torch::lazy::GetPythonFrames() << "\nC++ Frames:\n"
-          << tensorflow::CurrentStackTrace() << "\n";
+          << tsl::CurrentStackTrace() << "\n";
 }
 
 }  // namespace

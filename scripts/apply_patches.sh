@@ -5,9 +5,9 @@ set -ex
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 XDIR=$CDIR/..
 PTDIR=$XDIR/..
-TFDIR=$XDIR/third_party/tensorflow
+OPENXLADIR=$XDIR/third_party/xla
 
-TORCH_PIN="$XDIR/torch_patches/.torch_pin"
+TORCH_PIN="$XDIR/.torch_pin"
 if [ -f "$TORCH_PIN" ]; then
   CID=$(cat "$TORCH_PIN")
   # If starts with # and it's not merged into master, fetch from origin
@@ -38,7 +38,9 @@ python $CDIR/cond_patch.py \
   $XDIR/torch_patches \
   $PTDIR
 
-python $CDIR/cond_patch.py \
-  $XDIR/tf_patches \
-  $TFDIR
-
+# Apply OpenXLA patches only if requested, since bazel handles that normally.
+if [[ -n "${APPLY_OPENXLA_patches}" ]]; then
+  python $CDIR/cond_patch.py \
+    $XDIR/openxla_patches \
+    $OPENXLADIR
+fi

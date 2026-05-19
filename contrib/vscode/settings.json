@@ -1,0 +1,32 @@
+{
+    "bsv.bazel.buildFlags": [
+        "--config=compdb",
+    ],
+    "bsv.cc.compdb.targets": [
+        "//torch_xla/csrc/runtime:all",
+        "//torch_xla/csrc:all",
+        "//test/cpp:all",
+    ],
+    "coverage-gutters.coverageBaseDir": ".",
+    "coverage-gutters.showLineCoverage": false,
+    "coverage-gutters.showGutterCoverage": true,
+    "coverage-gutters.coverageReportFileName": "./genhtml/index.html",
+    "coverage-gutters.coverageFileNames": [
+        "./bazel-out/_coverage/_coverage_report.dat"
+    ],
+    "git.detectSubmodules": false,
+    "[python]": {
+        "editor.defaultFormatter": "eeyore.yapf",
+        "editor.formatOnSave": true,
+    },
+    "python.analysis.exclude": [
+        "**/third_party",
+        "**/build",
+        "**/__pycache__",
+        "**/.git",
+    ],
+    "[cpp]": {
+        "editor.defaultFormatter": "xaver.clang-format",
+        "editor.formatOnSave": true,
+    }
+}

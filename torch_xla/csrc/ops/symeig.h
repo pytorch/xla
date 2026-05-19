@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_SYMEIG_H_
+#define XLA_TORCH_XLA_CSRC_OPS_SYMEIG_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,11 +7,11 @@ namespace torch_xla {
 
 class SymEig : public XlaNode {
  public:
-  SymEig(const XlaValue& input, bool eigenvectors, bool lower);
+  SymEig(const torch::lazy::Value& input, bool eigenvectors, bool lower);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -24,3 +25,5 @@ class SymEig : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_SYMEIG_H_

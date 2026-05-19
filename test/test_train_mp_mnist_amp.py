@@ -31,13 +31,14 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
-from torch_xla.amp import autocast, GradScaler
+from torch_xla.amp import autocast
 try:
   from torch_xla.amp import syncfree
 except ImportError:
@@ -66,10 +67,10 @@ class MNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
-def _train_update(device, x, loss, tracker, writer):
+def _train_update(device, step, loss, tracker, writer):
   test_utils.print_training_update(
       device,
-      x,
+      step,
       loss.item(),
       tracker.rate(),
       tracker.global_rate(),
@@ -84,33 +85,33 @@ def train_mnist(flags, **kwargs):
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=60000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=60000 // flags.batch_size // xr.world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=10000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=10000 // flags.batch_size // xr.world_size())
   else:
     train_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(xm.get_ordinal())),
+        os.path.join(flags.datadir, str(xr.global_ordinal())),
         train=True,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(xm.get_ordinal())),
+        os.path.join(flags.datadir, str(xr.global_ordinal())),
         train=False,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     train_sampler = None
-    if xm.xrt_world_size() > 1:
+    if xr.world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
+          num_replicas=xr.world_size(),
+          rank=xr.global_ordinal(),
           shuffle=True)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -127,45 +128,63 @@ def train_mnist(flags, **kwargs):
         num_workers=flags.num_workers)
 
   # Scale learning rate to num cores
-  lr = flags.lr * xm.xrt_world_size()
+  lr = flags.lr * xr.world_size()
 
-  device = xm.xla_device()
+  device = torch_xla.device()
+  device_hw = xm.xla_device_hw(device)
   model = MNIST().to(device)
+
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
   optim_cls = syncfree.SGD if FLAGS.use_syncfree_optim else optim.SGD
   optimizer = optim_cls(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
-  scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+
+  if device_hw == 'TPU':
+    scaler = None
+  else:
+    print("Only TPU supported for AMP.")
+    sys.exit(1)
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
-      with autocast():
+      with autocast(device):
         output = model(data)
         loss = loss_fn(output, target)
-      scaler.scale(loss).backward()
-      gradients = xm._fetch_gradients(optimizer)
-      xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
-      scaler.step(optimizer)
-      scaler.update()
+      if scaler:
+        scaler.scale(loss).backward()
+        gradients = xm._fetch_gradients(optimizer)
+        xm.all_reduce('sum', gradients, scale=1.0 / xr.world_size())
+        scaler.step(optimizer)
+        scaler.update()
+      else:
+        loss.backward()
+        xm.optimizer_step(optimizer)
       tracker.add(flags.batch_size)
       if step % flags.log_steps == 0:
         xm.add_step_closure(
             _train_update, args=(device, step, loss, tracker, writer))
+      if FLAGS.num_steps and FLAGS.num_steps == step:
+        break
 
   def test_loop_fn(loader):
     total_samples = 0
     correct = 0
     model.eval()
-    for data, target in loader:
+    for step, (data, target) in enumerate(loader):
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum()
       total_samples += data.size()[0]
+      if step % FLAGS.log_steps == 0:
+        xm.add_step_closure(
+            test_utils.print_test_update, args=(device, None, epoch, step))
+      if FLAGS.num_steps and FLAGS.num_steps == step:
+        break
 
     accuracy = 100.0 * correct.item() / total_samples
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
@@ -197,7 +216,7 @@ def train_mnist(flags, **kwargs):
 
 
 def _mp_fn(index, flags):
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_mnist(flags)
   if flags.tidy and os.path.isdir(flags.datadir):
     shutil.rmtree(flags.datadir)
@@ -208,4 +227,6 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
+  debug_single_process = FLAGS.num_cores == 1
+  torch_xla.launch(
+      _mp_fn, args=(FLAGS,), debug_single_process=debug_single_process)

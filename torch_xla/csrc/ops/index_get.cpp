@@ -1,31 +1,33 @@
 #include "torch_xla/csrc/ops/index_get.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& base, const XlaValue& indices,
+xla::Shape NodeOutputShape(const torch::lazy::Value& base,
+                           const torch::lazy::Value& indices,
                            int64_t start_dim) {
   auto lower_for_shape_fn =
       [start_dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2);
     return CreateIndex(operands[0], operands[1], start_dim);
   };
-  return InferOutputShape({base.xla_shape(), indices.xla_shape()},
+  return InferOutputShape({GetXlaShape(base), GetXlaShape(indices)},
                           lower_for_shape_fn);
 }
 
 }  // namespace
 
-IndexGet::IndexGet(const XlaValue& base, const XlaValue& indices,
-                   int64_t start_dim)
-    : XlaNode(torch::lazy::OpKind(at::aten::index), {base, indices},
-              [&]() { return NodeOutputShape(base, indices, start_dim); },
-              /*num_outputs=*/1, torch::lazy::MHash(start_dim)),
+IndexGet::IndexGet(const torch::lazy::Value& base,
+                   const torch::lazy::Value& indices, int64_t start_dim)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::index), {base, indices},
+          [&]() { return NodeOutputShape(base, indices, start_dim); },
+          /*num_outputs=*/1, torch::lazy::MHash(start_dim)),
       start_dim_(start_dim) {}
 
 std::string IndexGet::ToString() const {
@@ -34,9 +36,9 @@ std::string IndexGet::ToString() const {
   return ss.str();
 }
 
-torch::lazy::NodePtr IndexGet::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<IndexGet>(operands.at(0), operands.at(1),
-                                         start_dim_);
+torch::lazy::NodePtr IndexGet::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<IndexGet>(operands.at(0), operands.at(1),
+                                       start_dim_);
 }
 
 XlaOpVector IndexGet::Lower(LoweringContext* loctx) const {

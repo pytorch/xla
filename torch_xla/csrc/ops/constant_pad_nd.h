@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_CONSTANT_PAD_ND_H_
+#define XLA_TORCH_XLA_CSRC_OPS_CONSTANT_PAD_ND_H_
 
 #include <c10/core/Scalar.h>
 
@@ -8,12 +9,12 @@ namespace torch_xla {
 
 class ConstantPadNd : public XlaNode {
  public:
-  ConstantPadNd(const XlaValue& input, std::vector<int64_t> pad,
+  ConstantPadNd(const torch::lazy::Value& input, std::vector<int64_t> pad,
                 const at::Scalar& value);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -27,3 +28,5 @@ class ConstantPadNd : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_CONSTANT_PAD_ND_H_

@@ -1,27 +1,29 @@
 #include "torch_xla/csrc/ops/upsample_nearest2d_backward.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/resize_ops.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 
 UpsampleNearestBackward::UpsampleNearestBackward(
-    const XlaValue& input, std::vector<int64_t> output_size,
+    const torch::lazy::Value& input, std::vector<int64_t> output_size,
     std::vector<int64_t> input_size)
-    : XlaNode(torch::lazy::OpKind(at::aten::upsample_nearest2d_backward),
-              {input},
-              [&]() {
-                return resize::GetBackwardOutputShape2d(input.xla_shape(),
-                                                        input_size);
-              },
-              /*num_outputs=*/1, torch::lazy::MHash(output_size, input_size)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::upsample_nearest2d_backward), {input},
+          [&]() {
+            return resize::GetBackwardOutputShape2d(GetXlaShape(input),
+                                                    input_size);
+          },
+          /*num_outputs=*/1, torch::lazy::MHash(output_size, input_size)),
       output_size_(std::move(output_size)),
       input_size_(std::move(input_size)) {}
 
-torch::lazy::NodePtr UpsampleNearestBackward::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<UpsampleNearestBackward>(
+torch::lazy::NodePtr UpsampleNearestBackward::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<UpsampleNearestBackward>(
       operands.at(0), output_size_, input_size_);
 }
 

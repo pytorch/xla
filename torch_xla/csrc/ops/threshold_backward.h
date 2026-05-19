@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_THRESHOLD_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_THRESHOLD_BACKWARD_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,10 +7,10 @@ namespace torch_xla {
 
 class ThresholdBackward : public XlaNode {
  public:
-  ThresholdBackward(const XlaValue& grad_output, const XlaValue& input,
-                    float threshold);
+  ThresholdBackward(const torch::lazy::Value& grad_output,
+                    const torch::lazy::Value& input, float threshold);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -22,3 +23,5 @@ class ThresholdBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_THRESHOLD_BACKWARD_H_

@@ -1,7 +1,9 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_NLL_LOSS_H_
+#define XLA_TORCH_XLA_CSRC_NLL_LOSS_H_
 
 #include "absl/types/optional.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
+
 #include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
@@ -18,3 +20,5 @@ xla::XlaOp BuildNllLossBackward(xla::XlaOp grad_output, xla::XlaOp logits,
                                 ReductionMode reduction_mode);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_NLL_LOSS_H_

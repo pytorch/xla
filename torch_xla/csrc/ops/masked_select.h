@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_MASKED_SELECT_H_
+#define XLA_TORCH_XLA_CSRC_OPS_MASKED_SELECT_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -9,11 +10,13 @@ namespace torch_xla {
 // it gets its own IR node class.
 class MaskedSelect : public XlaNode {
  public:
-  MaskedSelect(const XlaValue& input, const XlaValue& mask);
+  MaskedSelect(const torch::lazy::Value& input, const torch::lazy::Value& mask);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_MASKED_SELECT_H_

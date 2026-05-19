@@ -1,46 +1,50 @@
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "xla/hlo/builder/lib/constants.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/scalar.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 namespace {
 
 xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
                     absl::Span<const int64_t> pad) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   return xla::Pad(input,
                   XlaHelpers::ScalarValue(value, input_shape.element_type(),
                                           input.builder()),
                   XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad));
 }
 
-xla::Shape NodeOutputShape(const XlaValue& input, const at::Scalar& value,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           const at::Scalar& value,
                            absl::Span<const int64_t> pad) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerPad(operands[0], value, pad);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-ConstantPadNd::ConstantPadNd(const XlaValue& input, std::vector<int64_t> pad,
-                             const at::Scalar& value)
-    : XlaNode(torch::lazy::OpKind(at::aten::constant_pad_nd), {input},
-              [&]() { return NodeOutputShape(input, value, pad); },
-              /*num_outputs=*/1, torch::lazy::MHash(pad, ScalarHash(value))),
+ConstantPadNd::ConstantPadNd(const torch::lazy::Value& input,
+                             std::vector<int64_t> pad, const at::Scalar& value)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::constant_pad_nd), {input},
+          [&]() { return NodeOutputShape(input, value, pad); },
+          /*num_outputs=*/1, torch::lazy::MHash(pad, ScalarHash(value))),
       pad_(std::move(pad)),
       value_(value) {}
 
-torch::lazy::NodePtr ConstantPadNd::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
+torch::lazy::NodePtr ConstantPadNd::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
 }
 
 XlaOpVector ConstantPadNd::Lower(LoweringContext* loctx) const {

@@ -1,17 +1,18 @@
 #include "torch_xla/csrc/ops/flip.h"
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
 
-Flip::Flip(const XlaValue& input, std::vector<int64_t> dims)
-    : XlaNode(torch::lazy::OpKind(at::aten::flip), {input}, input.xla_shape(),
+Flip::Flip(const torch::lazy::Value& input, std::vector<int64_t> dims)
+    : XlaNode(torch::lazy::OpKind(at::aten::flip), {input}, GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
-torch::lazy::NodePtr Flip::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Flip>(operands.at(0), dims_);
+torch::lazy::NodePtr Flip::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Flip>(operands.at(0), dims_);
 }
 
 XlaOpVector Flip::Lower(LoweringContext* loctx) const {

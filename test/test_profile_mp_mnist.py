@@ -1,6 +1,29 @@
 """Fork of test_train_mp_mnist.py to demonstrate how to profile workloads."""
 import args_parse
 
+profile_opts = {
+    '--profile_step': {
+        'type': int,
+        'default': -1,
+        'help': 'Step at which to trigger a profile programmatically',
+    },
+    '--profile_epoch': {
+        'type': int,
+        'default': -1,
+        'help': 'Epoch at which to trigger a profile programmatically',
+    },
+    '--profile_logdir': {
+        'type': str,
+        'default': None,
+        'help': 'Path to store programmatically-triggered profiles',
+    },
+    '--profile_duration_ms': {
+        'type': int,
+        'default': 5000,
+        'help': 'Duration of programmatically-triggered profile captures'
+    },
+}
+
 FLAGS = args_parse.parse_common_options(
     datadir='/tmp/mnist-data',
     batch_size=128,
@@ -8,7 +31,8 @@ FLAGS = args_parse.parse_common_options(
     lr=0.01,
     target_accuracy=98.0,
     num_epochs=18,
-    profiler_port=9012)
+    profiler_port=9012,
+    opts=profile_opts.items())
 
 import os
 import shutil
@@ -20,12 +44,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
-import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
 
@@ -75,33 +99,33 @@ def train_mnist(flags,
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=600000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=600000 // flags.batch_size // xr.world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=100000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=100000 // flags.batch_size // xr.world_size())
   else:
     train_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(xm.get_ordinal())),
+        os.path.join(flags.datadir, str(xr.global_ordinal())),
         train=True,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(xm.get_ordinal())),
+        os.path.join(flags.datadir, str(xr.global_ordinal())),
         train=False,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     train_sampler = None
-    if xm.xrt_world_size() > 1:
+    if xr.world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
+          num_replicas=xr.world_size(),
+          rank=xr.global_ordinal(),
           shuffle=True)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -118,9 +142,9 @@ def train_mnist(flags,
         num_workers=flags.num_workers)
 
   # Scale learning rate to num cores
-  lr = flags.lr * xm.xrt_world_size()
+  lr = flags.lr * xr.world_size()
 
-  device = xm.xla_device()
+  device = torch_xla.device()
   model = MNIST().to(device)
   writer = None
   if xm.is_master_ordinal():
@@ -129,11 +153,20 @@ def train_mnist(flags,
   loss_fn = nn.NLLLoss()
 
   server = xp.start_server(flags.profiler_port)
+  profile_step = flags.profile_step
+  profile_epoch = flags.profile_epoch
 
-  def train_loop_fn(loader):
+  def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
+      if epoch == profile_epoch and step == profile_step and xm.is_master_ordinal(
+      ):
+        # Take a profile in a background thread
+        xp.trace_detached(
+            f'localhost:{flags.profiler_port}',
+            flags.profile_logdir,
+            duration_ms=flags.profile_duration_ms)
       if dynamic_graph:
         # testing purpose only: dynamic batch size and graph.
         index = max(-step, -flags.batch_size + 1)  # non-empty
@@ -177,7 +210,7 @@ def train_mnist(flags,
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, flags.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    train_loop_fn(train_device_loader)
+    train_loop_fn(train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
 
     accuracy = test_loop_fn(test_device_loader)
@@ -198,7 +231,7 @@ def train_mnist(flags,
 
 
 def _mp_fn(index, flags):
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_mnist(flags, dynamic_graph=True, fetch_often=True)
   if flags.tidy and os.path.isdir(flags.datadir):
     shutil.rmtree(flags.datadir)
@@ -209,4 +242,6 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
+  debug_single_process = FLAGS.num_cores == 1
+  torch_xla.launch(
+      _mp_fn, args=(FLAGS,), debug_single_process=debug_single_process)

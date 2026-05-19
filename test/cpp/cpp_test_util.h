@@ -1,18 +1,22 @@
-#pragma once
+#ifndef XLA_TEST_CPP_CPP_TEST_UTIL_H_
+#define XLA_TEST_CPP_CPP_TEST_UTIL_H_
 
 #include <gtest/gtest.h>
-#include <torch/torch.h>
 
 #include <cmath>
 #include <functional>
 #include <string>
 #include <unordered_set>
 
+#include <torch/torch.h>
+
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
 
 #define XLA_CPP_TEST_ENABLED(name)                          \
@@ -51,10 +55,10 @@ static inline void AllClose(at::Tensor tensor, at::Tensor xla_tensor,
   EXPECT_TRUE(CloseValues(tensor, xla_tensor, rtol, atol));
 }
 
-static inline void AllClose(at::Tensor tensor, XLATensor& xla_tensor,
+static inline void AllClose(at::Tensor tensor, XLATensorPtr& xla_tensor,
                             double rtol = 1e-5, double atol = 1e-8) {
-  EXPECT_TRUE(
-      CloseValues(tensor, xla_tensor.ToTensor(/*detached=*/false), rtol, atol));
+  EXPECT_TRUE(CloseValues(tensor, xla_tensor->ToTensor(/*detached=*/false),
+                          rtol, atol));
 }
 
 static inline void AllEqual(at::Tensor tensor, at::Tensor xla_tensor) {
@@ -85,17 +89,20 @@ std::string GetTensorDotGraph(at::Tensor tensor);
 
 std::string GetTensorHloGraph(at::Tensor tensor);
 
-XlaValue GetTensorIrValue(const at::Tensor& tensor,
-                          const torch::lazy::BackendDevice& device);
+torch::lazy::Value GetTensorIrValue(const at::Tensor& tensor,
+                                    const torch::lazy::BackendDevice& device);
 
-std::vector<xla::ComputationClient::DataPtr> Execute(
-    absl::Span<const XlaValue> roots, const torch::lazy::BackendDevice& device);
+std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
+    absl::Span<const torch::lazy::Value> roots,
+    const torch::lazy::BackendDevice& device);
 
 std::vector<at::Tensor> Fetch(
-    absl::Span<const xla::ComputationClient::DataPtr> device_data);
+    absl::Span<const torch_xla::runtime::ComputationClient::DataPtr>
+        device_data);
 
 std::vector<at::Tensor> ExecuteAndFetch(
-    absl::Span<const XlaValue> roots, const torch::lazy::BackendDevice& device);
+    absl::Span<const torch::lazy::Value> roots,
+    const torch::lazy::BackendDevice& device);
 
 void AssertBackward(const torch::Tensor& xla_output,
                     const std::vector<torch::Tensor>& xla_inputs,
@@ -108,5 +115,12 @@ void TestBackward(
         testfn,
     double rtol = 1e-5, double atol = 1e-8, int derivative_level = 1);
 
+torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
+                                         int64_t num_row, int64_t num_col);
+
+bool UsingTpu();
+
 }  // namespace cpp_test
 }  // namespace torch_xla
+
+#endif  // XLA_TEST_CPP_CPP_TEST_UTIL_H_

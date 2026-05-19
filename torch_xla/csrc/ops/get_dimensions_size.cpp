@@ -1,7 +1,8 @@
 #include "torch_xla/csrc/ops/get_dimensions_size.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -9,7 +10,7 @@
 
 namespace torch_xla {
 
-GetDimensionsSize::GetDimensionsSize(const XlaValue& input,
+GetDimensionsSize::GetDimensionsSize(const torch::lazy::Value& input,
                                      std::vector<int64_t> dimensions)
     : XlaNode(xla_get_dimensions_size, {input},
               xla::ShapeUtil::MakeShape(
@@ -17,8 +18,9 @@ GetDimensionsSize::GetDimensionsSize(const XlaValue& input,
               /*num_outputs=*/1, torch::lazy::MHash(dimensions)),
       dimensions_(std::move(dimensions)) {}
 
-torch::lazy::NodePtr GetDimensionsSize::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<GetDimensionsSize>(operands.at(0), dimensions_);
+torch::lazy::NodePtr GetDimensionsSize::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<GetDimensionsSize>(operands.at(0), dimensions_);
 }
 
 XlaOpVector GetDimensionsSize::Lower(LoweringContext* loctx) const {

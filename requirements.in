@@ -1,0 +1,11 @@
+expecttest
+filelock
+fsspec
+jinja2
+markupsafe
+mpmath
+networkx
+pyyaml
+sympy
+typing-extensions
+setuptools; python_version >= "3.12"

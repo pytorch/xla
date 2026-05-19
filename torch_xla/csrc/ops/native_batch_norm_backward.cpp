@@ -1,16 +1,19 @@
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/batch_norm.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& grad_out, const XlaValue& input,
-                           const XlaValue& weight, const XlaValue& save_mean,
-                           const XlaValue& save_invstd, bool training) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& grad_out,
+                           const torch::lazy::Value& input,
+                           const torch::lazy::Value& weight,
+                           const torch::lazy::Value& save_mean,
+                           const torch::lazy::Value& save_invstd,
+                           bool training) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     BatchNormGrads xla_outputs =
@@ -21,31 +24,31 @@ xla::Shape NodeOutputShape(const XlaValue& grad_out, const XlaValue& input,
                        xla_outputs.grad_bias});
   };
   return InferOutputShape(
-      {grad_out.xla_shape(), input.xla_shape(), weight.xla_shape(),
-       save_mean.xla_shape(), save_invstd.xla_shape()},
+      {GetXlaShape(grad_out), GetXlaShape(input), GetXlaShape(weight),
+       GetXlaShape(save_mean), GetXlaShape(save_invstd)},
       lower_for_shape_fn);
 }
 
 }  // namespace
 
-NativeBatchNormBackward::NativeBatchNormBackward(const XlaValue& grad_out,
-                                                 const XlaValue& input,
-                                                 const XlaValue& weight,
-                                                 const XlaValue& save_mean,
-                                                 const XlaValue& save_invstd,
-                                                 bool training, double eps)
-    : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm_backward),
-              {grad_out, input, weight, save_mean, save_invstd},
-              [&]() {
-                return NodeOutputShape(grad_out, input, weight, save_mean,
-                                       save_invstd, training);
-              },
-              /*num_outputs=*/3, torch::lazy::MHash(training, eps)),
+NativeBatchNormBackward::NativeBatchNormBackward(
+    const torch::lazy::Value& grad_out, const torch::lazy::Value& input,
+    const torch::lazy::Value& weight, const torch::lazy::Value& save_mean,
+    const torch::lazy::Value& save_invstd, bool training, double eps)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::native_batch_norm_backward),
+          {grad_out, input, weight, save_mean, save_invstd},
+          [&]() {
+            return NodeOutputShape(grad_out, input, weight, save_mean,
+                                   save_invstd, training);
+          },
+          /*num_outputs=*/3, torch::lazy::MHash(training, eps)),
       training_(training),
       eps_(eps) {}
 
-torch::lazy::NodePtr NativeBatchNormBackward::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<NativeBatchNormBackward>(
+torch::lazy::NodePtr NativeBatchNormBackward::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<NativeBatchNormBackward>(
       operands.at(0), operands.at(1), operands.at(2), operands.at(3),
       operands.at(4), training_, eps_);
 }

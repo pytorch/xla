@@ -1,0 +1,17 @@
+# Used for fetching clang from the right repo, see apt.yaml.
+llvm_debian_repo: bookworm
+clang_version: 17
+# PyTorch and PyTorch/XLA wheel versions.
+package_version: 2.9.0
+# If set to true, wheels will be renamed to $WHEEL_NAME-nightly-cp38-cp38-linux_x86_64.whl.
+nightly_release: false
+# Whether to preinstall libtpu in the PyTorch/XLA wheel.
+bundle_libtpu: 1
+# Suffix for bazel remote cache key
+cache_suffix: ""
+# Whether to build C++ tests with `torch_xla` wheel
+build_cpp_tests: 0
+# Whether to tag wheels with git hash, e.g. X.Y.Z+git123abc
+git_versioned_xla_build: false
+# Whether to use C++11 ABI when building torch and torch_xla.
+cxx11_abi: 1

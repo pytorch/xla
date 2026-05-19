@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_KTH_VALUE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_KTH_VALUE_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,11 +7,12 @@ namespace torch_xla {
 
 class KthValue : public XlaNode {
  public:
-  KthValue(const XlaValue& input, int64_t k, int64_t dim, bool keepdim);
+  KthValue(const torch::lazy::Value& input, int64_t k, int64_t dim,
+           bool keepdim);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -27,3 +29,5 @@ class KthValue : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_KTH_VALUE_H_

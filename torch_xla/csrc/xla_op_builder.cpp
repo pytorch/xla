@@ -3,16 +3,18 @@
 #include <map>
 
 #include "absl/types/optional.h"
-#include "tensorflow/compiler/xla/client/lib/logdet.h"
-#include "tensorflow/compiler/xla/client/lib/math.h"
-#include "tensorflow/compiler/xla/client/lib/matrix.h"
-#include "tensorflow/compiler/xla/client/lib/pooling.h"
-#include "tensorflow/compiler/xla/primitive_util.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "torch_xla/csrc/computation.h"
+#include "xla/hlo/builder/lib/logdet.h"
+#include "xla/hlo/builder/lib/math.h"
+#include "xla/hlo/builder/lib/matrix.h"
+#include "xla/hlo/builder/lib/pooling.h"
+#include "xla/primitive_util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -161,7 +163,7 @@ xla::XlaOp Reshape(const BuilderPtr& builder,
       ArgOptional<py::tuple>(args, "dimensions");
   if (arg_dimensions) {
     std::vector<int64_t> dimensions = GetTupleVector<int64_t>(*arg_dimensions);
-    return xla::Reshape(operands.at(0)->op, dimensions, sizes);
+    return xla::Reshape(xla::Transpose(operands.at(0)->op, dimensions), sizes);
   }
   int64_t inferred_dimension =
       ArgOrDefault<int64_t>(args, "inferred_dimension", -1);
@@ -208,6 +210,10 @@ xla::PrecisionConfig DotPrecisonConfig(py::dict args) {
       precision = xla::PrecisionConfig::HIGH;
     } else if (*arg_precision_config == "highest") {
       precision = xla::PrecisionConfig::HIGHEST;
+    } else {
+      XLA_ERROR() << "Invalid precision config in args: "
+                  << *arg_precision_config
+                  << " (valid values: default, high, highest)";
     }
   }
   return XlaHelpers::BuildPrecisionConfig(precision);
@@ -411,14 +417,16 @@ xla::XlaOp DynamicUpdateSlice(const BuilderPtr& builder,
 xla::XlaOp Reduce(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                   py::dict args) {
   std::vector<int64_t> dimensions = GetTupleVector<int64_t>(args["dimensions"]);
-  ComputationPtr computation = args["computation"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr computation =
+      args["computation"].cast<runtime::ComputationClient::ComputationPtr>();
   return xla::Reduce(operands.at(0)->op, operands.at(1)->op,
                      computation->computation(), dimensions);
 }
 
 xla::XlaOp ReduceAll(const BuilderPtr& builder,
                      const std::vector<OpPtr>& operands, py::dict args) {
-  ComputationPtr computation = args["computation"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr computation =
+      args["computation"].cast<runtime::ComputationClient::ComputationPtr>();
   return xla::ReduceAll(operands.at(0)->op, operands.at(1)->op,
                         computation->computation());
 }
@@ -429,7 +437,8 @@ xla::XlaOp ReduceWindow(const BuilderPtr& builder,
       GetTupleVector<int64_t>(args["window_dimensions"]);
   std::vector<int64_t> window_strides =
       GetTupleVector<int64_t>(args["window_strides"]);
-  ComputationPtr computation = args["computation"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr computation =
+      args["computation"].cast<runtime::ComputationClient::ComputationPtr>();
   xla::Padding padding = ParsePadding(args["padding"].cast<std::string>());
   return xla::ReduceWindow(operands.at(0)->op, operands.at(1)->op,
                            computation->computation(), window_dimensions,
@@ -439,7 +448,8 @@ xla::XlaOp ReduceWindow(const BuilderPtr& builder,
 xla::XlaOp Map(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                py::dict args) {
   std::vector<int64_t> dimensions = GetTupleVector<int64_t>(args["dimensions"]);
-  ComputationPtr computation = args["computation"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr computation =
+      args["computation"].cast<runtime::ComputationClient::ComputationPtr>();
   std::vector<xla::XlaOp> static_operands =
       GetOpVector(args["static_operands"].cast<py::tuple>());
   std::vector<xla::XlaOp> ops = ExtractXlaOps(operands);
@@ -449,17 +459,20 @@ xla::XlaOp Map(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
 
 xla::XlaOp Call(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                 py::dict args) {
-  ComputationPtr computation = args["computation"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr computation =
+      args["computation"].cast<runtime::ComputationClient::ComputationPtr>();
   std::vector<xla::XlaOp> ops = ExtractXlaOps(operands);
   return xla::Call(builder.get(), computation->computation(), ops);
 }
 
 xla::XlaOp Conditional(const BuilderPtr& builder,
                        const std::vector<OpPtr>& operands, py::dict args) {
-  ComputationPtr true_computation =
-      args["true_computation"].cast<ComputationPtr>();
-  ComputationPtr false_computation =
-      args["false_computation"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr true_computation =
+      args["true_computation"]
+          .cast<runtime::ComputationClient::ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr false_computation =
+      args["false_computation"]
+          .cast<runtime::ComputationClient::ComputationPtr>();
   return xla::Conditional(operands.at(0)->op, operands.at(1)->op,
                           true_computation->computation(), operands.at(2)->op,
                           false_computation->computation());
@@ -467,10 +480,12 @@ xla::XlaOp Conditional(const BuilderPtr& builder,
 
 xla::XlaOp While(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                  py::dict args) {
-  ComputationPtr condition_computation =
-      args["condition_computation"].cast<ComputationPtr>();
-  ComputationPtr body_computation =
-      args["body_computation"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr condition_computation =
+      args["condition_computation"]
+          .cast<runtime::ComputationClient::ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr body_computation =
+      args["body_computation"]
+          .cast<runtime::ComputationClient::ComputationPtr>();
   return xla::While(condition_computation->computation(),
                     body_computation->computation(), operands.at(0)->op);
 }
@@ -570,7 +585,8 @@ xla::XlaOp Scatter(const BuilderPtr& builder,
   bool indices_are_sorted =
       ArgOrDefault<bool>(args, "indices_are_sorted", false);
   bool unique_indices = ArgOrDefault<bool>(args, "unique_indices", false);
-  ComputationPtr computation = args["computation"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr computation =
+      args["computation"].cast<runtime::ComputationClient::ComputationPtr>();
   xla::ScatterDimensionNumbers dimension_numbers =
       ParseScatterDimensionNumbers(args);
   return xla::Scatter(operands.at(0)->op, operands.at(1)->op,
@@ -580,10 +596,12 @@ xla::XlaOp Scatter(const BuilderPtr& builder,
 
 xla::XlaOp SelectAndScatter(const BuilderPtr& builder,
                             const std::vector<OpPtr>& operands, py::dict args) {
-  ComputationPtr select_computation =
-      args["select_computation"].cast<ComputationPtr>();
-  ComputationPtr scatter_computation =
-      args["scatter_computation"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr select_computation =
+      args["select_computation"]
+          .cast<runtime::ComputationClient::ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr scatter_computation =
+      args["scatter_computation"]
+          .cast<runtime::ComputationClient::ComputationPtr>();
   std::vector<int64_t> window_dimensions =
       GetTupleVector<int64_t>(args["window_dimensions"]);
   std::vector<int64_t> window_strides =
@@ -598,10 +616,12 @@ xla::XlaOp SelectAndScatter(const BuilderPtr& builder,
 xla::XlaOp SelectAndScatterWithGeneralPadding(
     const BuilderPtr& builder, const std::vector<OpPtr>& operands,
     py::dict args) {
-  ComputationPtr select_computation =
-      args["select_computation"].cast<ComputationPtr>();
-  ComputationPtr scatter_computation =
-      args["scatter_computation"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr select_computation =
+      args["select_computation"]
+          .cast<runtime::ComputationClient::ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr scatter_computation =
+      args["scatter_computation"]
+          .cast<runtime::ComputationClient::ComputationPtr>();
   std::vector<int64_t> window_dimensions =
       GetTupleVector<int64_t>(args["window_dimensions"]);
   std::vector<int64_t> window_strides =
@@ -637,7 +657,8 @@ xla::XlaOp Sort(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                 py::dict args) {
   bool is_stable = ArgOrDefault<bool>(args, "is_stable", false);
   int64_t dimension = ArgOrDefault<int64_t>(args, "dimension", -1);
-  ComputationPtr comparator = args["comparator"].cast<ComputationPtr>();
+  runtime::ComputationClient::ComputationPtr comparator =
+      args["comparator"].cast<runtime::ComputationClient::ComputationPtr>();
   std::vector<xla::XlaOp> ops = ExtractXlaOps(operands);
   return xla::Sort(ops, comparator->computation(), dimension, is_stable);
 }
@@ -670,8 +691,8 @@ xla::XlaOp ConcatInDim(const BuilderPtr& builder,
 xla::XlaOp Convert(const BuilderPtr& builder,
                    const std::vector<OpPtr>& operands, py::dict args) {
   std::string type = args["to_type"].cast<std::string>();
-  xla::PrimitiveType xla_type =
-      ConsumeValue(xla::primitive_util::StringToPrimitiveType(type));
+  XLA_ASSIGN_OR_THROW(xla::PrimitiveType xla_type,
+                      xla::primitive_util::StringToPrimitiveType(type));
   return MaybeConvertTo(operands.at(0)->op, xla_type);
 }
 
@@ -697,8 +718,8 @@ xla::XlaOp SetDimensionSize(const BuilderPtr& builder,
 xla::XlaOp BitcastConvert(const BuilderPtr& builder,
                           const std::vector<OpPtr>& operands, py::dict args) {
   std::string type = args["to_type"].cast<std::string>();
-  xla::PrimitiveType xla_type =
-      ConsumeValue(xla::primitive_util::StringToPrimitiveType(type));
+  XLA_ASSIGN_OR_THROW(xla::PrimitiveType xla_type,
+                      xla::primitive_util::StringToPrimitiveType(type));
   return xla::BitcastConvertType(operands.at(0)->op, xla_type);
 }
 
@@ -853,8 +874,8 @@ xla::Shape PyShapeToShape(py::object shape) {
   std::string type = py_shape["type"].cast<std::string>();
   std::vector<int64_t> dimensions =
       GetTupleVector<int64_t>(py_shape["sizes"].cast<py::tuple>());
-  xla::PrimitiveType xla_type =
-      ConsumeValue(xla::primitive_util::StringToPrimitiveType(type));
+  XLA_ASSIGN_OR_THROW(xla::PrimitiveType xla_type,
+                      xla::primitive_util::StringToPrimitiveType(type));
   if (py_shape.contains("dynamic_dimensions")) {
     std::vector<bool> dynamic_dimensions =
         GetTupleVector<bool>(py_shape["dynamic_dimensions"]);

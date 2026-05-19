@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_NOT_SUPPORTED_H_
+#define XLA_TORCH_XLA_CSRC_OPS_NOT_SUPPORTED_H_
 
 #include <string>
 
@@ -12,7 +13,7 @@ class NotSupported : public XlaNode {
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -23,3 +24,5 @@ class NotSupported : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_NOT_SUPPORTED_H_

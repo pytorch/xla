@@ -1,20 +1,22 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_VAR_H_
+#define XLA_TORCH_XLA_CSRC_OPS_VAR_H_
 
 #include <vector>
 
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
+
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 
 class Var : public XlaNode {
  public:
-  Var(const XlaValue& input, std::vector<int64_t> dimensions,
-      int64_t correction, bool keep_reduced_dimensions);
+  Var(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
+      double correction, bool keep_reduced_dimensions);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -22,12 +24,14 @@ class Var : public XlaNode {
 
   bool keep_reduced_dimensions() const { return keep_reduced_dimensions_; }
 
-  int64_t correction() const { return correction_; }
+  double correction() const { return correction_; }
 
  private:
   std::vector<int64_t> dimensions_;
-  int64_t correction_;
+  double correction_;
   bool keep_reduced_dimensions_;
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_VAR_H_

@@ -27,7 +27,6 @@ MODEL_OPTS = {
     '--test_only_at_end': {
         'action': 'store_true',
     },
-    # AMP only works with XLA:GPU
     '--amp': {
         'action': 'store_true',
     },
@@ -62,13 +61,13 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
-from torch_xla.amp import autocast, GradScaler
+from torch_xla.amp import autocast
 try:
   from torch_xla.amp import syncfree
 except ImportError:
@@ -136,12 +135,11 @@ def train_imagenet():
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=train_dataset_len // FLAGS.batch_size //
-        xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size // xr.world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
-        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=50000 // FLAGS.batch_size // xr.world_size())
   else:
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -168,16 +166,16 @@ def train_imagenet():
         ]))
 
     train_sampler, test_sampler = None, None
-    if xm.xrt_world_size() > 1:
+    if xr.world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
+          num_replicas=xr.world_size(),
+          rank=xr.global_ordinal(),
           shuffle=True)
       test_sampler = torch.utils.data.distributed.DistributedSampler(
           test_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
+          num_replicas=xr.world_size(),
+          rank=xr.global_ordinal(),
           shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -196,7 +194,8 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  device = xm.xla_device()
+  device = torch_xla.device()
+  device_hw = xm.xla_device_hw(device)
   model = get_model_property('model_fn')().to(device)
   writer = None
   if xm.is_master_ordinal():
@@ -208,7 +207,7 @@ def train_imagenet():
       momentum=FLAGS.momentum,
       weight_decay=1e-4)
   num_training_steps_per_epoch = train_dataset_len // (
-      FLAGS.batch_size * xm.xrt_world_size())
+      FLAGS.batch_size * xr.world_size())
   lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
       optimizer,
       scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
@@ -219,7 +218,8 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
   if FLAGS.amp:
-    scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+    if device_hw == 'TPU':
+      scaler = None
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
@@ -227,15 +227,18 @@ def train_imagenet():
     for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
       if FLAGS.amp:
-        with autocast():
+        with autocast(torch_xla.device()):
           output = model(data)
           loss = loss_fn(output, target)
-
-        scaler.scale(loss).backward()
-        gradients = xm._fetch_gradients(optimizer)
-        xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
-        scaler.step(optimizer)
-        scaler.update()
+        if scaler:
+          scaler.scale(loss).backward()
+          gradients = xm._fetch_gradients(optimizer)
+          xm.all_reduce('sum', gradients, scale=1.0 / xr.world_size())
+          scaler.step(optimizer)
+          scaler.update()
+        else:
+          loss.backward()
+          xm.optimizer_step(optimizer)
       else:
         output = model(data)
         loss = loss_fn(output, target)
@@ -248,6 +251,8 @@ def train_imagenet():
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             _train_update, args=(device, step, loss, tracker, epoch, writer))
+      if FLAGS.num_steps and FLAGS.num_steps == step:
+        break
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -260,6 +265,8 @@ def train_imagenet():
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             test_utils.print_test_update, args=(device, None, epoch, step))
+      if FLAGS.num_steps and FLAGS.num_steps == step:
+        break
     accuracy = 100.0 * correct.item() / total_samples
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
@@ -292,7 +299,7 @@ def train_imagenet():
 def _mp_fn(index, flags):
   global FLAGS
   FLAGS = flags
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
@@ -301,4 +308,6 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
+  debug_single_process = FLAGS.num_cores == 1
+  torch_xla.launch(
+      _mp_fn, args=(FLAGS,), debug_single_process=debug_single_process)

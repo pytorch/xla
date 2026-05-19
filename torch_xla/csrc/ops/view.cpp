@@ -1,17 +1,19 @@
 #include "torch_xla/csrc/ops/view.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> output_sizes) {
-  const xla::Shape& input_shape = input.xla_shape();
+  const xla::Shape& input_shape = GetXlaShape(input);
   auto info = XlaHelpers::GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
     return std::move(info->output_shape);
@@ -24,15 +26,31 @@ xla::Shape NodeOutputShape(const XlaValue& input,
 
 }  // namespace
 
-ViewOp::ViewOp(const XlaValue& input, std::vector<int64_t> output_size)
+ViewOp::ViewOp(const torch::lazy::Value& input,
+               std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(at::aten::view), {input},
               NodeOutputShape(input, output_size),
               /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
+ViewOp::ViewOp(const torch::lazy::Value& input, xla::Shape output_shape)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::view), {input}, output_shape,
+          /*num_outputs=*/1,
+          torch::lazy::MHash(
+              torch::lazy::ToVector<int64_t>(output_shape.dimensions()),
+              torch::lazy::ToVector<bool>(output_shape.dynamic_dimensions()))),
+      output_size_(torch::lazy::ToVector<int64_t>(output_shape.dimensions())) {}
+
 XlaOpVector ViewOp::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp output = BuildView(input, output_size_);
+  xla::XlaOp output;
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  if (!input_shape.is_unbounded_dynamic()) {
+    output = BuildView(input, output_size_);
+  } else {
+    output = BuildUnboundedDynamicView(input, input_shape, output_size_);
+  }
   return ReturnOp(output, loctx);
 }
 

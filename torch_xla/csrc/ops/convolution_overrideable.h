@@ -1,7 +1,9 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_CONVOLUTION_OVERRIDEABLE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_CONVOLUTION_OVERRIDEABLE_H_
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/xla_data.pb.h"
+#include "xla/xla_data.pb.h"
+
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -9,19 +11,22 @@ namespace torch_xla {
 // IR node for 2D & 3D convolutions with or without bias.
 class ConvolutionOverrideable : public XlaNode {
  public:
-  ConvolutionOverrideable(const XlaValue& input, const XlaValue& weight,
-                          const XlaValue& bias, std::vector<int64_t> stride,
-                          std::vector<int64_t> padding,
-                          std::vector<int64_t> dilation, bool transposed,
-                          std::vector<int64_t> output_padding, int64_t groups);
-
-  ConvolutionOverrideable(const XlaValue& input, const XlaValue& weight,
+  ConvolutionOverrideable(const torch::lazy::Value& input,
+                          const torch::lazy::Value& weight,
+                          const torch::lazy::Value& bias,
                           std::vector<int64_t> stride,
                           std::vector<int64_t> padding,
                           std::vector<int64_t> dilation, bool transposed,
                           std::vector<int64_t> output_padding, int64_t groups);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  ConvolutionOverrideable(const torch::lazy::Value& input,
+                          const torch::lazy::Value& weight,
+                          std::vector<int64_t> stride,
+                          std::vector<int64_t> padding,
+                          std::vector<int64_t> dilation, bool transposed,
+                          std::vector<int64_t> output_padding, int64_t groups);
+
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -49,3 +54,5 @@ class ConvolutionOverrideable : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_CONVOLUTION_OVERRIDEABLE_H_

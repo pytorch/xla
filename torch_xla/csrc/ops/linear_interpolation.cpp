@@ -6,16 +6,17 @@
 
 namespace torch_xla {
 
-LinearInterpolation::LinearInterpolation(const XlaValue& value,
-                                         const XlaValue& new_value,
+LinearInterpolation::LinearInterpolation(const torch::lazy::Value& value,
+                                         const torch::lazy::Value& new_value,
                                          double alpha)
-    : XlaNode(xla_moving_average, {value, new_value}, value.xla_shape(),
+    : XlaNode(xla_moving_average, {value, new_value}, GetXlaShape(value),
               /*num_outputs=*/1, torch::lazy::MHash(alpha)),
       alpha_(alpha) {}
 
-torch::lazy::NodePtr LinearInterpolation::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<LinearInterpolation>(operands.at(0),
-                                                    operands.at(1), alpha_);
+torch::lazy::NodePtr LinearInterpolation::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<LinearInterpolation>(operands.at(0),
+                                                  operands.at(1), alpha_);
 }
 
 XlaOpVector LinearInterpolation::Lower(LoweringContext* loctx) const {

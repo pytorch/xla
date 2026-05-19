@@ -1,20 +1,23 @@
-#include <ATen/ATen.h>
 #include <gtest/gtest.h>
 
 #include <iostream>
 
-#include "cpp_test_util.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
+#include <ATen/ATen.h>
+
+#include "absl/synchronization/blocking_counter.h"
+#include "xla/hlo/builder/xla_builder.h"
+#include "xla/shape_util.h"
+
+#include "test/cpp/cpp_test_util.h"
+#include "test/cpp/torch_xla_test.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/status.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -24,7 +27,8 @@ xla::XlaComputation CreateCrsComputation(const xla::Shape& shape) {
   xla::XlaBuilder builder("CrsComputation");
   xla::XlaOp x = xla::Parameter(&builder, 0, shape, "x");
   xla::CrossReplicaSum(x);
-  return ConsumeValue(builder.Build());
+  XLA_ASSIGN_OR_THROW(xla::XlaComputation crs_computation, builder.Build());
+  return crs_computation;
 }
 
 void TestSingleReplication(
@@ -41,37 +45,45 @@ void TestSingleReplication(
     all_device_strings.push_back(device.toString());
   }
   xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {8, 8});
-  std::vector<xla::ComputationClient::CompileInstance> instances;
+  std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
   for (auto& device_str : device_strings) {
     instances.emplace_back(CreateCrsComputation(shape), device_str,
                            all_device_strings, &shape);
   }
-  auto compiled_computations =
-      xla::ComputationClient::Get()->Compile(std::move(instances));
+  XLA_ASSIGN_OR_THROW(runtime::ComputationClient * absl_nonnull const client,
+                      runtime::GetComputationClient());
+  std::vector<torch_xla::runtime::ComputationClient::ComputationPtr>
+      compiled_computations = client->Compile(std::move(instances));
 
   std::vector<at::Tensor> tensors;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     tensors.push_back(at::ones({8, 8}, at::TensorOptions(at::kFloat)));
   }
-  auto tensors_data = CreateTensorsData(tensors, device_strings);
+  std::vector<torch::lazy::BackendDataPtr> tensors_data =
+      CreateTensorsData(tensors, device_strings);
 
-  std::vector<std::vector<xla::ComputationClient::DataPtr>> results(
-      device_strings.size());
-  xla::util::MultiWait mwait(device_strings.size());
-  xla::ComputationClient::ExecuteComputationOptions exec_options;
+  std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>>
+      results(device_strings.size());
+  absl::BlockingCounter counter(device_strings.size());
+  torch_xla::runtime::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
-      results[i] = xla::ComputationClient::Get()->ExecuteComputation(
-          *compiled_computations[i], {tensors_data[i]}, device_strings[i],
-          exec_options);
+      XLA_ASSIGN_OR_THROW(results[i],
+                          client->ExecuteComputation(
+                              *compiled_computations[i],
+                              {std::dynamic_pointer_cast<
+                                  torch_xla::runtime::ComputationClient::Data>(
+                                  tensors_data[i])},
+                              device_strings[i], exec_options));
+      counter.DecrementCount();
     };
-    xla::env::ScheduleIoClosure(mwait.Completer(std::move(executor)));
+    torch_xla::thread::Schedule(std::move(executor));
   }
-  mwait.Wait();
+  counter.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    auto literals =
-        xla::ComputationClient::Get()->TransferFromServer(results[i]);
+    XLA_ASSIGN_OR_THROW(std::vector<xla::Literal> literals,
+                        client->TransferFromDevice(results[i]));
     ASSERT_EQ(literals.size(), 1);
 
     // The result must be the original tensor value, multiplied by the number of
@@ -86,9 +98,10 @@ void TestSingleReplication(
 
 class ReplicationTest : public AtenXlaTensorTestBase {};
 
+// Parallelism for DataParallel uses multi-threads.
 TEST_F(ReplicationTest, TestNSingleReplication) {
   WithAllDevices(
-      {XlaDeviceType::TPU, XlaDeviceType::GPU},
+      {XlaDeviceType::TPU},
       [&](const std::vector<torch::lazy::BackendDevice>& devices,
           const std::vector<torch::lazy::BackendDevice>& all_devices) {
         TestSingleReplication(devices, all_devices);

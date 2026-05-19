@@ -5,16 +5,16 @@
 
 namespace torch_xla {
 
-Put::Put(const XlaValue& input, const XlaValue& index, const XlaValue& source,
-         bool accumulate)
+Put::Put(const torch::lazy::Value& input, const torch::lazy::Value& index,
+         const torch::lazy::Value& source, bool accumulate)
     : XlaNode(torch::lazy::OpKind(at::aten::put), {input, index, source},
-              input.xla_shape(),
+              GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(accumulate)),
       accumulate_(accumulate) {}
 
-torch::lazy::NodePtr Put::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Put>(operands.at(0), operands.at(1),
-                                    operands.at(2), accumulate_);
+torch::lazy::NodePtr Put::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<Put>(operands.at(0), operands.at(1),
+                                  operands.at(2), accumulate_);
 }
 
 XlaOpVector Put::Lower(LoweringContext* loctx) const {

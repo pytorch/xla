@@ -6,18 +6,20 @@
 
 namespace torch_xla {
 
-DiagonalViewUpdate::DiagonalViewUpdate(const XlaValue& target,
-                                       const XlaValue& input, int64_t offset,
-                                       int64_t dim1, int64_t dim2)
-    : XlaNode(xla_diagonal_view_update, {target, input}, target.xla_shape(),
+DiagonalViewUpdate::DiagonalViewUpdate(const torch::lazy::Value& target,
+                                       const torch::lazy::Value& input,
+                                       int64_t offset, int64_t dim1,
+                                       int64_t dim2)
+    : XlaNode(xla_diagonal_view_update, {target, input}, GetXlaShape(target),
               /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),
       dim2_(dim2) {}
 
-torch::lazy::NodePtr DiagonalViewUpdate::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<DiagonalViewUpdate>(
-      operands.at(0), operands.at(1), offset_, dim1_, dim2_);
+torch::lazy::NodePtr DiagonalViewUpdate::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<DiagonalViewUpdate>(operands.at(0), operands.at(1),
+                                                 offset_, dim1_, dim2_);
 }
 
 XlaOpVector DiagonalViewUpdate::Lower(LoweringContext* loctx) const {

@@ -5,12 +5,39 @@ import multiprocessing
 import os
 import sys
 import tempfile
+import signal
 import unittest
 
 import args_parse
 import test_profile_mp_mnist
+import torch_xla
 import torch_xla.debug.profiler as xp
 import torch_xla.utils.utils as xu
+
+
+# This function must remain a top-level function. Using spawn
+# as the fork method requires this function to be pickle-able.
+def train_worker(port, training_started):
+  flags = args_parse.parse_common_options(
+      datadir='/tmp/mnist-data',
+      batch_size=16,
+      momentum=0.5,
+      lr=0.01,
+      num_epochs=100)
+  flags.fake_data = True
+  flags.profiler_port = port
+
+  # Disable programmatic profiling
+  flags.profile_step = -1
+  flags.profile_epoch = -1
+  flags.profile_logdir = None
+  flags.profile_duration_ms = -1
+
+  test_profile_mp_mnist.train_mnist(
+      flags,
+      training_started=training_started,
+      dynamic_graph=True,
+      fetch_often=True)
 
 
 class ProfilerTest(unittest.TestCase):
@@ -30,8 +57,8 @@ class ProfilerTest(unittest.TestCase):
     with open(fname, 'r') as f:
       debug_warnings = f.read()
     logging.info(f'PT_XLA_DEBUG_FILE Contents:\n{debug_warnings}')
-    self.assertTrue('TransferFromServerTime too frequent' in debug_warnings,
-                    f'Expected "TransferFromServerTime" warning in: {fname}')
+    self.assertTrue('TransferFromDeviceTime too frequent' in debug_warnings,
+                    f'Expected "TransferFromDeviceTime" warning in: {fname}')
     self.assertTrue('CompileTime too frequent' in debug_warnings,
                     f'Expected "CompileTime" wraning in: {fname}')
 
@@ -50,29 +77,16 @@ class ProfilerTest(unittest.TestCase):
                     f'Expected "build_graph" trace in: {path}')
 
   def test_trace_and_metrics(self):
-
     port = xu.get_free_tcp_ports()[0]
-    training_started = multiprocessing.Event()
+    training_started = context.Event()
+    p = context.Process(
+        target=train_worker, args=(port, training_started), daemon=True)
 
-    def train_worker():
-      flags = args_parse.parse_common_options(
-          datadir='/tmp/mnist-data',
-          batch_size=16,
-          momentum=0.5,
-          lr=0.01,
-          num_epochs=10)
-      flags.fake_data = True
-      flags.profiler_port = port
-      test_profile_mp_mnist.train_mnist(
-          flags,
-          training_started=training_started,
-          dynamic_graph=True,
-          fetch_often=True)
-
-    p = multiprocessing.Process(target=train_worker, daemon=True)
+    # Wait for training to start.
     p.start()
-    training_started.wait(60)
+    training_started.wait(600)
 
+    # Take a profile.
     logdir = tempfile.mkdtemp()
     xp.trace(
         f'localhost:{port}',
@@ -80,7 +94,13 @@ class ProfilerTest(unittest.TestCase):
         duration_ms=5000,
         num_tracing_attempts=5,
         delay_ms=1000)
-    p.terminate()
+    pid = p.pid
+    assert pid is not None, 'Process ID should not be None'
+    # Gracefully interrupt the process.
+    os.kill(pid, signal.SIGINT)
+    p.join()
+
+    # Validate the profiling output.
     path = self._check_xspace_pb_exist(logdir)
     self._check_trace_namespace_exists(path)
     self._check_metrics_warnings_exist(self.fname)

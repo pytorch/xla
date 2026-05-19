@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_REFLECTION_PAD2D_H_
+#define XLA_TORCH_XLA_CSRC_OPS_REFLECTION_PAD2D_H_
 
 #include <vector>
 
@@ -8,9 +9,10 @@ namespace torch_xla {
 
 class ReflectionPad2d : public XlaNode {
  public:
-  ReflectionPad2d(const XlaValue& input, std::vector<int64_t> padding);
+  ReflectionPad2d(const torch::lazy::Value& input,
+                  std::vector<int64_t> padding);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -23,3 +25,5 @@ class ReflectionPad2d : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_REFLECTION_PAD2D_H_

@@ -1,0 +1,90 @@
+name: TPU Integration Test
+on:
+  workflow_call:
+    inputs:
+      timeout-minutes:
+        required: false
+        type: number
+        description: Timeout in minutes for the job run
+        default: 75  # Takes ~40m as of 2025/5/30.
+      has_code_changes:
+        required: false
+        type: string
+        description: Whether to run full workflow or not
+        default: 'true'
+jobs:
+  tpu-test:
+    runs-on: v4-runner-set
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        test_script:
+          - test/tpu/run_tests.sh
+          - test/tpu/run_expensive_test_1.sh
+          - test/tpu/run_expensive_test_2.sh
+          - test/tpu/run_pallas_test.sh
+          - test/tpu/run_training_tests.sh
+    steps:
+      - name: Checkout actions
+        if: inputs.has_code_changes == 'true'
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/workflows/setup
+          path: .actions
+
+      - name: Setup
+        if: inputs.has_code_changes == 'true'
+        uses: ./.actions/.github/workflows/setup
+        with:
+          wheels-artifact: torch-xla-wheels
+
+      - name: Install test dependencies
+        if: inputs.has_code_changes == 'true'
+        shell: bash
+        run: |
+          set -x
+
+          # TODO: Add these in setup.py
+          pip install --upgrade pip
+          pip install fsspec
+          pip install rich
+
+          # Test dependencies 
+          pip install --upgrade protobuf
+          pip install flax
+
+          # PyTorch/XLA Optional Dependencies
+          # =================================
+          #
+          # Install `jax` and `libtpu` dependencies for pallas and TPU tests.
+          #
+          # Note that we might need to install pre-release versions of both, in
+          # external artifact repositories.
+
+          # Retrieve the PyTorch/XLA ".whl" file.
+          # This assumes PyTorch/XLA wheels are downloaded in "/tmp/wheels".
+          WHL=$(ls /tmp/wheels/torch_xla*)
+
+          # Links for finding `jax` and `libtpu` versions.
+          INDEX="https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ "
+          LINKS="https://storage.googleapis.com/jax-releases/libtpu_releases.html"
+
+          pip install "$WHL[pallas]" --pre --index-url $INDEX --find-links $LINKS
+          pip install "$WHL[tpu]"    --pre --index-url $INDEX --find-links $LINKS
+
+      - name: Run Tests (${{ matrix.test_script }})
+        if: inputs.has_code_changes == 'true'
+        env:
+          PJRT_DEVICE: TPU
+          TPU_LOG_DIR: tpu_logs_${{ strategy.job-index }}
+        run: |
+          cd pytorch/xla
+          ${{ matrix.test_script }}
+
+      - name: Report no code changes
+        # Only report the first instance
+        if: inputs.has_code_changes == 'false' && strategy.job-index == 0
+        run: |
+          echo "No code changes were detected that require running the full test suite."

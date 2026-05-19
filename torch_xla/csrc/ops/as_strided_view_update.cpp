@@ -1,12 +1,14 @@
 #include "torch_xla/csrc/ops/as_strided_view_update.h"
 
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "xla/shape_util.h"
+
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
@@ -17,13 +19,12 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
                                     absl::Span<const int64_t> size,
                                     absl::Span<const int64_t> stride,
                                     int64_t storage_offset) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   int64_t input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
-  int64_t slice_size = xla::util::Multiply<int64_t>(size);
+  int64_t slice_size = torch_xla::runtime::util::Multiply<int64_t>(size);
   XLA_CHECK_LE(storage_offset + input_element_count, slice_size);
 
-  std::vector<int64_t> permutation =
-      AsStrided::GetArrayStridePermutation(stride, input_shape.dimensions());
+  std::vector<int64_t> permutation = GetDescendingOrderPermutation(stride);
   xla::XlaOp transposed_input = xla::IsIdentityPermutation(permutation)
                                     ? input
                                     : xla::Transpose(input, permutation);
@@ -39,18 +40,18 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
 
 }  // namespace
 
-AsStridedViewUpdate::AsStridedViewUpdate(const XlaValue& target,
-                                         const XlaValue& input,
+AsStridedViewUpdate::AsStridedViewUpdate(const torch::lazy::Value& target,
+                                         const torch::lazy::Value& input,
                                          std::vector<int64_t> size,
                                          std::vector<int64_t> stride,
                                          int64_t storage_offset)
-    : XlaNode(xla_as_strided_view_update, {target, input},
-              [&]() {
-                return xla::ShapeUtil::MakeShape(
-                    target.xla_shape().element_type(), size);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(size, stride, storage_offset)),
+    : XlaNode(
+          xla_as_strided_view_update, {target, input},
+          [&]() {
+            return xla::ShapeUtil::MakeShape(GetXlaShape(target).element_type(),
+                                             size);
+          },
+          /*num_outputs=*/1, torch::lazy::MHash(size, stride, storage_offset)),
       size_(std::move(size)),
       stride_(std::move(stride)),
       storage_offset_(storage_offset) {}
@@ -63,8 +64,9 @@ std::string AsStridedViewUpdate::ToString() const {
   return ss.str();
 }
 
-torch::lazy::NodePtr AsStridedViewUpdate::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<AsStridedViewUpdate>(
+torch::lazy::NodePtr AsStridedViewUpdate::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<AsStridedViewUpdate>(
       operands.at(0), operands.at(1), size_, stride_, storage_offset_);
 }
 

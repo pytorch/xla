@@ -1,32 +1,114 @@
 # This file is copied from https://github.com/pytorch/pytorch/blob/master/torch/utils/checkpoint.py.
 # PyTorch/XLA needs to add `optimization_barrier` before saving the input for the backward hence we
 # slightly modify the upstream version of the checkpoint util function.
+import inspect
 import torch
 import warnings
 import torch_xla.core.xla_model as xm
-from torch.utils.checkpoint import detach_variable, check_backward_validity, get_device_states, set_device_states
-from typing import Any, Iterable, List, Tuple, Union
+from torch.utils.checkpoint import detach_variable, check_backward_validity, _get_device_module, _infer_device_type
+from typing import Iterable, List, Tuple, Union
+
+# The 2 functions below (get_device_states and set_device_states) are slightly modified versions
+# from PyTorch's original file.
+#
+# They are mostly implemented the same, while accounting for XLA device. In summary, the problem was
+# twofold:
+#
+#     1. No XLA device support.
+#
+#     2. The XLA device module (torch_xla.core.xla_model) has a slightly different API: its state
+#        representation is an int, instead of a tensor.
+
+
+def get_device_states(
+    *args) -> Tuple[List[torch.device], List[Union[torch.Tensor, int]]]:
+  fwd_device = list({
+      arg.device
+      for arg in args
+      if isinstance(arg, torch.Tensor) and not arg.device.type == "cpu"
+  })
+
+  fwd_device_states = []
+
+  device_type = _infer_device_type(*args)
+  assert device_type is not None, "multiple non-CPU devices not supported"
+
+  device_module = xm if device_type == "xla" else _get_device_module(
+      device_type)
+
+  for device in fwd_device:
+    fwd_device_states.append(device_module.get_rng_state(device))
+
+  return fwd_device, fwd_device_states
+
+
+def set_device_states(devices: List[torch.device],
+                      states: List[Union[torch.Tensor, int]]) -> None:
+  if len(states) == 0:
+    return
+
+  # get_device_states guarantees that there's only one device-type.
+  # Therefore, their states should also be of either Tensor (cuda) or int (xla) type.
+
+  state_0_type = type(states[0])
+  assert all(isinstance(v, state_0_type)
+             for v in states), f"all device states should have the same type"
+
+  device_module = xm if state_0_type == int else _get_device_module(*states)
+  for device, state in zip(devices, states):
+    device_module.set_rng_state(state, device=device)
+
+
+class CheckpointStatus:
+
+  def __init__(self):
+    self.in_chkpt_bwd = False
+
+
+# chkpt_status is used for FSDP allgather reduction optimizaion
+chkpt_status = CheckpointStatus()
 
 
 class CheckpointFunction(torch.autograd.Function):
+
+  def _extract_tensors_from_list(inputs):
+    tensor_inputs = []
+    if torch.is_tensor(inputs):
+      tensor_inputs.append(inputs)
+    # tensor is Iterable so we need to avoid iterating through tensor
+    elif isinstance(inputs, Iterable):
+      for input in inputs:
+        if torch.is_tensor(input):
+          tensor_inputs.append(input)
+    return tensor_inputs
 
   @staticmethod
   def forward(ctx, run_function, preserve_rng_state, *args):
     check_backward_validity(args)
     ctx.run_function = run_function
     ctx.preserve_rng_state = preserve_rng_state
+
     # Accommodates the (remote) possibility that autocast is enabled for cpu AND gpu.
     ctx.gpu_autocast_kwargs = {
-        "enabled": torch.is_autocast_enabled(),
-        "dtype": torch.get_autocast_gpu_dtype(),
+        "device_type": "cuda",
+        "enabled": torch.is_autocast_enabled("cuda"),
+        "dtype": torch.get_autocast_dtype("cuda"),
         "cache_enabled": torch.is_autocast_cache_enabled()
     }
     ctx.cpu_autocast_kwargs = {
-        "enabled": torch.is_autocast_cpu_enabled(),
-        "dtype": torch.get_autocast_cpu_dtype(),
+        "device_type": "cpu",
+        "enabled": torch.is_autocast_enabled("cpu"),
+        "dtype": torch.get_autocast_dtype("cpu"),
+        "cache_enabled": torch.is_autocast_cache_enabled()
+    }
+    ctx.xla_autocast_kwargs = {
+        "device_type": "xla",
+        "enabled": torch.is_autocast_enabled("xla"),
+        "dtype": torch.get_autocast_dtype("xla"),
         "cache_enabled": torch.is_autocast_cache_enabled()
     }
     if preserve_rng_state:
+      ctx.fwd_xla_state = xm.get_rng_state()
       ctx.fwd_cpu_state = torch.get_rng_state()
       # Don't eagerly initialize the cuda context by accident.
       # (If the user intends that the context is initialized later, within their
@@ -51,23 +133,17 @@ class CheckpointFunction(torch.autograd.Function):
       else:
         ctx.inputs.append(arg)
 
+    ctx.save_for_backward(*tensor_inputs)
+
     with torch.no_grad():
       outputs = run_function(*args)
-    if torch.is_tensor(outputs):
-      tensor_outputs.append(outputs)
-    # tensor is Iterable so we need to avoid iterating through tensor
-    elif isinstance(outputs, Iterable):
-      for output in outputs:
-        if torch.is_tensor(output):
-          tensor_outputs.append(output)
-
-    xm.optimization_barrier_(tensor_inputs + tensor_outputs)
-    ctx.save_for_backward(*tensor_inputs)
 
     return outputs
 
   @staticmethod
   def backward(ctx, *args):
+    chkpt_status.in_chkpt_bwd = True
+
     if not torch.autograd._is_checkpoint_valid():
       raise RuntimeError(
           "Checkpointing is not compatible with .grad() or when an `inputs` parameter"
@@ -88,17 +164,35 @@ class CheckpointFunction(torch.autograd.Function):
     rng_devices = []
     if ctx.preserve_rng_state and ctx.had_cuda_in_fwd:
       rng_devices = ctx.fwd_gpu_devices
+
+    # optimization_barrier_ is needed to separate the original forward pass with
+    # the next forward + backward pass.
+    weights = []
+    buffers = []
+    if inspect.ismethod(ctx.run_function) and isinstance(
+        ctx.run_function.__self__, torch.nn.Module):
+      weights = list(ctx.run_function.__self__.parameters())
+      buffers = list(ctx.run_function.__self__.buffers())
+    xm.optimization_barrier_(
+        CheckpointFunction._extract_tensors_from_list(inputs + list(args) +
+                                                      weights + buffers))
+
+    # torch.random.fork_rng will handle the cpu and gpu seed
+    # xm.fork_rng will handle the xla device seed
     with torch.random.fork_rng(
         devices=rng_devices, enabled=ctx.preserve_rng_state):
-      if ctx.preserve_rng_state:
-        torch.set_rng_state(ctx.fwd_cpu_state)
-        if ctx.had_cuda_in_fwd:
-          set_device_states(ctx.fwd_gpu_devices, ctx.fwd_gpu_states)
-      detached_inputs = detach_variable(tuple(inputs))
-      with torch.enable_grad(), \
-           torch.cuda.amp.autocast(**ctx.gpu_autocast_kwargs), \
-           torch.cpu.amp.autocast(**ctx.cpu_autocast_kwargs):
-        outputs = ctx.run_function(*detached_inputs)
+      with xm.fork_rng():
+        if ctx.preserve_rng_state:
+          xm.set_rng_state(ctx.fwd_xla_state)
+          torch.set_rng_state(ctx.fwd_cpu_state)
+          if ctx.had_cuda_in_fwd:
+            set_device_states(ctx.fwd_gpu_devices, ctx.fwd_gpu_states)
+        detached_inputs = detach_variable(tuple(inputs))
+        with torch.enable_grad(), \
+            torch.autocast(**ctx.gpu_autocast_kwargs), \
+            torch.autocast(**ctx.cpu_autocast_kwargs), \
+            torch.autocast(**ctx.xla_autocast_kwargs):
+          outputs = ctx.run_function(*detached_inputs)
 
     if isinstance(outputs, torch.Tensor):
       outputs = (outputs,)
@@ -118,6 +212,7 @@ class CheckpointFunction(torch.autograd.Function):
         inp.grad if isinstance(inp, torch.Tensor) else None
         for inp in detached_inputs)
 
+    chkpt_status.in_chkpt_bwd = False
     return (None, None) + grads
 
 

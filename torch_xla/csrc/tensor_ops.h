@@ -1,42 +1,47 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TENSOR_OPS_H_
+#define XLA_TORCH_XLA_CSRC_TENSOR_OPS_H_
 
 #include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/tensor.h"
 
 // Certain tensor operations can be expressed in terms of other tensor
-// operations. Add their implementations here instead of the main XLATensor
+// operations. Add their implementations here instead of the main XLATensorPtr
 // class.
 
 namespace torch_xla {
 namespace tensor_ops {
 
-XLATensor Cross(const XLATensor& input, const XLATensor& other,
-                c10::optional<int64_t> dim);
+XLATensorPtr Cross(const XLATensorPtr& input, const XLATensorPtr& other,
+                   std::optional<int64_t> dim);
 
-XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
-                        const XLATensor& target, ReductionMode reduction,
-                        bool log_target);
+XLATensorPtr MakeMatrixWithDiagonal(const XLATensorPtr& input,
+                                    int64_t diagonal);
 
-XLATensor MakeMatrixWithDiagonal(const XLATensor& input, int64_t diagonal);
+XLATensorPtr SmoothL1Loss(const XLATensorPtr& input, const XLATensorPtr& target,
+                          ReductionMode reduction, double beta);
 
-XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
-                       ReductionMode reduction, double beta);
+XLATensorPtr SmoothL1LossBackward(const XLATensorPtr& grad_output,
+                                  const XLATensorPtr& input,
+                                  const XLATensorPtr& target,
+                                  ReductionMode reduction, double beta);
 
-XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
-                               const XLATensor& input, const XLATensor& target,
-                               ReductionMode reduction, double beta);
+XLATensorPtr Softplus(const XLATensorPtr& input, const at::Scalar& beta,
+                      const at::Scalar& threshold);
 
-XLATensor Softplus(const XLATensor& input, const at::Scalar& beta,
-                   const at::Scalar& threshold);
+XLATensorPtr SoftplusBackward(const XLATensorPtr& grad_output,
+                              const XLATensorPtr& input, const at::Scalar& beta,
+                              const at::Scalar& threshold);
 
-XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
-                           const at::Scalar& beta, const at::Scalar& threshold);
+XLATensorPtr Select(const XLATensorPtr& input, int64_t dim, int64_t index);
 
-XLATensor Select(const XLATensor& input, int64_t dim, int64_t index);
+XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
+                                    const XLATensorPtr& indices,
+                                    int64_t num_weights, int64_t padding_idx,
+                                    bool scale_grad_by_freq);
 
-XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
-                                 const XLATensor& indices, int64_t num_weights,
-                                 int64_t padding_idx, bool scale_grad_by_freq);
+XLATensorPtr Embedding(const XLATensorPtr& weight, const XLATensorPtr& indices);
 
 }  // namespace tensor_ops
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_TENSOR_OPS_H_

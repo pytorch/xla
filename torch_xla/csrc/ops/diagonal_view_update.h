@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_DIAGONAL_VIEW_UPDATE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_DIAGONAL_VIEW_UPDATE_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -6,10 +7,11 @@ namespace torch_xla {
 
 class DiagonalViewUpdate : public XlaNode {
  public:
-  DiagonalViewUpdate(const XlaValue& target, const XlaValue& input,
-                     int64_t offset, int64_t dim1, int64_t dim2);
+  DiagonalViewUpdate(const torch::lazy::Value& target,
+                     const torch::lazy::Value& input, int64_t offset,
+                     int64_t dim1, int64_t dim2);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -28,3 +30,5 @@ class DiagonalViewUpdate : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_DIAGONAL_VIEW_UPDATE_H_

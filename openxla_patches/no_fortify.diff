@@ -1,0 +1,40 @@
+diff --git a/tools/toolchains/cross_compile/cc/BUILD b/tools/toolchains/cross_compile/cc/BUILD
+index be6e8968d5..51d15fa3c9 100644
+--- a/tools/toolchains/cross_compile/cc/BUILD
++++ b/tools/toolchains/cross_compile/cc/BUILD
+@@ -80,7 +80,6 @@ cc_toolchain_config(
+     opt_compile_flags = [
+         "-g0",
+         "-O2",
+-        "-D_FORTIFY_SOURCE=1",
+         "-DNDEBUG",
+         "-ffunction-sections",
+         "-fdata-sections",
+@@ -166,7 +165,6 @@ cc_toolchain_config(
+     opt_compile_flags = [
+         "-g0",
+         "-O2",
+-        "-D_FORTIFY_SOURCE=1",
+         "-DNDEBUG",
+         "-ffunction-sections",
+         "-fdata-sections",
+@@ -263,7 +261,6 @@ cc_toolchain_config(
+     opt_compile_flags = [
+         "-g0",
+         "-O2",
+-        "-D_FORTIFY_SOURCE=1",
+         "-DNDEBUG",
+         "-ffunction-sections",
+         "-fdata-sections",
+diff --git a/tools/toolchains/cross_compile/cc/cc_toolchain_config.bzl b/tools/toolchains/cross_compile/cc/cc_toolchain_config.bzl
+index de638c0159..f25c0cc0fe 100644
+--- a/tools/toolchains/cross_compile/cc/cc_toolchain_config.bzl
++++ b/tools/toolchains/cross_compile/cc/cc_toolchain_config.bzl
+@@ -218,7 +218,6 @@ def _impl(ctx):
+                     flag_group(
+                         # Security hardening requires optimization.
+                         # We need to undef it as some distributions now have it enabled by default.
+-                        flags = ["-U_FORTIFY_SOURCE"],
+                     ),
+                 ],
+                 with_features = [

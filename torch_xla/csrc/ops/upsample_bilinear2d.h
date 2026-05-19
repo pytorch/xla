@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_UPSAMPLE_BILINEAR2D_H_
+#define XLA_TORCH_XLA_CSRC_OPS_UPSAMPLE_BILINEAR2D_H_
 
 #include <vector>
 
@@ -8,10 +9,10 @@ namespace torch_xla {
 
 class UpsampleBilinear : public XlaNode {
  public:
-  UpsampleBilinear(const XlaValue& input, std::vector<int64_t> output_size,
-                   bool align_corners);
+  UpsampleBilinear(const torch::lazy::Value& input,
+                   std::vector<int64_t> output_size, bool align_corners);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -27,3 +28,5 @@ class UpsampleBilinear : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_UPSAMPLE_BILINEAR2D_H_

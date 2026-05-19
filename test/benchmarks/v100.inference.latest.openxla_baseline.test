@@ -1,0 +1,3 @@
+# ARGS: --backends openxla+dynamo inductor --baseline=latest --filter-by-tier=1
+# Workload,Speedup(XLA+Dynamo/Latest XLA+Dynamo),StdDev,ModelName(XLA+Dynamo),Speedup(Inductor/Latest XLA+Dynamo),StdDev,ModelName(Inductor)
+0,1.0,0.0,BERT_pytorch,0.96858952,0.0,BERT_pytorch

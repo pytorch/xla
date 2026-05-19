@@ -1,8 +1,8 @@
 #include "torch_xla/csrc/ops/not_supported.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 
@@ -11,8 +11,8 @@ NotSupported::NotSupported(std::string description, xla::Shape shape)
               torch::lazy::MHash(description)),
       description_(std::move(description)) {}
 
-torch::lazy::NodePtr NotSupported::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<NotSupported>(description_, xla_shape());
+torch::lazy::NodePtr NotSupported::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<NotSupported>(description_, xla_shape());
 }
 
 XlaOpVector NotSupported::Lower(LoweringContext* /* loctx */) const {

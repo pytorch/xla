@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 
 #include "absl/strings/str_join.h"
+
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -8,30 +9,33 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& grad_output,
+                           const torch::lazy::Value& input,
                            absl::Span<const int64_t> padding) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReflectionPadBackward(operands[0], operands[1], padding);
   };
-  return InferOutputShape({grad_output.xla_shape(), input.xla_shape()},
+  return InferOutputShape({GetXlaShape(grad_output), GetXlaShape(input)},
                           lower_for_shape_fn);
 }
 
 }  // namespace
 
-ReflectionPad2dBackward::ReflectionPad2dBackward(const XlaValue& grad_output,
-                                                 const XlaValue& input,
-                                                 std::vector<int64_t> padding)
-    : XlaNode(torch::lazy::OpKind(at::aten::reflection_pad2d_backward),
-              {grad_output, input},
-              [&]() { return NodeOutputShape(grad_output, input, padding); },
-              /*num_outputs=*/1, torch::lazy::MHash(padding)),
+ReflectionPad2dBackward::ReflectionPad2dBackward(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    std::vector<int64_t> padding)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::reflection_pad2d_backward),
+          {grad_output, input},
+          [&]() { return NodeOutputShape(grad_output, input, padding); },
+          /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
-torch::lazy::NodePtr ReflectionPad2dBackward::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<ReflectionPad2dBackward>(
-      operands.at(0), operands.at(1), padding_);
+torch::lazy::NodePtr ReflectionPad2dBackward::Clone(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<ReflectionPad2dBackward>(operands.at(0),
+                                                      operands.at(1), padding_);
 }
 
 XlaOpVector ReflectionPad2dBackward::Lower(LoweringContext* loctx) const {

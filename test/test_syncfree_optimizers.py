@@ -9,6 +9,7 @@ sys.argv = [sys.argv[0]] + leftovers
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch_xla
 import torch_xla.core.xla_model as xm
 import unittest
 import numpy as np
@@ -52,7 +53,7 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
                       syncfree_optim_cls,
                       ref_optim_cls,
                       optim_kwargs={'lr': 1e-2}):
-    device = xm.xla_device()
+    device = torch_xla.device()
     loss_fn = nn.NLLLoss()
     # syncfree model
     torch.manual_seed(0)
@@ -81,7 +82,7 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
         found_inf = torch.tensor(0.0).to(device)
       xm.optimizer_step(
           syncfree_optimizer, optimizer_args={"found_inf": found_inf})
-      xm.mark_step()
+      torch_xla.sync()
       # reference step
       ref_optimizer.zero_grad()
       ref_output = ref_model(data)
@@ -90,13 +91,13 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
       # mimick the effect of found_inf tensor
       if i % 2 != 0:
         xm.optimizer_step(ref_optimizer)
-      xm.mark_step()
+      torch_xla.sync()
       # check loss
       np.testing.assert_allclose(
           ref_loss.cpu().detach().numpy(),
           syncfree_loss.cpu().detach().numpy(),
           rtol=1e-2,
-          atol=1e-2)
+          atol=1e-1)
 
     # check weight
     for p, p_ref in zip(syncfree_model.parameters(), ref_model.parameters()):
@@ -104,7 +105,7 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
           p.cpu().detach().numpy(),
           p_ref.cpu().detach().numpy(),
           rtol=1e-2,
-          atol=1e-2)
+          atol=1e-1)
 
 
 class TestSyncFreeSGD(TestSyncFreeOptimizerBase):

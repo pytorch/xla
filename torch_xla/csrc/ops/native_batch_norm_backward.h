@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_NATIVE_BATCH_NORM_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_NATIVE_BATCH_NORM_BACKWARD_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -7,12 +8,14 @@ namespace torch_xla {
 // XlaNode for the backward batch norm operator.
 class NativeBatchNormBackward : public XlaNode {
  public:
-  NativeBatchNormBackward(const XlaValue& grad_out, const XlaValue& input,
-                          const XlaValue& weight, const XlaValue& save_mean,
-                          const XlaValue& save_invstd, bool training,
+  NativeBatchNormBackward(const torch::lazy::Value& grad_out,
+                          const torch::lazy::Value& input,
+                          const torch::lazy::Value& weight,
+                          const torch::lazy::Value& save_mean,
+                          const torch::lazy::Value& save_invstd, bool training,
                           double eps);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -28,3 +31,5 @@ class NativeBatchNormBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_NATIVE_BATCH_NORM_BACKWARD_H_

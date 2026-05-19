@@ -1,10 +1,13 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_
+#define XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_
 
 #include <vector>
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/hlo/builder/xla_builder.h"
+#include "xla/hlo/ir/hlo_sharding.h"
+
 #include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
@@ -20,8 +23,6 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
 
-xla::XlaOp BuildGer(xla::XlaOp lhs, xla::XlaOp rhs);
-
 xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias);
 
 xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,
@@ -29,15 +30,27 @@ xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,
                                      xla::XlaOp product_multiplier,
                                      xla::XlaOp bias_multiplier);
 
+xla::XlaOp BuildCountNonzero(xla::XlaOp input, std::vector<int64_t> dim);
+
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
                           xla::PrimitiveType type);
 
+xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
+                            bool replacement, xla::XlaOp seed);
+
 xla::XlaOp BuildExponential(xla::XlaOp lambda, xla::XlaOp seed,
                             xla::PrimitiveType type);
 
 xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed);
+
+std::vector<xla::XlaOp> BuildNativeDropout(xla::XlaOp input, xla::XlaOp seed,
+                                           float probability,
+                                           std::optional<bool> train);
+
+xla::XlaOp BuildSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp output,
+                                xla::XlaOp scalar_1);
 
 std::vector<xla::XlaOp> CreateBroadcastTensors(
     absl::Span<const xla::XlaOp> operands);
@@ -63,6 +76,12 @@ xla::XlaOp CreateIndexFill(xla::XlaOp buffer, int64_t dim, xla::XlaOp index,
 using XlaOpCombiner = std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>;
 
 XlaOpCombiner NumericAddCombiner();
+
+XlaOpCombiner NumericMulCombiner();
+
+XlaOpCombiner NumericMinCombiner();
+
+XlaOpCombiner NumericMaxCombiner();
 
 struct ScatterOptions {
   explicit ScatterOptions(XlaOpCombiner combiner)
@@ -121,4 +140,29 @@ xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other);
 xla::XlaOp BuildRoll(xla::XlaOp input, absl::Span<const int64_t> shifts,
                      absl::Span<const int64_t> dims);
 
+xla::XlaOp BuildAddcdiv(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
+                        xla::XlaOp val);
+
+xla::XlaOp BuildAddcmul(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
+                        xla::XlaOp val);
+
+xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
+                             bool use_hamming, bool use_chebyshev);
+
+xla::XlaOp BuildPixelShuffle(xla::XlaOp input, int64_t upscale_factor);
+
+xla::XlaOp BuildUpperTriangle(xla::XlaOp input);
+
+xla::XlaOp BuildCustomSharding(const xla::XlaOp& input, const std::string& type,
+                               const xla::Shape& output_shape);
+
+std::vector<xla::XlaOp> BuildTpuCustomCall(
+    const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
+    const std::string& payload);
+
+xla::XlaOp BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
+                    xla::XlaOp iou_threshold);
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_

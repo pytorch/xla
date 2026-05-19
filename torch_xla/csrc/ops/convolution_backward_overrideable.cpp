@@ -1,21 +1,20 @@
 #include "torch_xla/csrc/ops/convolution_backward_overrideable.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+
 #include "torch_xla/csrc/convolution.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
-                           const XlaValue& weight,
-                           absl::Span<const int64_t> stride,
-                           absl::Span<const int64_t> padding,
-                           absl::Span<const int64_t> dilation, bool transposed,
-                           absl::Span<const int64_t> output_padding,
-                           int64_t groups) {
+xla::Shape NodeOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    const torch::lazy::Value& weight, absl::Span<const int64_t> stride,
+    absl::Span<const int64_t> padding, absl::Span<const int64_t> dilation,
+    bool transposed, absl::Span<const int64_t> output_padding, int64_t groups) {
   auto lower_for_shape_fn =
       [stride, padding, dilation, transposed, output_padding,
        groups](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -28,27 +27,28 @@ xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
                       {grads.grad_input, grads.grad_weight, grads.grad_bias});
   };
   return InferOutputShape(
-      {grad_output.xla_shape(), input.xla_shape(), weight.xla_shape()},
+      {GetXlaShape(grad_output), GetXlaShape(input), GetXlaShape(weight)},
       lower_for_shape_fn);
 }
 
 }  // namespace
 
 ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
-    const XlaValue& grad_output, const XlaValue& input, const XlaValue& weight,
-    std::vector<int64_t> stride, std::vector<int64_t> padding,
-    std::vector<int64_t> dilation, bool transposed,
-    std::vector<int64_t> output_padding, int64_t groups)
-    : XlaNode(torch::lazy::OpKind(at::aten::convolution_backward_overrideable),
-              {grad_output, input, weight},
-              [&]() {
-                return NodeOutputShape(grad_output, input, weight, stride,
-                                       padding, dilation, transposed,
-                                       output_padding, groups);
-              },
-              /*num_outputs=*/3,
-              torch::lazy::MHash(stride, padding, dilation, transposed,
-                                 output_padding, groups)),
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    const torch::lazy::Value& weight, std::vector<int64_t> stride,
+    std::vector<int64_t> padding, std::vector<int64_t> dilation,
+    bool transposed, std::vector<int64_t> output_padding, int64_t groups)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::convolution_backward_overrideable),
+          {grad_output, input, weight},
+          [&]() {
+            return NodeOutputShape(grad_output, input, weight, stride, padding,
+                                   dilation, transposed, output_padding,
+                                   groups);
+          },
+          /*num_outputs=*/3,
+          torch::lazy::MHash(stride, padding, dilation, transposed,
+                             output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       dilation_(std::move(dilation)),
@@ -57,8 +57,8 @@ ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
       groups_(groups) {}
 
 torch::lazy::NodePtr ConvolutionBackwardOverrideable::Clone(
-    OpList operands) const {
-  return torch::lazy::MakeNode<ConvolutionBackwardOverrideable>(
+    torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<ConvolutionBackwardOverrideable>(
       operands.at(0), operands.at(1), operands.at(2), stride_, padding_,
       dilation_, transposed_, output_padding_, groups_);
 }
