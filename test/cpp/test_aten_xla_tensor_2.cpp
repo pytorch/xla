@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <tuple>
+#include <vector>
 
 #include <torch/torch.h>
 
@@ -427,6 +428,30 @@ TEST_F(AtenXlaTensorTest, TestLinalgSVD) {
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::_linalg_svd", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestLinalgSVDEmpty) {
+  std::vector<std::vector<int64_t>> empty_sizes = {
+      {0, 0}, {0, 3}, {3, 0}, {2, 0, 3}, {2, 3, 0}};
+  for (const auto& sizes : empty_sizes) {
+    for (bool full_matrices : {false, true}) {
+      for (bool compute_uv : {false, true}) {
+        torch::Tensor a =
+            torch::empty(sizes, torch::TensorOptions(torch::kFloat));
+        auto expected = torch::_linalg_svd(a, full_matrices, compute_uv);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_a = CopyToDevice(a, device);
+          auto actual = torch::_linalg_svd(xla_a, full_matrices, compute_uv);
+          ASSERT_EQ(std::get<0>(expected).sizes(),
+                    std::get<0>(actual).sizes());
+          ASSERT_EQ(std::get<1>(expected).sizes(),
+                    std::get<1>(actual).sizes());
+          ASSERT_EQ(std::get<2>(expected).sizes(),
+                    std::get<2>(actual).sizes());
+        });
+      }
+    }
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestLinalgVectorNorm) {

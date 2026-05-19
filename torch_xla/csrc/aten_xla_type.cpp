@@ -4175,6 +4175,32 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
     std::optional<std::string_view> /* driver */) {
   // The optional driver string is only for CUDA with a cuSOLVER backend.
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  if (self.numel() == 0) {
+    const auto m = self.size(-2);
+    const auto n = self.size(-1);
+    auto singular_values_sizes = self.sizes().vec();
+    const auto k = std::min(m, n);
+    singular_values_sizes.pop_back();
+    singular_values_sizes.back() = k;
+    auto s = at::zeros(singular_values_sizes, self.options());
+
+    if (!compute_uv) {
+      auto u = at::zeros({0}, self.options());
+      auto vh = at::zeros({0}, self.options());
+      return std::make_tuple(std::move(u), std::move(s), std::move(vh));
+    }
+
+    auto u_sizes = self.sizes().vec();
+    u_sizes.back() = full_matrices ? m : k;
+    auto u = at::zeros(u_sizes, self.options());
+
+    auto vh_sizes = self.sizes().vec();
+    vh_sizes.end()[-2] = full_matrices ? n : k;
+    vh_sizes.end()[-1] = n;
+    auto vh = at::zeros(vh_sizes, self.options());
+
+    return std::make_tuple(std::move(u), std::move(s), std::move(vh));
+  }
   // As per https://pytorch.org/docs/stable/generated/torch.svd.html,
   // The second boolean argument is exactly opposite between
   // torch::svd and torch::_linalg_svd, hence the negation of full_matrices.
