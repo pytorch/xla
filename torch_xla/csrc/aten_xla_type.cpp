@@ -4175,6 +4175,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
     std::optional<std::string_view> /* driver */) {
   // The optional driver string is only for CUDA with a cuSOLVER backend.
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  TORCH_CHECK(self.dim() >= 2,
+              "linalg.svd: The input tensor A must have at least 2 dimensions.");
   if (self.numel() == 0) {
     auto singular_values_sizes = self.sizes().vec();
     const auto m = singular_values_sizes.cend()[-2];
