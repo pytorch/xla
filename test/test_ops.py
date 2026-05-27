@@ -72,7 +72,6 @@ allowed_opinfo = get_allowed_ops_map(
     AllowedOpInfoEntry('bitwise_left_shift'),
     AllowedOpInfoEntry('bitwise_right_shift'),
     AllowedOpInfoEntry('ceil'),
-    AllowedOpInfoEntry('cholesky'),
     AllowedOpInfoEntry('chunk'),
     AllowedOpInfoEntry('clone'),
     AllowedOpInfoEntry('contiguous'),
