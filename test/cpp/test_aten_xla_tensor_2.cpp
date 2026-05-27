@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <iostream>
+#include <string>
 #include <tuple>
 
 #include <torch/torch.h>
@@ -560,19 +562,39 @@ TEST_F(AtenXlaTensorTest, TestQR) {
   static const int dims[] = {4, 7};
   for (auto m : dims) {
     for (auto n : dims) {
-      torch::Tensor a =
-          torch::rand({m, n}, torch::TensorOptions(torch::kFloat));
-      auto b = torch::qr(a);
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor xla_a = CopyToDevice(a, device);
-        auto xla_b = torch::qr(xla_a);
-        AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(), /*rtol=*/1e-3,
-                 /*atol=*/1e-4);
-        AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(), /*rtol=*/1e-3,
-                 /*atol=*/1e-4);
-      });
+      for (const auto mode : {"reduced", "complete"}) {
+        torch::Tensor a =
+            torch::rand({m, n}, torch::TensorOptions(torch::kFloat));
+        auto b = torch::linalg_qr(a, mode);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_a = CopyToDevice(a, device);
+          auto xla_b = torch::linalg_qr(xla_a, mode);
+          int64_t k = mode == std::string("complete") ? m : std::min(m, n);
+          EXPECT_EQ(std::get<0>(xla_b).size(0), m);
+          EXPECT_EQ(std::get<0>(xla_b).size(1), k);
+          EXPECT_EQ(std::get<1>(xla_b).size(0), k);
+          EXPECT_EQ(std::get<1>(xla_b).size(1), n);
+          AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(),
+                   /*rtol=*/1e-3, /*atol=*/1e-4);
+          AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
+                   /*rtol=*/1e-3, /*atol=*/1e-4);
+        });
+      }
     }
   }
+
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a =
+        CopyToDevice(torch::rand({4, 7}, torch::TensorOptions(torch::kFloat)),
+                     device);
+    try {
+      torch::linalg_qr(xla_a, "raw");
+      FAIL() << "Expected torch::linalg_qr to reject unsupported QR mode";
+    } catch (const c10::Error& error) {
+      EXPECT_NE(std::string(error.what()).find("mode='raw'"),
+                std::string::npos);
+    }
+  });
 }
 
 TEST_F(AtenXlaTensorTest, TestCholesky) {
