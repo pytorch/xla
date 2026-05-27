@@ -32,7 +32,7 @@ full_codegen:
   - bitwise_left_shift.Tensor
   - bitwise_right_shift.Tensor
   - ceil
-  - cholesky
+  - linalg_cholesky
   - clamp.Tensor
   - clamp_max.Tensor
   - clamp_min.Tensor
