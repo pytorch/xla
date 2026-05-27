@@ -364,8 +364,6 @@ allowed_opinfo = get_allowed_ops_map(
     # AllowedOpInfoEntry('norm'),
     # AllowedOpInfoEntry('t'),
     # AllowedOpInfoEntry('logdet'), xla::lodget does not handle empty input
-    # AllowedOpInfoEntry('qr'),  # Slice dim size 1 greater than dynamic slice dimension: 0
-
     # Worked locally (but failing on CI both CPU)
     # app.circleci.com/pipelines/github/pytorch/xla/9130/workflows/71c74f3d-1735-4328-81b5-784d6e6744da/jobs/17998
     # AllowedOpInfoEntry('var_mean'),
