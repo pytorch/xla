@@ -10,7 +10,7 @@ on:
                 required: false
                 type: string
                 description: Runner type for the test
-                default: linux.12xlarge
+                default: mt-l-x86iavx512-48-384
             timeout-minutes:
                 required: false
                 type: number
@@ -38,19 +38,10 @@ jobs:
             BAZEL_JOBS: "" # Let bazel decide the parallelism based on the number of CPUs.
             BUILD_CPP_TESTS: 1
         steps:
-            # Need to check out local composite actions before using them
-            # https://github.com/orgs/community/discussions/11771
-            - name: Checkout actions
-              if: inputs.has_code_changes == 'true'
-              uses: actions/checkout@v4
-              with:
-                  sparse-checkout: |
-                      .github/workflows/setup
-                  path: .actions
-
+            # OSDC runners can't resolve local action paths
             - name: Setup
               if: inputs.has_code_changes == 'true'
-              uses: ./.actions/.github/workflows/setup
+              uses: pytorch/xla/.github/workflows/setup@master
 
             # Restore the disk cache associated with the base branch and the commit SHA
             # that was used for merging with the current pr.

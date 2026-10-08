@@ -50,7 +50,7 @@ jobs:
       # In order for it (the `push-docs` job) to be successful, it needs to install the PyTorch
       # and PyTorch/XLA wheels. Therefore, we need to build their wheels by running this job.
       has_code_changes: ${{ (needs.check_code_changes.outputs.has_code_changes == 'true' || github.event_name == 'push') && 'true' || 'false' }}
-      runner: linux.24xlarge
+      runner: mt-l-x86iavx512-94-192
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
@@ -62,7 +62,7 @@ jobs:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.12_tpuvm
       timeout-minutes: 45  # Takes ~26m as of 2025/5/30.
       collect-coverage: false
-      runner: linux.24xlarge
+      runner: mt-l-x86iavx512-94-192
       has_code_changes: ${{ needs.check_code_changes.outputs.has_code_changes }}
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
