@@ -38,10 +38,37 @@ jobs:
             BAZEL_JOBS: "" # Let bazel decide the parallelism based on the number of CPUs.
             BUILD_CPP_TESTS: 1
         steps:
-            # OSDC runners can't resolve local action paths
-            - name: Setup
+            # OSDC runners can't run local actions, and pytorch/xla can't be used as a
+            # remote action because its `external` symlink breaks the download, so
+            # these are the steps of .github/workflows/setup inline.
+            - name: Setup gcloud
+              if: inputs.has_code_changes == 'true' && env.GCLOUD_SERVICE_KEY
+              shell: bash
+              run: |
+                  echo "${GCLOUD_SERVICE_KEY}" > /tmp/default_credentials.json
+                  echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/default_credentials.json" >> $GITHUB_ENV
+            - name: Checkout PyTorch Repo
               if: inputs.has_code_changes == 'true'
-              uses: pytorch/xla/.github/workflows/setup@master
+              uses: actions/checkout@v4
+              with:
+                  repository: pytorch/pytorch
+                  path: pytorch
+            - name: Checkout PyTorch/XLA Repo
+              if: inputs.has_code_changes == 'true'
+              uses: actions/checkout@v4
+              with:
+                  path: pytorch/xla
+            - name: Checkout to PyTorch Commit Pin
+              if: inputs.has_code_changes == 'true'
+              working-directory: pytorch
+              shell: bash
+              env:
+                  TORCH_COMMIT_FILE: ".torch_commit"
+              run: |
+                  COMMIT=$(tail -1 "xla/$TORCH_COMMIT_FILE")
+                  git fetch --no-recurse-submodules origin $COMMIT
+                  git checkout --no-recurse-submodules FETCH_HEAD
+                  git submodule update --init --recursive
 
             # Restore the disk cache associated with the base branch and the commit SHA
             # that was used for merging with the current pr.

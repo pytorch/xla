@@ -10,7 +10,7 @@ on:
                 required: false
                 type: string
                 description: Runner type for the test
-                default: mt-l-x86iavx512-16-128
+                default: linux.4xlarge
         secrets:
             torchxla-bot-token:
                 required: true
