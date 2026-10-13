@@ -145,7 +145,7 @@ To update your exisitng training loop, make the following changes:
 
  if __name__ == '__main__':
    ...
-+  # Move the model paramters to your XLA device
++  # Move the model parameters to your XLA device
 +  model.to('xla')
    train(model, training_data, ...)
    ...
@@ -165,7 +165,7 @@ To update your existing training loop, make the following changes:
  def _mp_fn(index):
    ...
 
-+  # Move the model paramters to your XLA device
++  # Move the model parameters to your XLA device
 +  model.to('xla')
 
    for inputs, labels in train_loader:

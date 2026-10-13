@@ -3,14 +3,14 @@ we have optimized and runs well on TPU.
 
 Contents of this directory is organized in the following way:
 
-* Every subdirectory is a self-contained model, as a seperate pip package.
+* Every subdirectory is a self-contained model, as a separate pip package.
 
 * Each subdirectory must has a README indicating:
 ** is this training or inference
 ** on what devices it has been tested / developed
 ** instructions on running.
 
-* Every subdirectory contains it's own set of shell scripts do with all the flags
+* Every subdirectory contains its own set of shell scripts do with all the flags
   set for the best performance that we turned, be it training or inference.
 
 * Each subdirectory can specify their own dependencies, and can depend on models / layers

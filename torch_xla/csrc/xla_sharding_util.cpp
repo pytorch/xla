@@ -712,7 +712,7 @@ void ShardingUtil::ReshardParameters(
     }
   }
   if (input_shardings.size() == 0) {
-    TF_VLOG(3) << "ReshardParamters... skip with empty input_shardings.";
+    TF_VLOG(3) << "ReshardParameters... skip with empty input_shardings.";
     return;
   }
   XLA_CHECK_EQ(input_shardings.size(), parameters->size());
@@ -736,10 +736,10 @@ void ShardingUtil::ReshardParameters(
     }
   }
   if (reshard_indices.size() == 0) {
-    TF_VLOG(3) << "ReshardParamters... skip with no new shardings.";
+    TF_VLOG(3) << "ReshardParameters... skip with no new shardings.";
     return;
   }
-  TF_VLOG(3) << "ReshardParamters... resharding " << reshard_indices.size()
+  TF_VLOG(3) << "ReshardParameters... resharding " << reshard_indices.size()
              << " parameters.";
 
   TORCH_LAZY_COUNTER("ReshardParameters", 1);
@@ -758,8 +758,8 @@ void ShardingUtil::ReshardParameters(
 
   std::vector<torch::lazy::BackendDataPtr> outputs;
   outputs.reserve(reshard_indices.size());
-  // Groupping is computationally more efficient but increases memory
-  // consumption. It is groupped by default, but can be overriden for
+  // Grouping is computationally more efficient but increases memory
+  // consumption. It is grouped by default, but can be overridden for
   // more-granular control over the peak memory consumption.
   bool group_sharding =
       runtime::sys_util::GetEnvBool("XLA_AUTO_USE_GROUP_SHARDING", true);
