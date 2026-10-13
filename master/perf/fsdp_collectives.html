@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -528,11 +528,11 @@ checkpoints together into a full model state dict. See
 <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> for an example.</p></li>
 </ul>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">ckpt</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
-    <span class="s1">&#39;shard_metadata&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">get_shard_metadata</span><span class="p">(),</span>
-    <span class="s1">&#39;optimizer&#39;</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+    <span class="s1">'model'</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+    <span class="s1">'shard_metadata'</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">get_shard_metadata</span><span class="p">(),</span>
+    <span class="s1">'optimizer'</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
 <span class="p">}</span>
-<span class="n">ckpt_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;/tmp/rank-</span><span class="si">{</span><span class="n">xr</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span><span class="si">}</span><span class="s1">-of-</span><span class="si">{</span><span class="n">xr</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span><span class="si">}</span><span class="s1">.pth&#39;</span>
+<span class="n">ckpt_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'/tmp/rank-</span><span class="si">{</span><span class="n">xr</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span><span class="si">}</span><span class="s1">-of-</span><span class="si">{</span><span class="n">xr</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span><span class="si">}</span><span class="s1">.pth'</span>
 <span class="n">xm</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">ckpt</span><span class="p">,</span> <span class="n">ckpt_path</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -543,7 +543,7 @@ command line as follows.</p></li>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># consolidate the saved checkpoints via command line tool</span>
 python3<span class="w"> </span>-m<span class="w"> </span>torch_xla.distributed.fsdp.consolidate_sharded_ckpts<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--ckpt_prefix<span class="w"> </span>/path/to/your_sharded_checkpoint_files<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ckpt_suffix<span class="w"> </span><span class="s2">&quot;_rank-*-of-*.pth&quot;</span>
+<span class="w">  </span>--ckpt_suffix<span class="w"> </span><span class="s2">"_rank-*-of-*.pth"</span>
 </pre></div>
 </div>
 <p>The implementation of this class is largely inspired by and mostly
@@ -591,7 +591,7 @@ can also manually consolidate the sharded checkpoints via</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># consolidate the saved checkpoints via command line tool</span>
 python3<span class="w"> </span>-m<span class="w"> </span>torch_xla.distributed.fsdp.consolidate_sharded_ckpts<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--ckpt_prefix<span class="w"> </span>/tmp/mnist-fsdp/final_ckpt<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ckpt_suffix<span class="w"> </span><span class="s2">&quot;_rank-*-of-*.pth&quot;</span>
+<span class="w">  </span>--ckpt_suffix<span class="w"> </span><span class="s2">"_rank-*-of-*.pth"</span>
 </pre></div>
 </div>
 </section>

@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -496,8 +496,8 @@ the traced computation instead of repeatedly tracing the same operations.</p>
 <span class="c1"># Even if we run this function ten times, it will only be traced once.</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
     <span class="n">v</span> <span class="o">=</span> <span class="n">do_some_math</span><span class="p">(</span>
-        <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1.0</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">),</span>
-        <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">2.0</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">),</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1.0</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla'</span><span class="p">),</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">2.0</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla'</span><span class="p">),</span>
         <span class="n">c</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
@@ -523,9 +523,9 @@ to convert the module into a pure function and pass that to <code class="docutil
 
 <span class="c1"># Create module and move to XLA device</span>
 <span class="n">module</span> <span class="o">=</span> <span class="n">MyModule</span><span class="p">()</span>
-<span class="n">module</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">module</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">'xla'</span><span class="p">)</span>
 
-<span class="c1"># Convert module&#39;s forward pass into a pure function</span>
+<span class="c1"># Convert module's forward pass into a pure function</span>
 <span class="n">pure_forward</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">params</span><span class="p">,</span> <span class="n">buffers</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">functional_call</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">buffers</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span><span class="p">,))</span>
 
 <span class="c1"># Wrap the pure function with @assume_pure</span>
@@ -536,7 +536,7 @@ to convert the module into a pure function and pass that to <code class="docutil
 <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">())</span>
 <span class="n">buffers</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">named_buffers</span><span class="p">())</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
-    <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla'</span><span class="p">)</span>
     <span class="n">y</span> <span class="o">=</span> <span class="n">cached_forward</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">buffers</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
 </pre></div>

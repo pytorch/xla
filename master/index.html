@@ -290,7 +290,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -452,6 +452,7 @@
   <section id="pytorch-xla-documentation">
 <h1>PyTorch/XLA documentation<a class="headerlink" href="#pytorch-xla-documentation" title="Permalink to this heading">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">torch_xla</span></code> is a Python package that implements <a class="reference external" href="https://openxla.org/xla">XLA</a> as a backend for PyTorch.</p>
+<p>4/22/2026: To read more on our TorchTPU announcement see our latest blog post &lt;<a class="reference external" href="https://developers.googleblog.com/torchtpu-running-pytorch-natively-on-tpus-at-google-scale/">https://developers.googleblog.com/torchtpu-running-pytorch-natively-on-tpus-at-google-scale/</a>&gt;. Once TorchTPU is public it will replace PyTorch/XLA.</p>
 <table class="docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><strong>Familiar APIs</strong></p>
@@ -476,8 +477,8 @@ for cost-efficient training and inference.</p>
 </pre></div>
 </div>
 <p>Verify the installation:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import torch_xla; print(torch_xla.__version__)&quot;</span>
-python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import torch; import torch_xla; print(torch.tensor(1.0, device=&#39;xla&#39;).device)&quot;</span>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import torch_xla; print(torch_xla.__version__)"</span>
+python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import torch; import torch_xla; print(torch.tensor(1.0, device='xla').device)"</span>
 </pre></div>
 </div>
 </section>

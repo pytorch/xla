@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -485,7 +485,7 @@ you can test with the placeholder <code class="docutils literal notranslate"><sp
 &gt;&gt;&gt; import torch_xla
 &gt;&gt;&gt; torch_xla.devices()
 # Assuming there are 4 devices. Your hardware may differ.
-[device(type=&#39;xla&#39;, index=0), device(type=&#39;xla&#39;, index=1), device(type=&#39;xla&#39;, index=2), device(type=&#39;xla&#39;, index=3)]
+[device(type='xla', index=0), device(type='xla', index=1), device(type='xla', index=2), device(type='xla', index=3)]
 </pre></div>
 </div>
 <p>To register your device type automatically for users as well as to
@@ -500,7 +500,7 @@ provides the path to your plugin binary. For example:</p></li>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">library_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;lib&#39;</span><span class="p">,</span> <span class="s1">&#39;pjrt_c_api_cpu_plugin.so&#39;</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">'lib'</span><span class="p">,</span> <span class="s1">'pjrt_c_api_cpu_plugin.so'</span><span class="p">)</span>
 </pre></div>
 </div>
 <ol class="arabic" start="2">
@@ -517,7 +517,7 @@ directly:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ PJRT_DEVICE=EXAMPLE python
 &gt;&gt;&gt; import torch_xla
 &gt;&gt;&gt; torch_xla.devices()
-[device(type=&#39;xla&#39;, index=0), device(type=&#39;xla&#39;, index=1), device(type=&#39;xla&#39;, index=2), device(type=&#39;xla&#39;, index=3)]
+[device(type='xla', index=0), device(type='xla', index=1), device(type='xla', index=2), device(type='xla', index=3)]
 </pre></div>
 </div>
 <p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/plugins.py">DevicePlugin</a>

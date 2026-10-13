@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -495,11 +495,11 @@ of the quantized weights.</p>
 <span class="c1"># Call with XLA Tensor to run on XLA device</span>
 <span class="n">matmul_output_xla</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">quantized_matmul</span><span class="p">(</span><span class="n">x_xla</span><span class="p">,</span> <span class="n">w_int_xla</span><span class="p">,</span> <span class="n">scaler_xla</span><span class="p">)</span>
 
-<span class="c1"># Use with torch.compile(backend=&#39;openxla&#39;)</span>
+<span class="c1"># Use with torch.compile(backend='openxla')</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
   <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">quantized_matmul</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
 
-<span class="n">f_dynamo</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;openxla&quot;</span><span class="p">)</span>
+<span class="n">f_dynamo</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"openxla"</span><span class="p">)</span>
 <span class="n">dynamo_out_xla</span> <span class="o">=</span> <span class="n">f_dynamo</span><span class="p">(</span><span class="n">x_xla</span><span class="p">,</span> <span class="n">w_int_xla</span><span class="p">,</span> <span class="n">scaler_xla</span><span class="p">)</span>
 </pre></div>
 </div>

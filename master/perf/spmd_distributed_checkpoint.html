@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -463,8 +463,8 @@ API:</p>
 
 <span class="c1"># Saving a state_dict</span>
 <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
-    <span class="s2">&quot;optim&quot;</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+    <span class="s2">"model"</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+    <span class="s2">"optim"</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
 <span class="p">}</span>
 
 <span class="n">dist_cp</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
@@ -474,10 +474,10 @@ API:</p>
 <span class="p">)</span>
 <span class="o">...</span>
 
-<span class="c1"># Loading the model&#39;s state_dict from the checkpoint. The model should</span>
+<span class="c1"># Loading the model's state_dict from the checkpoint. The model should</span>
 <span class="c1"># already be on the XLA device and have the desired sharding applied.</span>
 <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+    <span class="s2">"model"</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
 <span class="p">}</span>
 
 <span class="n">dist_cp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
@@ -485,7 +485,7 @@ API:</p>
     <span class="n">storage_reader</span><span class="o">=</span><span class="n">dist_cp</span><span class="o">.</span><span class="n">FileSystemReader</span><span class="p">(</span><span class="n">CHECKPOINT_DIR</span><span class="p">),</span>
     <span class="n">planner</span><span class="o">=</span><span class="n">xc</span><span class="o">.</span><span class="n">SPMDLoadPlanner</span><span class="p">(),</span>
 <span class="p">)</span>
-<span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
+<span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s2">"model"</span><span class="p">])</span>
 </pre></div>
 </div>
 <section id="checkpointmanager">
@@ -521,7 +521,7 @@ filesystem, including GCS.</p></li>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.distributed_checkpoint</span><span class="w"> </span><span class="kn">import</span> <span class="n">CheckpointManager</span><span class="p">,</span> <span class="n">prime_optimizer</span>
 
 <span class="c1"># Create a CheckpointManager to checkpoint every 10 steps into GCS.</span>
-<span class="n">chkpt_mgr</span> <span class="o">=</span> <span class="n">CheckpointManager</span><span class="p">(</span><span class="s1">&#39;gs://my-bucket/my-experiment&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="n">chkpt_mgr</span> <span class="o">=</span> <span class="n">CheckpointManager</span><span class="p">(</span><span class="s1">'gs://my-bucket/my-experiment'</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
 
 <span class="c1"># Select a checkpoint to restore from, and restore if applicable</span>
 <span class="n">tracked_steps</span> <span class="o">=</span> <span class="n">chkpt_mgr</span><span class="o">.</span><span class="n">all_steps</span><span class="p">()</span>
@@ -531,18 +531,18 @@ filesystem, including GCS.</p></li>
     <span class="c1"># Before restoring the checkpoint, the optimizer state must be primed</span>
     <span class="c1"># to allow state to be loaded into it.</span>
     <span class="n">prime_optimizer</span><span class="p">(</span><span class="n">optim</span><span class="p">)</span>
-    <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s1">&#39;optim&#39;</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()}</span>
+    <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'model'</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s1">'optim'</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()}</span>
     <span class="n">chkpt_mgr</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">best_step</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">)</span>
-    <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">])</span>
-    <span class="n">optim</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;optim&#39;</span><span class="p">])</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s1">'model'</span><span class="p">])</span>
+    <span class="n">optim</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s1">'optim'</span><span class="p">])</span>
 
 <span class="c1"># Call `save` or `save_async` every step within the train loop. These methods</span>
 <span class="c1"># return True when a checkpoint is taken.</span>
 <span class="k">for</span> <span class="n">step</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataloader</span><span class="p">):</span>
     <span class="o">...</span>
-    <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s1">&#39;optim&#39;</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()}</span>
+    <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'model'</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s1">'optim'</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()}</span>
     <span class="k">if</span> <span class="n">chkpt_mgr</span><span class="o">.</span><span class="n">save_async</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Checkpoint taken at step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Checkpoint taken at step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
 </pre></div>
 </div>
 <section id="restoring-optimizer-state">
@@ -574,7 +574,7 @@ global world size, and host rank. An example initialization is below:</p>
 
 <span class="c1"># The `xla://` init_method will automatically discover master worker IP, rank,</span>
 <span class="c1"># and global world size without requiring environment configuration on TPUs.</span>
-<span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">&#39;gloo&#39;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
+<span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">'gloo'</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">'xla://'</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>

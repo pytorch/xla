@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -552,12 +552,12 @@ We are working in adding support for torch.export now.</p>
 
 
 <span class="c1"># Create a `mylib` library which has a basic SDPA op.</span>
-<span class="n">m</span> <span class="o">=</span> <span class="n">Library</span><span class="p">(</span><span class="s2">&quot;mylib&quot;</span><span class="p">,</span> <span class="s2">&quot;DEF&quot;</span><span class="p">)</span>
-<span class="n">m</span><span class="o">.</span><span class="n">define</span><span class="p">(</span><span class="s2">&quot;scaled_dot_product_attention(Tensor q, Tensor k, Tensor v) -&gt; Tensor&quot;</span><span class="p">)</span>
+<span class="n">m</span> <span class="o">=</span> <span class="n">Library</span><span class="p">(</span><span class="s2">"mylib"</span><span class="p">,</span> <span class="s2">"DEF"</span><span class="p">)</span>
+<span class="n">m</span><span class="o">.</span><span class="n">define</span><span class="p">(</span><span class="s2">"scaled_dot_product_attention(Tensor q, Tensor k, Tensor v) -&gt; Tensor"</span><span class="p">)</span>
 
-<span class="nd">@impl</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="s2">&quot;scaled_dot_product_attention&quot;</span><span class="p">,</span> <span class="s2">&quot;CompositeExplicitAutograd&quot;</span><span class="p">)</span>
+<span class="nd">@impl</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="s2">"scaled_dot_product_attention"</span><span class="p">,</span> <span class="s2">"CompositeExplicitAutograd"</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_mylib_scaled_dot_product_attention</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Basic scaled dot product attention without all the flags/features.&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""Basic scaled dot product attention without all the flags/features."""</span>
   <span class="n">q</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
   <span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
   <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
@@ -571,14 +571,14 @@ We are working in adding support for torch.export now.</p>
   <span class="p">)</span>
   <span class="k">return</span> <span class="n">y</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 
-<span class="nd">@impl_abstract</span><span class="p">(</span><span class="s2">&quot;mylib::scaled_dot_product_attention&quot;</span><span class="p">)</span>
+<span class="nd">@impl_abstract</span><span class="p">(</span><span class="s2">"mylib::scaled_dot_product_attention"</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_mylib_scaled_dot_product_attention_meta</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
   <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
 
 <span class="c1"># Register library op as a composite for export using the `@impl` method</span>
 <span class="c1"># for a torch decomposition.</span>
 <span class="n">jlibrary</span><span class="o">.</span><span class="n">register_torch_composite</span><span class="p">(</span>
-  <span class="s2">&quot;mylib.scaled_dot_product_attention&quot;</span><span class="p">,</span>
+  <span class="s2">"mylib.scaled_dot_product_attention"</span><span class="p">,</span>
   <span class="n">_mylib_scaled_dot_product_attention</span><span class="p">,</span>
   <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">mylib</span><span class="o">.</span><span class="n">scaled_dot_product_attention</span><span class="p">,</span>
   <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">mylib</span><span class="o">.</span><span class="n">scaled_dot_product_attention</span><span class="o">.</span><span class="n">default</span>
@@ -587,7 +587,7 @@ We are working in adding support for torch.export now.</p>
 <span class="c1"># Also register ATen softmax as a composite for export in the `mylib` library</span>
 <span class="c1"># using the JAX ATen decomposition from `jaten`.</span>
 <span class="n">jlibrary</span><span class="o">.</span><span class="n">register_jax_composite</span><span class="p">(</span>
-  <span class="s2">&quot;mylib.softmax&quot;</span><span class="p">,</span>
+  <span class="s2">"mylib.softmax"</span><span class="p">,</span>
   <span class="n">jaten</span><span class="o">.</span><span class="n">_aten_softmax</span><span class="p">,</span>
   <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">aten</span><span class="o">.</span><span class="n">_softmax</span><span class="p">,</span>
   <span class="n">static_argnums</span><span class="o">=</span><span class="mi">1</span>  <span class="c1"># Required by JAX jit</span>
@@ -618,11 +618,11 @@ We are working in adding support for torch.export now.</p>
 
     <span class="c1">## TODO Update this machinery from producing function calls to producing</span>
     <span class="c1">## stablehlo.composite ops.</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="s2">&quot;call @mylib.scaled_dot_product_attention&quot;</span><span class="p">,</span> <span class="n">module_str</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="s2">&quot;call @mylib.softmax&quot;</span><span class="p">,</span> <span class="n">module_str</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="s2">"call @mylib.scaled_dot_product_attention"</span><span class="p">,</span> <span class="n">module_str</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="s2">"call @mylib.softmax"</span><span class="p">,</span> <span class="n">module_str</span><span class="p">)</span>
 
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">'__main__'</span><span class="p">:</span>
   <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
 </pre></div>
 </div>

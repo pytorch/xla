@@ -289,7 +289,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -522,8 +522,8 @@ import torch_xla.distributed.xla_backend
 
 def _mp_fn(index):
 <span class="w"> </span> device = torch_xla.device()
-<span class="gd">-  dist.init_process_group(&#39;xla&#39;, rank=xr.global_ordinal(), world_size=xr.world_size())</span>
-<span class="gi">+  dist.init_process_group(&#39;xla&#39;, init_method=&#39;xla://&#39;)</span>
+<span class="gd">-  dist.init_process_group('xla', rank=xr.global_ordinal(), world_size=xr.world_size())</span>
+<span class="gi">+  dist.init_process_group('xla', init_method='xla://')</span>
 
 <span class="w"> </span> torch.manual_seed(42)
 <span class="w"> </span> model = nn.Linear(128, 10).to(device)
@@ -546,16 +546,16 @@ def _mp_fn(index):
 <span class="w"> </span>   optimizer.step()
 <span class="w"> </span>   torch_xla.sync()
 
-<span class="w"> </span> # Print mean parameters so we can confirm they&#39;re the same across replicas
+<span class="w"> </span> # Print mean parameters so we can confirm they're the same across replicas
 <span class="w"> </span> print([p.mean() for p in model.parameters()])
 
-if __name__ == &#39;__main__&#39;:
-<span class="gd">-  os.environ[&#39;XRT_TPU_CONFIG&#39;] = &#39;localservice;0;localhost:51011&#39;</span>
-<span class="gd">-  os.environ[&#39;MASTER_ADDR&#39;] = &#39;localhost&#39;</span>
-<span class="gd">-  os.environ[&#39;MASTER_PORT&#39;] = &#39;12355&#39;</span>
+if __name__ == '__main__':
+<span class="gd">-  os.environ['XRT_TPU_CONFIG'] = 'localservice;0;localhost:51011'</span>
+<span class="gd">-  os.environ['MASTER_ADDR'] = 'localhost'</span>
+<span class="gd">-  os.environ['MASTER_PORT'] = '12355'</span>
 
 <span class="gi">+  # Recommended: set PJRT_DEVICE to your local device type</span>
-<span class="gi">+  os.environ[&#39;PJRT_DEVICE&#39;] = &#39;TPU&#39;</span>
+<span class="gi">+  os.environ['PJRT_DEVICE'] = 'TPU'</span>
 
 <span class="w"> </span> torch_xla.launch(_mp_fn)
 </pre></div>
@@ -611,8 +611,8 @@ configure <code class="docutils literal notranslate"><span class="pre">TPU_PROCE
 <section id="pods">
 <h4>Pods<a class="headerlink" href="#pods" title="Permalink to this heading">¶</a></h4>
 <p>On TPU Pods, use <code class="docutils literal notranslate"><span class="pre">gcloud</span></code> to run your command on each TPU in parallel:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command=&quot;git clone --depth=1 --branch r1.13 https://github.com/pytorch/xla.git&quot;
-gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command=&quot;PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1&quot;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command="git clone --depth=1 --branch r1.13 https://github.com/pytorch/xla.git"
+gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command="PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1"
 </pre></div>
 </div>
 </section>
@@ -623,10 +623,10 @@ PyTorch/XLA preinstalled:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>export DOCKER_IMAGE=gcr.io/...
 
 # Optional: authenticate docker if your image is in a private GCP repository
-gcloud compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command &quot;sudo gcloud auth configure-docker&quot;
+gcloud compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command "sudo gcloud auth configure-docker"
 
 # Run your workload
-gcloud compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command &quot;sudo docker run --rm --privileged --net=host -e PJRT_DEVICE=TPU $DOCKER_IMAGE python pytorch/xla/test/test_train_mp_imagenet.py --fake_data&quot;
+gcloud compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command "sudo docker run --rm --privileged --net=host -e PJRT_DEVICE=TPU $DOCKER_IMAGE python pytorch/xla/test/test_train_mp_imagenet.py --fake_data"
 </pre></div>
 </div>
 <p>Note that <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">run</span></code> requires privileged access to the host
@@ -762,16 +762,16 @@ querying the runtime. For example:</p>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_all_gather</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
   <span class="c1"># No need to pass in `rank` or `world_size`</span>
-  <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">'xla'</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">'xla://'</span><span class="p">)</span>
 
-  <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+  <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla'</span><span class="p">)</span>
   <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">get_world_size</span><span class="p">())]</span>
   <span class="n">dist</span><span class="o">.</span><span class="n">all_gather</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
 
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
   <span class="nb">print</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">'__main__'</span><span class="p">:</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">_all_gather</span><span class="p">)</span>
 </pre></div>
 </div>

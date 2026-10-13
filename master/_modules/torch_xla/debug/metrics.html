@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -445,35 +445,35 @@
 
 
 <div class="viewcode-block" id="counter_names"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.counter_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">counter_names</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves all the currently active counter names.&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""Retrieves all the currently active counter names."""</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_counter_names</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="counter_value"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.counter_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">counter_value</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the value of an active counter.</span>
+<span class="w">  </span><span class="sd">"""Returns the value of an active counter.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    name (string): The name of the counter whose value needs to be retrieved.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The counter value as integer.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_counter_value</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">clear_counters</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all counters.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""Clear the value of all counters.</span>
+<span class="sd">  """</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_clear_xla_counters</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="metric_names"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metric_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metric_names</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves all the currently active metric names.&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""Retrieves all the currently active metric names."""</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metric_names</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="metric_data"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metric_data">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metric_data</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the data of an active metric.</span>
+<span class="w">  </span><span class="sd">"""Returns the data of an active metric.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    name (string): The name of the metric whose data needs to be retrieved.</span>
@@ -485,47 +485,47 @@
 <span class="sd">    buffer).</span>
 <span class="sd">    The `ACCUMULATOR` is the sum of the samples over `TOTAL_SAMPLES`.</span>
 <span class="sd">    The `SAMPLES` is a list of (TIME, VALUE) tuples.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metric_data</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">clear_metrics</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all metrics.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""Clear the value of all metrics.</span>
+<span class="sd">  """</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_clear_xla_metrics</span><span class="p">()</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">clear_all</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all metrics and all counters.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""Clear the value of all metrics and all counters.</span>
+<span class="sd">  """</span>
   <span class="n">clear_metrics</span><span class="p">()</span>
   <span class="n">clear_counters</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="metrics_report"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metrics_report">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metrics_report</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a string containing the full metrics and counters report.&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""Retrieves a string containing the full metrics and counters report."""</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metrics_report</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="short_metrics_report"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.short_metrics_report">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">short_metrics_report</span><span class="p">(</span><span class="n">counter_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">metric_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a string containing the full metrics and counters report.</span>
+<span class="w">  </span><span class="sd">"""Retrieves a string containing the full metrics and counters report.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    counter_names (list): The list of counter names whose data needs to be printed.</span>
 <span class="sd">    metric_names (list): The list of metric names whose data needs to be printed.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">if</span> <span class="ow">not</span> <span class="n">counter_names</span><span class="p">:</span>
-    <span class="n">counter_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CachedCompile&#39;</span><span class="p">,</span> <span class="s1">&#39;MarkStep&#39;</span><span class="p">,</span> <span class="s1">&#39;DynamoSyncInputExecuteTime&#39;</span><span class="p">]</span>
+    <span class="n">counter_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'CachedCompile'</span><span class="p">,</span> <span class="s1">'MarkStep'</span><span class="p">,</span> <span class="s1">'DynamoSyncInputExecuteTime'</span><span class="p">]</span>
   <span class="k">if</span> <span class="ow">not</span> <span class="n">metric_names</span><span class="p">:</span>
     <span class="n">metric_names</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s1">&#39;CompileTime&#39;</span><span class="p">,</span> <span class="s1">&#39;ExecuteTime&#39;</span><span class="p">,</span> <span class="s1">&#39;ExecuteReplicatedTime&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;TransferToDeviceTime&#39;</span><span class="p">,</span> <span class="s1">&#39;TransferFromDeviceTime&#39;</span>
+        <span class="s1">'CompileTime'</span><span class="p">,</span> <span class="s1">'ExecuteTime'</span><span class="p">,</span> <span class="s1">'ExecuteReplicatedTime'</span><span class="p">,</span>
+        <span class="s1">'TransferToDeviceTime'</span><span class="p">,</span> <span class="s1">'TransferFromDeviceTime'</span>
     <span class="p">]</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_short_xla_metrics_report</span><span class="p">(</span><span class="n">counter_names</span><span class="p">,</span> <span class="n">metric_names</span><span class="p">)</span></div>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">executed_fallback_ops</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a list of operations that were run in fallback mode.&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""Retrieves a list of operations that were run in fallback mode."""</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_executed_fallback_ops</span><span class="p">()</span>
 </pre></div>
 

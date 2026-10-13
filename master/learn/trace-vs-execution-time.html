@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -478,10 +478,10 @@ the duration of code that only performs XLA operations without an explicit
 instruction to wait for the device, you are primarily measuring this tracing
 time plus Python overhead.</strong></p>
 <p>Consider the following conceptual code:</p>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Assume &#39;a&#39; and &#39;b&#39; are XLA tensors</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Assume 'a' and 'b' are XLA tensors</span>
 <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
 
-<span class="c1"># This operation is recorded in PyTorch/XLA&#39;s graph</span>
+<span class="c1"># This operation is recorded in PyTorch/XLA's graph</span>
 <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
 
 <span class="c1"># ❌❌❌ !!! INCORRECT PROFILING: compilation and execution are deferred !!! ❌❌❌</span>
@@ -506,15 +506,15 @@ assigned computations before taking the final timestamp.</p></li>
 </ol>
 <p>This is exemplified, using <code class="docutils literal notranslate"><span class="pre">torch_xla.sync(wait=True)</span></code>, in the following
 conceptual code:</p>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Assume &#39;a&#39; and &#39;b&#39; are XLA tensors</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Assume 'a' and 'b' are XLA tensors</span>
 
 <span class="c1"># -- Warm-up Iteration begin ---</span>
 
 <span class="c1"># The first execution of a new graph will include compilation time, as</span>
 <span class="c1"># PyTorch/XLA translates the graph into optimized device code. To isolate the</span>
 <span class="c1"># steady-state device execution time for consistent benchmarking, we perform a</span>
-<span class="c1"># &quot;warm-up&quot; run.</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="c1"># The result isn&#39;t needed, just triggering the op</span>
+<span class="c1"># "warm-up" run.</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="c1"># The result isn't needed, just triggering the op</span>
 <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="c1"># -- Warm-up Iteration end ---</span>

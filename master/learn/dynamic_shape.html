@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -449,7 +449,7 @@
 <h1>Dynamic Shapes<a class="headerlink" href="#dynamic-shapes" title="Permalink to this heading">¶</a></h1>
 <p>Dynamic shapes means a tensor’s shape depends on the value of another tensor. For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span><span class="o">,</span><span class="w"> </span><span class="nn">torch_xla</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">in_tensor</span>  <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">in_tensor</span>  <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla:0'</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">out_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">in_tensor</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -469,7 +469,7 @@
 <h2>Bounded dynamic shape<a class="headerlink" href="#bounded-dynamic-shape" title="Permalink to this heading">¶</a></h2>
 <p>Currently, we support multi-layer perceptron models (MLP) with dynamic size input on TPU.</p>
 <p>This feature is controlled by a flag <code class="docutils literal notranslate"><span class="pre">XLA_EXPERIMENTAL=&quot;nonzero:masked_select&quot;</span></code>. To run a model with the feature enabled, launch Python with the following environment variable:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">XLA_EXPERIMENTAL</span><span class="o">=</span><span class="s2">&quot;nonzero:masked_select:masked_scatter&quot;</span><span class="w"> </span>python<span class="w"> </span>your_scripts.py
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">XLA_EXPERIMENTAL</span><span class="o">=</span><span class="s2">"nonzero:masked_select:masked_scatter"</span><span class="w"> </span>python<span class="w"> </span>your_scripts.py
 </pre></div>
 </div>
 <p>Here are some numbers we get when we run the MLP model for 100 iterations:</p>
@@ -498,7 +498,7 @@
 <p><img alt="Performance comparison (a) without dynamic shape  (b) with dynamic shape" src="../_images/dynamic_shape_mlp_perf.png" /></p>
 <p>One of the motivations of the dynamic shape is to reduce the number of excessive recompilation when the shape keeps changing between iterations. From the figure above, you can see the number of compilations reduced by half which results in the drop of the training time.</p>
 <p>To try it:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">XLA_EXPERIMENTAL</span><span class="o">=</span><span class="s2">&quot;nonzero:masked_select&quot;</span><span class="w"> </span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>TPU<span class="w"> </span>python3<span class="w"> </span>pytorch/xla/test/ds/test_dynamic_shape_models.py<span class="w"> </span>TestDynamicShapeModels.test_backward_pass_with_dynamic_input
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">XLA_EXPERIMENTAL</span><span class="o">=</span><span class="s2">"nonzero:masked_select"</span><span class="w"> </span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>TPU<span class="w"> </span>python3<span class="w"> </span>pytorch/xla/test/ds/test_dynamic_shape_models.py<span class="w"> </span>TestDynamicShapeModels.test_backward_pass_with_dynamic_input
 </pre></div>
 </div>
 </section>

@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -470,16 +470,16 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch.utils._pytree</span><span class="w"> </span><span class="kn">import</span> <span class="n">tree_flatten</span><span class="p">,</span> <span class="n">tree_unflatten</span>
 
 <span class="n">PartitionSpec</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="o">...</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span>
-<span class="sd">&quot;&quot;&quot;PartitionSpec describes the sharding of a tensor.</span>
+<span class="sd">"""PartitionSpec describes the sharding of a tensor.</span>
 
 <span class="sd">Specifically, it is a tuple of one or more device mesh axes that describes how to</span>
 <span class="sd">shard the input tensor. For example, the first dimension of the tensor is sharded</span>
 <span class="sd">across the axis/axes described in the first element of this tuple and so on.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 
 <div class="viewcode-block" id="Mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.Mesh">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Mesh</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Describe the logical XLA device topology mesh and the underlying resources.</span>
+<span class="w">  </span><span class="sd">"""Describe the logical XLA device topology mesh and the underlying resources.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    device_ids: A flattened list of devices (IDs).</span>
@@ -497,15 +497,15 @@
 <span class="sd">    &gt;&gt;&gt; mesh_shape = (4, 2)</span>
 <span class="sd">    &gt;&gt;&gt; num_devices = len(xm.get_xla_supported_devices())</span>
 <span class="sd">    &gt;&gt;&gt; device_ids = np.array(range(num_devices))</span>
-<span class="sd">    &gt;&gt;&gt; mesh = Mesh(device_ids, mesh_shape, (&#39;x&#39;, &#39;y&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))</span>
 <span class="sd">    &gt;&gt;&gt; mesh.get_logical_mesh()</span>
 <span class="sd">    &gt;&gt;&gt; array([[0, 1],</span>
 <span class="sd">              [2, 3],</span>
 <span class="sd">              [4, 5],</span>
 <span class="sd">              [6, 7]])</span>
 <span class="sd">    &gt;&gt;&gt; mesh.shape()</span>
-<span class="sd">    OrderedDict([(&#39;x&#39;, 4), (&#39;y&#39;, 2)])</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">    OrderedDict([('x', 4), ('y', 2)])</span>
+<span class="sd">  """</span>
 
   <span class="n">device_ids</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
   <span class="n">mesh_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
@@ -521,28 +521,28 @@
     <span class="c1"># At the moment, XLA requires that the Mesh uses the global number of</span>
     <span class="c1"># devices.</span>
     <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
-    <span class="k">assert</span> <span class="n">num_devices</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;This requires XLA supported device(s).&quot;</span>
+    <span class="k">assert</span> <span class="n">num_devices</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"This requires XLA supported device(s)."</span>
     <span class="k">assert</span> <span class="n">num_devices</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span>
         <span class="n">device_ids</span>
-    <span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;Number of device IDs (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match the global number of devices (</span><span class="si">{</span><span class="n">num_devices</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="p">),</span> <span class="sa">f</span><span class="s2">"Number of device IDs (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match the global number of devices (</span><span class="si">{</span><span class="n">num_devices</span><span class="si">}</span><span class="s2">)"</span>
 
     <span class="k">if</span> <span class="n">axis_names</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
       <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">axis_names</span><span class="p">),</span> \
-          <span class="sa">f</span><span class="s2">&quot;Number of axis names (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">axis_names</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match mesh dimensions (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+          <span class="sa">f</span><span class="s2">"Number of axis names (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">axis_names</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match mesh dimensions (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
       <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">axis_names</span><span class="p">))</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">axis_names</span><span class="p">),</span> \
-          <span class="sa">f</span><span class="s2">&quot;Axis names must be unique, got: </span><span class="si">{</span><span class="n">axis_names</span><span class="si">}</span><span class="s2">&quot;</span>
+          <span class="sa">f</span><span class="s2">"Axis names must be unique, got: </span><span class="si">{</span><span class="n">axis_names</span><span class="si">}</span><span class="s2">"</span>
 
     <span class="n">expected_devices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span>
     <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span> <span class="o">==</span> <span class="n">expected_devices</span><span class="p">,</span> \
-        <span class="sa">f</span><span class="s2">&quot;Number of device IDs (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match mesh size (</span><span class="si">{</span><span class="n">expected_devices</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="sa">f</span><span class="s2">"Number of device IDs (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match mesh size (</span><span class="si">{</span><span class="n">expected_devices</span><span class="si">}</span><span class="s2">)"</span>
     <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)),</span> \
-        <span class="sa">f</span><span class="s2">&quot;Device IDs must be unique, got: </span><span class="si">{</span><span class="n">device_ids</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">"Device IDs must be unique, got: </span><span class="si">{</span><span class="n">device_ids</span><span class="si">}</span><span class="s2">"</span>
 
     <span class="bp">self</span><span class="o">.</span><span class="n">device_ids</span> <span class="o">=</span> <span class="n">device_ids</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span> <span class="o">=</span> <span class="n">mesh_shape</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span> <span class="o">=</span> <span class="n">axis_names</span>
     <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">d</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">device_ids</span><span class="p">),</span> \
-        <span class="sa">f</span><span class="s2">&quot;Device IDs must be less than mesh size (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2">), got: </span><span class="si">{</span><span class="n">device_ids</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">"Device IDs must be less than mesh size (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2">), got: </span><span class="si">{</span><span class="n">device_ids</span><span class="si">}</span><span class="s2">"</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">)</span>
@@ -566,9 +566,9 @@
     <span class="n">flat_specs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">partition_spec</span><span class="p">])</span>
     <span class="n">specs</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">flat_specs</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
     <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">d</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">d</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">specs</span><span class="p">),</span> \
-      <span class="sa">f</span><span class="s2">&quot;partition_spec (</span><span class="si">{</span><span class="n">partition_spec</span><span class="si">}</span><span class="s2">) contains out of bound index into mesh_shape.&quot;</span>
+      <span class="sa">f</span><span class="s2">"partition_spec (</span><span class="si">{</span><span class="n">partition_spec</span><span class="si">}</span><span class="s2">) contains out of bound index into mesh_shape."</span>
     <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">specs</span><span class="p">)),</span> \
-    <span class="sa">f</span><span class="s2">&quot;Each device mesh dimension should appear at most once in partition_spec </span><span class="si">{</span><span class="n">partition_spec</span><span class="si">}</span><span class="s2">.&quot;</span>
+    <span class="sa">f</span><span class="s2">"Each device mesh dimension should appear at most once in partition_spec </span><span class="si">{</span><span class="n">partition_spec</span><span class="si">}</span><span class="s2">."</span>
 
   <span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">_get_op_sharding_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">PartitionSpec</span><span class="p">):</span>
@@ -591,10 +591,10 @@
 
   <span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">_get_op_sharding_args_v2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">PartitionSpec</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    This function returns all the sharding parameters needed for TILED or PARTIAL sharding.</span>
 <span class="sd">    (All other sharding types are handled separately by the V1 OpSharding function)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">partition_spec</span> <span class="o">=</span> <span class="n">_translate_named_partition_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_validate_translated_partition_spec</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span>
 
@@ -647,9 +647,9 @@
   <span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">get_op_sharding_v2</span><span class="p">(</span>
       <span class="bp">self</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">PartitionSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">OpSharding</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the OpSharding for the given partition spec using V2 annotations.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
       <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">OpSharding</span><span class="p">([],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="n">ShardingType</span><span class="o">.</span><span class="n">REPLICATED</span><span class="p">)</span>
     <span class="n">sharding_type</span> <span class="o">=</span> <span class="n">_get_sharding_type</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
@@ -663,10 +663,10 @@
   <span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">get_op_sharding</span><span class="p">(</span>
       <span class="bp">self</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">PartitionSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">OpSharding</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the OpSharding for the given partition spec. This is an expensive</span>
 <span class="sd">    operation as the mesh grows, so the value is cached for reuse.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># For scalar tensors, it can only be replicated.</span>
     <span class="c1"># We have made sure len(t.shape) == len(partition_spec)</span>
     <span class="c1"># in mark_sharding API.</span>
@@ -680,23 +680,23 @@
                                       <span class="n">replication_groups</span><span class="p">,</span> <span class="n">sharding_type</span><span class="p">)</span>
 
   <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert Mesh to string representation.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">{{</span><span class="s2">&#39;device_ids&#39;: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">device_ids</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">, &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;&#39;mesh_shape&#39;: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s2">, &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;&#39;axis_names&#39;: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span><span class="si">}</span><span class="se">}}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Convert Mesh to string representation."""</span>
+    <span class="k">return</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">{{</span><span class="s2">'device_ids': </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">device_ids</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"'mesh_shape': </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"'axis_names': </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span><span class="si">}</span><span class="se">}}</span><span class="s2">"</span><span class="p">)</span>
 
   <span class="nd">@classmethod</span>
-  <span class="k">def</span><span class="w"> </span><span class="nf">from_str</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">mesh_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">&quot;Mesh&quot;</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create Mesh from string representation.&quot;&quot;&quot;</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">from_str</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">mesh_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">"Mesh"</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Create Mesh from string representation."""</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">ast</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
     <span class="k">try</span><span class="p">:</span>
-      <span class="n">dict_str</span> <span class="o">=</span> <span class="n">mesh_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;Mesh&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+      <span class="n">dict_str</span> <span class="o">=</span> <span class="n">mesh_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'Mesh'</span><span class="p">,</span> <span class="s1">''</span><span class="p">)</span>
       <span class="n">mesh_dict</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">dict_str</span><span class="p">)</span>
       <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
-          <span class="n">device_ids</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">&#39;device_ids&#39;</span><span class="p">]),</span>
-          <span class="n">mesh_shape</span><span class="o">=</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">&#39;mesh_shape&#39;</span><span class="p">],</span>
-          <span class="n">axis_names</span><span class="o">=</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">&#39;axis_names&#39;</span><span class="p">])</span>
+          <span class="n">device_ids</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">'device_ids'</span><span class="p">]),</span>
+          <span class="n">mesh_shape</span><span class="o">=</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">'mesh_shape'</span><span class="p">],</span>
+          <span class="n">axis_names</span><span class="o">=</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">'axis_names'</span><span class="p">])</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">SyntaxError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
       <span class="k">return</span> <span class="kc">None</span>
 
@@ -720,7 +720,7 @@
     <span class="n">device_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">device_id_to_device</span><span class="o">.</span><span class="n">get</span><span class="p">)(</span><span class="n">device_ids_array</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">device_array</span> <span class="o">==</span> <span class="kc">None</span><span class="p">):</span>
       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-          <span class="sa">f</span><span class="s2">&quot;torch_xla device ID </span><span class="si">{</span><span class="n">device_ids_array</span><span class="p">[</span><span class="n">device_array</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">None</span><span class="p">]</span><span class="si">}</span><span class="s2"> not found in available JAX devices&quot;</span>
+          <span class="sa">f</span><span class="s2">"torch_xla device ID </span><span class="si">{</span><span class="n">device_ids_array</span><span class="p">[</span><span class="n">device_array</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">None</span><span class="p">]</span><span class="si">}</span><span class="s2"> not found in available JAX devices"</span>
       <span class="p">)</span>
     <span class="k">return</span> <span class="n">mesh_lib</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_array</span><span class="p">,</span> <span class="n">axis_names</span><span class="o">=</span><span class="n">axis_names</span><span class="p">)</span></div>
 
@@ -729,7 +729,7 @@
 
 
 <div class="viewcode-block" id="set_global_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.set_global_mesh">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">set_global_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  Set the global mesh that can be used for the current process.</span>
 
 <span class="sd">  Args:</span>
@@ -738,15 +738,15 @@
 <span class="sd">  Example:</span>
 
 <span class="sd">    &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
-<span class="sd">    &gt;&gt;&gt; mesh = xs.get_1d_mesh(&quot;data&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; mesh = xs.get_1d_mesh("data")</span>
 <span class="sd">    &gt;&gt;&gt; xs.set_global_mesh(mesh)</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">global</span> <span class="n">_GLOBAL_MESH</span>
   <span class="n">_GLOBAL_MESH</span> <span class="o">=</span> <span class="n">mesh</span></div>
 
 
 <div class="viewcode-block" id="get_global_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.get_global_mesh">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_global_mesh</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mesh</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  Get the global mesh for the current process.</span>
 
 <span class="sd">  Returns:</span>
@@ -756,13 +756,13 @@
 
 <span class="sd">    &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
 <span class="sd">    &gt;&gt;&gt; xs.get_global_mesh()</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">global</span> <span class="n">_GLOBAL_MESH</span>
   <span class="k">return</span> <span class="n">_GLOBAL_MESH</span></div>
 
 
 <div class="viewcode-block" id="get_1d_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.get_1d_mesh">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_1d_mesh</span><span class="p">(</span><span class="n">axis_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  Helper function to return the mesh with all devices in one dimension.</span>
 
 <span class="sd">  Args:</span>
@@ -775,12 +775,12 @@
 
 <span class="sd">    &gt;&gt;&gt; # This example is assuming 1 TPU v4-8</span>
 <span class="sd">    &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
-<span class="sd">    &gt;&gt;&gt; mesh = xs.get_1d_mesh(&quot;data&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; mesh = xs.get_1d_mesh("data")</span>
 <span class="sd">    &gt;&gt;&gt; print(mesh.mesh_shape)</span>
 <span class="sd">    (4,)</span>
 <span class="sd">    &gt;&gt;&gt; print(mesh.axis_names)</span>
-<span class="sd">    (&#39;data&#39;,)</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">    ('data',)</span>
+<span class="sd">  """</span>
   <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
   <span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,)</span>
   <span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
@@ -790,9 +790,9 @@
     <span class="k">return</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="n">axis_name</span><span class="p">,))</span></div>
 
 
-<span class="c1"># HybridDevice class has been inspired from jax&#39;s mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ</span>
+<span class="c1"># HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ</span>
 <div class="viewcode-block" id="HybridMesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.HybridMesh">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">HybridMesh</span><span class="p">(</span><span class="n">Mesh</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Creates a hybrid device mesh of devices connected with ICI and DCN networks.</span>
+<span class="w">  </span><span class="sd">"""Creates a hybrid device mesh of devices connected with ICI and DCN networks.</span>
 <span class="sd">    The shape of logical mesh should be ordered by increasing network-intensity</span>
 <span class="sd">    e.g. [replica, data, model] where mdl has the most network communication</span>
 <span class="sd">    requirements.</span>
@@ -806,10 +806,10 @@
 <span class="sd">    &gt;&gt;&gt; # This example is assuming 2 slices of v4-8.</span>
 <span class="sd">    &gt;&gt;&gt; ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)</span>
 <span class="sd">    &gt;&gt;&gt; dcn_mesh_shape = (2, 1, 1)</span>
-<span class="sd">    &gt;&gt;&gt; mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, (&#39;data&#39;,&#39;fsdp&#39;,&#39;tensor&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, ('data','fsdp','tensor'))</span>
 <span class="sd">    &gt;&gt;&gt; print(mesh.shape())</span>
-<span class="sd">    &gt;&gt;&gt; &gt;&gt; OrderedDict([(&#39;data&#39;, 2), (&#39;fsdp&#39;, 4), (&#39;tensor&#39;, 1)])</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">    &gt;&gt;&gt; &gt;&gt; OrderedDict([('data', 2), ('fsdp', 4), ('tensor', 1)])</span>
+<span class="sd">  """</span>
   <span class="n">ici_mesh_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
   <span class="n">dcn_mesh_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
 
@@ -824,17 +824,17 @@
     <span class="n">mesh_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="n">x</span> <span class="o">*</span> <span class="n">y</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ici_mesh_shape</span><span class="p">,</span> <span class="n">dcn_mesh_shape</span><span class="p">)])</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span>
-        <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">attr</span><span class="p">:</span> <span class="n">_utils</span><span class="o">.</span><span class="n">parse_xla_device</span><span class="p">(</span><span class="n">attr</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">attr</span><span class="p">:</span> <span class="n">_utils</span><span class="o">.</span><span class="n">parse_xla_device</span><span class="p">(</span><span class="n">attr</span><span class="p">[</span><span class="s1">'name'</span><span class="p">])[</span><span class="mi">1</span><span class="p">])</span>
 
-    <span class="k">if</span> <span class="s1">&#39;slice_index&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span>
+    <span class="k">if</span> <span class="s1">'slice_index'</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span>
         <span class="n">dcn_mesh_shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Provide dcn_mesh_shape to create a mesh for multislice&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="s1">&#39;slice_index&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Provide dcn_mesh_shape to create a mesh for multislice'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">'slice_index'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span>
         <span class="n">dcn_mesh_shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Invalid dcn_mesh_shape for single slice mesh&#39;</span><span class="p">)</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Invalid dcn_mesh_shape for single slice mesh'</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">ici_mesh_shape</span> <span class="o">=</span> <span class="n">ici_mesh_shape</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">dcn_mesh_shape</span> <span class="o">=</span> <span class="n">dcn_mesh_shape</span>
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">dcn_mesh_shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="s1">&#39;slice_index&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="p">[</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">dcn_mesh_shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="s1">'slice_index'</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="p">[</span>
         <span class="mi">0</span><span class="p">]:</span>  <span class="c1"># multislice</span>
       <span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_hybrid_device_mesh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ici_mesh_shape</span><span class="p">,</span>
                                              <span class="bp">self</span><span class="o">.</span><span class="n">dcn_mesh_shape</span><span class="p">)</span>
@@ -845,7 +845,7 @@
 
   <span class="c1"># This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L172</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">_get_physical_tpu_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Rearrange TPU devices in a slice into a physical mesh.</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""Rearrange TPU devices in a slice into a physical mesh.</span>
 
 <span class="sd">      Args:</span>
 <span class="sd">        devices: A list of device logical ordinals in a TPU slice.</span>
@@ -853,10 +853,10 @@
 <span class="sd">      Returns:</span>
 <span class="sd">        A np.ndarray of device logical ordinals with shape [global_x, global_y, global_z]. On</span>
 <span class="sd">          v2 and v3, global_z is instead cores_per_chip (i.e., 2).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">assert</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device_hw</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span>
+<span class="sd">    """</span>
+    <span class="k">assert</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device_hw</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span> <span class="o">==</span> <span class="s1">'TPU'</span>
     <span class="c1"># coords is a 3-dims tuple representing the device in physical mesh</span>
-    <span class="n">device_coords</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="p">[</span><span class="n">d</span><span class="p">][</span><span class="s1">&#39;coords&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
+    <span class="n">device_coords</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="p">[</span><span class="n">d</span><span class="p">][</span><span class="s1">'coords'</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
     <span class="n">dims</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">d</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">max</span><span class="p">(</span><span class="n">device_coords</span><span class="p">))</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">coords</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">device_coords</span><span class="p">,</span> <span class="n">devices</span><span class="p">):</span>
@@ -866,7 +866,7 @@
   <span class="k">def</span><span class="w"> </span><span class="nf">_create_device_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                           <span class="n">mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                           <span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a performant device mesh.</span>
+<span class="w">    </span><span class="sd">"""Creates a performant device mesh.</span>
 
 <span class="sd">      Args:</span>
 <span class="sd">        mesh_shape: shape of logical mesh, ordered by increasing network-intensity</span>
@@ -876,14 +876,14 @@
 
 <span class="sd">      Returns:</span>
 <span class="sd">        A np.ndarray of devices with mesh_shape as its shape.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">if</span> <span class="n">devices</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="n">devices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">())</span>
     <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-          <span class="sa">f</span><span class="s1">&#39;Number of devices </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span><span class="si">}</span><span class="s1"> must equal the product &#39;</span>
-          <span class="sa">f</span><span class="s1">&#39;of mesh_shape </span><span class="si">{</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+          <span class="sa">f</span><span class="s1">'Number of devices </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span><span class="si">}</span><span class="s1"> must equal the product '</span>
+          <span class="sa">f</span><span class="s1">'of mesh_shape </span><span class="si">{</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
     <span class="n">physical_mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_physical_tpu_mesh</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span>
     <span class="n">device_mesh</span><span class="p">,</span> <span class="n">assignment</span> <span class="o">=</span> <span class="n">_create_device_mesh_for_nd_torus</span><span class="p">(</span>
         <span class="n">physical_mesh</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="n">allow_split_physical_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -892,7 +892,7 @@
   <span class="c1"># This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L288.</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">_create_hybrid_device_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ici_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                                  <span class="n">dcn_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a device mesh for hybrid (e.g., ICI and DCN) parallelism.</span>
+<span class="w">    </span><span class="sd">"""Creates a device mesh for hybrid (e.g., ICI and DCN) parallelism.</span>
 
 <span class="sd">      Args:</span>
 <span class="sd">        ici_mesh_shape: shape of the logical mesh for the faster/inner network, ordered</span>
@@ -904,16 +904,16 @@
 <span class="sd">      Returns:</span>
 <span class="sd">        A np.ndarray of device logical ordinal with ici_mesh_shape * dcn_mesh_shape as its shape</span>
 <span class="sd">        that can be fed into HybridMesh for hybrid parallelism.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">granule_dict</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">dev</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device_attributes</span><span class="p">):</span>
-      <span class="n">granule_dict</span><span class="p">[</span><span class="n">dev</span><span class="p">[</span><span class="s1">&#39;slice_index&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+      <span class="n">granule_dict</span><span class="p">[</span><span class="n">dev</span><span class="p">[</span><span class="s1">'slice_index'</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
     <span class="c1"># sorts devices based on slice_index.</span>
     <span class="n">granules</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">granule_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">granule_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
     <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">dcn_mesh_shape</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">granules</span><span class="p">):</span>
       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-          <span class="sa">f</span><span class="s1">&#39;Number of slices </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">granules</span><span class="p">)</span><span class="si">}</span><span class="s1"> must equal the product of &#39;</span>
-          <span class="sa">f</span><span class="s1">&#39;dcn_mesh_shape </span><span class="si">{</span><span class="n">dcn_mesh_shape</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+          <span class="sa">f</span><span class="s1">'Number of slices </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">granules</span><span class="p">)</span><span class="si">}</span><span class="s1"> must equal the product of '</span>
+          <span class="sa">f</span><span class="s1">'dcn_mesh_shape </span><span class="si">{</span><span class="n">dcn_mesh_shape</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
     <span class="c1"># creates a separate internal mesh for each slice.</span>
     <span class="n">per_granule_meshes</span> <span class="o">=</span> <span class="p">[</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_create_device_mesh</span><span class="p">(</span><span class="n">ici_mesh_shape</span><span class="p">,</span> <span class="n">granule</span><span class="p">)</span>
@@ -952,14 +952,14 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_get_tile_assignment</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
                          <span class="n">partition_spec</span><span class="p">:</span> <span class="n">PartitionSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  Permute the given mesh to create the tile assignment based on the partition</span>
 <span class="sd">  spec. Returns the tiling assignment as a numpy ndarray.</span>
 
 <span class="sd">  If the input partition_spec combines multiple logical mesh axes over a single</span>
 <span class="sd">  tensor axis, the resulting tiling assignment will combine the specified axes</span>
 <span class="sd">  into a single axis.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="c1"># Flatten the partition spec and ensure that it is fully specified over the</span>
   <span class="c1"># mesh for permutation.</span>
   <span class="n">tiled_dims</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">partition_spec</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
@@ -1022,27 +1022,27 @@
   <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">partition_spec</span><span class="p">:</span>
     <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">tuple</span><span class="p">:</span>
       <span class="k">assert</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">tuple</span>
-                     <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">p</span><span class="p">),</span> <span class="s1">&#39;Partition spec cannot contain nested tuples&#39;</span>
+                     <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">p</span><span class="p">),</span> <span class="s1">'Partition spec cannot contain nested tuples'</span>
       <span class="n">_partition_spec</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_translate_named_partition_spec</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span>
     <span class="k">elif</span> <span class="p">(</span><span class="n">p</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">):</span>
       <span class="n">_partition_spec</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
       <span class="n">idx</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_axis_name_idx</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
       <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Axis name </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2"> is not defined in the given mesh&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Axis name </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2"> is not defined in the given mesh"</span><span class="p">)</span>
       <span class="n">_partition_spec</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-          <span class="sa">f</span><span class="s2">&quot;Spec type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="si">}</span><span class="s2"> is not supported in partition spec&quot;</span><span class="p">)</span>
+          <span class="sa">f</span><span class="s2">"Spec type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="si">}</span><span class="s2"> is not supported in partition spec"</span><span class="p">)</span>
   <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_partition_spec</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_mark_manual_sharding</span><span class="p">(</span>
     <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  This API is meant to be paired with the upcoming pause_spmd&amp;resume_spmd APIs.</span>
-<span class="sd">  Don&#39;t use it alone.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  Don't use it alone.</span>
+<span class="sd">  """</span>
   <span class="n">manual_sharding</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">OpSharding</span><span class="p">([],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="n">ShardingType</span><span class="o">.</span><span class="n">MANUAL</span><span class="p">)</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_mark_manual_sharding</span><span class="p">(</span>
       <span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">manual_sharding</span><span class="p">)</span>
@@ -1050,21 +1050,21 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_use_shlo_to_shardy</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-  <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;CONVERT_SHLO_TO_SHARDY&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">,</span> <span class="s2">&quot;yes&quot;</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"CONVERT_SHLO_TO_SHARDY"</span><span class="p">,</span>
+                        <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"1"</span><span class="p">,</span> <span class="s2">"true"</span><span class="p">,</span> <span class="s2">"yes"</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">enable_manual_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span>
                            <span class="n">partition_spec</span><span class="p">:</span> <span class="n">PartitionSpec</span><span class="p">,</span>
                            <span class="o">*</span><span class="p">,</span>
                            <span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  This API enables manual sharding for the given tensor. Manual sharding disables SPMD sharding proporgation and auto</span>
 <span class="sd">  partition for the given tensor and all subsequential tensors that produced by an op that uses the given tensor as</span>
 <span class="sd">  input, and therefore allows the user to manually call collectives for the tensor and subsequential tensors. It</span>
 <span class="sd">  requires the user to provide the partition spec to shard the tensor before enabling the manual sharding. To be noted,</span>
 <span class="sd">  the leaf tensors need to pass to disable_manual_sharding before ending the graph.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="n">mesh</span> <span class="o">=</span> <span class="n">get_global_mesh</span><span class="p">()</span> <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">mesh</span>
   <span class="n">t</span> <span class="o">=</span> <span class="n">mark_sharding</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
   <span class="n">t</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_spmd_full_to_shard_shape</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
@@ -1077,10 +1077,10 @@
                             <span class="n">full_shape</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">,</span>
                             <span class="o">*</span><span class="p">,</span>
                             <span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  This API disables manual sharding for the given tensor. The partition_spec and full_shape are used to construct the</span>
 <span class="sd">  output tensor as if the input tensor has not been manually sharded.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="n">mesh</span> <span class="o">=</span> <span class="n">get_global_mesh</span><span class="p">()</span> <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">mesh</span>
   <span class="n">t</span> <span class="o">=</span> <span class="n">_mark_manual_sharding</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
   <span class="n">t</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_spmd_shard_to_full_shape</span><span class="p">(</span>
@@ -1093,7 +1093,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">annotate_custom_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
                                       <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
                              <span class="n">partition_spec</span><span class="p">:</span> <span class="n">PartitionSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  Annotates an existing tensor with a custom sharding IR node without modifying its data layout.</span>
 
 <span class="sd">  Unlike `mark_sharding`, this function only adds a custom sharding annotation to the XLA IR</span>
@@ -1114,9 +1114,9 @@
 <span class="sd">      &gt;&gt;&gt; sharded_tensor = xs.mark_sharding(tensor, mesh1, (0, 1, 2, 3))</span>
 <span class="sd">      &gt;&gt;&gt; # Later, annotate with a different sharding for the XLA SPMD partitioner</span>
 <span class="sd">      &gt;&gt;&gt; custom_sharded = xs.annotate_custom_sharding(sharded_tensor, mesh2, (0, 1, 2, 3))</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span> \
-    <span class="sa">f</span><span class="s2">&quot;Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">).&quot;</span>
+    <span class="sa">f</span><span class="s2">"Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">)."</span>
 
   <span class="n">op_sharding</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_op_sharding</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span>
   <span class="n">annotate_func</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_annotate_custom_sharding</span>
@@ -1127,7 +1127,7 @@
 
 <div class="viewcode-block" id="mark_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.mark_sharding">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
                   <span class="n">partition_spec</span><span class="p">:</span> <span class="n">PartitionSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">    Annotates the tensor provided with XLA partition spec. Internally,</span>
 <span class="sd">    it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.</span>
 
@@ -1156,18 +1156,18 @@
 <span class="sd">      &gt;&gt;&gt; mesh_shape = (4, 2)</span>
 <span class="sd">      &gt;&gt;&gt; num_devices = xr.global_runtime_device_count()</span>
 <span class="sd">      &gt;&gt;&gt; device_ids = np.array(range(num_devices))</span>
-<span class="sd">      &gt;&gt;&gt; mesh = Mesh(device_ids, mesh_shape, (&#39;x&#39;, &#39;y&#39;))</span>
-<span class="sd">      &gt;&gt;&gt; input = torch.randn(8, 32).to(&#39;xla&#39;)</span>
+<span class="sd">      &gt;&gt;&gt; mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))</span>
+<span class="sd">      &gt;&gt;&gt; input = torch.randn(8, 32).to('xla')</span>
 <span class="sd">      &gt;&gt;&gt; xs.mark_sharding(input, mesh, (0, None)) # 4-way data parallel</span>
-<span class="sd">      &gt;&gt;&gt; linear = nn.Linear(32, 10).to(&#39;xla&#39;)</span>
+<span class="sd">      &gt;&gt;&gt; linear = nn.Linear(32, 10).to('xla')</span>
 <span class="sd">      &gt;&gt;&gt; xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="c1"># We only allow fully specified `partition_spec` to be applicable, as opposed</span>
   <span class="c1"># to filling in the unspecified replicated dims. Fully specified `partition_spec`</span>
   <span class="c1"># should be of the same rank as `t`. This is to support partial replication</span>
   <span class="c1"># where the group assignment may vary with different input ranks.</span>
   <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span> \
-    <span class="sa">f</span><span class="s2">&quot;Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">).&quot;</span>
+    <span class="sa">f</span><span class="s2">"Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">)."</span>
 
   <span class="n">tx</span> <span class="o">=</span> <span class="n">maybe_get_torchax</span><span class="p">()</span>
   <span class="c1"># Do not log jax warnings when workarounds are available.</span>
@@ -1192,7 +1192,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">mark_sharding_with_gradients</span><span class="p">(</span>
     <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
     <span class="n">partition_spec</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">    A function to add sharding annotations on intermediate tensors (not in-place) and the gradient</span>
 <span class="sd">    of the intermediate tensors during backward pass.</span>
 
@@ -1206,7 +1206,7 @@
 
 <span class="sd">    Usage:</span>
 
-<span class="sd">    &gt;&gt;&gt; new_tensor = MarkShardingFunction.apply(tensor, mesh, (&#39;axis_1&#39;, &#39;axis_2&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; new_tensor = MarkShardingFunction.apply(tensor, mesh, ('axis_1', 'axis_2'))</span>
 <span class="sd">    sharding annotations are added to `new_tensor` and `tensor.grad`.</span>
 
 <span class="sd">    This is required to guide GSPMD sharding propagation better during the</span>
@@ -1218,37 +1218,37 @@
 <span class="sd">    After GSPMD sharding propagation in the compiler, both tensors will become sharded.</span>
 
 <span class="sd">    This version can also be used in AOTAutograd.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
   <span class="c1"># We only allow fully specified `partition_spec` to be applicable, as opposed</span>
   <span class="c1"># to filling in the unspecified replicated dims. Fully specified `partition_spec`</span>
   <span class="c1"># should be of the same rank as `t`. This is to support partial replication</span>
   <span class="c1"># where the group assignment may vary with different input ranks.</span>
   <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span> \
-    <span class="sa">f</span><span class="s2">&quot;Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">).&quot;</span>
+    <span class="sa">f</span><span class="s2">"Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">)."</span>
 
   <span class="n">r</span> <span class="o">=</span> <span class="n">MarkShardingFunction</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
   <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">r</span>
 
 
-<span class="n">PyTreeA</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;PyTreeA&#39;</span><span class="p">)</span>
-<span class="n">PyTreeB</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;PyTreeB&#39;</span><span class="p">)</span>
+<span class="n">PyTreeA</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">'PyTreeA'</span><span class="p">)</span>
+<span class="n">PyTreeB</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">'PyTreeB'</span><span class="p">)</span>
 
 
 <span class="nd">@requires_jax</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">shard_as</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">PyTreeA</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">PyTreeB</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PyTreeA</span><span class="p">,</span> <span class="n">PyTreeB</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Ensure that `a` and `b` are sharded the same way without specifying</span>
+<span class="w">  </span><span class="sd">"""Ensure that `a` and `b` are sharded the same way without specifying</span>
 <span class="sd">  a particular sharding constraint.</span>
 
 <span class="sd">  shard_as takes two PyTrees of matching structure and returns</span>
 <span class="sd">  two PyTrees of that same structure. As long as you use at least one</span>
 <span class="sd">  of the outputs, then corresponding tensors in all four PyTrees</span>
 <span class="sd">  (a, b, out[0], out[1]) will be sharded the same way.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
 
   <span class="n">a_flat</span><span class="p">,</span> <span class="n">a_spec</span> <span class="o">=</span> <span class="n">tree_flatten</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
   <span class="n">b_flat</span><span class="p">,</span> <span class="n">b_spec</span> <span class="o">=</span> <span class="n">tree_flatten</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
-  <span class="k">assert</span> <span class="n">a_spec</span> <span class="o">==</span> <span class="n">b_spec</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;a and b must have the same structure. got </span><span class="si">{</span><span class="n">a_spec</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">b_spec</span><span class="si">}</span><span class="s2">&quot;</span>
+  <span class="k">assert</span> <span class="n">a_spec</span> <span class="o">==</span> <span class="n">b_spec</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"a and b must have the same structure. got </span><span class="si">{</span><span class="n">a_spec</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">b_spec</span><span class="si">}</span><span class="s2">"</span>
   <span class="n">a_sharded_flat</span> <span class="o">=</span> <span class="p">[]</span>
   <span class="n">b_sharded_flat</span> <span class="o">=</span> <span class="p">[]</span>
   <span class="kn">from</span><span class="w"> </span><span class="nn">jax.experimental.shard_alike</span><span class="w"> </span><span class="kn">import</span> <span class="n">shard_alike</span>
@@ -1265,7 +1265,7 @@
 
 
 <div class="viewcode-block" id="clear_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.clear_sharding">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">clear_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  Clear sharding annotation from the input tensor and return a `cpu` casted tensor. This</span>
 <span class="sd">  is a in place operation but will also return the same torch.Tensor back.</span>
 
@@ -1279,11 +1279,11 @@
 
 <span class="sd">    &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
 <span class="sd">    &gt;&gt;&gt; torch_xla.runtime.use_spmd()</span>
-<span class="sd">    &gt;&gt;&gt; t1 = torch.randn(8,8).to(&#39;xla&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; t1 = torch.randn(8,8).to('xla')</span>
 <span class="sd">    &gt;&gt;&gt; mesh = xs.get_1d_mesh()</span>
 <span class="sd">    &gt;&gt;&gt; xs.mark_sharding(t1, mesh, (0, None))</span>
 <span class="sd">    &gt;&gt;&gt; xs.clear_sharding(t1)</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_clear_sharding</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
   <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">global_tensor</span>
@@ -1326,12 +1326,12 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">wrap_if_sharded</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  If the input is a sharded tensor, return an XLAShardedTensor wrapping it.</span>
 <span class="sd">  Otherwise, returns the input.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">)</span> <span class="ow">and</span>
-      <span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;xla&#39;</span> <span class="ow">and</span>
+      <span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">'xla'</span> <span class="ow">and</span>
       <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_xla_sharding_type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">XLAShardedTensor</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">x</span>
@@ -1364,11 +1364,11 @@
       <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshape_dims</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">transpose_perm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">subgroup_types</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">_get_op_sharding_args_v2</span><span class="p">(</span>
           <span class="n">partition_spec</span><span class="p">)</span>
 
-  <span class="k">def</span><span class="w"> </span><span class="nf">xla_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;XlaShardingSpec&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">xla_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">'XlaShardingSpec'</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Create an XlaShardingSpec for the given tensor. If the tensor is</span>
 <span class="sd">    incompatible with the ShardingSpec, returns None.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">can_apply</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
       <span class="k">return</span> <span class="kc">None</span>
 
@@ -1385,9 +1385,9 @@
                                            <span class="bp">self</span><span class="o">.</span><span class="n">minibatch</span><span class="p">)</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">can_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Test whether the ShardingSpec is compatible with the given torch.Tensor.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition_spec</span><span class="p">)</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
@@ -1401,13 +1401,13 @@
 
 <span class="c1"># A custom forward op that uses einsum internally</span>
 <span class="nd">@custom_op</span><span class="p">(</span>
-    <span class="s2">&quot;xla::einsum_linear_forward&quot;</span><span class="p">,</span>
-    <span class="n">schema</span><span class="o">=</span><span class="s2">&quot;(Tensor input, Tensor weight, Tensor? bias) -&gt; Tensor&quot;</span><span class="p">,</span>
+    <span class="s2">"xla::einsum_linear_forward"</span><span class="p">,</span>
+    <span class="n">schema</span><span class="o">=</span><span class="s2">"(Tensor input, Tensor weight, Tensor? bias) -&gt; Tensor"</span><span class="p">,</span>
     <span class="n">mutates_args</span><span class="o">=</span><span class="p">())</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_einsum_linear_forward</span><span class="p">(</span><span class="nb">input</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">weight</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
                            <span class="n">bias</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]):</span>
-  <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s1">&#39;einsum_linear_forward&#39;</span><span class="p">):</span>
-    <span class="n">product</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...n,mn-&gt;...m&#39;</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span>
+  <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s1">'einsum_linear_forward'</span><span class="p">):</span>
+    <span class="n">product</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">'...n,mn-&gt;...m'</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
       <span class="k">return</span> <span class="n">product</span> <span class="o">+</span> <span class="n">bias</span>
     <span class="k">return</span> <span class="n">product</span>
@@ -1416,7 +1416,7 @@
 <span class="nd">@_einsum_linear_forward</span><span class="o">.</span><span class="n">register_fake</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_einsum_linear_forward_fake</span><span class="p">(</span><span class="nb">input</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">weight</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
                                 <span class="n">bias</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]):</span>
-  <span class="n">product</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...n,mn-&gt;...m&#39;</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span>
+  <span class="n">product</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">'...n,mn-&gt;...m'</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">product</span> <span class="o">+</span> <span class="n">bias</span>
   <span class="k">return</span> <span class="n">product</span>
@@ -1430,17 +1430,17 @@
   <span class="n">grad_input</span> <span class="o">=</span> <span class="n">grad_weight</span> <span class="o">=</span> <span class="n">grad_bias</span> <span class="o">=</span> <span class="kc">None</span>
 
   <span class="k">if</span> <span class="n">needs_input_grad_input</span><span class="p">:</span>
-    <span class="n">grad_input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...m,mn-&gt;...n&#39;</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+    <span class="n">grad_input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">'...m,mn-&gt;...n'</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="n">grad_input</span> <span class="o">=</span> <span class="kc">None</span>
 
   <span class="k">if</span> <span class="n">needs_input_grad_weight</span><span class="p">:</span>
-    <span class="n">grad_weight</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...m,...n-&gt;mn&#39;</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">,</span> <span class="nb">input</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+    <span class="n">grad_weight</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">'...m,...n-&gt;mn'</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">,</span> <span class="nb">input</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="n">grad_weight</span> <span class="o">=</span> <span class="kc">None</span>
 
   <span class="k">if</span> <span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">needs_input_grad_bias</span><span class="p">:</span>
-    <span class="n">grad_bias</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...m-&gt;m&#39;</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+    <span class="n">grad_bias</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">'...m-&gt;m'</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="n">grad_bias</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -1448,15 +1448,15 @@
 
 
 <span class="nd">@custom_op</span><span class="p">(</span>
-    <span class="s2">&quot;xla::einsum_linear_backward&quot;</span><span class="p">,</span>
-    <span class="n">schema</span><span class="o">=</span><span class="s2">&quot;(Tensor grad_output, Tensor input, Tensor weight, Tensor? bias, bool needs_input_grad_input, bool needs_input_grad_weight, bool needs_input_grad_bias) -&gt; (Tensor, Tensor, Tensor)&quot;</span><span class="p">,</span>
+    <span class="s2">"xla::einsum_linear_backward"</span><span class="p">,</span>
+    <span class="n">schema</span><span class="o">=</span><span class="s2">"(Tensor grad_output, Tensor input, Tensor weight, Tensor? bias, bool needs_input_grad_input, bool needs_input_grad_weight, bool needs_input_grad_bias) -&gt; (Tensor, Tensor, Tensor)"</span><span class="p">,</span>
     <span class="n">mutates_args</span><span class="o">=</span><span class="p">())</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_einsum_linear_backward</span><span class="p">(</span><span class="n">grad_output</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="nb">input</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">weight</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
                             <span class="n">bias</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
                             <span class="n">needs_input_grad_input</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
                             <span class="n">needs_input_grad_weight</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
                             <span class="n">needs_input_grad_bias</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
-  <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s1">&#39;einsum_linear_backward&#39;</span><span class="p">):</span>
+  <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s1">'einsum_linear_backward'</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">_einsum_linear_backward_operation</span><span class="p">(</span><span class="n">grad_output</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span>
                                              <span class="n">needs_input_grad_input</span><span class="p">,</span>
                                              <span class="n">needs_input_grad_weight</span><span class="p">,</span>
@@ -1478,7 +1478,7 @@
 
 <span class="c1"># Now define the XLAPatchedLinear function that uses the custom ops</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">XLAPatchedLinear</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  A patched version of `torch.nn.functional.linear` that uses einsum instead</span>
 <span class="sd">  of torch.matmul which will flatten the tensors to 2D and collide the sharded</span>
 <span class="sd">  dimensions. The torch.matmul default behavior makes it very hard for XLA compiler</span>
@@ -1486,28 +1486,28 @@
 
 <span class="sd">  Autocast decorators @custom_fwd and @custom_bwd used as per autocast docs [1] to bring this class/layer within</span>
 <span class="sd">  autocast context, when autocast is enabled.</span>
-<span class="sd">  torch.get_autocast_dtype() fetches datatype for ops run in autocast [2], with the specified device (here, &#39;xla&#39;).</span>
+<span class="sd">  torch.get_autocast_dtype() fetches datatype for ops run in autocast [2], with the specified device (here, 'xla').</span>
 
 <span class="sd">  References:</span>
 <span class="sd">  [1] https://pytorch.org/docs/stable/notes/amp_examples.html#functions-with-multiple-inputs-or-autocastable-ops</span>
 <span class="sd">  [2] https://github.com/pytorch/pytorch/blob/2cc01cc6d3ad2aff47e8460667ba654b2e4c9f21/torch/amp/autocast_mode.py#L500</span>
 
-<span class="sd">  TODO (alanwaketan): Let&#39;s patch it on the dispatcher level.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  TODO (alanwaketan): Let's patch it on the dispatcher level.</span>
+<span class="sd">  """</span>
 
   <span class="nd">@staticmethod</span>
-  <span class="nd">@custom_fwd</span><span class="p">(</span><span class="n">device_type</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">cast_inputs</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">get_autocast_dtype</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">))</span>
+  <span class="nd">@custom_fwd</span><span class="p">(</span><span class="n">device_type</span><span class="o">=</span><span class="s1">'xla'</span><span class="p">,</span> <span class="n">cast_inputs</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">get_autocast_dtype</span><span class="p">(</span><span class="s1">'xla'</span><span class="p">))</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span>
               <span class="nb">input</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
               <span class="n">weight</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
               <span class="n">bias</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
     <span class="n">ctx</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span><span class="p">)</span>
     <span class="c1"># Call our custom forward op. By wrapping the einsum in custom ops,</span>
-    <span class="c1"># AOTAutograd won&#39;t decompose the einsum.</span>
+    <span class="c1"># AOTAutograd won't decompose the einsum.</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">einsum_linear_forward</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span><span class="p">)</span>
 
   <span class="nd">@staticmethod</span>
-  <span class="nd">@custom_bwd</span><span class="p">(</span><span class="n">device_type</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+  <span class="nd">@custom_bwd</span><span class="p">(</span><span class="n">device_type</span><span class="o">=</span><span class="s1">'xla'</span><span class="p">)</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">):</span>
     <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">saved_tensors</span>
     <span class="n">needs_input_grad_input</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -1528,9 +1528,9 @@
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">EinsumLinear</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  A `torch.nn.Linear` subclass implemented with `einsum`.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
 
   <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
@@ -1542,16 +1542,16 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">apply_xla_patch_to_nn_linear</span><span class="p">(</span><span class="n">module</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  Recursively replace `nn.Linear` layers with `EinsumLinear` in the module.</span>
 
 <span class="sd">  Without this patch, an `nn.Linear` module in PyTorch/XLA will lower to reshapes</span>
 <span class="sd">  and transposes instead of einsum, thus compromising sharding propagation.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">module</span><span class="o">.</span><span class="n">named_children</span><span class="p">():</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span>
                   <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">EinsumLinear</span><span class="p">):</span>
-      <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;meta&#39;</span><span class="p">):</span>
+      <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">'meta'</span><span class="p">):</span>
         <span class="n">einsum_linear</span> <span class="o">=</span> <span class="n">EinsumLinear</span><span class="p">(</span>
             <span class="n">child</span><span class="o">.</span><span class="n">in_features</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">out_features</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="n">child</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
       <span class="n">einsum_linear</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span>
@@ -1564,11 +1564,11 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">apply_backward_optimization_barrier</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  Register a full backward hook that apply an optimization barrier to the given module.</span>
-<span class="sd">  This will prevent the XLA compiler from fusing the module&#39;s backward pass with others.</span>
-<span class="sd">  It&#39;s useful to prevent gigantic buffers being allocated to synchronize the gradients.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  This will prevent the XLA compiler from fusing the module's backward pass with others.</span>
+<span class="sd">  It's useful to prevent gigantic buffers being allocated to synchronize the gradients.</span>
+<span class="sd">  """</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">optimization_barrier</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">grad_input</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">):</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.utils.checkpoint</span><span class="w"> </span><span class="kn">import</span> <span class="n">CheckpointFunction</span>
@@ -1596,7 +1596,7 @@
     <span class="o">*</span><span class="p">,</span>
     <span class="n">allow_split_physical_axes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Assigns logical parallelism axes to physical axes of an N-D torus network.</span>
+<span class="w">  </span><span class="sd">"""Assigns logical parallelism axes to physical axes of an N-D torus network.</span>
 
 <span class="sd">  Given logical parallelism axes with sizes in `mesh_shape` and devices in an</span>
 <span class="sd">  N-dimensional torus network represented by `physical_mesh`, maps each logical</span>
@@ -1610,7 +1610,7 @@
 <span class="sd">  instead of splitting a physical axis over more than one logical axis (which</span>
 <span class="sd">  would reduce total usable bandwidth).</span>
 
-<span class="sd">  Let&#39;s use a concrete example to explain the concepts and considerations.</span>
+<span class="sd">  Let's use a concrete example to explain the concepts and considerations.</span>
 
 <span class="sd">  As an example, suppose the logical mesh is [data, model], for data and model</span>
 <span class="sd">  parallelism respectively. Also suppose that data parallelism is less</span>
@@ -1637,7 +1637,7 @@
 <span class="sd">      (physical_axis, logical_axis) to the size assigned, with the invariant</span>
 <span class="sd">      np.prod(assignment, axis=1) = physical_mesh_shape, and</span>
 <span class="sd">      np.prod(assignment, axis=0) = mesh_shape.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="c1"># Remaining physical axes to be assigned to logical axes.</span>
   <span class="n">assignable_physical_mesh</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
   <span class="c1"># Map each logical axis to a subset of physical axes.</span>
@@ -1680,14 +1680,14 @@
           <span class="c1"># Although this is now implemented, there are downstream tasks</span>
           <span class="c1"># counting on this being a NotImplementedError.</span>
           <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-              <span class="s1">&#39;Failed to find assignment for logical_axis_index&#39;</span>
-              <span class="sa">f</span><span class="s1">&#39; </span><span class="si">{</span><span class="n">logical_axis_index</span><span class="si">}</span><span class="s1"> of size </span><span class="si">{</span><span class="n">logical_axis_size</span><span class="si">}</span><span class="s1"> with&#39;</span>
-              <span class="sa">f</span><span class="s1">&#39; remaining assignable mesh </span><span class="si">{</span><span class="n">assignable_physical_mesh</span><span class="si">}</span><span class="s1">. The size&#39;</span>
-              <span class="s1">&#39; of each axis in your logical mesh must be equal to the product&#39;</span>
-              <span class="s1">&#39; of some subset of the physical mesh axis sizes. E.g. logical&#39;</span>
-              <span class="s1">&#39; mesh (4, 16) is compatible with physical mesh 4x4x4 since 4=4&#39;</span>
-              <span class="s1">&#39; and 16=4x4. If you want to split physical axes, set &#39;</span>
-              <span class="s1">&#39; allow_split_physical_axes to True.&#39;</span><span class="p">)</span>
+              <span class="s1">'Failed to find assignment for logical_axis_index'</span>
+              <span class="sa">f</span><span class="s1">' </span><span class="si">{</span><span class="n">logical_axis_index</span><span class="si">}</span><span class="s1"> of size </span><span class="si">{</span><span class="n">logical_axis_size</span><span class="si">}</span><span class="s1"> with'</span>
+              <span class="sa">f</span><span class="s1">' remaining assignable mesh </span><span class="si">{</span><span class="n">assignable_physical_mesh</span><span class="si">}</span><span class="s1">. The size'</span>
+              <span class="s1">' of each axis in your logical mesh must be equal to the product'</span>
+              <span class="s1">' of some subset of the physical mesh axis sizes. E.g. logical'</span>
+              <span class="s1">' mesh (4, 16) is compatible with physical mesh 4x4x4 since 4=4'</span>
+              <span class="s1">' and 16=4x4. If you want to split physical axes, set '</span>
+              <span class="s1">' allow_split_physical_axes to True.'</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
           <span class="c1"># We will try finding an assignment, even if that means splitting the</span>
           <span class="c1"># physical axes, which requires a more sophisticated implementation.</span>
@@ -1717,7 +1717,7 @@
     <span class="n">physical_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
     <span class="n">assignment</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns True if the first axis assignment is preferred over the second.</span>
+<span class="w">  </span><span class="sd">"""Returns True if the first axis assignment is preferred over the second.</span>
 
 <span class="sd">  For now, this is implemented with some very simple heuristics. However,</span>
 <span class="sd">  it is possible to introduce e.g., a value function here based on a more</span>
@@ -1733,8 +1733,8 @@
 
 <span class="sd">  Returns:</span>
 <span class="sd">    True if x is preferred over y.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="c1"># Prefer occupying complete physical axes. I don&#39;t have a good reason for</span>
+<span class="sd">  """</span>
+  <span class="c1"># Prefer occupying complete physical axes. I don't have a good reason for</span>
   <span class="c1"># this, except that it is compatible with the existing behavior.</span>
   <span class="c1">#</span>
   <span class="c1"># E.g., on 4 x 4 x 8, [4, 4, -] will be preferred over [4, -, 4], and then</span>
@@ -1782,7 +1782,7 @@
     <span class="n">physical_mesh</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Assigns logical parallelism axes to physical axes of an N-D torus network.</span>
+<span class="w">  </span><span class="sd">"""Assigns logical parallelism axes to physical axes of an N-D torus network.</span>
 
 <span class="sd">  This implementation allows creating meshes that requires splitting physical</span>
 <span class="sd">  axes, and thus one could produce logical mesh of any shape, as long as the</span>
@@ -1805,12 +1805,12 @@
 <span class="sd">      (physical_axis, logical_axis) to the size assigned, with the invariant</span>
 <span class="sd">      np.prod(assignment, axis=1) = physical_mesh_shape, and</span>
 <span class="sd">      np.prod(assignment, axis=0) = mesh_shape.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">):</span>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-        <span class="s1">&#39;The number of devices in physical mesh&#39;</span>
-        <span class="sa">f</span><span class="s1">&#39; </span><span class="si">{</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1"> does not match the number of devices&#39;</span>
-        <span class="sa">f</span><span class="s1">&#39; in logical mesh </span><span class="si">{</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+        <span class="s1">'The number of devices in physical mesh'</span>
+        <span class="sa">f</span><span class="s1">' </span><span class="si">{</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1"> does not match the number of devices'</span>
+        <span class="sa">f</span><span class="s1">' in logical mesh </span><span class="si">{</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s1">.'</span><span class="p">)</span>
 
   <span class="n">physical_mesh_shape</span> <span class="o">=</span> <span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span>
   <span class="n">logical_mesh_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span>
@@ -1851,7 +1851,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_get_prime_factors</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a sorted list of prime factors for the given number.&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""Returns a sorted list of prime factors for the given number."""</span>
   <span class="k">assert</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span>
   <span class="n">factors</span> <span class="o">=</span> <span class="p">[]</span>
   <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">isqrt</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">):</span>
@@ -1869,7 +1869,7 @@
     <span class="n">assignment</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">logical_axis_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Yields feasible assignments for a single logical axis.</span>
+<span class="w">  </span><span class="sd">"""Yields feasible assignments for a single logical axis.</span>
 
 <span class="sd">  For a physical mesh of shape [x_1, ..., x_n], and the product of all previous</span>
 <span class="sd">  assignments on each physical axes [y_1, ..., y_n], this function yields all</span>
@@ -1887,7 +1887,7 @@
 <span class="sd">  Yields:</span>
 <span class="sd">    All valid assignments for the logical axis. Each assignment is represented</span>
 <span class="sd">    as an integer array of length len(physical_mesh_shape).</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="n">logical_axis_factors</span><span class="p">:</span> <span class="n">MutableMapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
   <span class="k">for</span> <span class="n">factor</span> <span class="ow">in</span> <span class="n">_get_prime_factors</span><span class="p">(</span><span class="n">logical_axis_size</span><span class="p">):</span>
     <span class="n">logical_axis_factors</span><span class="p">[</span><span class="n">factor</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -1930,7 +1930,7 @@
     <span class="n">logical_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
     <span class="n">assignment</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Compute the logical mesh from assignment map.</span>
+<span class="w">  </span><span class="sd">"""Compute the logical mesh from assignment map.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    physical_mesh: Physical device mesh.</span>
@@ -1939,7 +1939,7 @@
 
 <span class="sd">  Returns:</span>
 <span class="sd">    Logical mesh reshaped from physical mesh.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="n">physical_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span>
       <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span>
           <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span>
@@ -1977,13 +1977,13 @@
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">MarkShardingFunction</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""</span>
 <span class="sd">  Autograd function to mark_sharding on intermediate tensors and the gradient</span>
 <span class="sd">  of the intermediate tensors during backward pass.</span>
 
 <span class="sd">  Usage:</span>
 
-<span class="sd">  &gt;&gt;&gt; new_tensor = MarkShardingFunction.apply(tensor, mesh, (&#39;axis_1&#39;, &#39;axis_2&#39;))</span>
+<span class="sd">  &gt;&gt;&gt; new_tensor = MarkShardingFunction.apply(tensor, mesh, ('axis_1', 'axis_2'))</span>
 
 <span class="sd">  This is required to guide GSPMD sharding propagation better during the</span>
 <span class="sd">  backward pass as during complicated workloads the compiler can introduce extra</span>
@@ -1994,7 +1994,7 @@
 <span class="sd">  After GSPMD sharding propagation in the compiler, both tensors will become sharded.</span>
 
 <span class="sd">  This version can also be used in AOTAutograd.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
 
   <span class="nd">@staticmethod</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">torch_tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
@@ -2012,7 +2012,7 @@
     <span class="k">return</span> <span class="n">o</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
 
-<span class="nd">@torch</span><span class="o">.</span><span class="n">library</span><span class="o">.</span><span class="n">custom_op</span><span class="p">(</span><span class="s2">&quot;xla::aot_mark_sharding&quot;</span><span class="p">,</span> <span class="n">mutates_args</span><span class="o">=</span><span class="p">())</span>
+<span class="nd">@torch</span><span class="o">.</span><span class="n">library</span><span class="o">.</span><span class="n">custom_op</span><span class="p">(</span><span class="s2">"xla::aot_mark_sharding"</span><span class="p">,</span> <span class="n">mutates_args</span><span class="o">=</span><span class="p">())</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_aot_mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                        <span class="n">partition_spec</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
   <span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>

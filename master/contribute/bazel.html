@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -458,18 +458,18 @@ good fit for PyTorch/XLA as well.</p>
 which can be seen in the <code class="docutils literal notranslate"><span class="pre">WORKSPACE</span></code> file:</p>
 <p><code class="docutils literal notranslate"><span class="pre">WORKSPACE</span></code></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">http_archive</span><span class="p">(</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;xla&quot;</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"xla"</span><span class="p">,</span>
     <span class="n">patch_args</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s2">&quot;-l&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-p1&quot;</span><span class="p">,</span>
+        <span class="s2">"-l"</span><span class="p">,</span>
+        <span class="s2">"-p1"</span><span class="p">,</span>
     <span class="p">],</span>
-    <span class="n">patch_tool</span> <span class="o">=</span> <span class="s2">&quot;patch&quot;</span><span class="p">,</span>
+    <span class="n">patch_tool</span> <span class="o">=</span> <span class="s2">"patch"</span><span class="p">,</span>
     <span class="n">patches</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s2">&quot;//openxla_patches:no_fortify.diff&quot;</span><span class="p">,</span>
+        <span class="s2">"//openxla_patches:no_fortify.diff"</span><span class="p">,</span>
     <span class="p">],</span>
-    <span class="n">strip_prefix</span> <span class="o">=</span> <span class="s2">&quot;xla-&quot;</span> <span class="o">+</span> <span class="n">xla_hash</span><span class="p">,</span>
+    <span class="n">strip_prefix</span> <span class="o">=</span> <span class="s2">"xla-"</span> <span class="o">+</span> <span class="n">xla_hash</span><span class="p">,</span>
     <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s2">&quot;https://github.com/openxla/xla/archive/&quot;</span> <span class="o">+</span> <span class="n">xla_hash</span> <span class="o">+</span> <span class="s2">&quot;.tar.gz&quot;</span><span class="p">,</span>
+        <span class="s2">"https://github.com/openxla/xla/archive/"</span> <span class="o">+</span> <span class="n">xla_hash</span> <span class="o">+</span> <span class="s2">".tar.gz"</span><span class="p">,</span>
     <span class="p">],</span>
 <span class="p">)</span>
 </pre></div>
@@ -499,8 +499,8 @@ revisions and in case of <code class="docutils literal notranslate"><span class=
 build objects are present; ideally installed into the system.</p>
 <p><code class="docutils literal notranslate"><span class="pre">WORKSPACE</span></code></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">new_local_repository</span><span class="p">(</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;torch&quot;</span><span class="p">,</span>
-    <span class="n">build_file</span> <span class="o">=</span> <span class="s2">&quot;//bazel:torch.BUILD&quot;</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"torch"</span><span class="p">,</span>
+    <span class="n">build_file</span> <span class="o">=</span> <span class="s2">"//bazel:torch.BUILD"</span><span class="p">,</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">PYTORCH_LOCAL_DIR</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
@@ -591,7 +591,7 @@ specify a unique silo key to benefit from consistent caching. The silo
 key can be passed using a flag:
 <code class="docutils literal notranslate"><span class="pre">-remote_default_exec_properties=cache-silo-key=SOME_SILO_KEY'</span></code>.</p>
 <p>Running the build with remote cache:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BAZEL_REMOTE_CACHE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">SILO_NAME</span><span class="o">=</span><span class="s2">&quot;cache-silo-YOUR-USER&quot;</span><span class="w"> </span><span class="nv">TPUVM_MODE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>setup.py<span class="w"> </span>bdist_wheel
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BAZEL_REMOTE_CACHE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">SILO_NAME</span><span class="o">=</span><span class="s2">"cache-silo-YOUR-USER"</span><span class="w"> </span><span class="nv">TPUVM_MODE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>setup.py<span class="w"> </span>bdist_wheel
 </pre></div>
 </div>
 <p>Adding</p>
@@ -623,7 +623,7 @@ misses are not too common (environment is part of the cache key), see
 <code class="docutils literal notranslate"><span class="pre">.bazelrc</span></code> test configuration to see which ones are passed in, and add
 new ones as required.</p>
 <p>You can run the tests using the helper script too:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BAZEL_REMOTE_CACHE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">SILO_NAME</span><span class="o">=</span><span class="s2">&quot;cache-silo-YOUR-USER&quot;</span><span class="w"> </span>./test/cpp/run_tests.sh<span class="w"> </span>-R
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BAZEL_REMOTE_CACHE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">SILO_NAME</span><span class="o">=</span><span class="s2">"cache-silo-YOUR-USER"</span><span class="w"> </span>./test/cpp/run_tests.sh<span class="w"> </span>-R
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">xla_client</span></code> tests are pure hermetic tests that can be easily
@@ -658,7 +658,7 @@ functionality to bring powerful features to assist code editing.</p>
 <section id="building-pytorch-xla">
 <h2>Building PyTorch/XLA<a class="headerlink" href="#building-pytorch-xla" title="Permalink to this heading">¶</a></h2>
 <p>As always, PyTorch/XLA can be built using Python <code class="docutils literal notranslate"><span class="pre">distutils</span></code>:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BAZEL_REMOTE_CACHE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">SILO_NAME</span><span class="o">=</span><span class="s2">&quot;cache-silo-YOUR-USER&quot;</span><span class="w"> </span><span class="nv">TPUVM_MODE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>setup.py<span class="w"> </span>bdist_wheel
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BAZEL_REMOTE_CACHE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">SILO_NAME</span><span class="o">=</span><span class="s2">"cache-silo-YOUR-USER"</span><span class="w"> </span><span class="nv">TPUVM_MODE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>setup.py<span class="w"> </span>bdist_wheel
 </pre></div>
 </div>
 </section>

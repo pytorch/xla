@@ -289,7 +289,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -461,7 +461,7 @@ that runs on GPUs to run on TPUs, let’s look at the <a class="reference extern
 code</a>
 from a PyTorch implementation of the stable diffusion model. You can run the
 script from the command line:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>python<span class="w"> </span>scripts/txt2img.py<span class="w"> </span>--prompt<span class="w"> </span><span class="s2">&quot;a photograph of an astronaut riding a horse&quot;</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">    </span>python<span class="w"> </span>scripts/txt2img.py<span class="w"> </span>--prompt<span class="w"> </span><span class="s2">"a photograph of an astronaut riding a horse"</span>
 </pre></div>
 </div>
 <p>To see a diff of the modifications explained below, see
@@ -490,8 +490,8 @@ Add <code class="docutils literal notranslate"><span class="pre">import</span> <
 replace
 <a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/978da4c625a712a01ee066d019a0b0d2319cd8b3/ldm/models/diffusion/ddim.py#L21-L22">these</a>
 lines</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">attr</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">):</span>
-   <span class="n">attr</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">))</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">attr</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">"cuda"</span><span class="p">):</span>
+   <span class="n">attr</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">"cuda"</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>with</p>
@@ -659,7 +659,7 @@ Then run your script with</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>gcloud<span class="w"> </span>compute<span class="w"> </span>tpus<span class="w"> </span>tpu-vm<span class="w"> </span>ssh<span class="w"> </span><span class="si">${</span><span class="nv">TPU_NAME</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--zone<span class="o">=</span><span class="si">${</span><span class="nv">ZONE</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--worker<span class="o">=</span>all<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--command<span class="o">=</span><span class="s2">&quot;python3 your_script.py&quot;</span>
+<span class="w">  </span>--command<span class="o">=</span><span class="s2">"python3 your_script.py"</span>
 </pre></div>
 </div>
 </section>

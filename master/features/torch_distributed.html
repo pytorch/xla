@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -462,12 +462,12 @@
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># torch_xla/distributed/xla_backend.py</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_create_xla_process_group</span><span class="p">(</span><span class="n">prefix_store</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
   <span class="k">assert</span> <span class="ow">not</span> <span class="n">xr</span><span class="o">.</span><span class="n">is_spmd</span><span class="p">(</span>
-  <span class="p">),</span> <span class="s2">&quot;XLA backend is not supported with SPMD. Please use a CPU process group instead.&quot;</span>
+  <span class="p">),</span> <span class="s2">"XLA backend is not supported with SPMD. Please use a CPU process group instead."</span>
   <span class="k">return</span> <span class="n">ProcessGroupXla</span><span class="p">(</span><span class="n">prefix_store</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_register_xla_backend</span><span class="p">():</span>
-  <span class="n">dist</span><span class="o">.</span><span class="n">Backend</span><span class="o">.</span><span class="n">register_backend</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">_create_xla_process_group</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">Backend</span><span class="o">.</span><span class="n">register_backend</span><span class="p">(</span><span class="s1">'xla'</span><span class="p">,</span> <span class="n">_create_xla_process_group</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="s1">'xla'</span><span class="p">)</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">ProcessGroupXla</span><span class="p">(</span><span class="n">ProcessGroup</span><span class="p">):</span>
@@ -480,7 +480,7 @@
 </div>
 <p>The corresponding xla dist backend is initialized when we call:</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">_mp_fn</span><span class="p">(</span><span class="n">rank</span><span class="p">):</span>
-  <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s2">"xla"</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">'xla://'</span><span class="p">)</span>
 
 <span class="n">In</span> <span class="n">this</span> <span class="n">way</span><span class="p">,</span> <span class="n">collective</span> <span class="n">ops</span> <span class="n">will</span> <span class="n">be</span> <span class="n">called</span> <span class="n">based</span> <span class="n">on</span> <span class="n">the</span> <span class="n">progress</span> <span class="n">group</span> <span class="n">instance</span><span class="p">:</span>
 
@@ -500,7 +500,7 @@
 <span class="w">                      </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="cm">/*group_name*/</span><span class="p">)</span><span class="w">  </span><span class="p">{...}</span>
 
 <span class="n">TORCH_LIBRARY_IMPL</span><span class="p">(</span><span class="n">_c10d_functional</span><span class="p">,</span><span class="w"> </span><span class="n">XLA</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="n">m</span><span class="p">.</span><span class="n">impl</span><span class="p">(</span><span class="s">&quot;all_reduce&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">all_reduce</span><span class="p">);</span>
+<span class="w">  </span><span class="n">m</span><span class="p">.</span><span class="n">impl</span><span class="p">(</span><span class="s">"all_reduce"</span><span class="p">,</span><span class="w"> </span><span class="n">all_reduce</span><span class="p">);</span>
 <span class="p">}</span>
 </pre></div>
 </div>

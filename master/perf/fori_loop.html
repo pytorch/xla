@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -489,7 +489,7 @@ PyTorch/XLA provide experimental XLA backend support for
 &gt;&gt;&gt;<span class="w"> </span>_,<span class="w"> </span><span class="nv">res</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>while_loop<span class="o">(</span>cond_fn,<span class="w"> </span>body_fn,<span class="w"> </span><span class="o">(</span>iteri,<span class="w"> </span>init_val<span class="o">))</span>
 &gt;&gt;&gt;<span class="w"> </span>res
 FunctionalTensor<span class="o">(</span><span class="nv">lvl</span><span class="o">=</span><span class="m">0</span>,<span class="w"> </span><span class="nv">value</span><span class="o">=</span><span class="se">\</span>
-tensor<span class="o">(</span><span class="m">13</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="o">))</span>
+tensor<span class="o">(</span><span class="m">13</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span><span class="s1">'xla:0'</span><span class="o">))</span>
 </pre></div>
 </div>
 <section id="control-group-test-case">
@@ -517,7 +517,7 @@ with similar logic: cumulative plus 1 for ten times:</p>
 <span class="o">...</span>   <span class="n">iteri</span> <span class="o">-=</span> <span class="mi">1</span>
 <span class="o">...</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">init_val</span>
-<span class="n">tensor</span><span class="p">(</span><span class="mi">51</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
+<span class="n">tensor</span><span class="p">(</span><span class="mi">51</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla:0'</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>PyTorch/XLA would include <code class="docutils literal notranslate"><span class="pre">while_loop</span></code> support in 2.4 with test case,

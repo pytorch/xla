@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -441,11 +441,11 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.backends</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;torch_xla.backends controls the behavior of the XLA backend.</span>
+<span></span><span class="sd">"""torch_xla.backends controls the behavior of the XLA backend.</span>
 
 <span class="sd">This subpackage parallels the torch.backends.{cuda, cpu, mps, etc}</span>
 <span class="sd">subpackages in PyTorch.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="c1"># See https://github.com/pytorch/pytorch/blob/main/torch/backends/mps/__init__.py</span>
 <span class="c1"># for an example of how backends are implemented in PyTorch</span>
@@ -461,19 +461,19 @@
 <span class="c1"># TODO: Refactor logging in torch_xla package https://github.com/pytorch/xla/issues/9142</span>
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 <span class="n">_WARNING_MESSAGE</span><span class="p">:</span> <span class="n">Final</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="s1">&#39;Setting mat mul precision multiple times is not &#39;</span>
-    <span class="s1">&#39;recommended. If you need to do so, please empirically &#39;</span>
-    <span class="s1">&#39;verify that the precision setting is behaving as expected.&#39;</span><span class="p">)</span>
+    <span class="s1">'Setting mat mul precision multiple times is not '</span>
+    <span class="s1">'recommended. If you need to do so, please empirically '</span>
+    <span class="s1">'verify that the precision setting is behaving as expected.'</span><span class="p">)</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;set_mat_mul_precision&quot;</span><span class="p">,</span> <span class="s2">&quot;get_mat_mul_precision&quot;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"set_mat_mul_precision"</span><span class="p">,</span> <span class="s2">"get_mat_mul_precision"</span><span class="p">]</span>
 
 <span class="c1"># Valid values for get_mat_mul_precision/set_mat_mul_precision</span>
 <span class="c1"># Note: it is idiomatic to PyTorch to use strings rather than enums.</span>
 <span class="c1"># See https://github.com/pytorch/pytorch/blob/v2.7.0/torch/backends/cpu/__init__.py#L9</span>
 
-<span class="n">_DEFAULT</span><span class="p">:</span> <span class="n">Final</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span>
-<span class="n">_HIGH</span><span class="p">:</span> <span class="n">Final</span> <span class="o">=</span> <span class="s2">&quot;high&quot;</span>
-<span class="n">_HIGHEST</span><span class="p">:</span> <span class="n">Final</span> <span class="o">=</span> <span class="s2">&quot;highest&quot;</span>
+<span class="n">_DEFAULT</span><span class="p">:</span> <span class="n">Final</span> <span class="o">=</span> <span class="s2">"default"</span>
+<span class="n">_HIGH</span><span class="p">:</span> <span class="n">Final</span> <span class="o">=</span> <span class="s2">"high"</span>
+<span class="n">_HIGHEST</span><span class="p">:</span> <span class="n">Final</span> <span class="o">=</span> <span class="s2">"highest"</span>
 
 <span class="c1"># Use of variables with Final typehint instead of literals is valid.</span>
 <span class="n">_PrecisionType</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span>
@@ -482,7 +482,7 @@
 
 <span class="c1"># Some of this description adapted from Jax documentation.</span>
 <div class="viewcode-block" id="set_mat_mul_precision"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.backends.set_mat_mul_precision">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">set_mat_mul_precision</span><span class="p">(</span><span class="n">precision</span><span class="p">:</span> <span class="n">_PrecisionType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Control the default mat mul and conv precision for 32bit inputs.</span>
+<span class="w">  </span><span class="sd">"""Control the default mat mul and conv precision for 32bit inputs.</span>
 
 <span class="sd">    Some platforms, like TPU, offer configurable precision levels for</span>
 <span class="sd">    matrix multiplication and convolution computations,</span>
@@ -512,11 +512,11 @@
 
 <span class="sd">    Args:</span>
 <span class="sd">      precision (str): The precision to set for matrix multiplication.</span>
-<span class="sd">        Must be one of &#39;default&#39;, &#39;high&#39;, or &#39;highest&#39;.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        Must be one of 'default', 'high', or 'highest'.</span>
+<span class="sd">    """</span>
   <span class="k">if</span> <span class="n">precision</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">_DEFAULT</span><span class="p">,</span> <span class="n">_HIGH</span><span class="p">,</span> <span class="n">_HIGHEST</span><span class="p">]:</span>
-    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid precision: </span><span class="si">{</span><span class="n">precision</span><span class="si">}</span><span class="s2">. &quot;</span>
-                     <span class="sa">f</span><span class="s2">&quot;Must be one of </span><span class="si">{</span><span class="n">_DEFAULT</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">_HIGH</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">_HIGHEST</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Invalid precision: </span><span class="si">{</span><span class="n">precision</span><span class="si">}</span><span class="s2">. "</span>
+                     <span class="sa">f</span><span class="s2">"Must be one of </span><span class="si">{</span><span class="n">_DEFAULT</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">_HIGH</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">_HIGHEST</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
 
   <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">_WARNING_MESSAGE</span><span class="p">)</span>
 
@@ -524,19 +524,19 @@
 
 
 <div class="viewcode-block" id="get_mat_mul_precision"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.backends.get_mat_mul_precision">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_mat_mul_precision</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">_PrecisionType</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Get the current mat mul precision for 32bit inputs.</span>
+<span class="w">  </span><span class="sd">"""Get the current mat mul precision for 32bit inputs.</span>
 
 <span class="sd">    See the [precision tutorial](../../tutorials/precision_tutorial.html)</span>
 <span class="sd">    for more information about the precision levels.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        str: The current precision setting for matrix multiplication,</span>
-<span class="sd">            one of &#39;default&#39;, &#39;high&#39;, or &#39;highest&#39;.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">            one of 'default', 'high', or 'highest'.</span>
+<span class="sd">    """</span>
   <span class="n">precision</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_mat_mul_precision</span><span class="p">()</span>
   <span class="k">assert</span> <span class="n">precision</span> <span class="ow">in</span> <span class="p">[</span><span class="n">_DEFAULT</span><span class="p">,</span> <span class="n">_HIGH</span><span class="p">,</span> <span class="n">_HIGHEST</span>
-                      <span class="p">],</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid precision: </span><span class="si">{</span><span class="n">precision</span><span class="si">}</span><span class="s2">. &quot;</span>
-                          <span class="sa">f</span><span class="s2">&quot;Must be one of </span><span class="si">{</span><span class="n">_DEFAULT</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">_HIGH</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">_HIGHEST</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                      <span class="p">],</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"Invalid precision: </span><span class="si">{</span><span class="n">precision</span><span class="si">}</span><span class="s2">. "</span>
+                          <span class="sa">f</span><span class="s2">"Must be one of </span><span class="si">{</span><span class="n">_DEFAULT</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">_HIGH</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">_HIGHEST</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">precision</span></div>
 </pre></div>
 

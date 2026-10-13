@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -522,19 +522,19 @@ sum. <code class="docutils literal notranslate"><span class="pre">scan_example_p
 </div>
 <p>The output should look something like the following:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Running</span> <span class="n">example</span><span class="p">:</span> <span class="n">scan_example_cumsum</span>
-<span class="n">Final</span> <span class="nb">sum</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">6.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
+<span class="n">Final</span> <span class="nb">sum</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">6.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla:0'</span><span class="p">)</span>
 <span class="n">History</span> <span class="n">of</span> <span class="n">sums</span> <span class="n">tensor</span><span class="p">([[</span><span class="mf">1.</span><span class="p">],</span>
         <span class="p">[</span><span class="mf">3.</span><span class="p">],</span>
-        <span class="p">[</span><span class="mf">6.</span><span class="p">]],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
+        <span class="p">[</span><span class="mf">6.</span><span class="p">]],</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla:0'</span><span class="p">)</span>
 
 
 <span class="n">Running</span> <span class="n">example</span><span class="p">:</span> <span class="n">scan_example_pytree</span>
-<span class="n">Final</span> <span class="n">carry</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;sum&#39;</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">15.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">),</span> <span class="s1">&#39;count&#39;</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">5.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)}</span>
+<span class="n">Final</span> <span class="n">carry</span><span class="p">:</span> <span class="p">{</span><span class="s1">'sum'</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">15.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla:0'</span><span class="p">),</span> <span class="s1">'count'</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">5.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla:0'</span><span class="p">)}</span>
 <span class="n">Means</span> <span class="n">over</span> <span class="n">time</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([[</span><span class="mf">1.0000</span><span class="p">],</span>
         <span class="p">[</span><span class="mf">1.5000</span><span class="p">],</span>
         <span class="p">[</span><span class="mf">2.0000</span><span class="p">],</span>
         <span class="p">[</span><span class="mf">2.5000</span><span class="p">],</span>
-        <span class="p">[</span><span class="mf">3.0000</span><span class="p">]],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
+        <span class="p">[</span><span class="mf">3.0000</span><span class="p">]],</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla:0'</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>

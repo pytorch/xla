@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -473,7 +473,7 @@ command:</p>
 <span class="c1">#</span>
 <span class="c1">#   [...]</span>
 <span class="c1">#</span>
-<span class="c1">#   USE_CUSTOM_DEBINFO=&quot;path/to/file1.cpp;path/to/file2.cpp&quot;</span>
+<span class="c1">#   USE_CUSTOM_DEBINFO="path/to/file1.cpp;path/to/file2.cpp"</span>
 <span class="c1">#     build with debug info only for specified files</span>
 </pre></div>
 </div>
@@ -531,32 +531,32 @@ VSCode <em>Extensions</em> tab.</p>
 following is a sample file to start from. You’ll need to adjust the file paths
 to match your specific installation.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.2.0&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;configurations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.2.0"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"configurations"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;GDB a python interpreter&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cppdbg&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;request&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;program&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/home/USERNAME/miniconda3/envs/torch310/bin/python&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// Replace with your executable&#39;s path</span>
-<span class="w">            </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">            </span><span class="nt">&quot;cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;${workspaceFolder}&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">            </span><span class="nt">&quot;externalConsole&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;MIMode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gdb&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;setupCommands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GDB a python interpreter"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cppdbg"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"request"</span><span class="p">:</span><span class="w"> </span><span class="s2">"launch"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"program"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/home/USERNAME/miniconda3/envs/torch310/bin/python"</span><span class="p">,</span><span class="w"> </span><span class="c1">// Replace with your executable's path</span>
+<span class="w">            </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">            </span><span class="nt">"cwd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"${workspaceFolder}"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">            </span><span class="nt">"externalConsole"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"MIMode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gdb"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"setupCommands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Enable pretty-printing for gdb&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;-enable-pretty-printing&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;ignoreFailures&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">                    </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Enable pretty-printing for gdb"</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"-enable-pretty-printing"</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"ignoreFailures"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">                </span><span class="p">},</span>
 <span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Set Disassembly flavor to Intel&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;-gdb-set disassembly-flavor intel&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;ignoreFailures&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">                    </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Set Disassembly flavor to Intel"</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"-gdb-set disassembly-flavor intel"</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"ignoreFailures"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">                </span><span class="p">}</span>
 <span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="c1">// &quot;preLaunchTask&quot;: &quot;C/C++: g++ build active file&quot;,</span>
-<span class="w">            </span><span class="nt">&quot;miDebuggerPath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/home/USERNAME/miniconda3/envs/torch310/bin/gdb&quot;</span><span class="w"> </span><span class="c1">// Replace with your gdb location</span>
+<span class="w">            </span><span class="c1">// "preLaunchTask": "C/C++: g++ build active file",</span>
+<span class="w">            </span><span class="nt">"miDebuggerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/home/USERNAME/miniconda3/envs/torch310/bin/gdb"</span><span class="w"> </span><span class="c1">// Replace with your gdb location</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">]</span>
 <span class="w"> </span><span class="p">}</span>
@@ -571,10 +571,10 @@ their quirks, and you may benefit from switching between the two.</p>
 <em>Extensions</em>.</p>
 <p>Then add the following snippet to your launch.json file:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="w">    </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;LLDB Python&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lldb&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;request&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;program&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/home/your-user-id/miniconda3/envs/torch310/bin/python&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"LLDB Python"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"lldb"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"request"</span><span class="p">:</span><span class="w"> </span><span class="s2">"launch"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"program"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/home/your-user-id/miniconda3/envs/torch310/bin/python"</span><span class="p">,</span>
 
 <span class="w">    </span><span class="p">}</span>
 </pre></div>
@@ -618,7 +618,7 @@ information is displayed on the left.</p>
 building certain libraries to speed up builds, or adding diagnostics. The following
 settings turns off building CUDA and turns on handling an environment variable
 to print dispatcher traces.</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">USE_CUSTOM_DEBINFO</span><span class="o">=</span><span class="s2">&quot;aten/src/ATen/native/Linear.cpp&quot;</span><span class="w"> </span><span class="nv">USE_CUDA</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/home/USERNAME/miniconda3/envs/torch310/lib<span class="w"> </span><span class="nv">CFLAGS</span><span class="o">=</span><span class="s2">&quot;-DHAS_TORCH_SHOW_DISPATCH_TRACE&quot;</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-build-isolation<span class="w"> </span>-v<span class="w"> </span>-e<span class="w"> </span>.
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">USE_CUSTOM_DEBINFO</span><span class="o">=</span><span class="s2">"aten/src/ATen/native/Linear.cpp"</span><span class="w"> </span><span class="nv">USE_CUDA</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/home/USERNAME/miniconda3/envs/torch310/lib<span class="w"> </span><span class="nv">CFLAGS</span><span class="o">=</span><span class="s2">"-DHAS_TORCH_SHOW_DISPATCH_TRACE"</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-build-isolation<span class="w"> </span>-v<span class="w"> </span>-e<span class="w"> </span>.
 </pre></div>
 </div>
 </section>

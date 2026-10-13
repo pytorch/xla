@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -598,7 +598,7 @@ time. At some future point, we may bring the ops into codegen.</p></li>
 </ol>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">self_tensor</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="k">static</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">sync_update</span><span class="w"> </span><span class="o">=</span>
-<span class="w">      </span><span class="n">torch_xla</span><span class="o">::</span><span class="n">runtime</span><span class="o">::</span><span class="n">sys_util</span><span class="o">::</span><span class="n">GetEnvBool</span><span class="p">(</span><span class="s">&quot;XLA_TENSOR_UPDATE_SYNC&quot;</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+<span class="w">      </span><span class="n">torch_xla</span><span class="o">::</span><span class="n">runtime</span><span class="o">::</span><span class="n">sys_util</span><span class="o">::</span><span class="n">GetEnvBool</span><span class="p">(</span><span class="s">"XLA_TENSOR_UPDATE_SYNC"</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
 <span class="w">  </span><span class="n">XLA_CHECK</span><span class="p">(</span><span class="n">dst_tensor</span><span class="p">);</span>
 <span class="w">  </span><span class="n">dst_tensor</span><span class="o">-&gt;</span><span class="n">UpdateFromTensor</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="cm">/*sync=*/</span><span class="n">sync_update</span><span class="p">);</span>
 <span class="p">}</span>
@@ -610,7 +610,7 @@ mapping from op to IR.</p></li>
 </ol>
 <p>An good example of a “simple” op would be something like <code class="docutils literal notranslate"><span class="pre">abs</span></code>:</p>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">XLANativeFunctions::abs</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="n">TORCH_LAZY_FN_COUNTER</span><span class="p">(</span><span class="s">&quot;xla::&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="n">TORCH_LAZY_FN_COUNTER</span><span class="p">(</span><span class="s">"xla::"</span><span class="p">);</span>
 <span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">bridge</span><span class="o">::</span><span class="n">AtenFromXlaTensor</span><span class="p">(</span><span class="n">XLATensor</span><span class="o">::</span><span class="n">abs</span><span class="p">(</span><span class="n">bridge</span><span class="o">::</span><span class="n">GetXlaTensor</span><span class="p">(</span><span class="n">self</span><span class="p">)));</span>
 <span class="p">}</span>
 </pre></div>
@@ -631,7 +631,7 @@ attempt to add the necessary function in
 to be unblocked.</p>
 <p>The code snippets below uses <code class="docutils literal notranslate"><span class="pre">abs</span></code> as an example. #### XLANativeFunctions.cpp</p>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">XLANativeFunctions::abs</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="n">TORCH_LAZY_FN_COUNTER</span><span class="p">(</span><span class="s">&quot;xla::&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="n">TORCH_LAZY_FN_COUNTER</span><span class="p">(</span><span class="s">"xla::"</span><span class="p">);</span>
 <span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">common_device</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">torch_xla</span><span class="o">::</span><span class="n">bridge</span><span class="o">::</span><span class="n">GetXlaDevice</span><span class="p">(</span><span class="n">self</span><span class="p">);</span>
 <span class="w">  </span><span class="n">TORCH_INTERNAL_ASSERT</span><span class="p">(</span><span class="n">common_device</span><span class="p">);</span>
 

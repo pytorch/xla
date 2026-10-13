@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -570,7 +570,7 @@ because it lowers tracing overhead, leading to more efficient static inference
 graphs. To use it with XLA, simply specify <code class="docutils literal notranslate"><span class="pre">backend=&quot;openxla&quot;</span></code>.</p></li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">eager_mode</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">compiled_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;openxla&quot;</span><span class="p">)</span>
+<span class="n">compiled_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"openxla"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The long-term aim is for <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> to be the single compilation API for

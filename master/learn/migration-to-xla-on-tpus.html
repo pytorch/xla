@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -478,14 +478,14 @@ This compilation step occurs when a graph is first encountered or if the graph s
 <h3>Device Handling<a class="headerlink" href="#device-handling" title="Permalink to this heading">¶</a></h3>
 <p>Replace CUDA device specifications with XLA device specifications.</p>
 <p><strong>(OLD) GPU Code:</strong></p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda:0&quot;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">"cuda:0"</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">"cpu"</span><span class="p">)</span>
 <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>(NEW) PyTorch/XLA Code:</strong></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Acquire the XLA device (e.g., a TPU core)</span>
-<span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">'xla'</span><span class="p">)</span>
 
 <span class="c1"># Move your model and data to the XLA device</span>
 <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
@@ -519,7 +519,7 @@ This compilation step occurs when a graph is first encountered or if the graph s
 <span class="c1"># Explicitly tell XLA to compile and run the graph for this step</span>
 <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 
-<span class="c1"># To print a tensor&#39;s value, ensure the graph producing it has executed.</span>
+<span class="c1"># To print a tensor's value, ensure the graph producing it has executed.</span>
 <span class="c1"># Often, printing is done less frequently or via asynchronous callbacks.</span>
 <span class="c1"># If printing immediately after sync, the value will be available:</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
@@ -547,7 +547,7 @@ This compilation step occurs when a graph is first encountered or if the graph s
 
 <span class="c1"># Inside your _mp_fn (multi-processing function, see below)</span>
 <span class="c1"># train_loader is your standard PyTorch DataLoader</span>
-<span class="c1"># device is torch.device(&#39;xla&#39;) for the current process</span>
+<span class="c1"># device is torch.device('xla') for the current process</span>
 <span class="n">mp_train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span><span class="n">train_loader</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
 
 <span class="k">for</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">in</span> <span class="n">mp_train_loader</span><span class="p">:</span>
@@ -562,7 +562,7 @@ This compilation step occurs when a graph is first encountered or if the graph s
 <p>While <code class="docutils literal notranslate"><span class="pre">torch.nn.parallel.DistributedDataParallel</span></code> can be used with an XLA backend (see <a class="reference internal" href="../perf/ddp.html"><span class="doc std std-doc">DDP Guide</span></a>), PyTorch/XLA’s <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code> utility provides a common way to spawn multiple Python processes for distributed training, where each process typically controls one XLA device or a set of devices. This is often used with <code class="docutils literal notranslate"><span class="pre">torch_xla.distributed.parallel_loader.MpDeviceLoader</span></code> and <code class="docutils literal notranslate"><span class="pre">torch_xla.core.xla_model.optimizer_step</span></code>.</p>
 <p>Let’s adapt our single-device MNIST example to run in a distributed fashion using <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code>.</p>
 <p><strong>Single-Device MNIST Snippet (Recap):</strong></p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">'xla'</span><span class="p">)</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">MNISTNet</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 <span class="n">train_loader</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span><span class="o">...</span><span class="p">)</span> <span class="c1"># Standard DataLoader</span>
 <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">)</span>
@@ -622,7 +622,7 @@ This compilation step occurs when a graph is first encountered or if the graph s
     <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span> <span class="c1"># Ensure consistent model initialization if needed</span>
 
     <span class="c1"># 1. Acquire the XLA device for THIS process.</span>
-    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">'xla'</span><span class="p">)</span>
 
     <span class="c1"># 2. Create the model and move it to the process-specific XLA device</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">MNISTNet</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
@@ -637,12 +637,12 @@ This compilation step occurs when a graph is first encountered or if the graph s
     <span class="c1">#    The underlying train_dataset is shared, MpDeviceLoader handles per-device dispatch.</span>
     <span class="n">mp_train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">train_loader</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Process </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> (Global Ordinal </span><span class="si">{</span><span class="n">xr</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span><span class="si">}</span><span class="s2">): Starting training on </span><span class="si">{</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device_hw</span><span class="p">(</span><span class="n">device</span><span class="p">)</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Process </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> (Global Ordinal </span><span class="si">{</span><span class="n">xr</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span><span class="si">}</span><span class="s2">): Starting training on </span><span class="si">{</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device_hw</span><span class="p">(</span><span class="n">device</span><span class="p">)</span><span class="si">}</span><span class="s2">..."</span><span class="p">)</span>
 
     <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">epochs</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
         <span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mp_train_loader</span><span class="p">):</span>
-            <span class="c1"># Data and target are already on the correct &#39;device&#39; from MpDeviceLoader</span>
+            <span class="c1"># Data and target are already on the correct 'device' from MpDeviceLoader</span>
             <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
             <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
             <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
@@ -655,17 +655,17 @@ This compilation step occurs when a graph is first encountered or if the graph s
             <span class="k">if</span> <span class="n">batch_idx</span> <span class="o">%</span> <span class="n">args</span><span class="o">.</span><span class="n">log_interval</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="c1"># Print only on the master ordinal to avoid spamming logs</span>
                 <span class="k">if</span> <span class="n">xm</span><span class="o">.</span><span class="n">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span> <span class="c1"># global_master=False for per-host master</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Process </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s1"> - Train Epoch: </span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s1"> &#39;</span>
-                          <span class="sa">f</span><span class="s1">&#39;[</span><span class="si">{</span><span class="n">batch_idx</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">xr</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">train_loader</span><span class="o">.</span><span class="n">dataset</span><span class="p">)</span><span class="si">}</span><span class="s1"> &#39;</span>
-                          <span class="sa">f</span><span class="s1">&#39;(</span><span class="si">{</span><span class="mf">100.</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">batch_idx</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">train_loader</span><span class="p">)</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">%)]</span><span class="se">\t</span><span class="s1">Loss: </span><span class="si">{</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s1">.6f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Process </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s1"> - Train Epoch: </span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s1"> '</span>
+                          <span class="sa">f</span><span class="s1">'[</span><span class="si">{</span><span class="n">batch_idx</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">xr</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">train_loader</span><span class="o">.</span><span class="n">dataset</span><span class="p">)</span><span class="si">}</span><span class="s1"> '</span>
+                          <span class="sa">f</span><span class="s1">'(</span><span class="si">{</span><span class="mf">100.</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">batch_idx</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">train_loader</span><span class="p">)</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">%)]</span><span class="se">\t</span><span class="s1">Loss: </span><span class="si">{</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s1">.6f</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
 
-        <span class="c1"># It&#39;s good practice to wait for all processes at epoch boundaries if doing validation</span>
-        <span class="c1"># xm.rendezvous(&#39;epoch_end&#39;) # Example, might not be strictly needed here</span>
+        <span class="c1"># It's good practice to wait for all processes at epoch boundaries if doing validation</span>
+        <span class="c1"># xm.rendezvous('epoch_end') # Example, might not be strictly needed here</span>
 
     <span class="k">if</span> <span class="n">xm</span><span class="o">.</span><span class="n">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Process </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">: Training finished!&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Process </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">: Training finished!"</span><span class="p">)</span>
         <span class="c1"># Optionally save the model (master_only is True by default in xm.save)</span>
-        <span class="c1"># xm.save(model.state_dict(), &quot;mnist_xla_distributed.pt&quot;)</span>
+        <span class="c1"># xm.save(model.state_dict(), "mnist_xla_distributed.pt")</span>
 
 <span class="c1"># Define training configurations</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Args</span><span class="p">:</span>
@@ -676,13 +676,13 @@ This compilation step occurs when a graph is first encountered or if the graph s
     <span class="n">seed</span> <span class="o">=</span> <span class="mi">42</span>
     <span class="n">log_interval</span> <span class="o">=</span> <span class="mi">50</span> <span class="c1"># Log every 50 batches</span>
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">'__main__'</span><span class="p">:</span>
 
     <span class="n">args</span> <span class="o">=</span> <span class="n">Args</span><span class="p">()</span>
 
     <span class="c1"># Create the shared DataLoader (not wrapped by MpDeviceLoader here yet)</span>
     <span class="n">train_dataset</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">MNIST</span><span class="p">(</span>
-        <span class="s1">&#39;./data&#39;</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="s1">'./data'</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">transform</span><span class="o">=</span><span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
             <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
             <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">((</span><span class="mf">0.1307</span><span class="p">,),</span> <span class="p">(</span><span class="mf">0.3081</span><span class="p">,))</span>
@@ -699,7 +699,7 @@ This compilation step occurs when a graph is first encountered or if the graph s
 
     <span class="c1"># 6. Start distributed training on all available XLA devices with torch_xla.launch</span>
     <span class="c1"># Ensure PJRT_DEVICE is set in your environment (e.g., export PJRT_DEVICE=TPU)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Launching distributed MNIST training...&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Launching distributed MNIST training..."</span><span class="p">)</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">_mp_mnist_fn</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">args</span><span class="p">,))</span>
 </pre></div>
 </div>
@@ -741,7 +741,7 @@ Process<span class="w"> </span><span class="m">0</span>:<span class="w"> </span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
 <span class="c1"># Creates model and optimizer in default precision</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">Net</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Net</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">'xla'</span><span class="p">)</span>
 <span class="c1"># Pytorch/XLA provides sync-free optimizers for improved performance</span>
 <span class="n">optimizer</span> <span class="o">=</span> <span class="n">syncfree</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="o">...</span><span class="p">)</span>
 
@@ -772,14 +772,14 @@ Process<span class="w"> </span><span class="m">0</span>:<span class="w"> </span>
 </li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Saving</span>
-<span class="n">xm</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s2">&quot;model_xla.pt&quot;</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># master_only recommended</span>
+<span class="n">xm</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s2">"model_xla.pt"</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># master_only recommended</span>
 <span class="n">Or</span> <span class="k">for</span> <span class="n">more</span> <span class="nb">complex</span> <span class="n">scenarios</span><span class="p">,</span> <span class="n">especially</span> <span class="k">if</span> <span class="n">moving</span> <span class="n">to</span> <span class="n">other</span> <span class="n">environments</span><span class="p">:</span>
 <span class="k">if</span> <span class="n">xm</span><span class="o">.</span><span class="n">is_master_ordinal</span><span class="p">():</span>
    <span class="n">cpu_state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-   <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">cpu_state_dict</span><span class="p">,</span> <span class="s2">&quot;model_cpu.pt&quot;</span><span class="p">)</span>
+   <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">cpu_state_dict</span><span class="p">,</span> <span class="s2">"model_cpu.pt"</span><span class="p">)</span>
 
 <span class="c1"># Loading</span>
-<span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;model_cpu.pt&quot;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"model_cpu.pt"</span><span class="p">))</span>
 <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="c1"># Then move to XLA device</span>
 </pre></div>
 </div>
@@ -827,7 +827,7 @@ Process<span class="w"> </span><span class="m">0</span>:<span class="w"> </span>
 <p><strong>PyTorch/XLA on TPU Script Structure (Single Device):</strong></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Imports (include torch_xla, torch_xla.core.xla_model as xm)</span>
 <span class="c1"># 2. Model, Optimizer, DataLoader, Loss_fn definitions</span>
-<span class="c1"># 3. device = torch.device(&#39;xla&#39;)</span>
+<span class="c1"># 3. device = torch.device('xla')</span>
 <span class="c1"># 4. Move model to XLA device</span>
 <span class="c1"># 5. Training loop:</span>
 <span class="c1">#    a. Move data to XLA device</span>
@@ -842,7 +842,7 @@ Process<span class="w"> </span><span class="m">0</span>:<span class="w"> </span>
 </div>
 <p><strong>PyTorch/XLA on TPU Script Structure (Multi-Process with <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code>):</strong></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># def _mp_fn(index, args):</span>
-<span class="c1">#    # 1. device = torch.device(&#39;xla&#39;)</span>
+<span class="c1">#    # 1. device = torch.device('xla')</span>
 <span class="c1">#    # 2. Model, Optimizer, Loss_fn definitions</span>
 <span class="c1">#    # 3. Move model to XLA device</span>
 <span class="c1">#    # 4. mp_loader = pl.MpDeviceLoader(args.dataloader, device)</span>
@@ -855,7 +855,7 @@ Process<span class="w"> </span><span class="m">0</span>:<span class="w"> </span>
 <span class="c1">#    #    f. xm.optimizer_step(optimizer) # Handles sync and gradient reduction</span>
 <span class="c1">#    #    g. Logging/Metrics (check master_ordinal for single print)</span>
 
-<span class="c1"># if __name__ == &#39;__main__&#39;:</span>
+<span class="c1"># if __name__ == '__main__':</span>
 <span class="c1">#    # Setup Dataloader, etc. in args</span>
 <span class="c1">#    torch_xla.launch(_mp_fn, args=(args,))</span>
 </pre></div>

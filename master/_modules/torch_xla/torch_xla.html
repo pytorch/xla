@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -460,7 +460,7 @@
 
 
 <div class="viewcode-block" id="device"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.device">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">device</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a given instance of an XLA device.</span>
+<span class="w">  </span><span class="sd">"""Returns a given instance of an XLA device.</span>
 
 <span class="sd">  If SPMD is enabled, returns a virtual device that wraps all devices available</span>
 <span class="sd">  to this process.</span>
@@ -471,11 +471,11 @@
 
 <span class="sd">  Returns:</span>
 <span class="sd">    An XLA `torch.device`.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="c1"># When SPMD is enabled, we always return `xla:0` to the user, and</span>
   <span class="c1"># under the hood we use virtual device logic for every xla tensor</span>
-  <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">check_env_flag</span><span class="p">(</span><span class="s1">&#39;XLA_USE_SPMD&#39;</span><span class="p">):</span>
-    <span class="n">device</span> <span class="o">=</span> <span class="s1">&#39;xla:0&#39;</span>
+  <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">check_env_flag</span><span class="p">(</span><span class="s1">'XLA_USE_SPMD'</span><span class="p">):</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="s1">'xla:0'</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
@@ -484,7 +484,7 @@
 
   <span class="n">devices</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_xla_supported_devices</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">index</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
-    <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s1">&#39;Device index </span><span class="si">{}</span><span class="s1"> out of range in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+    <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s1">'Device index </span><span class="si">{}</span><span class="s1"> out of range in </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
         <span class="n">index</span><span class="p">,</span> <span class="n">devices</span><span class="p">))</span>
 
   <span class="n">device</span> <span class="o">=</span> <span class="n">devices</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
@@ -493,43 +493,43 @@
 
 
 <div class="viewcode-block" id="devices"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.devices">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">devices</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns all devices available in the current process.</span>
+<span class="w">  </span><span class="sd">"""Returns all devices available in the current process.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    A list of XLA `torch.devices`.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
 
   <span class="k">return</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_xla_supported_devices</span><span class="p">()]</span></div>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">real_devices</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns local XLA device types and indices.</span>
+<span class="w">  </span><span class="sd">"""Returns local XLA device types and indices.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    A list strings representing the XLA devices available in the current</span>
-<span class="sd">    process, e.g. `[&#39;TPU:0&#39;, &#39;TPU:1&#39;, ...]`.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">    process, e.g. `['TPU:0', 'TPU:1', ...]`.</span>
+<span class="sd">  """</span>
 
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_real_devices</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="device_count"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.device_count">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns number of addressable devices in the current process.&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">"""Returns number of addressable devices in the current process."""</span>
   <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">real_devices</span><span class="p">())</span></div>
 
 
 <div class="viewcode-block" id="sync"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.sync">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">sync</span><span class="p">(</span><span class="n">wait</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">reset_scope</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Launches all pending graph operations.</span>
+<span class="w">  </span><span class="sd">"""Launches all pending graph operations.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    wait (bool): whether to block the current process until the execution finished.</span>
 <span class="sd">    reset_scope (bool): whether to reset the torch::lazy::ScopeContext of the IR Nodes.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_EMIT_STEPLOG&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;torch_xla.torch_xla::sync</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="sd">  """</span>
+  <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">'XLA_EMIT_STEPLOG'</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'torch_xla.torch_xla::sync</span><span class="se">\n</span><span class="s1">'</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">''</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_step_marker</span><span class="p">(</span>
       <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span> <span class="p">[],</span>
-      <span class="n">wait</span><span class="o">=</span><span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_SYNC_WAIT&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">wait</span><span class="p">),</span>
+      <span class="n">wait</span><span class="o">=</span><span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">'XLA_SYNC_WAIT'</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">wait</span><span class="p">),</span>
       <span class="n">reset_scope</span><span class="o">=</span><span class="n">reset_scope</span><span class="p">)</span>
   <span class="c1"># Only emit metrics from the first local device index, to avoid emitting the</span>
   <span class="c1"># same values from different threads.</span>
@@ -540,12 +540,12 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps code that should be dispatched to the runtime.</span>
+<span class="w">  </span><span class="sd">"""Wraps code that should be dispatched to the runtime.</span>
 
 <span class="sd">  Experimental: `xla.step` is still a work in progress. Some code that currently</span>
 <span class="sd">  works with `xla.step` but does not follow best practices will become errors in</span>
 <span class="sd">  future releases. See https://github.com/pytorch/xla/issues/6751 for context.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">return</span> <span class="nb">compile</span><span class="p">()</span>
 
 
@@ -561,12 +561,12 @@
     <span class="n">max_different_graphs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">custom_compile_options</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">  Optimizes given model/function using torch_xla&#39;s LazyTensor tracing mode.</span>
+<span class="w">  </span><span class="sd">"""</span>
+<span class="sd">  Optimizes given model/function using torch_xla's LazyTensor tracing mode.</span>
 <span class="sd">  PyTorch/XLA will trace the given function with given inputs and then generate</span>
 <span class="sd">  graphs to represent the pytorch operations happens within this function. This</span>
 <span class="sd">  graph will be compiled by the XLA and executed on the accelerator(decided by the</span>
-<span class="sd">  tensor&#39;s device). Eager mode will be disabled for the compiled region of the funciton.</span>
+<span class="sd">  tensor's device). Eager mode will be disabled for the compiled region of the funciton.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">      model (Callable): Module/function to optimize, if not passed this function will</span>
@@ -601,20 +601,20 @@
 <span class="sd">      # usage 3</span>
 <span class="sd">      with torch_xla.compile():</span>
 <span class="sd">        res = foo2(x)</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">f</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s1">&#39;__name__&#39;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s1">'__name__'</span><span class="p">):</span>
       <span class="n">name</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="vm">__name__</span>
-    <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s1">&#39;__str__&#39;</span><span class="p">):</span>
+    <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s1">'__str__'</span><span class="p">):</span>
       <span class="n">name</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
 
   <span class="k">if</span> <span class="n">f</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">current_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="nb">id</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">current_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="nb">id</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="n">current_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
 
-  <span class="c1"># Check whether the function/module that corresponds with current_id is still alive. If it&#39;s not,</span>
-  <span class="c1"># we can remove it from the session&#39;s map in the C++ side, so we can start a fresh session.</span>
+  <span class="c1"># Check whether the function/module that corresponds with current_id is still alive. If it's not,</span>
+  <span class="c1"># we can remove it from the session's map in the C++ side, so we can start a fresh session.</span>
   <span class="c1">#</span>
   <span class="c1"># This solves the issue where there are 2 different local-scoped functions with the same name.</span>
   <span class="c1"># Since they are local-scoped, they might end-up with the same id. And, since they have the same</span>
@@ -637,7 +637,7 @@
     <span class="n">saved_current_graph_name</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_current_graph_name</span><span class="p">()</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-      <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_current_graph_name</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_clear_pending&#39;</span><span class="p">)</span>
+      <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_current_graph_name</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s1">'_clear_pending'</span><span class="p">)</span>
     <span class="c1"># Clear pending operations</span>
     <span class="n">_clear_pending_ops_before_compile</span><span class="p">()</span>
 
@@ -670,13 +670,13 @@
 
 
 <div class="viewcode-block" id="manual_seed"><a class="viewcode-back" href="../../learn/api-guide.html#torch_xla.manual_seed">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Set the seed for generating random numbers for the current XLA device.</span>
+<span class="w">  </span><span class="sd">"""Set the seed for generating random numbers for the current XLA device.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    seed (integer): The state to be set.</span>
 <span class="sd">    device (torch.device, optional): The device where the RNG state needs to be set.</span>
 <span class="sd">      If missing the default device seed will be set.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="n">xm</span><span class="o">.</span><span class="n">set_rng_state</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span></div>
 
 
@@ -684,10 +684,10 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">launch</span><span class="p">(</span>
     <span class="n">fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
     <span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span> <span class="o">=</span> <span class="p">(),</span>
-    <span class="n">start_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;spawn&#39;</span><span class="p">,</span>
+    <span class="n">start_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'spawn'</span><span class="p">,</span>
     <span class="n">debug_single_process</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot; Entry to launch multiprocess.</span>
+<span class="w">  </span><span class="sd">""" Entry to launch multiprocess.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    fn: The function to be called for each device which takes part of the</span>
@@ -703,11 +703,11 @@
 
 <span class="sd">  Raises:</span>
 <span class="sd">    NotImplementedError: SPMD is not supported yet.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="k">if</span> <span class="n">xr</span><span class="o">.</span><span class="n">is_spmd</span><span class="p">():</span>
     <span class="c1"># TODO(piz): SPMD is specified differently from mp. Skip for now.</span>
     <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-        <span class="s1">&#39;launch function does not support SPMD at this time&#39;</span><span class="p">)</span>
+        <span class="s1">'launch function does not support SPMD at this time'</span><span class="p">)</span>
 
   <span class="n">nprocs</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">debug_single_process</span> <span class="k">else</span> <span class="kc">None</span>
 
@@ -718,13 +718,13 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">set_custom_compile_options</span><span class="p">(</span><span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Set XLA **compiler flag overrides** (env option overrides) for compilation.</span>
+<span class="w">  </span><span class="sd">"""Set XLA **compiler flag overrides** (env option overrides) for compilation.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    options: Dict mapping XLA flag names to values. Values may be bool/float/int/str;</span>
 <span class="sd">      they will be stringified before being passed to XLA.</span>
 <span class="sd">      Pass an empty dict `{}` to clear previously set options.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_custom_compile_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
 </pre></div>
 

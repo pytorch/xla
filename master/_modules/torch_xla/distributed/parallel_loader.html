@@ -288,7 +288,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -500,7 +500,7 @@
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">ParallelLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps an existing PyTorch DataLoader with background data upload.</span>
+<span class="w">  </span><span class="sd">"""Wraps an existing PyTorch DataLoader with background data upload.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    cpu_loader (:class:`torch.utils.data.DataLoader`): The PyTorch DataLoader to be</span>
@@ -523,7 +523,7 @@
 <span class="sd">      Default: 1</span>
 <span class="sd">    input_sharding (ShardingSpec, Dict(str, ShardingSpec), optional): Sharding</span>
 <span class="sd">      spec to apply to compatible input tensors after loading.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
 
   <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                <span class="n">cpu_loader</span><span class="p">,</span>
@@ -563,7 +563,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_threads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thread</span><span class="p">)</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">per_device_loader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieves the loader iterator object for the given device.</span>
+<span class="w">    </span><span class="sd">"""Retrieves the loader iterator object for the given device.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">      device (`torch.device`): The device whole loader is being requested.</span>
@@ -573,7 +573,7 @@
 <span class="sd">      `torch.utils.data.DataLoader` interface, but a Python iterator which</span>
 <span class="sd">      returns the same tensor data structure as returned by the wrapped</span>
 <span class="sd">      `torch.utils.data.DataLoader`, but residing on XLA devices.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">PerDeviceLoader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">per_device_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -604,7 +604,7 @@
     <span class="k">try</span><span class="p">:</span>
       <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
-          <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s2">&quot;cpu_loader.next&quot;</span><span class="p">):</span>
+          <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s2">"cpu_loader.next"</span><span class="p">):</span>
             <span class="n">_</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">data_iter</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
           <span class="k">break</span>
@@ -627,7 +627,7 @@
     <span class="k">return</span> <span class="n">batch</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batches</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Move batch to device.</span>
+<span class="w">    </span><span class="sd">"""Move batch to device.</span>
 <span class="sd">    Args:</span>
 <span class="sd">      batch -&gt; List(torch.Tensor), List(Dict(str: torch.Tensor)): Input batch</span>
 <span class="sd">        present in the cpu memory</span>
@@ -636,12 +636,12 @@
 <span class="sd">    Returns:</span>
 <span class="sd">      result -&gt; List(torch.Tensor), Dict(str: torch.Tensor): Returns a dict if the</span>
 <span class="sd">        input batch is a dict. Otherwise, returns a list of torch.Tensor.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
       <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batches</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;input batch should be a dict when input sharding is a dict.&quot;</span><span class="p">)</span>
+            <span class="sa">f</span><span class="s2">"input batch should be a dict when input sharding is a dict."</span><span class="p">)</span>
       <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
       <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">:</span>
         <span class="n">xla_batch</span> <span class="o">=</span> <span class="p">{}</span>
@@ -659,9 +659,9 @@
           <span class="n">xla_tensor</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">sharding_spec</span><span class="p">)</span>
           <span class="n">xla_batch</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">xla_tensor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing_keys</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-          <span class="c1"># Returning exception as raising in the dataloading thread doesn&#39;t surface the problem in the main thread.</span>
+          <span class="c1"># Returning exception as raising in the dataloading thread doesn't surface the problem in the main thread.</span>
           <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-              <span class="sa">f</span><span class="s2">&quot;Keys: </span><span class="si">{</span><span class="n">missing_keys</span><span class="si">}</span><span class="s2"> are missing from input_sharding.&quot;</span><span class="p">)</span>
+              <span class="sa">f</span><span class="s2">"Keys: </span><span class="si">{</span><span class="n">missing_keys</span><span class="si">}</span><span class="s2"> are missing from input_sharding."</span><span class="p">)</span>
         <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xla_batch</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
       <span class="n">result</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">batches</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">)</span>
@@ -672,13 +672,13 @@
 
     <span class="k">try</span><span class="p">:</span>
       <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-        <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s2">&quot;get_batch_from_cpu_queue&quot;</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s2">"get_batch_from_cpu_queue"</span><span class="p">):</span>
           <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_batch</span><span class="p">(</span><span class="n">dqueue</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">batch</span><span class="p">:</span>
           <span class="k">break</span>
         <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
           <span class="k">try</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s2">&quot;cpu_data_to_xla_device&quot;</span><span class="p">):</span>
+            <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s2">"cpu_data_to_xla_device"</span><span class="p">):</span>
               <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
           <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="c1"># _worker is being run in a daemon thread, raise the error</span>
@@ -694,7 +694,7 @@
 
 
 <div class="viewcode-block" id="MpDeviceLoader"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.distributed.parallel_loader.MpDeviceLoader">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">MpDeviceLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps an existing PyTorch DataLoader with background data upload.</span>
+<span class="w">  </span><span class="sd">"""Wraps an existing PyTorch DataLoader with background data upload.</span>
 
 <span class="sd">  This class should only be using with multi-processing data parallelism. It will wrap</span>
 <span class="sd">  the dataloader passed in with ParallelLoader and return the per_device_loader for the</span>
@@ -710,7 +710,7 @@
 
 <span class="sd">    &gt;&gt;&gt; device = torch_xla.device()</span>
 <span class="sd">    &gt;&gt;&gt; train_device_loader = MpDeviceLoader(train_loader, device)</span>
-<span class="sd">  &quot;&quot;&quot;</span>
+<span class="sd">  """</span>
 
   <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">loader</span>

@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -475,10 +475,10 @@ detials on versions available.</p>
 vm:~$<span class="w"> </span>python3
 &gt;&gt;&gt;<span class="w"> </span>import<span class="w"> </span>torch
 &gt;&gt;&gt;<span class="w"> </span>import<span class="w"> </span>torch_xla.core.xla_model<span class="w"> </span>as<span class="w"> </span>xm
-&gt;&gt;&gt;<span class="w"> </span><span class="nv">t1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>torch.tensor<span class="o">(</span><span class="m">100</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="o">)</span>
-&gt;&gt;&gt;<span class="w"> </span><span class="nv">t2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>torch.tensor<span class="o">(</span><span class="m">200</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="o">)</span>
+&gt;&gt;&gt;<span class="w"> </span><span class="nv">t1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>torch.tensor<span class="o">(</span><span class="m">100</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span><span class="s1">'xla'</span><span class="o">)</span>
+&gt;&gt;&gt;<span class="w"> </span><span class="nv">t2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>torch.tensor<span class="o">(</span><span class="m">200</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span><span class="s1">'xla'</span><span class="o">)</span>
 &gt;&gt;&gt;<span class="w"> </span>print<span class="o">(</span>t1<span class="w"> </span>+<span class="w"> </span>t2<span class="o">)</span>
-tensor<span class="o">(</span><span class="m">300</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="o">)</span>
+tensor<span class="o">(</span><span class="m">300</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span><span class="s1">'xla:0'</span><span class="o">)</span>
 </pre></div>
 </div>
 </section>
@@ -878,17 +878,17 @@ the runtime error raised by <code class="docutils literal notranslate"><span cla
 <h3>Common Debugging Environment Variables Combinations<a class="headerlink" href="#common-debugging-environment-variables-combinations" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>Record the graph execution in the IR format</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT=&quot;text&quot; XLA_SAVE_TENSORS_FILE=&quot;/tmp/save1.ir&quot;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="text" XLA_SAVE_TENSORS_FILE="/tmp/save1.ir"
 </pre></div>
 </div>
 </li>
 <li><p>Record the graph execution in the HLO format</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT=&quot;hlo&quot; XLA_SAVE_TENSORS_FILE=&quot;/tmp/save1.hlo&quot;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="hlo" XLA_SAVE_TENSORS_FILE="/tmp/save1.hlo"
 </pre></div>
 </div>
 </li>
 <li><p>Show debugging VLOG for runtime and graph compilation/execution</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>TF_CPP_MIN_LOG_LEVEL=0 TF_CPP_VMODULE=&quot;xla_graph_executor=5,pjrt_computation_client=3&quot;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>TF_CPP_MIN_LOG_LEVEL=0 TF_CPP_VMODULE="xla_graph_executor=5,pjrt_computation_client=3"
 </pre></div>
 </div>
 </li>

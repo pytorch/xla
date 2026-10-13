@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -596,14 +596,14 @@ has 6 variants in <code class="docutils literal notranslate"><span class="pre">n
 
 <span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="c1">// anonymous namespace</span>
 
-<span class="w">    </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nf">wrapper_Scalar_lerp_</span><span class="p">(</span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Scalar</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">weight</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="k">auto</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp__tmp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wrapper_Scalar_lerp</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">,</span><span class="w"> </span><span class="n">weight</span><span class="p">);</span>
 <span class="w">      </span><span class="n">at</span><span class="o">::</span><span class="n">_copy_from</span><span class="p">(</span><span class="n">wrapper_Scalar_lerp__tmp</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p">);</span>
 <span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">;</span>
 <span class="w">    </span><span class="p">}</span>
 
 <span class="w">    </span><span class="p">...</span>
-<span class="w">      </span><span class="n">m</span><span class="p">.</span><span class="n">impl</span><span class="p">(</span><span class="s">&quot;lerp_.Scalar&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="n">m</span><span class="p">.</span><span class="n">impl</span><span class="p">(</span><span class="s">"lerp_.Scalar"</span><span class="p">,</span>
 <span class="w">      </span><span class="n">TORCH_FN</span><span class="p">(</span><span class="n">wrapper_Scalar_lerp_</span><span class="p">));</span>
 </pre></div>
 </div>

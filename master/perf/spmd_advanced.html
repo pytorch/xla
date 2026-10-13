@@ -291,7 +291,7 @@
               
               
                 <div class="version">
-                  master (2.9.0+gitc04e61c )
+                  master (2.9.0+git61efe4c )
                 </div>
               
             
@@ -459,12 +459,12 @@
          <span class="n">train_loader</span><span class="p">,</span>  <span class="c1"># wraps PyTorch DataLoader</span>
          <span class="n">device</span><span class="p">,</span>
 	 <span class="c1"># assume 4d input and we want to shard at the batch dimension.</span>
-         <span class="n">input_sharding</span><span class="o">=</span><span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
+         <span class="n">input_sharding</span><span class="o">=</span><span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">'data'</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
 </pre></div>
 </div>
 <p>It is also possible to specify a different <code class="docutils literal notranslate"><span class="pre">input_sharding</span></code> for each element of the batch if they are different shapes:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># if batch = next(train_loader) looks like</span>
-<span class="c1"># {&#39;x&#39;: &lt;tensor of shape [s1, s2, s3, s4]&gt;, &#39;y&#39;: &lt;tensor for shape [s1, s2]&gt;}</span>
+<span class="c1"># {'x': &lt;tensor of shape [s1, s2, s3, s4]&gt;, 'y': &lt;tensor for shape [s1, s2]&gt;}</span>
 
 <span class="c1"># MpDeviceLoader returns ParallelLoader.per_device_loader as iterator</span>
 <span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
@@ -472,8 +472,8 @@
          <span class="n">device</span><span class="p">,</span>
 	 <span class="c1"># specify different sharding for each input of the batch.</span>
          <span class="n">input_sharding</span><span class="o">=</span><span class="p">{</span>
-          <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
-          <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+          <span class="s1">'x'</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">'data'</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
+          <span class="s1">'y'</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">'data'</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
         <span class="p">}</span>
 <span class="p">)</span>
 </pre></div>
@@ -494,9 +494,9 @@
 <span class="n">ici_mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># (data, fsdp, tensor)</span>
 <span class="n">dcn_mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
-<span class="n">mesh</span> <span class="o">=</span> <span class="n">HybridMesh</span><span class="p">(</span><span class="n">ici_mesh_shape</span><span class="p">,</span> <span class="n">dcn_mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span><span class="s1">&#39;tensor&#39;</span><span class="p">))</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">HybridMesh</span><span class="p">(</span><span class="n">ici_mesh_shape</span><span class="p">,</span> <span class="n">dcn_mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">'data'</span><span class="p">,</span><span class="s1">'fsdp'</span><span class="p">,</span><span class="s1">'tensor'</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">())</span>
-<span class="o">&gt;&gt;</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;tensor&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
+<span class="o">&gt;&gt;</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="s1">'data'</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">'fsdp'</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s1">'tensor'</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
 </pre></div>
 </div>
 <section id="running-spmd-on-tpu-pod">
@@ -523,7 +523,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch.distributed.tensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_device_mesh</span><span class="p">,</span> <span class="n">Shard</span><span class="p">,</span> <span class="n">distribute_tensor</span>
 
 <span class="c1"># distribute_tensor now works with `xla` backend using PyTorch/XLA SPMD.</span>
-<span class="n">mesh</span> <span class="o">=</span> <span class="n">init_device_mesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="p">(</span><span class="n">world_size</span><span class="p">,))</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">init_device_mesh</span><span class="p">(</span><span class="s2">"xla"</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="p">(</span><span class="n">world_size</span><span class="p">,))</span>
 <span class="n">big_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100000</span><span class="p">,</span> <span class="mi">88</span><span class="p">)</span>
 <span class="n">my_dtensor</span> <span class="o">=</span> <span class="n">distribute_tensor</span><span class="p">(</span><span class="n">big_tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">[</span><span class="n">Shard</span><span class="p">(</span><span class="mi">0</span><span class="p">)])</span>
 </pre></div>
@@ -536,8 +536,8 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Activation output sharding</span>
 <span class="n">device_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_devices</span><span class="p">)]</span> <span class="c1"># List[int]</span>
 <span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">num_devices</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="c1"># List[int]</span>
-<span class="n">axis_names</span> <span class="o">=</span> <span class="s2">&quot;(&#39;data&#39;, &#39;model&#39;)&quot;</span> <span class="c1"># string version of axis_names</span>
-<span class="n">partition_spec</span> <span class="o">=</span> <span class="s2">&quot;(&#39;data&#39;, &#39;model&#39;)&quot;</span> <span class="c1"># string version of partition spec</span>
+<span class="n">axis_names</span> <span class="o">=</span> <span class="s2">"('data', 'model')"</span> <span class="c1"># string version of axis_names</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="s2">"('data', 'model')"</span> <span class="c1"># string version of partition spec</span>
 <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">dynamo_mark_sharding</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="n">axis_names</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -550,11 +550,11 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">rich</span>
 
-<span class="c1"># Here, mesh is a 2x2 mesh with axes &#39;x&#39; and &#39;y&#39;</span>
-<span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
-<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
+<span class="c1"># Here, mesh is a 2x2 mesh with axes 'x' and 'y'</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">'xla'</span><span class="p">)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">'x'</span><span class="p">,</span> <span class="s1">'y'</span><span class="p">))</span>
 
-<span class="c1"># A tensor&#39;s sharding can be visualized using the `visualize_tensor_sharding` method</span>
+<span class="c1"># A tensor's sharding can be visualized using the `visualize_tensor_sharding` method</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd.debugging</span><span class="w"> </span><span class="kn">import</span> <span class="n">visualize_tensor_sharding</span>
 <span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_tensor_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
@@ -567,7 +567,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> and visualization result:</p></li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd.debugging</span><span class="w"> </span><span class="kn">import</span> <span class="n">visualize_sharding</span>
-<span class="n">sharding</span> <span class="o">=</span> <span class="s1">&#39;{devices=[2,2]0,1,2,3}&#39;</span>
+<span class="n">sharding</span> <span class="o">=</span> <span class="s1">'{devices=[2,2]0,1,2,3}'</span>
 <span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_sharding</span><span class="p">(</span><span class="n">sharding</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -597,7 +597,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="kn">import</span> <span class="n">auto_policy</span>
 
 <span class="n">device_count</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
-<span class="n">device_mesh</span> <span class="o">=</span> <span class="n">init_device_mesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="p">(</span><span class="n">device_count</span><span class="p">,))</span>
+<span class="n">device_mesh</span> <span class="o">=</span> <span class="n">init_device_mesh</span><span class="p">(</span><span class="s2">"xla"</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="o">=</span><span class="p">(</span><span class="n">device_count</span><span class="p">,))</span>
 
 <span class="c1"># Currently, model should be loaded to xla device via distribute_module.</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">MyModule</span><span class="p">()</span>  <span class="c1"># nn.module</span>
