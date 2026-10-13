@@ -10,7 +10,7 @@ on:
                 required: false
                 type: string
                 description: Runner type for the test
-                default: linux.12xlarge
+                default: mt-l-x86iavx512-48-384
             collect-coverage:
                 required: false
                 type: boolean
@@ -74,18 +74,51 @@ jobs:
             BAZEL_JOBS: "" # Let bazel decide the parallelism based on the number of CPUs.
             BAZEL_REMOTE_CACHE: 1
         steps:
-            - name: Checkout actions
+            # OSDC runners can't run local actions, and pytorch/xla can't be used as a
+            # remote action because its `external` symlink breaks the download, so
+            # these are the steps of .github/workflows/setup inline.
+            - name: Setup gcloud
+              if: inputs.has_code_changes == 'true' && env.GCLOUD_SERVICE_KEY
+              shell: bash
+              run: |
+                  echo "${GCLOUD_SERVICE_KEY}" > /tmp/default_credentials.json
+                  echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/default_credentials.json" >> $GITHUB_ENV
+            - name: Checkout PyTorch Repo
               if: inputs.has_code_changes == 'true'
               uses: actions/checkout@v4
               with:
-                  sparse-checkout: |
-                      .github/workflows/setup
-                  path: .actions
-            - name: Setup
+                  repository: pytorch/pytorch
+                  path: pytorch
+            - name: Checkout PyTorch/XLA Repo
               if: inputs.has_code_changes == 'true'
-              uses: ./.actions/.github/workflows/setup
+              uses: actions/checkout@v4
               with:
-                  wheels-artifact: torch-xla-wheels
+                  path: pytorch/xla
+            - name: Checkout to PyTorch Commit Pin
+              if: inputs.has_code_changes == 'true'
+              working-directory: pytorch
+              shell: bash
+              env:
+                  TORCH_COMMIT_FILE: ".torch_commit"
+              run: |
+                  COMMIT=$(tail -1 "xla/$TORCH_COMMIT_FILE")
+                  git fetch --no-recurse-submodules origin $COMMIT
+                  git checkout --no-recurse-submodules FETCH_HEAD
+                  git submodule update --init --recursive
+            - name: Fetch PyTorch/XLA packages
+              if: inputs.has_code_changes == 'true'
+              uses: actions/download-artifact@v5
+              with:
+                  name: torch-xla-wheels
+                  path: /tmp/wheels/
+            - name: Install wheels
+              if: inputs.has_code_changes == 'true'
+              shell: bash
+              run: |
+                  pip install /tmp/wheels/*.whl
+
+                  echo "Import check..."
+                  python -c "import torch_xla"
             - name: Fetch CPP test binaries
               if: inputs.has_code_changes == 'true' && matrix.run_cpp_tests
               uses: actions/download-artifact@v5

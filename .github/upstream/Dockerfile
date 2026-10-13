@@ -33,7 +33,10 @@ ENV CXX "${cxx}"
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 
-RUN apt-get update
+# bullseye is past its LTS, so its security updates are only on archive.debian.org
+RUN sed -i 's|deb.debian.org/debian-security|archive.debian.org/debian-security|' \
+        $(grep -rl deb.debian.org/debian-security /etc/apt) && \
+    apt-get update
 
 # Install clang as upstream CI forces clang
 RUN apt-get install -y clang

@@ -38,7 +38,9 @@
 
 - name: Install PyTorch wheels
   ansible.builtin.pip:
-    name: "{{ pytorch_wheels.files | map(attribute='path') }}"
+    # forcereinstall also reinstalls torch's unpinned setuptools; keep it below 82,
+    # which removed the pkg_resources that the pinned torchvision's setup.py imports.
+    name: "{{ pytorch_wheels.files | map(attribute='path') | list + ['setuptools<82'] }}"
     state: "forcereinstall"
 
 - name: Build PyTorch/XLA
