@@ -456,3 +456,5 @@ autograd:
   - max_pool3d
   - native_layer_norm
   - native_group_norm
+  - sparse_mask
+  - coalesce
