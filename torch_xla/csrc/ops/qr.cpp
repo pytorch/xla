@@ -44,7 +44,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input, bool some) {
 
 QR::QR(const torch::lazy::Value& input, bool some)
     : XlaNode(
-          torch::lazy::OpKind(at::aten::qr), {input},
+          torch::lazy::OpKind(at::aten::linalg_qr), {input},
           [&]() { return NodeOutputShape(input, some); },
           /*num_outputs=*/2, torch::lazy::MHash(some)),
       some_(some) {}
