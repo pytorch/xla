@@ -1,6 +1,7 @@
 # PyTorch/XLA
 
-> [!NOTE]
+> [!WARNING]
+> <b>10/19/2026 — PyTorch/XLA is deprecated</b>: [TorchTPU](https://github.com/google-pytorch/torch_tpu) (`pip install torch-tpu`) is now publicly available and replaces PyTorch/XLA for running PyTorch on Google Cloud TPUs. Please use [google-pytorch/torch_tpu](https://github.com/google-pytorch/torch_tpu) for all new development and migration.
 > <b>4/22/2026</b>: To read more on our TorchTPU announcement see our latest [blog post](https://developers.googleblog.com/torchtpu-running-pytorch-natively-on-tpus-at-google-scale/). Once TorchTPU is public it will replace PyTorch/XLA. 
 > <b>10/2025</b>: Based on community feedback, we have proposed a more native direction for PyTorch on TPU. Read the RFC and comment at [#9684](https://github.com/pytorch/xla/issues/9684).
 >
