@@ -2,7 +2,7 @@
 
 > [!CAUTION]
 > **Deprecated:** This project is deprecated and
-> replaced by [TorchTPU](http://cloud/tpu/docs/pytorch-on-tpu). The
+> replaced by [TorchTPU](https://docs.cloud.google.com/tpu/docs/pytorch-on-tpu). The
 > PyTorch/XLA repo will be archived on November 15, 2026. Please start new PyTorch
 > TPU workloads with TorchTPU and migrate existing PyTorch/XLA workloads to
 > TorchTPU.

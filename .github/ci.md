@@ -138,24 +138,6 @@ additional environment variables for these to load the correct `torch` and
 plugin binaries, so you should copy the variables we set in `_test.yml` before
 running them.
 
-### Generating docs
-
-Our API documentation is generated automatically from the `torch_xla` package
-with `sphinx`. The workflow to update our static site is defined in `_docs.yml`.
-The workflow is roughly the following:
-
-- Changes to `master` update the docs at `/master` on the `gh-pages` branch.
-- Changes to a release branch update the docs under `/releases/rX.Y`.
-
-By default, we redirect to the latest stable version, defined in
-[`index.md`](https://github.com/pytorch/xla/blob/gh-pages/index.md).
-
-We build preview docs for every CI, but only push to `gh-pages` for `master` and
-release branches. To preview doc changes, download the `github-pages` artifact
-locally and open `index.html` in your browser.
-
-Changes to `gh-pages` are pushed by our bot account, `torchxlabot2`.
-
 ### FAQ and Troubleshooting
 
 #### Why does PyTorch CI pin PyTorch/XLA?
