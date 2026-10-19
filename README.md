@@ -1,9 +1,11 @@
 # PyTorch/XLA
 
-> [!NOTE]
-> <b>4/22/2026</b>: To read more on our TorchTPU announcement see our latest [blog post](https://developers.googleblog.com/torchtpu-running-pytorch-natively-on-tpus-at-google-scale/). Once TorchTPU is public it will replace PyTorch/XLA. 
-> <b>10/2025</b>: Based on community feedback, we have proposed a more native direction for PyTorch on TPU. Read the RFC and comment at [#9684](https://github.com/pytorch/xla/issues/9684).
->
+> [!CAUTION]
+> **Deprecated:** This project is deprecated and
+> replaced by [TorchTPU](http://cloud/tpu/docs/pytorch-on-tpu). The
+> PyTorch/XLA repo will be archived on November 15, 2026. Please start new PyTorch
+> TPU workloads with TorchTPU and migrate existing PyTorch/XLA workloads to
+> TorchTPU.
 
 <b>Current CI status:</b>  ![GitHub Actions
 status](https://github.com/pytorch/xla/actions/workflows/build_and_test.yml/badge.svg)
