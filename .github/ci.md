@@ -138,13 +138,6 @@ additional environment variables for these to load the correct `torch` and
 plugin binaries, so you should copy the variables we set in `_test.yml` before
 running them.
 
-### Generating docs
-
-CI no longer publishes docs. PyTorch/XLA is deprecated in favor of TorchTPU, and
-the pages on the `gh-pages` branch redirect to
-https://docs.cloud.google.com/tpu/docs/pytorch-on-tpu. To build the docs
-locally, run `sphinx-build -b html source build` in `docs/`.
-
 ### FAQ and Troubleshooting
 
 #### Why does PyTorch CI pin PyTorch/XLA?
