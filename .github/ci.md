@@ -140,21 +140,10 @@ running them.
 
 ### Generating docs
 
-Our API documentation is generated automatically from the `torch_xla` package
-with `sphinx`. The workflow to update our static site is defined in `_docs.yml`.
-The workflow is roughly the following:
-
-- Changes to `master` update the docs at `/master` on the `gh-pages` branch.
-- Changes to a release branch update the docs under `/releases/rX.Y`.
-
-By default, we redirect to the latest stable version, defined in
-[`index.md`](https://github.com/pytorch/xla/blob/gh-pages/index.md).
-
-We build preview docs for every CI, but only push to `gh-pages` for `master` and
-release branches. To preview doc changes, download the `github-pages` artifact
-locally and open `index.html` in your browser.
-
-Changes to `gh-pages` are pushed by our bot account, `torchxlabot2`.
+CI no longer publishes docs. PyTorch/XLA is deprecated in favor of TorchTPU, and
+the pages on the `gh-pages` branch redirect to
+https://docs.cloud.google.com/tpu/docs/pytorch-on-tpu. To build the docs
+locally, run `sphinx-build -b html source build` in `docs/`.
 
 ### FAQ and Troubleshooting
 
