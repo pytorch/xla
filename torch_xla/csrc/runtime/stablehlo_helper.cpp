@@ -186,6 +186,10 @@ const std::string GetTorchDtypeToStablehloDtype(const std::string& dtype) {
   if (dtype == "torch.int16") return "i16";
   if (dtype == "torch.int32") return "i32";
   if (dtype == "torch.int64") return "i64";
+  if (dtype == "torch.float8_e4m3fn") return "f8E4M3FN";
+  if (dtype == "torch.float8_e4m3fnuz") return "f8E4M3FNUZ";
+  if (dtype == "torch.float8_e5m2") return "f8E5M2";
+  if (dtype == "torch.float8_e5m2fnuz") return "f8E5M2FNUZ";
   XLA_ERROR() << "Unsupported dtype for conversion to Stablehlo type: "
               << dtype;
 }
@@ -200,6 +204,10 @@ GetHloDtypeToStablehloDtypeMap() {
       {xla::PrimitiveType::U32, "ui32"}, {xla::PrimitiveType::U64, "ui64"},
       {xla::PrimitiveType::F16, "f16"},  {xla::PrimitiveType::BF16, "bf16"},
       {xla::PrimitiveType::F32, "f32"},  {xla::PrimitiveType::F64, "f64"},
+      {xla::PrimitiveType::F8E4M3FN, "f8E4M3FN"},
+      {xla::PrimitiveType::F8E4M3FNUZ, "f8E4M3FNUZ"},
+      {xla::PrimitiveType::F8E5M2, "f8E5M2"},
+      {xla::PrimitiveType::F8E5M2FNUZ, "f8E5M2FNUZ"},
   };
   return m_;
 }
