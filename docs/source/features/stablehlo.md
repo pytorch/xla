@@ -72,7 +72,7 @@ The convention used in `jax.jit` is all the input of the `jit`ed Python
 functions are exported as parameters, everything else are inlined as constants.
 
 So as above, the function we exported `jfunc` takes `weights` and `args` as input, so
-they appear as paramters.
+they appear as parameters.
 
 If you do this instead:
 
@@ -93,14 +93,14 @@ Then, you will see inlined constants.
 High level PyTorch ops (e.g. `F.scaled_dot_product_attention`) will be
 decomposed into low level ops during PyTorch -\> StableHLO lowering.
 Capturing the high level op in downstream ML compilers can be crucial
-for genearting a performant, efficient specialized kernels. While
+for generating a performant, efficient specialized kernels. While
 pattern matching a bunch of low level ops in the ML compiler can be
 challenging and error-prone, we offer a more robust method to outline
 the high-level PyTorch op in StableHLO program - by generating
 [stablehlo.composite](https://github.com/openxla/stablehlo/blob/main/docs/spec.md#composite)
 for the high level PyTorch ops.
 
-The following example shows a pratical use case - capturing
+The following example shows a practical use case - capturing
 `scaled_product_attention`
 
 For using `composite` we need to use the jax-centric export now. (i.e. no torch.export)
@@ -194,6 +194,6 @@ if __name__ == '__main__':
 
 As we see, to emit a stablehlo function into composite, first we make a python function
 representing the region of code that we want to call, then, we register it
-so that pytorch and jlibrary understands it's a custom region. Then, th
+so that pytorch and jlibrary understands it's a custom region. Then, the
 emitted Stablehlo will have `mylib.scaled_dot_product_attention` and `mylib.softmax`
 outlined stablehlo functions.

@@ -2,7 +2,7 @@
 
 [Bazel](https://bazel.build/) is a free software tool used for the
 automation of building and testing software.
-[TensorFlow](https://www.tensorflow.org/http) and
+[TensorFlow](https://www.tensorflow.org/) and
 [OpenXLA](https://github.com/openxla/xla) both use it, which makes it a
 good fit for PyTorch/XLA as well.
 
@@ -45,7 +45,7 @@ PyTorch/XLA uses `torchgen` python module that should be installed in
 the system).
 
 The local directory can either set in `bazel/dependencies.bzl`, or
-overriden on the command line:
+overridden on the command line:
 
 ``` bash
 bazel build --override_repository=org_tensorflow=/path/to/exported/tf_repo //...
@@ -78,7 +78,7 @@ to pass `-isystemexternal/torch` to the compiler so it can find `system`
 libraries and satisfy them from the local checkout. Some are included as
 `<system>` and some as `"user"` headers.
 
-Bazel brings in [pybind11](https://github.com/pybind/pybind11) embeded
+Bazel brings in [pybind11](https://github.com/pybind/pybind11) embedded
 python and links against it to provide `libpython` to the plugin using
 this mechanism. Python headers are also sourced from there instead of
 depending on the system version. These are satisfied from the
@@ -93,7 +93,7 @@ Building the libraries is simple:
 bazel build //torch_xla/csrc/runtime/...
 ```
 
-Bazel is configred via `.bazelrc`, but it can also take flags on the
+Bazel is configured via `.bazelrc`, but it can also take flags on the
 command line.
 
 ``` bash
@@ -107,8 +107,8 @@ configuration.
 Using bazel makes it easy to express complex dependencies and there is a
 lot of gain from having a single build graph with everything expressed
 in the same way. Therefore, there is no need to build the XLA libraries
-separately from the rest of the pluing as used to be the case, building
-the whole repository, or the plugin shared object that links everythin
+separately from the rest of the plugin as used to be the case, building
+the whole repository, or the plugin shared object that links everything
 else in, is enough.
 
 ## How to build the Torch/XLA plugin
@@ -198,7 +198,7 @@ next update quite fast again.
 Currently C++ code is built and tested by bazel. Python code will be
 migrated in the future.
 
-Bazel is a test plafrom too, making it easy to run tests:
+Bazel is a test platform too, making it easy to run tests:
 
 ``` bash
 bazel test //test/cpp:main

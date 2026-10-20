@@ -49,7 +49,7 @@ def _unpack_tensor_to_list(t: torch.Tensor):
 def _check_scale_zp(input, scale, zero_point, axis, dtype):
   # The followings are checked:
   # 1. scale, zp are 1D tensor.
-  # 2. Lenghth of scale, zp matched the (de)quant dim,
+  # 2. Length of scale, zp matched the (de)quant dim,
   #    or scale, zp has size of 1
   # 3. dtype must be integer type
   # 4. zero_point values must be within the range of dtype.

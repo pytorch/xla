@@ -356,7 +356,7 @@ def _fa_custom_forward_single_device(
     # We can't directly use flash_attention as we need to override the save_residuals flag which returns
     # l and m that is needed for the backward. Then we lose all the shape checks.
     # TODO: replicate the shape checks on flash_attention.
-    # Here we seperate the tracing and execution part just to support SegmentIds.
+    # Here we separate the tracing and execution part just to support SegmentIds.
     payload, _ = trace_pallas(
         _flash_attention_impl,
         q,
