@@ -1,5 +1,5 @@
 ---
 layout: docs_redirect
 title: PyTorch | Redirect
-redirect_url: "/xla/release/r2.8/index.html"
+redirect_url: "https://docs.cloud.google.com/tpu/docs/pytorch-on-tpu"
 ---
