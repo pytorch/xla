@@ -18,7 +18,7 @@ static std::atomic<bool> g_computation_client_initialized(false);
 // Creates a new instance of a `ComputationClient` (e.g.
 // `PjRtComputationClient`), and initializes the computation client.
 // Can only be called when g_computation_client_initialized is false.
-static absl::StatusOr<ComputationClient * absl_nonnull>
+static absl::StatusOr<std::unique_ptr<ComputationClient>>
 InitializeComputationClient() {
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
     tsl::testing::InstallStacktraceHandler();
@@ -47,7 +47,7 @@ InitializeComputationClient() {
   // Set only if we actually successfully initialized a client.
   g_computation_client_initialized = true;
 
-  return client.release();
+  return client;
 }
 
 const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient() {
@@ -56,8 +56,18 @@ const absl::StatusOr<ComputationClient * absl_nonnull>& GetComputationClient() {
   // Since we only allow a single initialization, as soon as this function is
   // called, we store the initialization result in this trivially destructible
   // reference.
-  static const auto& maybe_client =
-      *new absl::StatusOr<ComputationClient*>(InitializeComputationClient());
+  static absl::StatusOr<std::unique_ptr<ComputationClient>> init_result =
+      InitializeComputationClient();
+
+  static absl::StatusOr<ComputationClient* absl_nonnull> maybe_client = []() {
+    if (init_result.ok()) {
+      return absl::StatusOr<ComputationClient * absl_nonnull>(
+          init_result.value().get());
+    } else {
+      return absl::StatusOr<ComputationClient * absl_nonnull>(
+          init_result.status());
+    }
+  }();
   return maybe_client;
 }
 
