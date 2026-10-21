@@ -229,6 +229,9 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         if (json_value.empty()) {
           return builder.getArrayAttr({});
         }
+        if (json_value.size() > 1000000) {
+          return op->emitError() << "JSON array too large (max 1,000,000 elements)";
+        }
         auto get_json_type = [](const json& j) {
           auto ty = j.type();
           if (ty == json::value_t::number_unsigned) {
