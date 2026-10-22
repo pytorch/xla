@@ -207,7 +207,7 @@ def use_spmd(auto: Optional[bool] = False):
     warnings.warn(
         "Replicating tensors already initialized on non-virtual XLA device for SPMD "
         "to force SPMD mode. This is one-time overhead to setup, and to minimize such, "
-        "please set SPMD mode before initializting tensors "
+        "please set SPMD mode before initializing tensors "
         "(i.e., call use_spmd() in the beginning of the program).")
     torch_xla._XLAC._xla_force_spmd_device()
     xm.wait_device_ops()
