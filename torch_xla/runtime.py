@@ -274,3 +274,15 @@ def get_num_cached_compilation_graph():
   the compilation graph will be fetched into the in-memory cache.
   """
   return torch_xla._XLAC._xla_get_num_cached_compilation_graph()
+
+
+def clear_computation_cache():
+  """Clears the XLA computation cache contents, if computation cache is initialized.
+  Returns:
+    bool: whether the cache was cleared successfully.
+  """
+  if not torch_xla._XLAC._xla_computation_cache_is_initialized():
+    warnings.warn("Computation cache must be initialized to clear it.")
+    return False
+  torch_xla._XLAC._xla_computation_cache_clear()
+  return True
