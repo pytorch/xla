@@ -3118,9 +3118,18 @@ at::Tensor& XLANativeFunctions::put_(at::Tensor& self, const at::Tensor& index,
   return self;
 }
 
-std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::qr(
-    const at::Tensor& self, bool some) {
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_qr(
+    const at::Tensor& self, c10::string_view mode) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  bool some = true;
+  if (mode == "reduced") {
+    some = true;
+  } else if (mode == "complete") {
+    some = false;
+  } else {
+    TORCH_CHECK(false, "linalg_qr on XLA only supports modes 'reduced' and "
+                       "'complete', but got mode='", mode, "'");
+  }
   XLA_ASSIGN_OR_THROW(XLATensorPtr xla_self, bridge::GetXlaTensor(self));
   auto results = tensor_methods::qr(xla_self, some);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
