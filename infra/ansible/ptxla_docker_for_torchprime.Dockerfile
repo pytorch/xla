@@ -23,7 +23,7 @@
 #
 # (Googlers only) Refer to go/ptxla-torchprime-trigger for information on retention policy of
 # the docker images.
-ARG python_version=3.10
+ARG python_version=3.12
 ARG debian_version=bullseye
 
 FROM python:${python_version}-${debian_version} AS release
