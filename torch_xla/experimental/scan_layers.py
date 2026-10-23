@@ -16,7 +16,8 @@ _ONE_LAYER_CACHE = {}
 
 def _create_or_get_cached_one_layer_fn(first_layer: nn.Module,
                                        partition_fn,
-                                       is_layer_pure: bool = False):
+                                       is_layer_pure: bool = False,
+                                       has_params_or_buffers: bool = True):
   cache_key = (id(partition_fn), id(first_layer))
   if is_layer_pure and cache_key in _ONE_LAYER_CACHE:
     return _ONE_LAYER_CACHE[cache_key]
@@ -25,13 +26,23 @@ def _create_or_get_cached_one_layer_fn(first_layer: nn.Module,
   from copy import deepcopy
   example_layer = deepcopy(first_layer)
 
-  # Define the function to apply at each step
-  def one_layer_fn(carry, params_buffers):
-    # Apply the current layer's weights and biases to the example layer,
-    # then run the resulting layer.
-    output = torch.func.functional_call(  # type: ignore
-        example_layer, params_buffers, carry, strict=True)
-    return output, None
+  if has_params_or_buffers:
+
+    # Define the function to apply at each step
+    def one_layer_fn(carry, params_buffers):
+      # Apply the current layer's weights and biases to the example layer,
+      # then run the resulting layer.
+      output = torch.func.functional_call(  # type: ignore
+          example_layer, params_buffers, carry, strict=True)
+      return output, None
+  else:
+
+    # When the layer has no parameters or buffers, we don't need
+    # functional_call. Just run the layer directly, ignoring the dummy
+    # tensor passed as xs.
+    def one_layer_fn(carry, _dummy):
+      output = example_layer(carry)
+      return output, None
 
   if is_layer_pure:
     # Cache the function for pure layers to avoid recomputing it.
@@ -114,10 +125,23 @@ def scan_layers(layers: Iterable[torch.nn.Module],
   stacked_buffers = tree_map(lambda *tensors: torch.stack(tensors, dim=0),
                              *buffers_list)
 
-  one_layer = _create_or_get_cached_one_layer_fn(first_layer, partition_fn,
-                                                 is_layer_pure)
+  num_layers = len(params_and_buffers)
+  has_params_or_buffers = any(len(d) > 0 for d in (*params_list, *buffers_list))
 
-  stacked_params_buffers = (stacked_params, stacked_buffers)
+  one_layer = _create_or_get_cached_one_layer_fn(
+      first_layer,
+      partition_fn,
+      is_layer_pure,
+      has_params_or_buffers=has_params_or_buffers)
+
+  if has_params_or_buffers:
+    stacked_params_buffers = (stacked_params, stacked_buffers)
+  else:
+    # When layers have no parameters or buffers, `scan` still needs a tensor
+    # with a leading dimension to determine the number of iterations.
+    # Provide a dummy tensor of shape (num_layers,) for this purpose.
+    stacked_params_buffers = torch.zeros(num_layers)
+
   final_carry, _ = scan(
       one_layer,
       input_data,

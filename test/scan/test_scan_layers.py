@@ -316,6 +316,38 @@ class ScanLayersTest(XlaTestCase, parameterized.TestCase):
     # Check that the cache is not populated.
     self.assertEqual(len(scan_layers_module._ONE_LAYER_CACHE), 0)
 
+  @parameterized.parameters(False, True)
+  def test_no_weights_layers(self, is_layer_pure: bool):
+    """Test that scan_layers works with layers that have no parameters
+    or buffers (pure compute modules)."""
+
+    class PureComputeModule(torch.nn.Module):
+
+      def forward(self, x):
+        return x * 2 + 1
+
+    layers = [PureComputeModule().to(self.device) for _ in range(10)]
+    input_data = torch.randn(64).to(self.device)
+    torch_xla.sync(wait=True)
+
+    layers_for_scan = deepcopy(layers)
+    layers_for_loop = deepcopy(layers)
+    torch_xla.sync()
+
+    output = scan_layers(
+        layers_for_scan, input_data.clone(), is_layer_pure=is_layer_pure)
+    self.assert_while_found_in_hlo(output)
+    torch_xla.sync()
+
+    # Test that the result is the same as for loop.
+    loop_output = input_data.clone()
+    for layer in layers_for_loop:
+      loop_output = layer(loop_output)
+    torch_xla.sync()
+
+    super().compareResults(loop_output, output, abs_err=0.0001, rel_err=0.001)
+    self.assert_different_tensor(loop_output, output)
+
 
 if __name__ == '__main__':
   test = unittest.main()
